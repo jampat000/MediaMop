@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Weir.Core.Jobs;
+using Weir.Core.Time;
 
 namespace Weir.Infrastructure.Jobs;
 
@@ -68,7 +69,7 @@ public static class StartupRecovery
         SqliteTransaction transaction,
         DateTimeOffset now)
     {
-        var when = JobQueueRules.ToMicroseconds(now.ToUniversalTime());
+        var when = PyDateTime.TruncateToMicroseconds(now.ToUniversalTime());
         var requeued = 0;
         var failed = 0;
         var interrupted = new List<InterruptedJob>();

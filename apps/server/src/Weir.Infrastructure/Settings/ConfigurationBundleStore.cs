@@ -333,7 +333,7 @@ public static class ConfigurationBundleStore
     };
 
     private static PyJson Required(PyDict dict, string key) =>
-        dict.Get(key) ?? throw new PyTypeErrorException($"KeyError: {PyConvert.ReprString(key)}");
+        dict.Get(key) ?? throw new PyTypeErrorException($"KeyError: {PyStrings.Repr(key)}");
 
     private static long Saturate(System.Numerics.BigInteger value) =>
         value > long.MaxValue ? long.MaxValue : value < long.MinValue ? long.MinValue : (long)value;
@@ -377,7 +377,7 @@ public static class ConfigurationBundleStore
         var replaced = text.Value.Replace("Z", "+00:00", StringComparison.Ordinal);
         return PyDateTime.TryFromIsoFormat(replaced, out var parsed)
             ? new PyDateTimeValue(parsed)
-            : throw new PyValueErrorException($"Invalid isoformat string: {PyConvert.ReprString(replaced)}");
+            : throw new PyValueErrorException($"Invalid isoformat string: {PyStrings.Repr(replaced)}");
     }
 
     private static async Task<long> InsertAsync(UnitOfWork uow, string table, Dictionary<string, Column> columns, Dictionary<string, PyJson> kwargs)

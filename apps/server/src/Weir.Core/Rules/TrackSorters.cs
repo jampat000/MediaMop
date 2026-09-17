@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Weir.Core.Json;
 
 namespace Weir.Core.Rules;
 
@@ -163,7 +164,7 @@ public static partial class TrackSorters
     /// </summary>
     internal static double? ParseChannels(string text)
     {
-        var raw = Py.Lower(Py.Strip(text));
+        var raw = Py.Lower(PyStrings.Strip(text));
         if (raw is "mono" or "1.0")
         {
             return 1.0;
@@ -196,13 +197,13 @@ public static partial class TrackSorters
 
         if (field == "bitrate")
         {
-            var normalized = Py.Lower(Py.Strip(expected)).TrimEnd('k').Replace("_", string.Empty, StringComparison.Ordinal);
+            var normalized = Py.Lower(PyStrings.Strip(expected)).TrimEnd('k').Replace("_", string.Empty, StringComparison.Ordinal);
             if (Py.TryFloatFromText(normalized) is not { } wantedNumber)
             {
                 return false;
             }
 
-            if (Py.Lower(Py.Strip(expected)).EndsWith('k'))
+            if (Py.Lower(PyStrings.Strip(expected)).EndsWith('k'))
             {
                 wantedNumber *= 1000;
             }
@@ -212,14 +213,14 @@ public static partial class TrackSorters
 
         if (field is "default" or "forced" or "commentary")
         {
-            var wantedBool = Py.Lower(Py.Strip(expected)) is "1" or "true" or "yes" or "on";
+            var wantedBool = Py.Lower(PyStrings.Strip(expected)) is "1" or "true" or "yes" or "on";
             var haveBool = Truthy(actual);
             return op == "!=" ? haveBool != wantedBool : haveBool == wantedBool;
         }
 
         // Text compares case-insensitively; title is a containment test.
-        var haveText = Py.Lower(Py.Strip(Truthy(actual) ? Str(actual) : string.Empty));
-        var wantText = Py.Lower(Py.Strip(expected));
+        var haveText = Py.Lower(PyStrings.Strip(Truthy(actual) ? Str(actual) : string.Empty));
+        var wantText = Py.Lower(PyStrings.Strip(expected));
         var matched = field == "title" ? haveText.Contains(wantText, StringComparison.Ordinal) : haveText == wantText;
         return op == "!=" ? !matched : matched;
     }
@@ -239,7 +240,7 @@ public static partial class TrackSorters
         var match = ComparisonRegex().Match(value);
         if (!match.Success)
         {
-            return ("=", Py.Strip(value));
+            return ("=", PyStrings.Strip(value));
         }
 
         return (match.Groups[1].Success ? match.Groups[1].Value : "=", match.Groups[2].Value);
@@ -325,9 +326,9 @@ public static partial class TrackSorters
             return [sorter.Reversed ? -rank : rank];
         }
 
-        var text = Py.Lower(Py.Strip(Truthy(actual) ? Str(actual) : string.Empty));
+        var text = Py.Lower(PyStrings.Strip(Truthy(actual) ? Str(actual) : string.Empty));
         var parts = new List<long> { text.Length == 0 ? 1 : 0 };
-        foreach (var rune in Py.Slice(text, 32).EnumerateRunes())
+        foreach (var rune in PyStrings.Slice(text, 32).EnumerateRunes())
         {
             parts.Add(sorter.Reversed ? -rune.Value : rune.Value);
         }
@@ -355,7 +356,7 @@ public static partial class TrackSorters
     /// <summary>Read a stored list. Anything unusable yields the seeded default rather than none.</summary>
     public static IReadOnlyList<TrackSorter> Parse(string? raw)
     {
-        var text = Py.Strip(raw ?? string.Empty);
+        var text = PyStrings.Strip(raw ?? string.Empty);
         if (text.Length == 0)
         {
             return [.. DefaultAudioSorters];
@@ -401,9 +402,9 @@ public static partial class TrackSorters
 
     private static TrackSorter ReadEntry(JsonElement item)
     {
-        var field = Py.Lower(Py.Strip(Py.StrOr(Py.Get(item, "field"), string.Empty)));
+        var field = Py.Lower(PyStrings.Strip(Py.StrOr(Py.Get(item, "field"), string.Empty)));
         var value = Py.Get(item, "value");
-        var keptValue = Py.IsStr(value) && Py.Strip(value!.Value.GetString()!).Length > 0 ? value.Value.GetString() : null;
+        var keptValue = Py.IsStr(value) && PyStrings.Strip(value!.Value.GetString()!).Length > 0 ? value.Value.GetString() : null;
         return new TrackSorter(field, keptValue, Py.Truthy(Py.Get(item, "reversed")));
     }
 
@@ -422,7 +423,7 @@ public static partial class TrackSorters
 
             first = false;
             builder.Append("{\"field\":");
-            Py.AppendJsonString(builder, sorter.Field);
+            PyJsonWriter.WriteString(builder, sorter.Field, ensureAscii: true);
             builder.Append(",\"value\":");
             if (sorter.Value is null)
             {
@@ -430,7 +431,7 @@ public static partial class TrackSorters
             }
             else
             {
-                Py.AppendJsonString(builder, sorter.Value);
+                PyJsonWriter.WriteString(builder, sorter.Value, ensureAscii: true);
             }
 
             builder.Append(",\"reversed\":").Append(sorter.Reversed ? "true" : "false").Append('}');
@@ -442,7 +443,7 @@ public static partial class TrackSorters
     /// <summary>Validate a submitted list, refusing rather than silently dropping entries.</summary>
     public static string Validate(string? raw)
     {
-        var text = Py.Strip(raw ?? string.Empty);
+        var text = PyStrings.Strip(raw ?? string.Empty);
         if (text.Length == 0)
         {
             return Dump(DefaultAudioSorters);
@@ -491,7 +492,7 @@ public static partial class TrackSorters
 
     /// <summary>The preset for a policy name, or the seeded default.</summary>
     public static IReadOnlyList<TrackSorter> Preset(string? name) =>
-        Presets.TryGetValue(Py.Lower(Py.Strip(name ?? string.Empty)), out var preset) ? [.. preset] : [.. DefaultAudioSorters];
+        Presets.TryGetValue(Py.Lower(PyStrings.Strip(name ?? string.Empty)), out var preset) ? [.. preset] : [.. DefaultAudioSorters];
 
     /// <summary>A sentence for the selection notes.</summary>
     public static string Describe(IReadOnlyCollection<TrackSorter> sorters)

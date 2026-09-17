@@ -1,4 +1,3 @@
-using Weir.Core.Activity;
 using Weir.Core.Auth;
 using Weir.Core.Configuration;
 using Weir.Core.Json;
@@ -189,6 +188,18 @@ public sealed class PlatformRulesTests
         Assert.Equal(FailureKind.NotFound, FailureMessages.Classify(new FailureSubject("RuntimeError", "HTTP 404", ExceptionCategory.Other)));
         Assert.Equal(FailureKind.Auth, FailureMessages.Classify(new FailureSubject("RuntimeError", "403 Forbidden", ExceptionCategory.Other)));
         Assert.Equal(FailureKind.Internal, FailureMessages.Classify(new FailureSubject("RuntimeError", "boom", ExceptionCategory.Other)));
+
+        // .NET exceptions classify as their Python counterparts: the class name is part of what is searched.
+        Assert.Equal(FailureKind.Validation, FailureMessages.Classify(FailureMessages.FromDotNet(new FormatException("bad payload"))));
+        Assert.Equal(FailureKind.Network, FailureMessages.Classify(FailureMessages.FromDotNet(new IOException("pipe broke"))));
+        Assert.Equal(FailureKind.NotFound, FailureMessages.Classify(FailureMessages.FromDotNet(new InvalidOperationException("file not found"))));
+        Assert.Equal(FailureKind.Internal, FailureMessages.Classify(FailureMessages.FromDotNet(new InvalidOperationException("boom"))));
+        Assert.Equal(FailureKind.RateLimit, FailureMessages.Classify(FailureMessages.RuntimeError("HTTP 429")));
+        Assert.Equal("PermissionError: denied", FailureMessages.FromException("Refiner", "job", FailureMessages.FromDotNet(new UnauthorizedAccessException("denied"))).TechnicalDetail);
+
+        // provider_label(provider) or "the provider": a blank provider is not named.
+        var blank = FailureMessages.FromException("Refiner", "sync", new FailureSubject("RuntimeError", "401", ExceptionCategory.Other), provider: "   ");
+        Assert.Equal(("Refiner sync failed: The service from  rejected the credentials or permission level. This job is marked failed so it does not look successful.", "Re-enter the the provider credentials and run the connection test again."), (blank.Message, blank.NextAction));
     }
 
     [Fact]
@@ -316,17 +327,6 @@ public sealed class PlatformRulesTests
         Assert.False(PyIpAddress.TryParse("01.1.1.1", out _));
         Assert.True(PyIpNetwork.TryParse("10.0.0.5/24", strict: false, out var network) && network.Contains(documentation) is false);
         Assert.False(PyIpNetwork.TryParse("10.0.0.5/24", strict: true, out _));
-    }
-
-    [Fact]
-    public void Activity_facts_are_lifted_from_the_event()
-    {
-        Assert.Equal(new ActivityFacts("manual", "success", null, null, null), ActivityClassifier.Classify("auth.login_succeeded", "alice"));
-        Assert.Equal(new ActivityFacts("manual", "failed", null, null, null), ActivityClassifier.Classify("auth.bootstrap_denied", "An admin account already exists."));
-        Assert.Equal(
-            new ActivityFacts("worker", "warning", 3, "Movies/a.mkv", "run:7"),
-            ActivityClassifier.Classify("refiner.file_processed", "{\"trigger\": \" Worker \", \"result\": \"warning\", \"library_id\": 3, \"relative_media_path\": \" Movies/a.mkv \", \"run_id\": 7}"));
-        Assert.Equal(new ActivityFacts(null, "failed", null, null, null), ActivityClassifier.Classify("refiner.x", "{\"ok\": false, \"library_id\": true}"));
     }
 
     private static UserSessionRecord Session(DateTime now, DateTime absolute, DateTime lastSeen) =>

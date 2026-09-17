@@ -144,7 +144,7 @@ public static class ReleaseCatalog
         {
             if (!PyDateTime.TryFromIsoFormat(published.Value.Trim().Replace("Z", "+00:00", StringComparison.Ordinal), out var parsed))
             {
-                throw new PyValueErrorException($"Invalid isoformat string: {PyConvert.ReprString(published.Value.Trim())}");
+                throw new PyValueErrorException($"Invalid isoformat string: {PyStrings.Repr(published.Value.Trim())}");
             }
 
             publishedAt = parsed;

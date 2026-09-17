@@ -38,12 +38,6 @@ public sealed record SuiteSettingsUpdate(
     long? ConfigurationBackupIntervalHours = null,
     string? ConfigurationBackupPreferredTime = null);
 
-/// <summary>Looks up IANA time zone names the way <c>zoneinfo.ZoneInfo</c> does.</summary>
-public interface ITimeZoneResolver
-{
-    bool TryFind(string name, out TimeZoneInfo zone);
-}
-
 /// <summary>Port of <c>weir.platform.suite_settings.service</c>: validation, normalisation and the response shape.</summary>
 public static class SuiteSettingsRules
 {
@@ -315,18 +309,27 @@ public sealed record PauseState(bool Paused, PyDateTime? PausedUntil, bool ScanW
     public static PauseState Resolve(SuiteSettingsRecord row, DateTime nowUtc)
     {
         ArgumentNullException.ThrowIfNull(row);
-        PyDateTime? until = row.ProcessingPausedUntil is { } raw && !raw.IsAware ? raw with { Offset = TimeSpan.Zero } : row.ProcessingPausedUntil;
-        if (!row.ProcessingPaused)
+        return Resolve(row.ProcessingPaused, row.ProcessingPausedUntil, row.ScanWhilePaused, nowUtc);
+    }
+
+    /// <summary>
+    /// <c>resolve_pause_state</c>: expiry is applied on read, so a pause set before a restart still lapses.
+    /// A naive until time is UTC.
+    /// </summary>
+    public static PauseState Resolve(bool processingPaused, PyDateTime? pausedUntil, bool scanWhilePaused, DateTime nowUtc)
+    {
+        PyDateTime? until = pausedUntil is { } raw && !raw.IsAware ? raw with { Offset = TimeSpan.Zero } : pausedUntil;
+        if (!processingPaused)
         {
-            return new PauseState(false, null, row.ScanWhilePaused);
+            return new PauseState(false, null, scanWhilePaused);
         }
 
         if (until is { } u && nowUtc >= u.AsUtc)
         {
-            return new PauseState(false, until, row.ScanWhilePaused, Expired: true);
+            return new PauseState(false, until, scanWhilePaused, Expired: true);
         }
 
-        return new PauseState(true, until, row.ScanWhilePaused);
+        return new PauseState(true, until, scanWhilePaused);
     }
 
     public PyDict ToOut() => new PyDict()

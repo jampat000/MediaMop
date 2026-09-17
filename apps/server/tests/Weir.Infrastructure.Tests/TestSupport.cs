@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace Weir.Infrastructure.Tests;
@@ -45,49 +47,73 @@ internal sealed class TempDirectory : IDisposable
     }
 }
 
-/// <summary>A fact that runs only where the Python backend's virtualenv exists (cross-checks against the reference).</summary>
+/// <summary>A fact that runs only where the Python backend can be run (cross-checks against the reference).</summary>
 [AttributeUsage(AttributeTargets.Method)]
 internal sealed class PythonFactAttribute : FactAttribute
 {
     public PythonFactAttribute()
     {
-        if (PythonBackend.Interpreter is null)
+        if (PythonBackend.Executable is null || PythonBackend.SourceRoot is null)
         {
-            Skip = "apps/backend/.venv is not present; the Python cross-check needs it.";
+            Skip = "The Python backend virtualenv (apps/backend/.venv) was not found; set WEIR_TEST_PYTHON to run the Python cross-checks.";
         }
     }
 }
 
-/// <summary>Runs snippets with the Python backend's interpreter and <c>apps/backend/src</c> on the path.</summary>
+/// <summary>Finds and runs the Python reference backend, importing this checkout's <c>apps/backend/src</c>.</summary>
 internal static class PythonBackend
 {
-    public static string? Interpreter
+    /// <summary>This checkout's <c>apps/backend/src</c>: the code the cross-checks import.</summary>
+    public static string? SourceRoot =>
+        RepositoryPaths.RepositoryRoot is { } root && Directory.Exists(Path.Join(root, "apps", "backend", "src", "weir"))
+            ? Path.Join(root, "apps", "backend", "src")
+            : null;
+
+    /// <summary><c>WEIR_TEST_PYTHON</c>, else this checkout's backend virtualenv, else the main checkout's for a worktree.</summary>
+    public static string? Executable
     {
         get
         {
-            var root = RepositoryPaths.RepositoryRoot;
-            if (root is null)
+            var configured = Environment.GetEnvironmentVariable("WEIR_TEST_PYTHON");
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return File.Exists(configured) ? configured : null;
+            }
+
+            if (RepositoryPaths.RepositoryRoot is not { } root)
             {
                 return null;
             }
 
-            var windows = System.IO.Path.Join(root, "apps", "backend", ".venv", "Scripts", "python.exe");
-            var unix = System.IO.Path.Join(root, "apps", "backend", ".venv", "bin", "python");
-            return File.Exists(windows) ? windows : File.Exists(unix) ? unix : null;
+            var roots = new List<string> { root };
+            // A git worktree under .claude/worktrees has no virtualenv of its own; use the main checkout's.
+            var marker = Path.Join(".claude", "worktrees");
+            var index = root.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (index > 0)
+            {
+                roots.Add(root[..index].TrimEnd('/', '\\'));
+            }
+
+            return roots
+                .SelectMany(candidate => new[]
+                {
+                    Path.Join(candidate, "apps", "backend", ".venv", "Scripts", "python.exe"),
+                    Path.Join(candidate, "apps", "backend", ".venv", "bin", "python"),
+                })
+                .FirstOrDefault(File.Exists);
         }
     }
 
     /// <summary>Run <paramref name="code"/>; returns stdout. Fails the test with stderr on a non-zero exit.</summary>
     public static string Run(string code, IReadOnlyDictionary<string, string> environment)
     {
-        var root = RepositoryPaths.RepositoryRoot!;
-        var start = new System.Diagnostics.ProcessStartInfo(Interpreter!)
+        var start = new ProcessStartInfo(Executable!)
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = true,
             UseShellExecute = false,
-            WorkingDirectory = System.IO.Path.Join(root, "apps", "backend"),
+            WorkingDirectory = Path.GetDirectoryName(SourceRoot!)!,
         };
         start.ArgumentList.Add("-");
         foreach (var key in start.Environment.Keys.Where(k => k.StartsWith("WEIR_", StringComparison.OrdinalIgnoreCase)).ToList())
@@ -95,14 +121,15 @@ internal static class PythonBackend
             start.Environment.Remove(key);
         }
 
-        start.Environment["PYTHONPATH"] = System.IO.Path.Join(root, "apps", "backend", "src");
+        start.Environment["PYTHONPATH"] = SourceRoot!;
         start.Environment["PYTHONIOENCODING"] = "utf-8";
+        start.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
         foreach (var (key, value) in environment)
         {
             start.Environment[key] = value;
         }
 
-        using var process = System.Diagnostics.Process.Start(start)!;
+        using var process = Process.Start(start)!;
         process.StandardInput.Write(
             "import weir.core.config as _config\n_config._load_backend_dotenv_if_present = lambda: None\n" + code);
         process.StandardInput.Close();
@@ -116,6 +143,37 @@ internal static class PythonBackend
 
         Assert.True(process.ExitCode == 0, "Python failed:\n" + stderr.Result + stdout.Result);
         return stdout.Result.Trim();
+    }
+
+    /// <summary>Run the queue driver (<c>Jobs/python_queue_driver.py</c>) over <paramref name="ops"/> against one database.</summary>
+    public static async Task<JsonElement[]> RunAsync(string dbPath, string workDirectory, params object[] ops)
+    {
+        var opsPath = Path.Join(workDirectory, $"ops-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(opsPath, JsonSerializer.Serialize(ops));
+        var start = new ProcessStartInfo(Executable!)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        start.ArgumentList.Add(Path.Join(AppContext.BaseDirectory, "Jobs", "python_queue_driver.py"));
+        start.ArgumentList.Add(SourceRoot!);
+        start.ArgumentList.Add(dbPath);
+        start.ArgumentList.Add(opsPath);
+        start.Environment["PYTHONPATH"] = SourceRoot!;
+        start.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
+        start.Environment["WEIR_HOME"] = workDirectory;
+        using var process = Process.Start(start)!;
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(2));
+        var output = await stdout;
+        Assert.True(process.ExitCode == 0, $"python driver failed ({process.ExitCode}): {await stderr}");
+        using var document = JsonDocument.Parse(output.Trim().Split('\n')[^1]);
+        var weirFile = document.RootElement.GetProperty("weir_file").GetString()!;
+        // The import must come from this checkout's backend, not an installed copy.
+        Assert.StartsWith(Path.GetFullPath(SourceRoot!), Path.GetFullPath(weirFile), StringComparison.OrdinalIgnoreCase);
+        return [.. document.RootElement.GetProperty("results").EnumerateArray().Select(element => element.Clone())];
     }
 }
 
@@ -141,4 +199,14 @@ internal static class RepositoryPaths
             return null;
         }
     }
+}
+
+/// <summary>
+/// Tests that block many thread-pool threads at once (parallel SQLite claims behind a barrier). They run on
+/// their own, after the parallel tests, so the timing-sensitive worker and process tests are not starved.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class SerialTestGroup
+{
+    public const string Name = "Serial: thread-pool heavy";
 }

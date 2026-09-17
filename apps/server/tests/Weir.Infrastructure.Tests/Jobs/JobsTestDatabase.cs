@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Weir.Core.Activity;
 using Weir.Core.Jobs;
+using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Sqlite;
 

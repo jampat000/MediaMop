@@ -1,7 +1,7 @@
 using Weir.Core.Json;
 using Weir.Core.Security;
+using Weir.Core.Time;
 using Weir.Infrastructure.Auth;
-using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Settings;
 
 namespace Weir.Infrastructure.Tests.Platform;

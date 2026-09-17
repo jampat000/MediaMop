@@ -57,7 +57,7 @@ public static class NotificationRules
 
         if (!SupportedProviders.Contains(provider, StringComparer.Ordinal))
         {
-            throw new PyValueErrorException($"Unsupported provider: {PyConvert.ReprString(provider ?? string.Empty)}. Choose from: {string.Join(", ", SupportedProviders)}");
+            throw new PyValueErrorException($"Unsupported provider: {PyStrings.Repr(provider ?? string.Empty)}. Choose from: {string.Join(", ", SupportedProviders)}");
         }
 
         ExternalUrlPolicy.ValidateExternalProviderUrl(url);
@@ -220,7 +220,7 @@ public sealed record SplitUrl(string Scheme, string Netloc, string Path, string 
 
             if (!port.All(char.IsAsciiDigit) || !int.TryParse(port, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
             {
-                throw new PyValueErrorException($"Port could not be cast to integer value as {PyConvert.ReprString(port)}");
+                throw new PyValueErrorException($"Port could not be cast to integer value as {PyStrings.Repr(port)}");
             }
 
             if (number > 65535)
@@ -275,7 +275,7 @@ public sealed record SplitUrl(string Scheme, string Netloc, string Path, string 
                 }
                 else if (!PyIpAddress.TryParse(bracketed, out var ip))
                 {
-                    throw new PyValueErrorException($"{PyConvert.ReprString(bracketed)} does not appear to be an IPv4 or IPv6 address");
+                    throw new PyValueErrorException($"{PyStrings.Repr(bracketed)} does not appear to be an IPv4 or IPv6 address");
                 }
                 else if (!ip.IsV6)
                 {

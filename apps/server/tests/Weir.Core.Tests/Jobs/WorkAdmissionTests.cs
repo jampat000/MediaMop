@@ -1,5 +1,6 @@
-using Weir.Core.Activity;
 using Weir.Core.Jobs;
+using Weir.Core.Settings;
+using Weir.Core.Time;
 
 namespace Weir.Core.Tests.Jobs;
 
@@ -16,7 +17,7 @@ public sealed class WorkAdmissionTests
     [Fact]
     public void A_pause_with_no_expiry_stays_paused()
     {
-        var state = PauseState.Resolve(true, null, true, Now);
+        var state = PauseState.Resolve(true, null, true, Now.UtcDateTime);
 
         Assert.True(state.Paused);
         Assert.False(state.Expired);
@@ -26,7 +27,7 @@ public sealed class WorkAdmissionTests
     [Fact]
     public void A_pause_expires_on_its_own_without_a_background_task()
     {
-        var state = PauseState.Resolve(true, Now.AddMinutes(-1), true, Now);
+        var state = PauseState.Resolve(true, PyDateTime.FromUtc(Now.AddMinutes(-1).UtcDateTime), true, Now.UtcDateTime);
 
         Assert.False(state.Paused);
         Assert.True(state.Expired);
@@ -36,7 +37,7 @@ public sealed class WorkAdmissionTests
     [Fact]
     public void A_pause_that_has_not_yet_expired_is_still_a_pause_and_says_when()
     {
-        var state = PauseState.Resolve(true, Now.AddHours(2), true, Now);
+        var state = PauseState.Resolve(true, PyDateTime.FromUtc(Now.AddHours(2).UtcDateTime), true, Now.UtcDateTime);
 
         Assert.True(state.Paused);
         Assert.Equal("Processing is paused. Weir will start work again automatically at 2026-08-26 16:00 UTC.", state.Reason);
@@ -45,7 +46,7 @@ public sealed class WorkAdmissionTests
     [Fact]
     public void An_unpaused_suite_drops_the_until_time()
     {
-        Assert.Equal(new PauseState(false, null, false), PauseState.Resolve(false, Now.AddHours(1), false, Now));
+        Assert.Equal(new PauseState(false, null, false), PauseState.Resolve(false, PyDateTime.FromUtc(Now.AddHours(1).UtcDateTime), false, Now.UtcDateTime));
     }
 
     [Fact]
@@ -199,21 +200,6 @@ public sealed class WorkAdmissionTests
     public void Partial_outputs_match_the_hidden_partial_glob(string name, bool matches)
     {
         Assert.Equal(matches, WeirTempFiles.IsPartialOutputName(name, ignoreCase: false));
-    }
-
-    [Fact]
-    public void Activity_facts_are_lifted_from_the_detail()
-    {
-        var facts = ActivityFacts.Classify(
-            ActivityEventTypes.RefinerWorkerFailure,
-            "{\"job_id\":3,\"result\":\"Retrying\",\"trigger\":\" Scheduled \",\"library_id\":4,\"relative_media_path\":\" a/b.mkv \",\"run_id\":9}");
-        Assert.Equal(new ActivityFacts("scheduled", "retrying", 4, "a/b.mkv", "run:9"), facts);
-
-        Assert.Equal(new ActivityFacts(null, "failed", null, null, null), ActivityFacts.Classify(ActivityEventTypes.RefinerWorkerFailure, null));
-        Assert.Equal(new ActivityFacts("manual", "failed", null, null, "run:True"), ActivityFacts.Classify("auth.login", "{\"ok\":false,\"library_id\":true,\"run_id\":true}"));
-        Assert.Equal("skipped", ActivityFacts.Classify(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "{\"result\":\"skipped\"}").Result);
-        // Python's word order: "failure" (in the event type's name) is checked before "completed".
-        Assert.Equal("failed", ActivityFacts.Classify(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "not json").Result);
     }
 
     private static LibraryAdmissionSnapshot Library(long id) =>

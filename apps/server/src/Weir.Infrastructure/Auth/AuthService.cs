@@ -153,7 +153,7 @@ public sealed class AuthService
             trustedDevice,
             now,
             null,
-            SessionRules.Truncate(label.Length == 0 ? SessionRules.DefaultClientLabel : label, 80));
+            PyStrings.Slice(label.Length == 0 ? SessionRules.DefaultClientLabel : label, 80));
         await AuthStore.InsertSessionAsync(uow, row).ConfigureAwait(false);
         var revoked = await EnforceSessionLimitAsync(uow, user.Id).ConfigureAwait(false);
         if (revoked > 0)
@@ -215,7 +215,7 @@ public sealed class AuthService
         var label = string.IsNullOrEmpty(session.ClientLabel) ? SessionRules.DefaultClientLabel : session.ClientLabel;
         return new PyDict()
             .Set("session_id", session.PublicId)
-            .Set("client_label", SessionRules.Truncate(label, 80))
+            .Set("client_label", PyStrings.Slice(label, 80))
             .Set("current", current)
             .Set("trusted_device", session.IsTrustedDevice)
             .Set("created_at", session.CreatedAt.PydanticJson())

@@ -102,7 +102,9 @@ public sealed class ProcessRunnerTests
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => Runner.RunAsync(new ProcessRequest
         {
-            Argv = Shell("echo first& ping -n 60 127.0.0.1 >NUL", "echo first; sleep 60"),
+            // The line comes from the long-lived process itself. A line the shell echoes before starting its child
+            // races the child's creation: under load the tree kill can run before the child exists to be found.
+            Argv = Shell("ping -n 60 127.0.0.1", "echo first; exec sleep 60"),
             OnStdoutLine = _ => throw new InvalidOperationException("stop"),
         }));
 

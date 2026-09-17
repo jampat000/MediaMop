@@ -1,97 +1,9 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Weir.Core.Jobs;
 using Weir.Infrastructure.Jobs;
 
 namespace Weir.Infrastructure.Tests.Jobs;
-
-/// <summary>Skipped when the Python backend's virtualenv cannot be found.</summary>
-[AttributeUsage(AttributeTargets.Method)]
-internal sealed class PythonBackendFactAttribute : FactAttribute
-{
-    public PythonBackendFactAttribute()
-    {
-        if (PythonBackend.Executable is null || PythonBackend.SourceRoot is null)
-        {
-            Skip = "The Python backend virtualenv (apps/backend/.venv) was not found; set WEIR_TEST_PYTHON to run cross-backend tests.";
-        }
-    }
-}
-
-/// <summary>Finds and runs the Python reference backend.</summary>
-internal static class PythonBackend
-{
-    /// <summary>This checkout's <c>apps/backend/src</c>: the code the driver imports.</summary>
-    public static string? SourceRoot =>
-        RepositoryPaths.RepositoryRoot is { } root && Directory.Exists(Path.Join(root, "apps", "backend", "src", "weir"))
-            ? Path.Join(root, "apps", "backend", "src")
-            : null;
-
-    public static string? Executable
-    {
-        get
-        {
-            var configured = Environment.GetEnvironmentVariable("WEIR_TEST_PYTHON");
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                return File.Exists(configured) ? configured : null;
-            }
-
-            if (RepositoryPaths.RepositoryRoot is not { } root)
-            {
-                return null;
-            }
-
-            var roots = new List<string> { root };
-            // A git worktree under .claude/worktrees has no virtualenv of its own; use the main checkout's.
-            var marker = Path.Join(".claude", "worktrees");
-            var index = root.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (index > 0)
-            {
-                roots.Add(root[..index].TrimEnd('/', '\\'));
-            }
-
-            return roots
-                .SelectMany(candidate => new[]
-                {
-                    Path.Join(candidate, "apps", "backend", ".venv", "Scripts", "python.exe"),
-                    Path.Join(candidate, "apps", "backend", ".venv", "bin", "python"),
-                })
-                .FirstOrDefault(File.Exists);
-        }
-    }
-
-    public static async Task<JsonElement[]> RunAsync(string dbPath, string workDirectory, params object[] ops)
-    {
-        var opsPath = Path.Join(workDirectory, $"ops-{Guid.NewGuid():N}.json");
-        await File.WriteAllTextAsync(opsPath, JsonSerializer.Serialize(ops));
-        var start = new ProcessStartInfo(Executable!)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        start.ArgumentList.Add(Path.Join(AppContext.BaseDirectory, "Jobs", "python_queue_driver.py"));
-        start.ArgumentList.Add(SourceRoot!);
-        start.ArgumentList.Add(dbPath);
-        start.ArgumentList.Add(opsPath);
-        start.Environment["PYTHONPATH"] = SourceRoot!;
-        start.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
-        start.Environment["WEIR_HOME"] = workDirectory;
-        using var process = Process.Start(start)!;
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(2));
-        var output = await stdout;
-        Assert.True(process.ExitCode == 0, $"python driver failed ({process.ExitCode}): {await stderr}");
-        using var document = JsonDocument.Parse(output.Trim().Split('\n')[^1]);
-        var weirFile = document.RootElement.GetProperty("weir_file").GetString()!;
-        // The import must come from this checkout's backend, not an installed copy.
-        Assert.StartsWith(Path.GetFullPath(SourceRoot!), Path.GetFullPath(weirFile), StringComparison.OrdinalIgnoreCase);
-        return [.. document.RootElement.GetProperty("results").EnumerateArray().Select(element => element.Clone())];
-    }
-}
 
 /// <summary>
 /// Python and .NET share one queue: rows enqueued by one are claimed, completed, failed and recovered by
@@ -105,7 +17,7 @@ public sealed class CrossBackendTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    [PythonBackendFact]
+    [PythonFact]
     public async Task Python_enqueues_and_dotnet_claims_and_completes()
     {
         var results = await PythonAsync(
@@ -134,7 +46,7 @@ public sealed class CrossBackendTests : IDisposable
         Assert.Equal(2, read[3].GetProperty("attempt_count").GetInt32());
     }
 
-    [PythonBackendFact]
+    [PythonFact]
     public async Task Dotnet_enqueues_and_python_claims_and_completes()
     {
         var job = await _db.Store.EnqueueOrGetAsync("net-1", Kind, "{\"x\":1}");
@@ -160,7 +72,7 @@ public sealed class CrossBackendTests : IDisposable
         Assert.Equal(RefinerJobStatus.Completed, (await _db.Store.GetAsync(job.Id))!.Status);
     }
 
-    [PythonBackendFact]
+    [PythonFact]
     public async Task A_lease_dotnet_wrote_is_checked_by_python_and_its_expiry_lets_python_reclaim()
     {
         var job = await _db.Store.EnqueueOrGetAsync("lease", Kind);
@@ -181,7 +93,7 @@ public sealed class CrossBackendTests : IDisposable
         Assert.True(await _db.Store.CompleteClaimedAsync(job.Id, "python", T0.AddSeconds(100)));
     }
 
-    [PythonBackendFact]
+    [PythonFact]
     public async Task A_python_worker_that_died_mid_job_is_recovered_by_dotnet_and_the_reverse()
     {
         var jobs = await PythonAsync(
@@ -207,7 +119,7 @@ public sealed class CrossBackendTests : IDisposable
             recovered[2].GetProperty("last_error").GetString());
     }
 
-    [PythonBackendFact]
+    [PythonFact]
     public async Task Both_workers_store_the_same_failure_wording()
     {
         await _db.Store.EnqueueOrGetAsync("py-fail", "refiner.test.python_fail.v1", maxAttempts: 2);
@@ -228,7 +140,7 @@ public sealed class CrossBackendTests : IDisposable
         Assert.Equal((string?)_db.Scalar("SELECT not_before FROM refiner_jobs WHERE dedupe_key = 'py-fail'"), (string?)_db.Scalar("SELECT not_before FROM refiner_jobs WHERE dedupe_key = 'net-fail'"));
     }
 
-    [PythonBackendFact]
+    [PythonFact]
     public async Task A_pause_python_saved_gates_the_dotnet_claim_and_both_agree_on_admission()
     {
         await _db.Store.EnqueueOrGetAsync("remux", "refiner.file.remux_pass.v1");

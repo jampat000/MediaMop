@@ -1,5 +1,7 @@
 using Weir.Core.Configuration;
 using Weir.Core.Jobs;
+using Weir.Core.Observability;
+using Weir.Core.Time;
 
 namespace Weir.Core.Tests.Jobs;
 
@@ -88,46 +90,35 @@ public sealed class JobRulesTests
             WorkerFailures.RefusedJobError("Refiner", WorkerFailures.UnprefixedKindReason("legacy.unprefixed", 2), willRetry: false));
         Assert.Equal(
             "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: boom",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureCause.RuntimeError("boom"), willRetry: true)));
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError("boom"), willRetry: true)));
         Assert.Equal(
             "Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: boom",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureCause.RuntimeError("boom"), willRetry: false)));
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError("boom"), willRetry: false)));
         Assert.Equal(
             "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RefinerNoHandlerForJobKind: no Refiner job handler registered for job_kind='refiner.test.unknown.v1'",
             WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", WorkerFailures.NoHandler("refiner.test.unknown.v1"), willRetry: true)));
         Assert.Equal(
             "Refiner job failed: Weir could not use the saved credentials. This job is marked failed so it does not look successful. Next action: Re-enter the the provider credentials and run the connection test again. Technical detail: RuntimeError: api_key=[redacted] token: [redacted]",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureCause.RuntimeError("api_key=abc123 token: xyz"), willRetry: false)));
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError("api_key=abc123 token: xyz"), willRetry: false)));
         Assert.Equal(
             "Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: AlreadyRecordedFailure: the output folder is not writable",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureCause.FromException(new AlreadyRecordedFailureException("the output folder is not writable")), willRetry: false)));
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.FromDotNet(new AlreadyRecordedFailureException("the output folder is not writable")), willRetry: false)));
         Assert.Equal(
             "Refiner job failed: The job hit an unexpected error. The work ran, but Weir could not record that it finished. Technical detail: RuntimeError: complete_claimed_refiner_job refused (lease/state mismatch)",
-            WorkerFailures.StoredError(OperatorFailures.FromCause(
+            WorkerFailures.StoredError(FailureMessages.FromException(
                 "Refiner",
                 "job",
-                FailureCause.RuntimeError("complete_claimed_refiner_job refused (lease/state mismatch)"),
+                FailureMessages.RuntimeError("complete_claimed_refiner_job refused (lease/state mismatch)"),
                 continuation: "The work ran, but Weir could not record that it finished.")));
-    }
-
-    [Fact]
-    public void Dotnet_exceptions_classify_like_their_python_counterparts()
-    {
         Assert.Equal(
-            "Refiner job failed: Weir could not use a file or folder it needed. This job is marked failed so it does not look successful. Next action: Check that the file or folder still exists and that Weir can read and write it. Technical detail: FileNotFoundException: gone",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureCause.FromException(new FileNotFoundException("gone")), willRetry: false)));
-        Assert.Equal(FailureKind.Validation, OperatorFailures.Classify(FailureCause.FromException(new FormatException("bad payload"))));
-        Assert.Equal(FailureKind.Network, OperatorFailures.Classify(FailureCause.FromException(new IOException("pipe broke"))));
-        Assert.Equal(FailureKind.NotFound, OperatorFailures.Classify(FailureCause.FromException(new InvalidOperationException("file not found"))));
-        Assert.Equal(FailureKind.RateLimit, OperatorFailures.Classify(FailureCause.RuntimeError("HTTP 429")));
-        Assert.Equal(FailureKind.Auth, OperatorFailures.Classify(FailureCause.RuntimeError("403 Forbidden")));
-        Assert.Equal(FailureKind.Internal, OperatorFailures.Classify(FailureCause.FromException(new InvalidOperationException("boom"))));
+            "Refiner job failed: Weir could not use a file or folder it needed. This job is marked failed so it does not look successful. Next action: Check that the file or folder still exists and that Weir can read and write it. Technical detail: FileNotFoundError: gone",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.FromDotNet(new FileNotFoundException("gone")), willRetry: false)));
     }
 
     [Fact]
     public void Stored_errors_are_bounded_to_ten_thousand_characters()
     {
-        var failure = WorkerFailures.JobFailure("Refiner", FailureCause.RuntimeError(new string('x', 20_000)), willRetry: false);
+        var failure = WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError(new string('x', 20_000)), willRetry: false);
         Assert.Equal(1000, failure.TechnicalDetail!.Length);
         Assert.True(WorkerFailures.StoredError(failure with { Message = new string('m', 12_000) }).Length == 10_000);
     }
@@ -180,9 +171,9 @@ public sealed class JobRulesTests
     public void Python_isoformat_omits_zero_microseconds_and_keeps_the_offset()
     {
         var at = new DateTimeOffset(2026, 4, 10, 13, 0, 0, TimeSpan.Zero);
-        Assert.Equal("2026-04-10 13:00:00+00:00", JobQueueRules.PythonIsoFormat(at, ' '));
-        Assert.Equal("2026-04-10T13:00:00.123456+00:00", JobQueueRules.PythonIsoFormat(at.AddTicks(1_234_567), 'T'));
-        Assert.Equal("2026-04-10T13:00:00-05:30", JobQueueRules.PythonIsoFormat(new DateTimeOffset(2026, 4, 10, 13, 0, 0, new TimeSpan(-5, -30, 0)), 'T'));
+        Assert.Equal("2026-04-10 13:00:00+00:00", PyDateTime.FromDateTimeOffset(at).IsoFormat(' '));
+        Assert.Equal("2026-04-10T13:00:00.123456+00:00", PyDateTime.FromDateTimeOffset(at.AddTicks(1_234_567)).IsoFormat('T'));
+        Assert.Equal("2026-04-10T13:00:00-05:30", PyDateTime.FromDateTimeOffset(new DateTimeOffset(2026, 4, 10, 13, 0, 0, new TimeSpan(-5, -30, 0))).IsoFormat('T'));
     }
 
     [Fact]

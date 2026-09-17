@@ -1,3 +1,5 @@
+using Weir.Core.Json;
+
 namespace Weir.Core.Jobs;
 
 /// <summary>
@@ -64,13 +66,13 @@ public static class JobKindGuard
         if (IsRetired(jobKind))
         {
             throw new ArgumentException(
-                $"refiner_enqueue_or_get_job refuses a retired job_kind (got {PythonRepr(jobKind)})");
+                $"refiner_enqueue_or_get_job refuses a retired job_kind (got {PyStrings.Repr(jobKind)})");
         }
 
         if (!HasRefinerPrefix(jobKind))
         {
             throw new ArgumentException(
-                $"refiner_enqueue_or_get_job requires job_kind to start with {PythonRepr(JobKindPrefix)} (got {PythonRepr(jobKind)})");
+                $"refiner_enqueue_or_get_job requires job_kind to start with {PyStrings.Repr(JobKindPrefix)} (got {PyStrings.Repr(jobKind)})");
         }
     }
 
@@ -84,13 +86,7 @@ public static class JobKindGuard
         {
             throw new ArgumentException(
                 "Refiner worker handler registry keys must start with " +
-                $"{PythonRepr(JobKindPrefix)} and must not use a retired prefix (offending keys: [{string.Join(", ", bad.Select(PythonRepr))}])");
+                $"{PyStrings.Repr(JobKindPrefix)} and must not use a retired prefix (offending keys: [{string.Join(", ", bad.Select(PyStrings.Repr))}])");
         }
     }
-
-    /// <summary>Python's <c>repr()</c> of a plain string, as the error wording embeds it.</summary>
-    internal static string PythonRepr(string value) =>
-        value.Contains('\'', StringComparison.Ordinal) && !value.Contains('"', StringComparison.Ordinal)
-            ? "\"" + value.Replace("\\", "\\\\", StringComparison.Ordinal) + "\""
-            : "'" + value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("'", "\\'", StringComparison.Ordinal) + "'";
 }

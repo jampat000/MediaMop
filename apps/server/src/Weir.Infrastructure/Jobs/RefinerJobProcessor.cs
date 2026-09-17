@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Weir.Core.Activity;
 using Weir.Core.Jobs;
+using Weir.Core.Json;
+using Weir.Core.Observability;
+using Weir.Core.Time;
 
 namespace Weir.Infrastructure.Jobs;
 
@@ -100,7 +103,7 @@ public sealed class RefinerJobProcessor
         DateTimeOffset? now = null,
         CancellationToken cancellationToken = default)
     {
-        var when = JobQueueRules.ToMicroseconds((now ?? _time.GetUtcNow()).ToUniversalTime());
+        var when = PyDateTime.TruncateToMicroseconds((now ?? _time.GetUtcNow()).ToUniversalTime());
         var leaseUntil = when + TimeSpan.FromSeconds(leaseSeconds);
 
         // The schedule and the pause are evaluated at lease time, not only at enqueue (#337). A job
@@ -167,7 +170,7 @@ public sealed class RefinerJobProcessor
         catch (Exception exception)
 #pragma warning restore CA1031
         {
-            var failure = WorkerFailures.JobFailure(Module, FailureCause.FromException(exception), willRetry);
+            var failure = WorkerFailures.JobFailure(Module, FailureMessages.FromDotNet(exception), willRetry);
             _logger.LogError(
                 "Refiner job handler failed for job_id={JobId} kind={JobKind}: {Message} {Detail}",
                 context.Id,
@@ -218,12 +221,12 @@ public sealed class RefinerJobProcessor
         }
 
         // The handler finished; only recording that failed. Said plainly, with the detail after it.
-        var bounded = OperatorFailures.PythonSlice(
+        var bounded = PyStrings.Slice(
             TerminalizationFailurePrefix + WorkerFailures.StoredError(
-                OperatorFailures.FromCause(
+                FailureMessages.FromException(
                     Module,
                     "job",
-                    FailureCause.RuntimeError(completeError!),
+                    FailureMessages.RuntimeError(completeError!),
                     continuation: "The work ran, but Weir could not record that it finished.")),
             JobQueueRules.LastErrorLimit);
         try
@@ -263,7 +266,7 @@ public sealed class RefinerJobProcessor
                               JobPayload.LooseInteger(payload, "library_id") is not null)
             ? raw
             : (System.Text.Json.JsonElement?)null;
-        var safeMessage = OperatorFailures.PythonSlice(string.Join(' ', message.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)), 1200);
+        var safeMessage = PyStrings.Slice(string.Join(' ', message.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)), 1200);
 
         try
         {
@@ -271,27 +274,27 @@ public sealed class RefinerJobProcessor
                 new UnhandledJobFailure(context, JobPayload.LooseInteger(payload, "library_id"), scope, relativeTrimmed, safeMessage),
                 CancellationToken.None).ConfigureAwait(false);
 
-            var detail = new PythonJsonObject()
-                .Add("job_id", context.Id)
-                .Add("job_kind", context.JobKind)
-                .Add("failure_class", "unknown")
-                .Add("message", safeMessage)
-                .Add("next_action", "Review this job and use Start again after fixing the cause.")
-                .Add("retry_scheduled", willRetry == true)
-                .Add("result", willRetry == true ? "retrying" : "failed");
+            var detail = new PyDict()
+                .Set("job_id", context.Id)
+                .Set("job_kind", context.JobKind)
+                .Set("failure_class", "unknown")
+                .Set("message", safeMessage)
+                .Set("next_action", "Review this job and use Start again after fixing the cause.")
+                .Set("retry_scheduled", willRetry == true)
+                .Set("result", willRetry == true ? "retrying" : "failed");
             if (relativeTrimmed is not null)
             {
-                detail.Add("relative_media_path", relativeTrimmed);
+                detail.Set("relative_media_path", relativeTrimmed);
             }
 
             if (libraryIdValue is { } libraryId)
             {
-                detail.AddRaw("library_id", libraryId);
+                detail.Set("library_id", PyJsonParser.Parse(libraryId.GetRawText()));
             }
 
             AddProvenance(detail, payload);
             await _activity.RecordAsync(
-                new ActivityEventDraft(ActivityEventTypes.RefinerWorkerFailure, "refiner", "A Refiner job stopped with an error", detail.ToString()),
+                new ActivityEventDraft(ActivityEventTypes.RefinerWorkerFailure, "refiner", "A Refiner job stopped with an error", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)),
                 CancellationToken.None).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Diagnostics must never stop the worker from failing the job.
@@ -303,7 +306,7 @@ public sealed class RefinerJobProcessor
     }
 
     /// <summary><c>job_provenance</c>: <c>trigger</c> and <c>run_id</c> from the payload, only when present and valid.</summary>
-    internal static void AddProvenance(PythonJsonObject detail, System.Text.Json.JsonElement? payload)
+    internal static void AddProvenance(PyDict detail, System.Text.Json.JsonElement? payload)
     {
         if (payload is not { } element)
         {
@@ -311,9 +314,9 @@ public sealed class RefinerJobProcessor
         }
 
         var trigger = JobPayload.StringProperty(payload, "trigger");
-        if (trigger is not null && ActivityFacts.Triggers.Contains(trigger.Trim().ToLowerInvariant()))
+        if (trigger is not null && ActivityClassifier.Triggers.Contains(trigger.Trim().ToLowerInvariant()))
         {
-            detail.Add("trigger", trigger.Trim().ToLowerInvariant());
+            detail.Set("trigger", trigger.Trim().ToLowerInvariant());
         }
 
         if (element.TryGetProperty("run_id", out var runId))
@@ -326,7 +329,7 @@ public sealed class RefinerJobProcessor
             };
             if (valid)
             {
-                detail.AddRaw("run_id", runId);
+                detail.Set("run_id", PyJsonParser.Parse(runId.GetRawText()));
             }
         }
     }

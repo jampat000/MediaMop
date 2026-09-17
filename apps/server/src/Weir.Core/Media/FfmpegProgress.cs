@@ -1,4 +1,5 @@
 using System.Globalization;
+using Weir.Core.Json;
 using Weir.Core.Rules;
 
 namespace Weir.Core.Media;
@@ -52,7 +53,7 @@ public sealed class FfmpegProgressTracker
             throw new MediaToolException("ffmpeg timed out");
         }
 
-        var line = Py.Strip(rawLine);
+        var line = PyStrings.Strip(rawLine);
         var equals = line.IndexOf('=', StringComparison.Ordinal);
         if (line.Length == 0 || equals < 0)
         {

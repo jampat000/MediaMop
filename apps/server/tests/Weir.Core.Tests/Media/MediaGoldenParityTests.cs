@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Weir.Core.Json;
 using Weir.Core.Media;
 using Weir.Core.Rules;
 
@@ -187,7 +188,7 @@ public sealed class MediaGoldenParityTests
             var expected = item.GetProperty("expected");
             var result = expected.GetProperty("result");
             var actual = ProbeOutput.DurationSeconds(data.RootElement);
-            Assert.Equal(result.ValueKind == JsonValueKind.Null ? null : result.GetString(), actual is null ? null : Py.FloatRepr(actual.Value));
+            Assert.Equal(result.ValueKind == JsonValueKind.Null ? null : result.GetString(), actual is null ? null : PyConvert.FloatRepr(actual.Value));
         }
 
         foreach (var item in root.GetProperty("integrity").EnumerateArray())

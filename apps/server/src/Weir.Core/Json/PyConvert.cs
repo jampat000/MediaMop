@@ -59,58 +59,17 @@ public static class PyConvert
             PyNull => "None",
             PyBool b => b.Value ? "True" : "False",
             PyInt i => i.Value.ToString(CultureInfo.InvariantCulture),
-            PyFloat f => double.IsNaN(f.Value) ? "nan" : double.IsInfinity(f.Value) ? (f.Value > 0 ? "inf" : "-inf") : PyJsonWriter.FloatRepr(f.Value),
-            PyStr s => ReprString(s.Value),
+            PyFloat f => FloatRepr(f.Value),
+            PyStr s => PyStrings.Repr(s.Value),
             PyList l => "[" + string.Join(", ", l.Items.Select(Repr)) + "]",
-            PyDict d => "{" + string.Join(", ", d.Items.Select(p => ReprString(p.Key) + ": " + Repr(p.Value))) + "}",
+            PyDict d => "{" + string.Join(", ", d.Items.Select(p => PyStrings.Repr(p.Key) + ": " + Repr(p.Value))) + "}",
             _ => throw new InvalidOperationException("Unknown JSON value."),
         };
     }
 
-    /// <summary><c>repr(str)</c>: single quotes unless the text holds a single quote and no double quote.</summary>
-    public static string ReprString(string value)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-        var quote = value.Contains('\'', StringComparison.Ordinal) && !value.Contains('"', StringComparison.Ordinal) ? '"' : '\'';
-        var builder = new StringBuilder(value.Length + 2);
-        builder.Append(quote);
-        foreach (var c in value)
-        {
-            switch (c)
-            {
-                case '\\':
-                    builder.Append("\\\\");
-                    break;
-                case '\n':
-                    builder.Append("\\n");
-                    break;
-                case '\r':
-                    builder.Append("\\r");
-                    break;
-                case '\t':
-                    builder.Append("\\t");
-                    break;
-                default:
-                    if (c == quote)
-                    {
-                        builder.Append('\\').Append(c);
-                    }
-                    else if (c < 0x20 || c == 0x7F)
-                    {
-                        builder.Append("\\x").Append(((int)c).ToString("x2", CultureInfo.InvariantCulture));
-                    }
-                    else
-                    {
-                        builder.Append(c);
-                    }
-
-                    break;
-            }
-        }
-
-        builder.Append(quote);
-        return builder.ToString();
-    }
+    /// <summary><c>repr(float)</c>: shortest round-trip digits, and <c>nan</c>, <c>inf</c>, <c>-inf</c>.</summary>
+    public static string FloatRepr(double value) =>
+        double.IsNaN(value) ? "nan" : double.IsInfinity(value) ? (value > 0 ? "inf" : "-inf") : PyJsonWriter.FloatRepr(value);
 
     /// <summary><c>int(value)</c>.</summary>
     public static BigInteger ToInt(PyJson value)
@@ -140,7 +99,7 @@ public static class PyConvert
                     return parsed;
                 }
 
-                throw new PyValueErrorException($"invalid literal for int() with base 10: {ReprString(s.Value)}");
+                throw new PyValueErrorException($"invalid literal for int() with base 10: {PyStrings.Repr(s.Value)}");
             default:
                 throw new PyTypeErrorException(
                     $"int() argument must be a string, a bytes-like object or a real number, not '{value.PythonTypeName}'");

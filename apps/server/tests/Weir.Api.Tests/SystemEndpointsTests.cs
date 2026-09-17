@@ -58,27 +58,9 @@ public sealed class SystemEndpointsTests
     [Fact]
     public async Task Health_is_unhealthy_when_the_database_cannot_be_reached()
     {
-        // No workers, so nothing but the start-up retention tick holds the file open.
+        // No workers, so only the periodic tasks hold the file open, and only briefly.
         await using var server = await WeirTestServer.StartAsync([("WEIR_REFINER_WORKER_COUNT", "0")]);
-        var dbPath = Path.Join(server.Home, "data", "weir.sqlite3");
-        // Replace the file with a directory: any new connection now fails. A background connection
-        // closing at the same moment can leave the delete pending briefly on Windows, so retry.
-        for (var attempt = 0; ; attempt++)
-        {
-            SqliteConnection.ClearAllPools();
-            File.Delete(dbPath);
-            File.Delete(dbPath + "-wal");
-            File.Delete(dbPath + "-shm");
-            try
-            {
-                Directory.CreateDirectory(dbPath);
-                break;
-            }
-            catch (IOException) when (attempt < 50)
-            {
-                await Task.Delay(100);
-            }
-        }
+        await server.BreakDatabaseAsync();
 
         using var response = await server.Client.GetAsync("/health");
 

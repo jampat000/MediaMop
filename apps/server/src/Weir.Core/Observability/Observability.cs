@@ -313,7 +313,8 @@ public static class FailureMessages
 
     public static string WhyForKind(FailureKind kind, string? provider)
     {
-        var where = OperatorMessages.ProviderLabel(provider) is { } label ? $" from {label}" : string.Empty;
+        // Python: f" from {provider_label(provider)}" if provider else "".
+        var where = string.IsNullOrEmpty(provider) ? string.Empty : $" from {OperatorMessages.ProviderLabel(provider)}";
         return kind switch
         {
             FailureKind.RateLimit => $"The provider{where} temporarily limited requests.",
@@ -329,7 +330,8 @@ public static class FailureMessages
 
     public static string? NextActionForKind(FailureKind kind, string? provider, bool recoverable)
     {
-        var providerText = OperatorMessages.ProviderLabel(provider) ?? "the provider";
+        // Python: provider_label(provider) or "the provider" (an all-space provider labels as "").
+        var providerText = OperatorMessages.ProviderLabel(provider) is { Length: > 0 } label ? label : "the provider";
         return kind switch
         {
             FailureKind.Credential or FailureKind.Auth => $"Re-enter the {providerText} credentials and run the connection test again.",
@@ -354,7 +356,7 @@ public static class FailureMessages
         ArgumentNullException.ThrowIfNull(exception);
         var kind = Classify(exception);
         var providerText = OperatorMessages.ProviderLabel(provider);
-        var where = providerText is not null ? $" for {providerText}" : string.Empty;
+        var where = string.IsNullOrEmpty(providerText) ? string.Empty : $" for {providerText}";
         var state = recoverable ? "skipped and continued" : "failed";
         var happensNext = !string.IsNullOrEmpty(continuation)
             ? continuation
@@ -366,21 +368,31 @@ public static class FailureMessages
         return new OperatorFailure(
             module, action, kind, recoverable, message, WhyForKind(kind, provider), happensNext,
             NextActionForKind(kind, provider, recoverable),
-            Auth.SessionRules.Truncate(detail, 1000));
+            PyStrings.Slice(detail, 1000));
     }
 
-    /// <summary>The Python exception a .NET exception stands for.</summary>
+    /// <summary>A <c>RuntimeError(message)</c>, which Weir's own refusals raise in the Python code.</summary>
+    public static FailureSubject RuntimeError(string message) => new("RuntimeError", message, ExceptionCategory.Other);
+
+    /// <summary>
+    /// The Python exception a .NET exception stands for, as <c>classify_exception</c> sees it. The class
+    /// name matters as well as the family: the classifier searches <c>"{type}: {message}"</c>, so
+    /// <c>UnauthorizedAccessException</c> would read as an auth failure where Python's
+    /// <c>PermissionError</c> reads as a file problem.
+    /// </summary>
     public static FailureSubject FromDotNet(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
         return exception switch
         {
+            Jobs.AlreadyRecordedFailureException => new FailureSubject(Jobs.AlreadyRecordedFailureException.PythonTypeName, exception.Message, ExceptionCategory.Other),
             FileNotFoundException or DirectoryNotFoundException => new FailureSubject("FileNotFoundError", exception.Message, ExceptionCategory.Filesystem),
             UnauthorizedAccessException => new FailureSubject("PermissionError", exception.Message, ExceptionCategory.Filesystem),
             TimeoutException => new FailureSubject("TimeoutError", exception.Message, ExceptionCategory.NetworkOrOs),
             System.Net.Http.HttpRequestException or System.Net.Sockets.SocketException => new FailureSubject("ConnectionError", exception.Message, ExceptionCategory.NetworkOrOs),
             IOException => new FailureSubject("OSError", exception.Message, ExceptionCategory.NetworkOrOs),
-            ArgumentException or FormatException or InvalidCastException or PyValueErrorException or PyTypeErrorException =>
+            PyTypeErrorException => new FailureSubject("TypeError", exception.Message, ExceptionCategory.Validation),
+            ArgumentException or FormatException or InvalidCastException or PyValueErrorException =>
                 new FailureSubject("ValueError", exception.Message, ExceptionCategory.Validation),
             _ => new FailureSubject(exception.GetType().Name, exception.Message, ExceptionCategory.Other),
         };
@@ -397,7 +409,7 @@ public static class MetricsTruth
         {
             if (value < 0)
             {
-                throw new PyValueErrorException($"Metric {PyConvert.ReprString(name)} must not be negative.");
+                throw new PyValueErrorException($"Metric {PyStrings.Repr(name)} must not be negative.");
             }
         }
     }

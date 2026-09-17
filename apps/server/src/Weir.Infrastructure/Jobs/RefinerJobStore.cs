@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Weir.Core.Jobs;
+using Weir.Core.Json;
+using Weir.Core.Time;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Jobs;
@@ -254,7 +256,7 @@ public sealed class RefinerJobStore
                     "UPDATE refiner_jobs SET status = @status, lease_owner = NULL, lease_expires_at = NULL, last_error = @error, " +
                     "updated_at = CURRENT_TIMESTAMP WHERE id = @id",
                     ("@status", RefinerJobStatus.HandlerOkFinalizeFailed),
-                    ("@error", OperatorFailures.PythonSlice(errorMessage, JobQueueRules.LastErrorLimit)),
+                    ("@error", PyStrings.Slice(errorMessage, JobQueueRules.LastErrorLimit)),
                     ("@id", jobId));
                 _metrics.RecordJobEvent(MetricsModule, "failed");
                 RecordQueueDepth(connection, transaction);
@@ -293,7 +295,7 @@ public sealed class RefinerJobStore
                     transaction,
                     "UPDATE refiner_jobs SET last_error = @error, status = @status, lease_owner = NULL, lease_expires_at = NULL, " +
                     "updated_at = CURRENT_TIMESTAMP WHERE id = @id",
-                    ("@error", JobQueueRules.RecoveredFinalizeFailureError(job.LastError, JobQueueRules.ToMicroseconds(when.ToUniversalTime()), recoveredByLabel)),
+                    ("@error", JobQueueRules.RecoveredFinalizeFailureError(job.LastError, PyDateTime.TruncateToMicroseconds(when.ToUniversalTime()), recoveredByLabel)),
                     ("@status", RefinerJobStatus.Completed),
                     ("@id", jobId));
                 _metrics.RecordJobEvent(MetricsModule, "completed");
@@ -658,7 +660,7 @@ public static class WorkAdmissionReader
                 suite = new SuitePauseSettings(
                     reader.IsDBNull(0) ? null : reader.GetString(0),
                     Bool(reader.GetValue(1)),
-                    PythonTimestamps.Parse(reader.GetValue(2)),
+                    PythonTimestamps.Parse(reader.GetValue(2)) is { } until ? PyDateTime.FromUtc(until.UtcDateTime) : null,
                     Bool(reader.GetValue(3)));
             }
         }

@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Domain: records and rules. No IO, no framework dependencies. -->
+  <!-- Domain: records and rules. No IO, no framework dependencies (TimeZoneConverter is data). -->
   <PropertyGroup>
     <RootNamespace>Weir.Core</RootNamespace>
     <IsTrimmable>true</IsTrimmable>
@@ -8,7 +8,7 @@
     <InternalsVisibleTo Include="Weir.Core.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <!-- IANA to Windows time zone ids (CLDR, via ICU): the server runs with invariant globalization, so Windows cannot convert them itself. -->
-    <EmbeddedResource Include="Jobs\windows-zones.txt" LogicalName="Weir.Core.Jobs.windows-zones.txt" />
+    <!-- IANA time zone names on every platform (see Time/TimeZones.cs). -->
+    <PackageReference Include="TimeZoneConverter" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text;
+using Weir.Core.Json;
 using Weir.Core.Rules;
 
 namespace Weir.Core.Media;
@@ -14,21 +15,9 @@ internal static class PyText
 {
     private static readonly UTF8Encoding Utf8Replace = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false);
 
-    /// <summary><c>len(text)</c>: code points, not UTF-16 units.</summary>
-    public static int Length(string text)
-    {
-        var count = 0;
-        foreach (var _ in text.EnumerateRunes())
-        {
-            count++;
-        }
-
-        return count;
-    }
-
     /// <summary><c>t[:max_chars] + "…(truncated)"</c> when longer than <paramref name="maxChars"/>.</summary>
     public static string Clip(string text, int maxChars) =>
-        Length(text) > maxChars ? Py.Slice(text, maxChars) + "…(truncated)" : text;
+        PyStrings.Length(text) > maxChars ? PyStrings.Slice(text, maxChars) + "…(truncated)" : text;
 
     /// <summary><c>bytes.decode("utf-8", errors="replace")</c>.</summary>
     public static string DecodeUtf8(ReadOnlySpan<byte> bytes)
@@ -147,81 +136,5 @@ internal static class PyText
 
     /// <summary><c>str(int)</c> or <c>str(float)</c> for a timeout as the reference passes it.</summary>
     public static string NumberText(double value, bool isFloat) =>
-        isFloat ? Py.FloatRepr(value) : ((long)value).ToString(CultureInfo.InvariantCulture);
-}
-
-/// <summary>Python's text forms of values the ffmpeg layer reports, for callers outside <c>Weir.Core</c>.</summary>
-public static class PythonText
-{
-    /// <summary><c>repr(float)</c>, as Python would print a progress percentage or a duration.</summary>
-    public static string FloatRepr(double value) => Py.FloatRepr(value);
-}
-
-/// <summary>A <c>json.dumps(..., ensure_ascii=True)</c> object writer with the default separators.</summary>
-internal sealed class PyJsonObject
-{
-    private readonly StringBuilder _builder = new("{");
-    private bool _first = true;
-
-    public PyJsonObject Add(string key, string value)
-    {
-        Key(key);
-        Py.AppendJsonString(_builder, value);
-        return this;
-    }
-
-    public PyJsonObject Add(string key, bool value)
-    {
-        Key(key);
-        _builder.Append(value ? "true" : "false");
-        return this;
-    }
-
-    public PyJsonObject Add(string key, long value)
-    {
-        Key(key);
-        _builder.Append(value.ToString(CultureInfo.InvariantCulture));
-        return this;
-    }
-
-    public PyJsonObject Add(string key, double value)
-    {
-        Key(key);
-        _builder.Append(double.IsNaN(value) ? "NaN" : double.IsPositiveInfinity(value) ? "Infinity" : double.IsNegativeInfinity(value) ? "-Infinity" : Py.FloatRepr(value));
-        return this;
-    }
-
-    public PyJsonObject Add(string key, IEnumerable<string> values)
-    {
-        Key(key);
-        _builder.Append('[');
-        var first = true;
-        foreach (var value in values)
-        {
-            if (!first)
-            {
-                _builder.Append(", ");
-            }
-
-            first = false;
-            Py.AppendJsonString(_builder, value);
-        }
-
-        _builder.Append(']');
-        return this;
-    }
-
-    public override string ToString() => _builder + "}";
-
-    private void Key(string key)
-    {
-        if (!_first)
-        {
-            _builder.Append(", ");
-        }
-
-        _first = false;
-        Py.AppendJsonString(_builder, key);
-        _builder.Append(": ");
-    }
+        isFloat ? PyConvert.FloatRepr(value) : ((long)value).ToString(CultureInfo.InvariantCulture);
 }

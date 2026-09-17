@@ -10,6 +10,7 @@ namespace Weir.Infrastructure.Tests.Jobs;
 /// No double claim under parallel workers, and correct recovery of expired leases, on a real SQLite file
 /// with every worker on its own connection pool (as separate processes would be).
 /// </summary>
+[Collection(SerialTestGroup.Name)]
 public sealed class ClaimConcurrencyTests : IDisposable
 {
     private const string Kind = "refiner.test.parallel.v1";

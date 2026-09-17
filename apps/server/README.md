@@ -64,10 +64,12 @@ apps/backend/.venv/Scripts/python.exe scripts/generate-ffmpeg-golden.py --check 
 
 ## Jobs and workers
 
-The durable queue is the Python backend's `refiner_jobs` table, used the same way: the same statuses, dedupe keys, claim statement, lease checks, retry backoff and failure wording, and the same timestamp text, so either backend can claim, finish or recover a row the other wrote (`tests/Weir.Infrastructure.Tests/Jobs/CrossBackendTests.cs` proves it against the Python code when `apps/backend/.venv` exists).
+The durable queue is the Python backend's `refiner_jobs` table, used the same way: the same statuses, dedupe keys, claim statement, lease checks, retry backoff and failure wording, and the same timestamp text, so either backend can claim, finish or recover a row the other wrote (`tests/Weir.Infrastructure.Tests/Jobs/CrossBackendTests.cs` proves it against the Python code when `apps/backend/.venv` exists, or `WEIR_TEST_PYTHON` names an interpreter with the backend's dependencies; the cross-checks always import this checkout's `apps/backend/src`).
 
 - `Weir.Core/Jobs`: the rules (job kind guard, admission, schedule grid, backoff, failure wording, recovery wording, Weir's temp file names).
 - `Weir.Infrastructure/Jobs`: `RefinerJobStore` (SQLite), `RefinerJobProcessor` (one worker pass), startup recovery, history retention, periodic enqueue and the hosted services. `AddWeirJobs` registers all of it.
+- Shared by every area: `Weir.Core/Activity` (the event types, `ActivityClassifier` and `IActivityWriter`, with the one insert in `Weir.Infrastructure/Activity/SqliteActivityWriter`), `Weir.Core/Observability` (operator failure wording), `Weir.Core/Json/PyStrings` (Python `str` slicing, `strip()` and `repr()`), `Weir.Core/Time` (`PyDateTime`, IANA `TimeZones`) and `AddWeirPlatform` (the shared singletons).
+- Periodic work (`IPeriodicTask`: session cleanup, log retention, configuration backup, history retention) runs in `PeriodicTaskService` with the Python loops' timing: run at start or after one interval, then every interval, with a shorter cooldown after a failure where Python has one. It starts after startup recovery.
 - Job handlers implement `IJobHandler` and are registered as singletons by the area that ports them.
 
 **Unported job kinds are not claimed.** Python's worker claims every eligible row and fails any kind it has no handler for. While handlers are still being ported, a .NET worker doing that would fail real work, so it claims only kinds with a registered handler, plus retired or unprefixed kinds, which it claims only to refuse with Python's wording. Everything else stays `pending` for a backend that can run it. Periodic families are timed only when their kind has a handler, for the same reason.

@@ -1,3 +1,6 @@
+using Weir.Core.Json;
+using Weir.Core.Observability;
+
 namespace Weir.Core.Jobs;
 
 /// <summary>
@@ -43,8 +46,8 @@ public static class WorkerFailures
     public static bool RetryComing(int attemptCount, int maxAttempts) => attemptCount < maxAttempts;
 
     /// <summary><c>job_failure</c>.</summary>
-    public static OperatorFailure JobFailure(string module, FailureCause cause, bool willRetry) =>
-        OperatorFailures.FromCause(
+    public static OperatorFailure JobFailure(string module, FailureSubject cause, bool willRetry) =>
+        FailureMessages.FromException(
             module,
             "job",
             cause,
@@ -65,24 +68,24 @@ public static class WorkerFailures
             text += $" Technical detail: {failure.TechnicalDetail}";
         }
 
-        return OperatorFailures.PythonSlice(text, ErrorLimit);
+        return PyStrings.Slice(text, ErrorLimit);
     }
 
     /// <summary><c>refused_job_error</c>: a job this worker cannot run.</summary>
     public static string RefusedJobError(string module, string technicalReason, bool willRetry) =>
-        StoredError(JobFailure(module, FailureCause.RuntimeError(technicalReason), willRetry));
+        StoredError(JobFailure(module, FailureMessages.RuntimeError(technicalReason), willRetry));
 
     /// <summary>The worker's refusal of a retired kind, worded as <c>process_one_refiner_job</c> words it.</summary>
     public static string RetiredKindReason(string jobKind, long jobId) =>
         "refiner worker refused a retired job_kind: " +
-        $"{JobKindGuard.PythonRepr(jobKind)} (row id={jobId}); nothing runs this kind any more";
+        $"{PyStrings.Repr(jobKind)} (row id={jobId}); nothing runs this kind any more";
 
     /// <summary>The worker's refusal of a kind without the <c>refiner.</c> prefix.</summary>
     public static string UnprefixedKindReason(string jobKind, long jobId) =>
         "refiner worker refused job_kind missing required refiner.* prefix: " +
-        $"{JobKindGuard.PythonRepr(jobKind)} (row id={jobId}); enqueue only refiner-owned kinds";
+        $"{PyStrings.Repr(jobKind)} (row id={jobId}); enqueue only refiner-owned kinds";
 
     /// <summary><c>RefinerNoHandlerForJobKind</c> as a failure cause.</summary>
-    public static FailureCause NoHandler(string jobKind) =>
-        new("RefinerNoHandlerForJobKind", $"no Refiner job handler registered for job_kind={JobKindGuard.PythonRepr(jobKind)}", FailureCategory.Other);
+    public static FailureSubject NoHandler(string jobKind) =>
+        new("RefinerNoHandlerForJobKind", $"no Refiner job handler registered for job_kind={PyStrings.Repr(jobKind)}", ExceptionCategory.Other);
 }

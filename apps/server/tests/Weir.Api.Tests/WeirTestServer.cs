@@ -76,6 +76,35 @@ internal sealed class WeirTestServer : IAsyncDisposable
         File.WriteAllText(Path.Join(dist, "assets", "font.woff2"), "font");
     }
 
+    /// <summary>
+    /// Replace the database file with a directory, so every new connection fails. The periodic tasks may
+    /// hold the file open for a moment, which makes the delete fail or stay pending on Windows, so retry.
+    /// </summary>
+    public async Task BreakDatabaseAsync()
+    {
+        var dbPath = Path.Join(Home, "data", "weir.sqlite3");
+        for (var attempt = 0; ; attempt++)
+        {
+            SqliteConnection.ClearAllPools();
+            try
+            {
+                File.Delete(dbPath);
+                File.Delete(dbPath + "-wal");
+                File.Delete(dbPath + "-shm");
+                Directory.CreateDirectory(dbPath);
+                return;
+            }
+            catch (IOException) when (attempt < 50)
+            {
+                await Task.Delay(100);
+            }
+            catch (UnauthorizedAccessException) when (attempt < 50)
+            {
+                await Task.Delay(100);
+            }
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         Client.Dispose();

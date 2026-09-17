@@ -4,31 +4,15 @@ using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Activity;
 
-/// <summary>Writes to <c>activity_events</c> (port of the write side of <c>weir.platform.activity.service</c>).</summary>
+/// <summary>The auth-side Activity helpers of <c>weir.platform.activity.service</c>, written through <see cref="SqliteActivityWriter"/>.</summary>
 public static class ActivityStore
 {
     private static readonly TimeSpan LoginFailedSuppress = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan BootstrapDeniedSuppress = TimeSpan.FromSeconds(60);
 
-    /// <summary><c>record_activity_event</c>: the facts are lifted from the detail; <c>created_at</c> is the database default.</summary>
-    public static async Task<long> RecordAsync(UnitOfWork uow, string eventType, string module, string title, string? detail)
-    {
-        ArgumentNullException.ThrowIfNull(uow);
-        var facts = ActivityClassifier.Classify(eventType, detail);
-        var id = await uow.ExecuteScalarWriteAsync(
-            "INSERT INTO activity_events (event_type, module, title, detail, \"trigger\", result, library_id, relative_path, run_key) " +
-            "VALUES ($type, $module, $title, $detail, $trigger, $result, $library, $path, $run) RETURNING id",
-            ("$type", eventType),
-            ("$module", module),
-            ("$title", title),
-            ("$detail", detail),
-            ("$trigger", facts.Trigger),
-            ("$result", facts.Result),
-            ("$library", facts.LibraryId),
-            ("$path", facts.RelativePath),
-            ("$run", facts.RunKey)).ConfigureAwait(false);
-        return Convert.ToInt64(id, System.Globalization.CultureInfo.InvariantCulture);
-    }
+    /// <summary><c>record_activity_event</c> inside the caller's unit of work.</summary>
+    public static Task<long> RecordAsync(UnitOfWork uow, string eventType, string module, string title, string? detail) =>
+        SqliteActivityWriter.RecordAsync(uow, new ActivityEventDraft(eventType, module, title, detail));
 
     /// <summary><c>maybe_record_login_failed</c>: one event per username per two minutes.</summary>
     public static async Task MaybeRecordLoginFailedAsync(UnitOfWork uow, string username, PyDateTime now)

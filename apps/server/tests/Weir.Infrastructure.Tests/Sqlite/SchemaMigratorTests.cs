@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Tests.Sqlite;
@@ -141,7 +142,7 @@ public sealed class SchemaMigratorTests
         using var temp = new TempDirectory();
         var database = new SqliteDatabase(temp.Join("weir.sqlite3"));
         new SchemaMigrator(database).EnsureAtHead();
-        Assert.Equal(30, await SuiteSettingsQueries.ReadLogRetentionDaysAsync(database));
+        Assert.Equal(30, await LogRetentionTask.ReadKeepDaysAsync(database));
 
         using (var connection = database.Open())
         using (var command = connection.CreateCommand())
@@ -150,7 +151,7 @@ public sealed class SchemaMigratorTests
             command.ExecuteNonQuery();
         }
 
-        Assert.Equal(1, await SuiteSettingsQueries.ReadLogRetentionDaysAsync(database));
+        Assert.Equal(1, await LogRetentionTask.ReadKeepDaysAsync(database));
 
         using (var connection = database.Open())
         using (var command = connection.CreateCommand())
@@ -159,7 +160,14 @@ public sealed class SchemaMigratorTests
             command.ExecuteNonQuery();
         }
 
-        Assert.Equal(SuiteSettingsQueries.DefaultLogRetentionDays, await SuiteSettingsQueries.ReadLogRetentionDaysAsync(database));
+        // ensure_suite_settings_row: a missing row is created with its defaults.
+        Assert.Equal(30, await LogRetentionTask.ReadKeepDaysAsync(database));
+        using (var connection = database.Open())
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT count(*) FROM suite_settings";
+            Assert.Equal(1L, command.ExecuteScalar());
+        }
     }
 
     private static string AlembicDatabaseAt(TempDirectory temp, string revision)

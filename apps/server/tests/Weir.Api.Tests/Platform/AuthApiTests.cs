@@ -351,12 +351,7 @@ public sealed class AuthApiTests
     public async Task Bootstrap_status_is_503_when_the_database_cannot_be_opened()
     {
         await using var server = await StartServerAsync();
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        var dbPath = TestDatabase.PathFor(server);
-        File.Delete(dbPath);
-        File.Delete(dbPath + "-wal");
-        File.Delete(dbPath + "-shm");
-        Directory.CreateDirectory(dbPath);
+        await server.BreakDatabaseAsync();
         using var response = await server.Client.GetAsync("/api/v1/auth/bootstrap/status");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Contains("unavailable", (await Detail(response)).ToLowerInvariant(), StringComparison.Ordinal);

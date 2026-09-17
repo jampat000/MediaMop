@@ -9,6 +9,7 @@ using Weir.Infrastructure.Auth;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Logging;
 using Weir.Infrastructure.Runtime;
+using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Host;
@@ -193,13 +194,13 @@ public static class WeirServer
         // Non-essential, as in Python: a failed prune is logged and startup continues.
         try
         {
-            var keepDays = SuiteSettingsQueries.ReadLogRetentionDaysAsync(database).GetAwaiter().GetResult();
+            var keepDays = LogRetentionTask.ReadKeepDaysAsync(database).GetAwaiter().GetResult();
             if (!app.Services.GetRequiredService<WeirLogFile>().Prune(keepDays))
             {
                 logger.LogWarning("Suite log prune skipped because the active log could not be rewritten.");
             }
         }
-        catch (Microsoft.Data.Sqlite.SqliteException exception)
+        catch (Exception exception) when (exception is Microsoft.Data.Sqlite.SqliteException or FormatException or InvalidOperationException)
         {
             logger.LogError(exception, "Weir startup step failed but startup will continue step={Step}", "log_retention_prune");
         }

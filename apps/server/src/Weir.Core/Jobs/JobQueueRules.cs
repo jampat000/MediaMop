@@ -1,4 +1,6 @@
 using System.Globalization;
+using Weir.Core.Json;
+using Weir.Core.Time;
 
 namespace Weir.Core.Jobs;
 
@@ -40,46 +42,21 @@ public static class JobQueueRules
         var suffix = $":cancelled:{jobId.ToString(CultureInfo.InvariantCulture)}";
         var text = original ?? string.Empty;
         var keep = Math.Max(0, DedupeKeyMaxLength - suffix.Length);
-        var baseText = OperatorFailures.PythonSlice(text, keep);
-        return OperatorFailures.PythonSlice(baseText + suffix, DedupeKeyMaxLength);
+        var baseText = PyStrings.Slice(text, keep);
+        return PyStrings.Slice(baseText + suffix, DedupeKeyMaxLength);
     }
 
     /// <summary>The <c>last_error</c> that <c>recover_handler_ok_finalize_failed_to_completed</c> writes.</summary>
     public static string RecoveredFinalizeFailureError(string? previousError, DateTimeOffset when, string recoveredByLabel)
     {
         var previous = (previousError ?? string.Empty).Trim();
-        var iso = PythonIsoFormat(when, 'T').Replace("+00:00", "Z", StringComparison.Ordinal);
+        var iso = PyDateTime.FromDateTimeOffset(when).IsoFormat('T').Replace("+00:00", "Z", StringComparison.Ordinal);
         var note =
             $"manual_recover_finalize_failure: marked completed at {iso} by {recoveredByLabel} " +
             "(handler was not re-run; row was handler_ok_finalize_failed).";
         var text = previous.Length > 0 ? $"{previous}\n--- {note}" : note;
-        return OperatorFailures.PythonSlice(text, LastErrorLimit);
+        return PyStrings.Slice(text, LastErrorLimit);
     }
-
-    /// <summary>
-    /// Python's <c>datetime.isoformat(sep)</c> for an aware value: microseconds only when non-zero,
-    /// then the UTC offset as <c>+HH:MM</c>.
-    /// </summary>
-    public static string PythonIsoFormat(DateTimeOffset value, char separator)
-    {
-        var microseconds = (value.Ticks % TimeSpan.TicksPerSecond) / 10;
-        var text = value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + separator +
-                   value.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-        if (microseconds != 0)
-        {
-            text += "." + microseconds.ToString("D6", CultureInfo.InvariantCulture);
-        }
-
-        var offset = value.Offset;
-        var sign = offset < TimeSpan.Zero ? '-' : '+';
-        var absolute = offset.Duration();
-        return text + sign + absolute.Hours.ToString("D2", CultureInfo.InvariantCulture) + ":" +
-               absolute.Minutes.ToString("D2", CultureInfo.InvariantCulture);
-    }
-
-    /// <summary>Truncate to whole microseconds, the resolution Python and the database keep.</summary>
-    public static DateTimeOffset ToMicroseconds(DateTimeOffset value) =>
-        new(value.Ticks - (value.Ticks % 10), value.Offset);
 }
 
 /// <summary>What startup recovery did (port of <c>StartupJobRecoveryResult</c>).</summary>
@@ -104,7 +81,7 @@ public static class StartupJobRecovery
     {
         var attempts = attemptCount;
         var max = Math.Max(1, maxAttempts);
-        var iso = JobQueueRules.PythonIsoFormat(now, 'T');
+        var iso = PyDateTime.FromDateTimeOffset(now).IsoFormat('T');
         return attempts >= max
             ? new StartupRecoveryDecision(
                 RefinerJobStatus.Failed,

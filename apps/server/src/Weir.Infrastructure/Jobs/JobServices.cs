@@ -6,7 +6,10 @@ using Microsoft.Extensions.Logging;
 using Weir.Core.Activity;
 using Weir.Core.Configuration;
 using Weir.Core.Jobs;
+using Weir.Core.Json;
 using Weir.Core.Workers;
+using Weir.Infrastructure.Activity;
+using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Jobs;
@@ -207,17 +210,17 @@ public sealed class RefinerWorkerService : BackgroundService
 }
 
 /// <summary>
-/// History retention (port of <c>_run_job_rows_retention_forever</c>): prune on start, then every
-/// <c>WEIR_JOB_ROWS_RETENTION_SCHEDULE_INTERVAL_SECONDS</c>.
+/// <c>platform-job-rows-retention</c> (port of <c>_run_job_rows_retention_forever</c>): prune on start,
+/// then every <c>WEIR_JOB_ROWS_RETENTION_SCHEDULE_INTERVAL_SECONDS</c>.
 /// </summary>
-public sealed class JobRowsRetentionService : BackgroundService
+public sealed class JobRowsRetentionTask : IPeriodicTask
 {
     private readonly RefinerJobStore _store;
     private readonly WeirOptions _options;
     private readonly TimeProvider _time;
-    private readonly ILogger<JobRowsRetentionService> _logger;
+    private readonly ILogger<JobRowsRetentionTask> _logger;
 
-    public JobRowsRetentionService(RefinerJobStore store, WeirOptions options, TimeProvider time, ILogger<JobRowsRetentionService> logger)
+    public JobRowsRetentionTask(RefinerJobStore store, WeirOptions options, TimeProvider time, ILogger<JobRowsRetentionTask> logger)
     {
         _store = store;
         _options = options;
@@ -225,44 +228,27 @@ public sealed class JobRowsRetentionService : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        await Task.Yield();
-        var interval = TimeSpan.FromSeconds(_options.JobRowsRetentionScheduleIntervalSeconds);
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                var counts = await Task.Run(
-                    () => JobRowsRetention.RunTickAsync(_store, _options.JobRowsRetentionDays, _time.GetUtcNow(), stoppingToken),
-                    stoppingToken).ConfigureAwait(false);
-                if (counts.Total > 0)
-                {
-                    _logger.LogInformation(
-                        "History retention pruned refiner jobs={RefinerJobs} activity events={ActivityEvents}",
-                        counts.Refiner,
-                        counts.Activity);
-                }
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-#pragma warning disable CA1031 // A failed tick is logged and retried on the next interval.
-            catch (Exception exception)
-#pragma warning restore CA1031
-            {
-                _logger.LogError(exception, "Job-row retention prune tick failed");
-            }
+    public string Name => "platform-job-rows-retention";
 
-            try
-            {
-                await Task.Delay(interval, _time, stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
+    public TimeSpan Interval => TimeSpan.FromSeconds(_options.JobRowsRetentionScheduleIntervalSeconds);
+
+    public bool RunAtStart => true;
+
+    public TimeSpan? FailureCooldown => null;
+
+    public string FailureMessage => "Job-row retention prune tick failed";
+
+    public async Task RunOnceAsync(CancellationToken cancellationToken)
+    {
+        var counts = await Task.Run(
+            () => JobRowsRetention.RunTickAsync(_store, _options.JobRowsRetentionDays, _time.GetUtcNow(), cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+        if (counts.Total > 0)
+        {
+            _logger.LogInformation(
+                "History retention pruned refiner jobs={RefinerJobs} activity events={ActivityEvents}",
+                counts.Refiner,
+                counts.Activity);
         }
     }
 }
@@ -343,49 +329,23 @@ public sealed class PeriodicEnqueueService : BackgroundService
         await Task.WhenAll(running).ConfigureAwait(false);
     }
 
-    internal async Task RunAsync(IPeriodicEnqueuer enqueuer, CancellationToken stoppingToken)
+    internal Task RunAsync(IPeriodicEnqueuer enqueuer, CancellationToken stoppingToken) =>
+        PeriodicTaskRunner.RunAsync(new EnqueueTask(enqueuer), _time, _logger, stoppingToken);
+
+    /// <summary>One family as a periodic task: enqueue at once, then every interval; two seconds after a failure.</summary>
+    private sealed class EnqueueTask(IPeriodicEnqueuer enqueuer) : IPeriodicTask
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await enqueuer.EnqueueOnceAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-#pragma warning disable CA1031 // A failed tick is logged and retried after the cooldown.
-            catch (Exception exception)
-#pragma warning restore CA1031
-            {
-                _logger.LogError(exception, "Refiner periodic enqueue failed ({Name})", enqueuer.Name);
-                if (!await DelayAsync(PeriodicSchedule.FailureCooldown, stoppingToken).ConfigureAwait(false))
-                {
-                    return;
-                }
+        public string Name => enqueuer.Name;
 
-                continue;
-            }
+        public TimeSpan Interval => enqueuer.Interval;
 
-            if (!await DelayAsync(enqueuer.Interval, stoppingToken).ConfigureAwait(false))
-            {
-                return;
-            }
-        }
-    }
+        public bool RunAtStart => true;
 
-    private async Task<bool> DelayAsync(TimeSpan delay, CancellationToken stoppingToken)
-    {
-        try
-        {
-            await Task.Delay(delay, _time, stoppingToken).ConfigureAwait(false);
-            return true;
-        }
-        catch (OperationCanceledException)
-        {
-            return false;
-        }
+        public TimeSpan? FailureCooldown => PeriodicSchedule.FailureCooldown;
+
+        public string FailureMessage => $"Refiner periodic enqueue failed ({enqueuer.Name})";
+
+        public Task RunOnceAsync(CancellationToken cancellationToken) => enqueuer.EnqueueOnceAsync(cancellationToken);
     }
 }
 
@@ -433,7 +393,7 @@ public sealed class WorkTempStaleSweepEnqueuer : IPeriodicEnqueuer
         _store.EnqueueOrGetAsync(
             _scope == "tv" ? PeriodicJobKinds.WorkTempStaleSweepDedupeKeyTv : PeriodicJobKinds.WorkTempStaleSweepDedupeKeyMovie,
             PeriodicJobKinds.WorkTempStaleSweep,
-            new PythonJsonObject().Add("media_scope", _scope).Add("trigger", "scheduled").ToString(),
+            PyJsonWriter.Dumps(new PyDict().Set("media_scope", _scope).Set("trigger", "scheduled"), PyJsonFormat.Compact),
             cancellationToken: cancellationToken);
 
     /// <summary>A boolean column of the operator settings row; Python creates the row with its defaults when missing.</summary>
@@ -484,17 +444,17 @@ public sealed class FailureCleanupSweepEnqueuer : IPeriodicEnqueuer
                 if (!inserted)
                 {
                     var label = _scope == "tv" ? "TV" : "Movies";
-                    var detail = new PythonJsonObject()
-                        .Add("media_scope", _scope)
-                        .Add("cleanup_run_status", "skipped")
-                        .Add("reason", "Previous cleanup job is still queued or running.")
-                        .Add("existing_job_id", job.Id)
-                        .Add("result", "skipped")
-                        .Add("trigger", "scheduled");
+                    var detail = new PyDict()
+                        .Set("media_scope", _scope)
+                        .Set("cleanup_run_status", "skipped")
+                        .Set("reason", "Previous cleanup job is still queued or running.")
+                        .Set("existing_job_id", job.Id)
+                        .Set("result", "skipped")
+                        .Set("trigger", "scheduled");
                     SqliteActivityWriter.Record(
                         connection,
                         transaction,
-                        new ActivityEventDraft(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "refiner", $"Refiner cleanup skipped for {label}", detail.ToString()));
+                        new ActivityEventDraft(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "refiner", $"Refiner cleanup skipped for {label}", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)));
                 }
 
                 return inserted;
@@ -525,7 +485,7 @@ public sealed class FailureCleanupSweepEnqueuer : IPeriodicEnqueuer
         }
 
         var dedupe = $"{dedupeBase}:{Guid.NewGuid():N}";
-        var payload = new PythonJsonObject().Add("media_scope", scope).Add("trigger", trigger).ToString();
+        var payload = PyJsonWriter.Dumps(new PyDict().Set("media_scope", scope).Set("trigger", trigger), PyJsonFormat.Compact);
         return (store.EnqueueOrGet(connection, transaction, dedupe, jobKind, payload, JobQueueRules.DefaultMaxAttempts, 0, 0), true);
     }
 }
@@ -541,13 +501,10 @@ public static class WeirJobs
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(runtime);
-        services.TryAddSingleton(TimeProvider.System);
-        services.TryAddSingleton(sp => new SqliteDatabase(options.DbPath));
-        services.TryAddSingleton<WorkerHeartbeats>();
+        services.AddWeirPlatform(options);
         services.TryAddSingleton<IJobQueueMetrics>(NoJobQueueMetrics.Instance);
         services.TryAddSingleton<IJobNotifications, NoJobNotifications>();
         services.TryAddSingleton<IUnhandledJobFailureRecorder, NoUnhandledJobFailureRecorder>();
-        services.TryAddSingleton<IActivityWriter, SqliteActivityWriter>();
         services.TryAddSingleton(new WorkerLoopTimings());
         services.TryAddSingleton(sp => new RefinerJobStore(
             sp.GetRequiredService<SqliteDatabase>(), sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<IJobQueueMetrics>()));
@@ -571,7 +528,8 @@ public static class WeirJobs
         // Hosted services start in this order: recovery completes before any worker claims.
         services.AddSingleton<JobsStartupRecoveryService>();
         services.AddHostedService(sp => sp.GetRequiredService<JobsStartupRecoveryService>());
-        services.AddHostedService<JobRowsRetentionService>();
+        services.AddSingleton<IPeriodicTask, JobRowsRetentionTask>();
+        services.AddWeirPeriodicTasks();
         services.AddHostedService<PeriodicEnqueueService>();
         if (options.RefinerWorkerCount > 0)
         {

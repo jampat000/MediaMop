@@ -1,5 +1,6 @@
-using System.Globalization;
 using System.Text.Json;
+using Weir.Core.Settings;
+using Weir.Core.Time;
 
 namespace Weir.Core.Jobs;
 
@@ -103,44 +104,8 @@ public sealed record RunnerBudget(int Capacity, IReadOnlyDictionary<string, int>
     private static int NonNegative(long value) => (int)Math.Clamp(value, 0, int.MaxValue);
 }
 
-/// <summary>The suite-wide pause, already resolved against the clock (port of <c>PauseState</c>).</summary>
-public sealed record PauseState(bool Paused, DateTimeOffset? PausedUntil, bool ScanWhilePaused, bool Expired = false)
-{
-    public string Reason
-    {
-        get
-        {
-            if (!Paused)
-            {
-                return string.Empty;
-            }
-
-            return PausedUntil is { } until
-                ? "Processing is paused. Weir will start work again automatically at " +
-                  $"{until.ToUniversalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC."
-                : "Processing is paused. Weir will start work again when you resume it.";
-        }
-    }
-
-    /// <summary><c>resolve_pause_state</c>: expiry is applied on read, so a pause set before a restart still lapses.</summary>
-    public static PauseState Resolve(bool processingPaused, DateTimeOffset? pausedUntil, bool scanWhilePaused, DateTimeOffset now)
-    {
-        if (!processingPaused)
-        {
-            return new PauseState(false, null, scanWhilePaused);
-        }
-
-        if (pausedUntil is { } until && now >= until)
-        {
-            return new PauseState(false, until, scanWhilePaused, Expired: true);
-        }
-
-        return new PauseState(true, pausedUntil, scanWhilePaused);
-    }
-}
-
 /// <summary>The <c>suite_settings</c> fields admission reads.</summary>
-public sealed record SuitePauseSettings(string? AppTimezone, bool ProcessingPaused, DateTimeOffset? ProcessingPausedUntil, bool ScanWhilePaused);
+public sealed record SuitePauseSettings(string? AppTimezone, bool ProcessingPaused, PyDateTime? ProcessingPausedUntil, bool ScanWhilePaused);
 
 /// <summary>The <c>refiner_libraries</c> fields admission reads.</summary>
 public sealed record LibraryAdmissionSnapshot(
@@ -246,7 +211,7 @@ public static class WorkAdmissionRules
             timezoneName = "UTC";
         }
 
-        var pause = PauseState.Resolve(suite.ProcessingPaused, suite.ProcessingPausedUntil, suite.ScanWhilePaused, now);
+        var pause = PauseState.Resolve(suite.ProcessingPaused, suite.ProcessingPausedUntil, suite.ScanWhilePaused, now.UtcDateTime);
         var effectiveBudget = budget ?? RunnerBudget.Default;
 
         long unitsInUse = 0;

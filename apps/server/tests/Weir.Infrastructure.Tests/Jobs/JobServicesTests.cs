@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Weir.Core.Activity;
 using Weir.Core.Jobs;
 using Weir.Core.Workers;
+using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Jobs;
 
 namespace Weir.Infrastructure.Tests.Jobs;

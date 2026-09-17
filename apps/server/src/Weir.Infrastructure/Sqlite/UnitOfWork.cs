@@ -227,7 +227,7 @@ public static class SqliteValues
         var text = Convert.ToString(reader.GetValue(ordinal), CultureInfo.InvariantCulture) ?? string.Empty;
         return PyDateTime.TryFromIsoFormat(text, out var value)
             ? value
-            : throw new FormatException($"Invalid isoformat string: {PyConvert.ReprString(text)}");
+            : throw new FormatException($"Invalid isoformat string: {PyStrings.Repr(text)}");
     }
 
     public static PyDateTime GetDateTime(SqliteDataReader reader, int ordinal) =>

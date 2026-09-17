@@ -27,6 +27,13 @@ public readonly record struct PyDateTime(DateTime Clock, TimeSpan? Offset)
 
     public static DateTime TruncateToMicroseconds(DateTime value) => new(value.Ticks - (value.Ticks % 10), value.Kind);
 
+    /// <summary>Truncate to whole microseconds, the resolution Python and the database keep.</summary>
+    public static DateTimeOffset TruncateToMicroseconds(DateTimeOffset value) => new(value.Ticks - (value.Ticks % 10), value.Offset);
+
+    /// <summary>An aware value with <paramref name="value"/>'s wall clock and offset.</summary>
+    public static PyDateTime FromDateTimeOffset(DateTimeOffset value) =>
+        new(TruncateToMicroseconds(DateTime.SpecifyKind(value.DateTime, DateTimeKind.Unspecified)), value.Offset);
+
     /// <summary>The instant, treating a naive value as UTC (<c>as_utc</c>).</summary>
     public DateTime AsUtc => Offset is { } offset ? DateTime.SpecifyKind(Clock - offset, DateTimeKind.Utc) : DateTime.SpecifyKind(Clock, DateTimeKind.Utc);
 
@@ -46,14 +53,17 @@ public readonly record struct PyDateTime(DateTime Clock, TimeSpan? Offset)
     public string ToSqlite() => Clock.ToString(SqliteFormat, CultureInfo.InvariantCulture);
 
     /// <summary><c>datetime.isoformat()</c>.</summary>
-    public string IsoFormat() => ClockText() + OffsetText(zeroAsZ: false);
+    public string IsoFormat() => IsoFormat('T');
+
+    /// <summary><c>datetime.isoformat(sep)</c>.</summary>
+    public string IsoFormat(char separator) => ClockText(separator) + OffsetText(zeroAsZ: false);
 
     /// <summary>Pydantic's JSON form: like <c>isoformat()</c> but a zero offset is written <c>Z</c>.</summary>
-    public string PydanticJson() => ClockText() + OffsetText(zeroAsZ: true);
+    public string PydanticJson() => ClockText('T') + OffsetText(zeroAsZ: true);
 
-    private string ClockText()
+    private string ClockText(char separator)
     {
-        var text = Clock.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture);
+        var text = Clock.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + separator + Clock.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
         var micro = (Clock.Ticks % TimeSpan.TicksPerSecond) / 10;
         return micro == 0 ? text : text + "." + micro.ToString("D6", CultureInfo.InvariantCulture);
     }

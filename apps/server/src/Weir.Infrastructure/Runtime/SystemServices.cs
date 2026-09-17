@@ -1,33 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
-using TimeZoneConverter;
 using Weir.Core.Configuration;
 using Weir.Core.Json;
-using Weir.Core.Settings;
 using Weir.Core.Updates;
 
 namespace Weir.Infrastructure.Runtime;
-
-/// <summary>IANA zone names the way <c>zoneinfo.ZoneInfo</c> resolves them (with the tzdata package on Windows).</summary>
-public sealed class IanaTimeZoneResolver : ITimeZoneResolver
-{
-    public bool TryFind(string name, out TimeZoneInfo zone)
-    {
-        zone = TimeZoneInfo.Utc;
-        if (string.IsNullOrEmpty(name) || name.Contains('\0', StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        if (TZConvert.TryGetTimeZoneInfo(name, out var found))
-        {
-            zone = found;
-            return true;
-        }
-
-        return false;
-    }
-}
 
 /// <summary>The tray's update files under <c>WEIR_HOME</c> (port of the file side of <c>update_service</c>).</summary>
 public sealed class UpdateFiles

@@ -1,3 +1,5 @@
+using Weir.Core.Json;
+
 namespace Weir.Core.Jobs;
 
 /// <summary>
@@ -56,7 +58,7 @@ public sealed class JobHandlerRegistry
         {
             if (!_handlers.TryAdd(handler.JobKind, handler))
             {
-                throw new ArgumentException($"Two job handlers are registered for job_kind {JobKindGuard.PythonRepr(handler.JobKind)}.", nameof(handlers));
+                throw new ArgumentException($"Two job handlers are registered for job_kind {PyStrings.Repr(handler.JobKind)}.", nameof(handlers));
             }
         }
 

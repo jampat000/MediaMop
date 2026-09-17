@@ -7,14 +7,12 @@ using Weir.Api.Http;
 using Weir.Api.Web;
 using Weir.Core.Configuration;
 using Weir.Core.Metrics;
-using Weir.Core.Settings;
-using Weir.Core.Workers;
+using Weir.Infrastructure;
 using Weir.Infrastructure.Auth;
 using Weir.Infrastructure.Http;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Settings;
-using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Api;
 
@@ -24,25 +22,21 @@ public static class WeirApi
     public static IServiceCollection AddWeirApi(this IServiceCollection services, WeirOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        services.AddSingleton(options);
-        services.AddSingleton(TimeProvider.System);
+        services.AddWeirPlatform(options);
         services.AddSingleton<ServerLifecycle>();
-        services.AddSingleton<WorkerHeartbeats>();
-        services.AddSingleton(new SqliteDatabase(options.DbPath));
         services.AddSingleton(WebApp.Resolve(options.WebDist));
         services.AddSingleton<IOperatorAuthentication, SessionOperatorAuthentication>();
         services.AddSingleton<RouteTable>();
         services.TryAddSingleton<RuntimeMetricsStore>();
         services.AddSingleton<AuthService>();
         services.AddSingleton<AuthRateLimiters>();
-        services.AddSingleton<ITimeZoneResolver, IanaTimeZoneResolver>();
         services.AddSingleton<ConfigurationBackups>();
         services.AddSingleton<UpdateFiles>();
         services.AddSingleton<IReleaseCatalogClient, GitHubReleaseCatalogClient>();
         services.AddSingleton<IExternalJsonPoster, ExternalJsonPoster>();
         services.AddSingleton<NotificationDispatcher>();
 
-        // Scheduled work the jobs port (#521) will host.
+        // Scheduled work, hosted with the jobs (AddWeirJobs) by PeriodicTaskService.
         services.AddSingleton<SessionCleanupTask>();
         services.AddSingleton<LogRetentionTask>();
         services.AddSingleton<ConfigurationBackupTask>();

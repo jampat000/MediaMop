@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
+using Weir.Core.Json;
 using Weir.Core.Rules;
 
 namespace Weir.Core.Media;
@@ -29,7 +30,7 @@ public static class ProbeOutput
     public static MediaToolException FailureFor(string? stdout, string? stderr)
     {
         var chosen = !string.IsNullOrEmpty(stderr) ? stderr : !string.IsNullOrEmpty(stdout) ? stdout : string.Empty;
-        var message = Py.Strip(chosen);
+        var message = PyStrings.Strip(chosen);
         if (message.Length == 0)
         {
             message = "ffprobe failed";
@@ -53,7 +54,7 @@ public static class ProbeOutput
         }
 
         const string Invalid = "ffprobe returned invalid or empty output";
-        if (stdout is null || Py.Strip(stdout).Length == 0)
+        if (stdout is null || PyStrings.Strip(stdout).Length == 0)
         {
             throw new MediaToolException(Invalid);
         }
@@ -188,7 +189,7 @@ public static class ProbeOutput
     /// <summary>The error <c>validate_media_integrity</c> raises when the full demux exits non-zero.</summary>
     public static MediaCompletenessException IntegrityFailure(string? stderr)
     {
-        var detail = Py.Strip(stderr ?? string.Empty);
+        var detail = PyStrings.Strip(stderr ?? string.Empty);
         detail = PyText.Clip(detail, FfmpegCommands.ProbeLogMaxChars);
         return new MediaCompletenessException(
             "Weir could not read this media file from start to finish. It may still be downloading or may be "
@@ -203,7 +204,7 @@ public static class ProbeOutput
     public static string TailText(ReadOnlySpan<byte> bytes, int maxBytes = FfmpegCommands.FfmpegStderrTailBytes)
     {
         var tail = bytes.Length > maxBytes ? bytes[^maxBytes..] : bytes;
-        return Py.Strip(PyText.DecodeUtf8(tail));
+        return PyStrings.Strip(PyText.DecodeUtf8(tail));
     }
 
     /// <summary>Output captured with <c>text=True, encoding="utf-8", errors="replace"</c>.</summary>
@@ -215,37 +216,40 @@ public static class ProbeOutput
 
     /// <summary><c>str(subprocess.TimeoutExpired)</c> for a timeout given as a Python float.</summary>
     public static string TimeoutMessage(IEnumerable<string> argv, double timeoutSeconds) =>
-        PyText.TimeoutExpiredMessage(argv, Py.FloatRepr(timeoutSeconds));
+        PyText.TimeoutExpiredMessage(argv, PyConvert.FloatRepr(timeoutSeconds));
 
     // --- log payloads ------------------------------------------------------------------
 
     /// <summary>The <c>REFINER_FFPROBE_FILE_STATE</c> JSON.</summary>
     public static string FileStateLogPayload(string path, string resolvedPath, bool exists, bool isFile, long sizeBytes, string suffix, double mtimeEpoch) =>
-        new PyJsonObject()
-            .Add("path", path)
-            .Add("resolved_path", resolvedPath)
-            .Add("exists", exists)
-            .Add("is_file", isFile)
-            .Add("size_bytes", sizeBytes)
-            .Add("suffix", PyText.Clip(suffix, 64))
-            .Add("mtime_epoch", mtimeEpoch)
-            .ToString();
+        PyJsonWriter.Dumps(
+            new PyDict()
+            .Set("path", path)
+            .Set("resolved_path", resolvedPath)
+            .Set("exists", exists)
+            .Set("is_file", isFile)
+            .Set("size_bytes", sizeBytes)
+            .Set("suffix", PyText.Clip(suffix, 64))
+            .Set("mtime_epoch", mtimeEpoch),
+            PyJsonFormat.Default);
 
     /// <summary>The <c>REFINER_FFPROBE_CALL</c> JSON.</summary>
     public static string CallLogPayload(string path, IEnumerable<string> argv) =>
-        new PyJsonObject()
-            .Add("path", path)
-            .Add("argv", argv.Select(a => PyText.Clip(a, 256)))
-            .ToString();
+        PyJsonWriter.Dumps(
+            new PyDict()
+            .Set("path", path)
+            .Set("argv", new PyList(argv.Select(a => (PyJson)new PyStr(PyText.Clip(a, 256))))),
+            PyJsonFormat.Default);
 
     /// <summary>The <c>REFINER_FFPROBE_RESULT</c> JSON.</summary>
     public static string ResultLogPayload(string path, int returnCode, string stdout, string stderr) =>
-        new PyJsonObject()
-            .Add("path", path)
-            .Add("returncode", returnCode)
-            .Add("stdout", PyText.Clip(stdout, FfmpegCommands.ProbeLogMaxChars))
-            .Add("stderr", PyText.Clip(stderr, FfmpegCommands.ProbeLogMaxChars))
-            .ToString();
+        PyJsonWriter.Dumps(
+            new PyDict()
+            .Set("path", path)
+            .Set("returncode", returnCode)
+            .Set("stdout", PyText.Clip(stdout, FfmpegCommands.ProbeLogMaxChars))
+            .Set("stderr", PyText.Clip(stderr, FfmpegCommands.ProbeLogMaxChars)),
+            PyJsonFormat.Default);
 
     /// <summary>
     /// <c>float(value or 0)</c> with <c>TypeError</c>/<c>ValueError</c> suppressed (false). An integer too

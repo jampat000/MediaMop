@@ -1,3 +1,5 @@
+using Weir.Core.Time;
+
 namespace Weir.Core.Jobs;
 
 /// <summary>The stored schedule grid is not a usable schedule (<c>ScheduleGridError</c>).</summary>
@@ -217,93 +219,4 @@ public static class ScheduleGrid
     private static int PythonMod(int value, int divisor) => ((value % divisor) + divisor) % divisor;
 
     private static int PythonFloorDiv(int value, int divisor) => (int)Math.Floor(value / (double)divisor);
-}
-
-/// <summary>IANA time zones as Python's <c>ZoneInfo</c> resolves them, falling back to UTC when unknown.</summary>
-/// <remarks>
-/// Weir runs with invariant globalization, and on Windows that leaves .NET unable to convert an IANA id
-/// (the registry holds only Windows ids and the conversion needs ICU). So on Windows an IANA id is mapped
-/// through an embedded CLDR table; only IANA ids are accepted there, as with <c>ZoneInfo</c>. Linux reads
-/// <c>/usr/share/zoneinfo</c> directly. The few ids CLDR has no Windows zone for (<c>CET</c>, <c>Factory</c>,
-/// <c>Antarctica/Troll</c> and similar) fall back to UTC on Windows.
-/// </remarks>
-public static class TimeZones
-{
-    private static readonly Lazy<Dictionary<string, string>> WindowsIds = new(LoadWindowsIds);
-
-    public static TimeZoneInfo Find(string? name)
-    {
-        var id = (name ?? "UTC").Trim();
-        if (id.Length == 0 || id == "UTC")
-        {
-            return TimeZoneInfo.Utc;
-        }
-
-        if (OperatingSystem.IsWindows())
-        {
-            if (!WindowsIds.Value.TryGetValue(id, out var windowsId))
-            {
-                return TimeZoneInfo.Utc;
-            }
-
-            id = windowsId;
-        }
-
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(id);
-        }
-        catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException or ArgumentException or System.Security.SecurityException)
-        {
-            return TimeZoneInfo.Utc;
-        }
-    }
-
-    private static Dictionary<string, string> LoadWindowsIds()
-    {
-        var map = new Dictionary<string, string>(StringComparer.Ordinal);
-        using var stream = typeof(TimeZones).Assembly.GetManifestResourceStream("Weir.Core.Jobs.windows-zones.txt");
-        if (stream is null)
-        {
-            return map;
-        }
-
-        using var reader = new StreamReader(stream);
-        while (reader.ReadLine() is { } line)
-        {
-            var tab = line.IndexOf('\t', StringComparison.Ordinal);
-            if (tab > 0)
-            {
-                map[line[..tab]] = line[(tab + 1)..];
-            }
-        }
-
-        return map;
-    }
-
-    public static DateTimeOffset ToLocal(DateTimeOffset now, string? name) => TimeZoneInfo.ConvertTime(now, Find(name));
-
-    /// <summary>
-    /// A wall-clock time in <paramref name="zone"/> as an instant. For an ambiguous or skipped time
-    /// this takes the first offset (Python's <c>fold=0</c>).
-    /// </summary>
-    public static DateTimeOffset FromWallClock(DateTime wall, TimeZoneInfo zone)
-    {
-        ArgumentNullException.ThrowIfNull(zone);
-        TimeSpan offset;
-        if (zone.IsAmbiguousTime(wall))
-        {
-            offset = zone.GetAmbiguousTimeOffsets(wall).Max();
-        }
-        else if (zone.IsInvalidTime(wall))
-        {
-            offset = zone.GetUtcOffset(wall.AddHours(-1));
-        }
-        else
-        {
-            offset = zone.GetUtcOffset(wall);
-        }
-
-        return new DateTimeOffset(wall, offset);
-    }
 }

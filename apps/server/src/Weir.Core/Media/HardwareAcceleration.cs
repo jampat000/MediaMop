@@ -1,4 +1,5 @@
 using System.Globalization;
+using Weir.Core.Json;
 using Weir.Core.Rules;
 
 namespace Weir.Core.Media;
@@ -109,7 +110,7 @@ public static class HardwareAcceleration
         var methods = new List<string>();
         foreach (var raw in PyText.SplitLines(stdout ?? string.Empty))
         {
-            var line = Py.Lower(Py.Strip(raw));
+            var line = Py.Lower(PyStrings.Strip(raw));
             // The first line is a heading; anything with whitespace is prose, not a method.
             if (line.Length == 0 || line.Contains(':', StringComparison.Ordinal) || line.Contains(' ', StringComparison.Ordinal))
             {
@@ -163,7 +164,7 @@ public static class HardwareAcceleration
             {
                 ArgvFlags = strictFlags,
                 FellBackToSoftware = true,
-                Reason = Py.Strip(
+                Reason = PyStrings.Strip(
                     "Weir fell back to software decoding because this ffmpeg build reports no hardware "
                     + $"acceleration. {report.Detail}"),
             };
@@ -171,7 +172,7 @@ public static class HardwareAcceleration
 
         if (settings.Mode == ModeDevice)
         {
-            var wanted = Py.Lower(Py.Strip(settings.Device));
+            var wanted = Py.Lower(PyStrings.Strip(settings.Device));
             if (wanted.Length == 0)
             {
                 return new AccelerationDecision
@@ -241,7 +242,7 @@ public static class HardwareAcceleration
         var result = new List<string>();
         foreach (var raw in (csv ?? string.Empty).Split(','))
         {
-            var name = Py.Lower(Py.Strip(raw));
+            var name = Py.Lower(PyStrings.Strip(raw));
             if (VendorMethods.Any(v => v.Key == name) && !result.Contains(name, StringComparer.Ordinal))
             {
                 result.Add(name);
@@ -254,14 +255,14 @@ public static class HardwareAcceleration
     /// <summary><c>normalize_strictness</c>: unknown values mean ffmpeg's default.</summary>
     public static string NormalizeStrictness(string? raw)
     {
-        var value = Py.Lower(Py.Strip(raw ?? string.Empty));
+        var value = Py.Lower(PyStrings.Strip(raw ?? string.Empty));
         return StrictnessLevels.Contains(value, StringComparer.Ordinal) ? value : DefaultStrictness;
     }
 
     /// <summary><c>normalize_decode_mode</c>: unknown values mean off.</summary>
     public static string NormalizeDecodeMode(string? raw)
     {
-        var value = Py.Lower(Py.Strip(raw ?? string.Empty));
+        var value = Py.Lower(PyStrings.Strip(raw ?? string.Empty));
         return value is ModeOff or ModeAuto or ModeDevice ? value : ModeOff;
     }
 

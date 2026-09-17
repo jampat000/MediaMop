@@ -1,7 +1,5 @@
 using System.Globalization;
-using System.Text;
-using System.Text.Json;
-using Weir.Core.Jobs;
+using Weir.Core.Time;
 
 namespace Weir.Infrastructure.Jobs;
 
@@ -21,16 +19,10 @@ public static class PythonTimestamps
 {
     /// <summary>The <c>sqlite3</c> adapter shape, for values bound into raw SQL.</summary>
     public static string Adapter(DateTimeOffset value) =>
-        JobQueueRules.PythonIsoFormat(JobQueueRules.ToMicroseconds(value.ToUniversalTime()), ' ');
+        PyDateTime.FromDateTimeOffset(value.ToUniversalTime()).IsoFormat(' ');
 
     /// <summary>The SQLAlchemy SQLite <c>DATETIME</c> storage shape, for values written through the ORM.</summary>
-    public static string Orm(DateTimeOffset value)
-    {
-        var utc = JobQueueRules.ToMicroseconds(value.ToUniversalTime());
-        var microseconds = (utc.Ticks % TimeSpan.TicksPerSecond) / 10;
-        return utc.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + "." +
-               microseconds.ToString("D6", CultureInfo.InvariantCulture);
-    }
+    public static string Orm(DateTimeOffset value) => PyDateTime.FromDateTimeOffset(value.ToUniversalTime()).ToSqlite();
 
     /// <summary>Read any of the stored shapes (including <c>CURRENT_TIMESTAMP</c>); a value without an offset is UTC.</summary>
     public static DateTimeOffset? Parse(object? value)
@@ -56,104 +48,4 @@ public static class PythonTimestamps
         var parsed = DateTime.Parse(text.Replace(' ', 'T'), CultureInfo.InvariantCulture, styles | DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
         return new DateTimeOffset(DateTime.SpecifyKind(parsed, DateTimeKind.Utc));
     }
-}
-
-/// <summary>
-/// <c>json.dumps(value, separators=(",", ":"))</c>: compact, keys in insertion order, and non-ASCII
-/// escaped as <c>\uXXXX</c> (<c>ensure_ascii=True</c>).
-/// </summary>
-public sealed class PythonJsonObject
-{
-    private readonly List<(string Key, string Json)> _members = [];
-
-    public PythonJsonObject Add(string key, string? value)
-    {
-        _members.Add((key, value is null ? "null" : PythonJson.Quote(value)));
-        return this;
-    }
-
-    public PythonJsonObject Add(string key, long value)
-    {
-        _members.Add((key, value.ToString(CultureInfo.InvariantCulture)));
-        return this;
-    }
-
-    public PythonJsonObject Add(string key, bool value)
-    {
-        _members.Add((key, value ? "true" : "false"));
-        return this;
-    }
-
-    /// <summary>A value copied from parsed JSON, re-serialised the way Python would.</summary>
-    public PythonJsonObject AddRaw(string key, JsonElement value)
-    {
-        _members.Add((key, PythonJson.Element(value)));
-        return this;
-    }
-
-    public override string ToString() =>
-        "{" + string.Join(",", _members.Select(member => PythonJson.Quote(member.Key) + ":" + member.Json)) + "}";
-}
-
-/// <summary>Python's JSON encoder for the scalar shapes the queue writes.</summary>
-public static class PythonJson
-{
-    public static string Quote(string value)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-        var builder = new StringBuilder(value.Length + 2);
-        builder.Append('"');
-        foreach (var c in value)
-        {
-            switch (c)
-            {
-                case '"':
-                    builder.Append("\\\"");
-                    break;
-                case '\\':
-                    builder.Append("\\\\");
-                    break;
-                case '\n':
-                    builder.Append("\\n");
-                    break;
-                case '\r':
-                    builder.Append("\\r");
-                    break;
-                case '\t':
-                    builder.Append("\\t");
-                    break;
-                case '\b':
-                    builder.Append("\\b");
-                    break;
-                case '\f':
-                    builder.Append("\\f");
-                    break;
-                default:
-                    if (c < 0x20 || c > 0x7E)
-                    {
-                        builder.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
-                    }
-                    else
-                    {
-                        builder.Append(c);
-                    }
-
-                    break;
-            }
-        }
-
-        return builder.Append('"').ToString();
-    }
-
-    public static string Element(JsonElement value) => value.ValueKind switch
-    {
-        JsonValueKind.String => Quote(value.GetString()!),
-        JsonValueKind.True => "true",
-        JsonValueKind.False => "false",
-        JsonValueKind.Null => "null",
-        JsonValueKind.Number => value.GetRawText(),
-        JsonValueKind.Object => "{" + string.Join(",", value.EnumerateObject().Select(p => Quote(p.Name) + ":" + Element(p.Value))) + "}",
-        JsonValueKind.Array => "[" + string.Join(",", value.EnumerateArray().Select(Element)) + "]",
-        _ => "null",
-    };
 }

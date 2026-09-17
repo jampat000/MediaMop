@@ -1,3 +1,5 @@
+using Weir.Core.Json;
+
 namespace Weir.Core.Media;
 
 /// <summary>
@@ -42,7 +44,7 @@ public static class MediaToolLocations
         ArgumentNullException.ThrowIfNull(resolvedWeirHome);
         ArgumentNullException.ThrowIfNull(userHome);
         var candidates = new List<string>();
-        var rawEnvDir = Rules.Py.Strip(ffmpegDirEnvironment ?? string.Empty);
+        var rawEnvDir = PyStrings.Strip(ffmpegDirEnvironment ?? string.Empty);
         if (rawEnvDir.Length > 0)
         {
             candidates.Add(Normalize(ExpandUser(rawEnvDir, userHome, windows), windows));

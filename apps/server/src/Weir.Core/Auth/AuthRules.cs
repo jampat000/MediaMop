@@ -1,4 +1,5 @@
 using Weir.Core.Configuration;
+using Weir.Core.Json;
 using Weir.Core.Time;
 
 namespace Weir.Core.Auth;
@@ -152,30 +153,7 @@ public static class SessionRules
             platform = "Linux";
         }
 
-        return Truncate($"{browser} on {platform}", 80);
-    }
-
-    /// <summary>Python's <c>value[:n]</c> by code point.</summary>
-    public static string Truncate(string value, int codePoints)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-        var count = 0;
-        for (var i = 0; i < value.Length; i++)
-        {
-            if (count == codePoints)
-            {
-                return value[..i];
-            }
-
-            if (char.IsHighSurrogate(value[i]) && i + 1 < value.Length && char.IsLowSurrogate(value[i + 1]))
-            {
-                i++;
-            }
-
-            count++;
-        }
-
-        return value;
+        return PyStrings.Slice($"{browser} on {platform}", 80);
     }
 
     /// <summary><c>resolve_cookie_secure</c>.</summary>
