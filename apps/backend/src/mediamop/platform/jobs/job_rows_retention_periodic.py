@@ -1,8 +1,8 @@
-"""Periodic pruning of terminal job rows from all three module queues.
+"""Periodic pruning of terminal job rows from the module job queue.
 
 Deletes completed/failed/cancelled/handler_ok_finalize_failed rows whose ``updated_at``
 is older than ``job_rows_retention_days`` (default 7). Runs on the global asyncio event
-loop — one background task, shared across all three job tables.
+loop — one background task.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.platform.activity.service import prune_activity_events
 from mediamop.platform.media_managers.handoff_ledger import prune_ledger
@@ -29,11 +28,6 @@ _TERMINAL_REFINER = (
     RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
     RefinerJobStatus.CANCELLED.value,
 )
-_TERMINAL_PRUNER = (
-    PrunerJobStatus.COMPLETED.value,
-    PrunerJobStatus.FAILED.value,
-    PrunerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
-)
 
 
 def prune_job_rows(session: Session, *, cutoff: datetime) -> dict[str, int]:
@@ -43,15 +37,8 @@ def prune_job_rows(session: Session, *, cutoff: datetime) -> dict[str, int]:
             RefinerJob.updated_at < cutoff,
         )
     )
-    pruner_del = session.execute(
-        delete(PrunerJob).where(
-            PrunerJob.status.in_(_TERMINAL_PRUNER),
-            PrunerJob.updated_at < cutoff,
-        )
-    )
     return {
         "refiner": refiner_del.rowcount,  # type: ignore[attr-defined]
-        "pruner": pruner_del.rowcount,  # type: ignore[attr-defined]
     }
 
 
@@ -82,9 +69,8 @@ async def _run_job_rows_retention_forever(
             total = sum(counts.values())
             if total:
                 logger.info(
-                    "History retention pruned refiner jobs=%d pruner jobs=%d activity events=%d",
+                    "History retention pruned refiner jobs=%d activity events=%d",
                     counts["refiner"],
-                    counts["pruner"],
                     counts.get("activity", 0),
                 )
         except asyncio.CancelledError:

@@ -18,15 +18,6 @@ from mediamop.core.db import (
     dispose_engine,
 )
 from mediamop.core.logging import configure_logging
-from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
-from mediamop.modules.pruner.pruner_preview_schedule_enqueue import (
-    start_pruner_preview_schedule_enqueue_tasks,
-    stop_pruner_preview_schedule_enqueue_tasks,
-)
-from mediamop.modules.pruner.worker_loop import (
-    start_pruner_worker_background_tasks,
-    stop_pruner_worker_background_tasks,
-)
 from mediamop.modules.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
 from mediamop.modules.refiner.refiner_failure_cleanup_periodic_enqueue import (
     start_refiner_failure_cleanup_enqueue_tasks,
@@ -172,10 +163,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     refiner_stop = None
     refiner_worker_tasks: list[asyncio.Task[None]] = []
-    pruner_handlers = build_pruner_job_handlers(settings, session_factory)
-    pruner_preview_schedule_tasks: list[asyncio.Task[None]] = []
-    pruner_stop = None
-    pruner_worker_tasks: list[asyncio.Task[None]] = []
     suite_configuration_backup_tasks: list[asyncio.Task[None]] = []
 
     def _start_session_cleanup_task() -> None:
@@ -242,23 +229,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             max_concurrent_files_getter=_refiner_max_concurrent_files,
         )
 
-    def _start_pruner_preview_schedule_tasks() -> None:
-        nonlocal pruner_preview_schedule_tasks
-        pruner_preview_schedule_tasks = start_pruner_preview_schedule_enqueue_tasks(
-            session_factory,
-            stop_event=stop,
-            settings=settings,
-        )
-
-    def _start_pruner_workers() -> None:
-        nonlocal pruner_stop, pruner_worker_tasks
-        pruner_stop, pruner_worker_tasks = start_pruner_worker_background_tasks(
-            session_factory,
-            settings,
-            stop_event=stop,
-            job_handlers=pruner_handlers,
-        )
-
     def _start_suite_configuration_backup_tasks() -> None:
         nonlocal suite_configuration_backup_tasks
         suite_configuration_backup_tasks = start_suite_configuration_backup_tasks(
@@ -285,8 +255,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _run_non_essential_startup_step("refiner_work_temp_stale_sweep_start", _start_refiner_work_temp_stale_sweep_tasks)
     _run_non_essential_startup_step("refiner_failure_cleanup_start", _start_refiner_failure_cleanup_tasks)
     _run_non_essential_startup_step("refiner_worker_start", _start_refiner_workers)
-    _run_non_essential_startup_step("pruner_preview_schedule_start", _start_pruner_preview_schedule_tasks)
-    _run_non_essential_startup_step("pruner_worker_start", _start_pruner_workers)
     _run_non_essential_startup_step("suite_configuration_backup_start", _start_suite_configuration_backup_tasks)
     app.state.startup_ready = True
     try:
@@ -327,15 +295,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "job_rows_retention_tasks_stop",
             lambda: stop_job_rows_retention_tasks(job_rows_retention_tasks),
         )
-        await _stop_task_group(
-            "pruner_preview_schedule_stop",
-            lambda: stop_pruner_preview_schedule_enqueue_tasks(pruner_preview_schedule_tasks),
-        )
-        if pruner_stop is not None:
-            await _stop_task_group(
-                "pruner_worker_stop",
-                lambda: stop_pruner_worker_background_tasks(pruner_stop, pruner_worker_tasks),
-            )
         if refiner_stop is not None:
             await _stop_task_group(
                 "refiner_worker_stop",

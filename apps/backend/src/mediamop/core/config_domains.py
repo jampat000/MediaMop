@@ -57,16 +57,6 @@ class RefinerSettings:
 
 
 @dataclass(frozen=True, slots=True)
-class PrunerSettings:
-    worker_count: int
-    preview_schedule_enqueue_enabled: bool
-    preview_schedule_scan_interval_seconds: int
-    apply_enabled: bool
-    plex_live_removal_enabled: bool
-    plex_live_abs_max_items: int
-
-
-@dataclass(frozen=True, slots=True)
 class ArrSettings:
     radarr_base_url: str | None
     radarr_api_key: str | None

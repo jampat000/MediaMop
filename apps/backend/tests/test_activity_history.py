@@ -33,7 +33,7 @@ from tests.integration_helpers import csrf as fetch_csrf
 
 def test_facts_the_producer_stated_are_kept() -> None:
     facts = classify_activity(
-        event_type="pruner.preview_succeeded",
+        event_type="refiner.file_remux_pass_completed",
         detail=json.dumps({"trigger": "Scheduled", "result": "skipped", "library_id": 3, "run_id": 41}),
     )
     assert (facts.trigger, facts.result, facts.library_id, facts.run_key) == ("scheduled", "skipped", 3, "run:41")

@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PrunerInstancesListPage } from "./pruner/pruner-instances-list-page";
 import { RefinerJobsInspectionSection } from "./refiner/refiner-jobs-inspection-section";
 
 vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
@@ -33,42 +32,6 @@ vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
     isPending: false,
     isError: false,
     mutate: vi.fn(),
-  })),
-}));
-
-vi.mock("../lib/pruner/queries", () => ({
-  usePrunerInstancesQuery: vi.fn(() => ({
-    isLoading: false,
-    isError: false,
-    data: [],
-  })),
-  usePrunerJobsInspectionQuery: vi.fn(() => ({
-    isLoading: false,
-    isError: false,
-    data: {
-      jobs: [
-        {
-          id: 1,
-          job_kind: "pruner.preview.test.v1",
-          status: "completed",
-          payload_json: "{}",
-          updated_at: "2026-04-20T00:00:00Z",
-        },
-      ],
-      default_recent_slice: false,
-    },
-  })),
-  usePrunerOverviewStatsQuery: vi.fn(() => ({
-    isPending: false,
-    isError: false,
-    data: {
-      window_days: 30,
-      items_removed: 0,
-      items_skipped: 0,
-      apply_runs: 0,
-      preview_runs: 0,
-      failed_applies: 0,
-    },
   })),
 }));
 
@@ -115,13 +78,5 @@ describe("responsive smoke", () => {
       screen.getByTestId("refiner-jobs-inspection-section"),
     ).toBeInTheDocument();
     expect(screen.getByText("Jobs")).toBeInTheDocument();
-  });
-
-  it.each(VIEWPORTS)("renders Pruner jobs tab at %ipx", (width) => {
-    setViewport(width);
-    render(withProviders(<PrunerInstancesListPage />));
-    fireEvent.click(screen.getByRole("tab", { name: "Jobs" }));
-    expect(screen.getByTestId("pruner-top-jobs-tab")).toBeInTheDocument();
-    expect(screen.getByText("Rows per page")).toBeInTheDocument();
   });
 });

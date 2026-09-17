@@ -3,7 +3,7 @@ from mediamop.platform.observability.failure_messages import classify_exception,
 
 def test_failure_message_maps_credentials_to_actionable_guidance() -> None:
     failure = operator_failure_from_exception(
-        module="Pruner",
+        module="Refiner",
         action="connection test",
         provider="jellyfin",
         exc=RuntimeError("api_key=secret was rejected"),
@@ -12,7 +12,7 @@ def test_failure_message_maps_credentials_to_actionable_guidance() -> None:
 
     assert failure.kind == "credential"
     assert failure.recoverable is False
-    assert "Pruner connection test for Jellyfin failed" in failure.message
+    assert "Refiner connection test for Jellyfin failed" in failure.message
     assert "Re-enter the Jellyfin credentials" in (failure.next_action or "")
     assert "api_key=[redacted]" in (failure.technical_detail or "")
 

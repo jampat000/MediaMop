@@ -31,8 +31,8 @@ class SuiteSettingsRow(Base):
     configuration_backup_preferred_time: Mapped[str] = mapped_column(Text, nullable=False, server_default="02:00")
     configuration_backup_last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # Pause lives on the suite, not on Refiner, so Pruner can honour the same switch
-    # without a second one appearing next to it.
+    # Pause lives on the suite, not on Refiner, so any later module can honour the same
+    # switch without a second one appearing next to it.
     processing_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     # A pause with an expiry is one an operator cannot forget to lift. Null means
     # "until I say otherwise", which is a deliberate choice rather than the only option.
@@ -42,8 +42,8 @@ class SuiteSettingsRow(Base):
     scan_while_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
 
     # The metadata provider. On the suite rather than on Refiner because "what is this
-    # film's original language" is not a Refiner question — Pruner will want the same
-    # answer. The base URL is configurable so a cache or gateway in front of TMDb works
+    # film's original language" is not a Refiner question — any later module will want
+    # the same answer. The base URL is configurable so a cache or gateway in front of TMDb works
     # (#343). The key is encrypted with the same helper the manager credentials use.
     metadata_provider: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     metadata_provider_base_url: Mapped[str] = mapped_column(Text, nullable=False, server_default="")

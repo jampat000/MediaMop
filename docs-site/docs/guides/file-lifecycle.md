@@ -22,4 +22,3 @@ Backend code should use `mediamop.platform.file_lifecycle.mutations` for final m
 
 - **Missing files** are already absent, not success with hidden work
 - **Locked/in-use files** must produce an operator-readable skipped or failed reason
-- **Pruner destructive actions** must use stored preview snapshots, never a fresh live query

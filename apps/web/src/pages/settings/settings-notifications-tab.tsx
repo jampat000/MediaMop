@@ -22,8 +22,6 @@ const EVENT_LABELS: Record<string, string> = {
   job_failed: "Any job permanently failed",
   refiner_job_completed: "Refiner job completed",
   refiner_job_failed: "Refiner job permanently failed",
-  pruner_job_completed: "Pruner job completed",
-  pruner_job_failed: "Pruner job permanently failed",
 };
 
 type NotificationFormData = {

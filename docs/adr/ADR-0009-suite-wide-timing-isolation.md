@@ -5,6 +5,8 @@
 Accepted — **hard rule** for Refiner, Pruner, Subber, and any future module-owned durable-job lanes.
 
 > **Update (2026-08-28): Subber moved to Deluno.** This ADR is left as it was written — an ADR records the decision, not the current file list — but wherever it names Subber, read it as an example rather than as a lane that still exists. The ``subber_jobs`` table is dropped by migration ``0010_drop_subber_tables``, and ``subber.`` is now an abandoned prefix refused on every remaining lane, alongside ``trimmer.``.
+>
+> **Update (2026-09-17): Pruner moved to Deluno (#473).** Read Pruner here the same way as Subber: an example, not a lane that still exists. Its tables are dropped by migration ``0036_drop_pruner_tables``, and ``pruner.`` is now an abandoned prefix refused on every remaining lane.
 
 ## Context
 

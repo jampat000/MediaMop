@@ -27,10 +27,6 @@ import mediamop.platform.suite_settings.suite_configuration_backup_model  # noqa
 # Import Base after ensuring src/ is on path (run from apps/backend with PYTHONPATH=src).
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.pruner import pruner_jobs_model as _pruner_jobs_orm  # noqa: F401
-from mediamop.modules.pruner import pruner_preview_run_model as _pruner_preview_run_orm  # noqa: F401
-from mediamop.modules.pruner import pruner_scope_settings_model as _pruner_scope_settings_orm  # noqa: F401
-from mediamop.modules.pruner import pruner_server_instance_model as _pruner_server_instance_orm  # noqa: F401
 from mediamop.modules.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_file_log_model as _refiner_file_log_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_file_state_model as _refiner_file_state_orm  # noqa: F401

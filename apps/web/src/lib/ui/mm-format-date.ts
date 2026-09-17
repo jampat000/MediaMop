@@ -29,19 +29,3 @@ export function useAppDateFormatter(): (
     [tz],
   );
 }
-
-export function formatAppDate(
-  iso: string | null | undefined,
-  tz?: string,
-): string {
-  if (!iso) return "—";
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-      timeZone: tz || undefined,
-    }).format(parseAppDate(iso));
-  } catch {
-    return iso ?? "—";
-  }
-}

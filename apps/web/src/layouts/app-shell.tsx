@@ -8,7 +8,6 @@ import {
   NavIconDashboard,
   NavIconRefiner,
   NavIconSettings,
-  NavIconPruner,
   NavIconSignOut,
 } from "../components/shell/nav-icons";
 import { PauseControl } from "../components/shell/pause-control";
@@ -129,17 +128,6 @@ export function AppShell() {
               <NavIconRefiner />
             </span>
             <span className="mm-sidebar-link-label">Refiner</span>
-          </NavLink>
-          <NavLink
-            to="/pruner"
-            className={sidebarNavClass}
-            title="Pruner"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <span className="mm-sidebar-link-icon" aria-hidden="true">
-              <NavIconPruner />
-            </span>
-            <span className="mm-sidebar-link-label">Pruner</span>
           </NavLink>
 
           <p className="mm-sidebar-section-label">System</p>

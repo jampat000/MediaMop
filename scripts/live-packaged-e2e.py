@@ -378,15 +378,6 @@ class LiveAudit:
             "/api/v1/media-managers/capabilities",
             "/api/v1/media-managers/connections",
             "/api/v1/media-managers/connections/999999",
-            "/api/v1/pruner/instances",
-            "/api/v1/pruner/instances/999999",
-            "/api/v1/pruner/instances/999999/preview-runs?limit=5",
-            "/api/v1/pruner/instances/999999/preview-runs/00000000-0000-4000-8000-000000000000",
-            "/api/v1/pruner/instances/999999/scopes/movies",
-            "/api/v1/pruner/instances/999999/scopes/movies/plex-live-removal-eligibility",
-            "/api/v1/pruner/instances/999999/studios?scope=movies",
-            "/api/v1/pruner/jobs/inspection?limit=5",
-            "/api/v1/pruner/overview-stats",
             "/api/v1/refiner/files?limit=5",
             "/api/v1/refiner/files/999999/log",
             "/api/v1/refiner/files/999999/log/download",
@@ -653,63 +644,6 @@ class LiveAudit:
         self.screenshot("refiner")
         self.record(
             "Refiner overview, libraries, remux, schedules, files, jobs, and maintenance tabs"
-        )
-
-    def pruner(self) -> None:
-        self.open_sidebar("Pruner")
-        self.visible(self.page.get_by_test_id("pruner-scope-page"), "Pruner page")
-        self.visible(
-            self.page.get_by_test_id("pruner-top-level-tabs"), "Pruner top-level tabs"
-        )
-        self.visible(
-            self.page.get_by_test_id("pruner-top-overview-tab"), "Pruner overview"
-        )
-
-        for provider in ("Emby", "Jellyfin", "Plex"):
-            provider_id = provider.lower()
-            self.click(
-                self.page.get_by_role("tab", name=provider, exact=True),
-                f"open Pruner {provider} tab",
-            )
-            self.visible(
-                self.page.get_by_test_id(f"pruner-provider-tab-{provider_id}"),
-                f"Pruner {provider} tab",
-            )
-            self.visible(
-                self.page.get_by_test_id(f"pruner-connection-panel-{provider_id}"),
-                f"Pruner {provider} connection panel",
-            )
-            # Each provider workspace exposes the same connection/cleanup/schedule
-            # contract.  Exercise the visible section controls without saving an
-            # external server or running a destructive preview.
-            section_tabs = self.page.get_by_role("tab")
-            for label in ("Connection", "Cleanup", "Schedule"):
-                candidate = section_tabs.filter(has_text=label)
-                if candidate.count():
-                    self.click(
-                        candidate.first, f"open Pruner {provider} {label} section"
-                    )
-            self.click(
-                self.page.get_by_role("tab", name=provider, exact=True),
-                f"restore Pruner {provider} tab",
-            )
-
-        self.click(
-            self.page.get_by_role("tab", name="Jobs", exact=True),
-            "open Pruner jobs tab",
-        )
-        self.visible(self.page.get_by_test_id("pruner-top-jobs-tab"), "Pruner jobs")
-        self.page.goto(BASE_URL + "/pruner?tab=schedule", wait_until="domcontentloaded")
-        self.visible(
-            self.page.get_by_test_id("pruner-scope-page"), "Pruner schedule deep link"
-        )
-        self.visible(
-            self.page.get_by_test_id("pruner-provider-schedule-wrap"),
-            "Pruner schedule deep-link panel",
-        )
-        self.screenshot("pruner")
-        self.record(
-            "Pruner overview, Emby/Jellyfin/Plex configuration, jobs, and schedule deep link"
         )
 
     def settings_general_and_setup(self) -> None:
@@ -1312,7 +1246,6 @@ def run(playwright: Playwright) -> dict[str, Any]:
         audit.dashboard()
         audit.activity()
         audit.refiner()
-        audit.pruner()
         audit.settings_general_and_setup()
         audit.settings_backup_upgrade_logs_security()
         audit.settings_notifications()

@@ -25,7 +25,6 @@ This directory is the repository-local system of record. Keep durable decisions 
 - [`visual-identity.md`](visual-identity.md) - brand and visual identity.
 - [`ux-polish.md`](ux-polish.md) - UI polish baseline.
 - [`operator-messaging-standard.md`](operator-messaging-standard.md) - operator-facing wording.
-- [`pruner-forward-design-constraints.md`](pruner-forward-design-constraints.md) - Pruner safety/design constraints.
 
 ## Reliability And Safety
 

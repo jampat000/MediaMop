@@ -49,7 +49,7 @@ async def _run_forever(session_factory: sessionmaker[Session], *, stop_event: as
             raise
         except Exception:
             # Retention failing must not take the task down: the next tick tries again,
-            # and a stopped pruner is a database that grows silently.
+            # and a stopped cleanup task is a database that grows silently.
             logger.exception("Refiner processing-record retention failed.")
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(stop_event.wait(), timeout=PRUNE_INTERVAL_SECONDS)

@@ -87,7 +87,7 @@ export function SettingsGeneralTab({
         <div className={mmModuleTabBlurbBandClass}>
           <p className={mmModuleTabBlurbTextClass}>
             Suite-wide choices saved in the app database. Integration details
-            for Refiner and Pruner stay on those module pages.
+            for Refiner stay on its module page.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">

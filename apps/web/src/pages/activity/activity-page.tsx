@@ -48,7 +48,7 @@ import {
   RemoveFileHistoryDialog,
 } from "./activity-history-dialogs";
 
-type ActivityModuleFilter = "all" | "refiner" | "pruner" | "system";
+type ActivityModuleFilter = "all" | "refiner" | "system";
 type ActivityTone = "info" | "success" | "warning" | "error";
 
 type ActivityDisplay = {
@@ -94,7 +94,6 @@ type ParsedDetail = Record<string, unknown>;
 const MODULE_OPTIONS: Array<{ value: ActivityModuleFilter; label: string }> = [
   { value: "all", label: "All modules" },
   { value: "refiner", label: "Refiner" },
-  { value: "pruner", label: "Pruner" },
   { value: "system", label: "System" },
 ];
 
@@ -116,13 +115,6 @@ const EVENT_LABELS: Record<string, string> = {
   "refiner.file_remux_pass_completed": "File processing finished",
   "refiner.work_temp_stale_sweep_completed": "Temporary files cleanup finished",
   "refiner.failure_cleanup_sweep_completed": "Failed-remux cleanup finished",
-  "pruner.connection_test_succeeded": "Connection check finished",
-  "pruner.connection_test_failed": "Connection check failed",
-  "pruner.preview_succeeded": "Preview finished",
-  "pruner.preview_unsupported": "Preview finished",
-  "pruner.preview_failed": "Preview finished",
-  "pruner.apply_library_removal_completed": "Cleanup finished",
-  "pruner.apply_library_removal_failed": "Cleanup finished",
 };
 
 function compactActivityTitle(text: string, maxLength = 92): string {
@@ -219,18 +211,6 @@ function asBoolean(value: unknown): boolean | null {
   return null;
 }
 
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => asString(item))
-    .filter((item): item is string => Boolean(item));
-}
-
-function scopeLabel(raw: string | null): string {
-  if (!raw) return "Library";
-  return raw === "movies" ? "Movies" : raw === "tv" ? "TV" : titleCase(raw);
-}
-
 function toneClasses(tone: ActivityTone): string {
   switch (tone) {
     case "success":
@@ -255,78 +235,6 @@ function chipToneClasses(tone: ActivityTone): string {
     default:
       return "border-[var(--mm-border)] bg-black/10 text-[var(--mm-text2)]";
   }
-}
-
-function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
-  const parsed = parseDetail(ev.detail);
-  const error = asString(parsed?.error);
-
-  if (
-    ev.event_type === "pruner.preview_succeeded" ||
-    ev.event_type === "pruner.preview_unsupported" ||
-    ev.event_type === "pruner.preview_failed"
-  ) {
-    return {
-      title: "Preview finished",
-      summary: "Cleanup preview result",
-      detail: error ?? ev.detail ?? null,
-      chip:
-        ev.event_type === "pruner.preview_unsupported"
-          ? "Preview unsupported"
-          : ev.event_type === "pruner.preview_failed"
-            ? "Preview failed"
-            : "Preview complete",
-      tone:
-        ev.event_type === "pruner.preview_failed"
-          ? "error"
-          : ev.event_type === "pruner.preview_unsupported"
-            ? "warning"
-            : "success",
-      compact: true,
-    };
-  }
-
-  if (
-    ev.event_type === "pruner.apply_library_removal_completed" ||
-    ev.event_type === "pruner.apply_library_removal_failed"
-  ) {
-    return {
-      title: "Cleanup finished",
-      summary: "Cleanup run result",
-      detail: error ?? ev.detail ?? null,
-      chip:
-        ev.event_type === "pruner.apply_library_removal_failed"
-          ? "Cleanup failed"
-          : "Cleanup complete",
-      tone:
-        ev.event_type === "pruner.apply_library_removal_failed"
-          ? "error"
-          : "success",
-      compact: true,
-    };
-  }
-
-  if (
-    ev.event_type === "pruner.connection_test_succeeded" ||
-    ev.event_type === "pruner.connection_test_failed"
-  ) {
-    return {
-      title: "Media server connection check",
-      summary: "Media server connection check",
-      detail: ev.detail ?? null,
-      chip:
-        ev.event_type === "pruner.connection_test_failed"
-          ? "Connection failed"
-          : "Connection checked",
-      tone:
-        ev.event_type === "pruner.connection_test_failed"
-          ? "warning"
-          : "success",
-      compact: false,
-    };
-  }
-
-  return null;
 }
 
 function normalizeRefinerSummary(
@@ -479,8 +387,6 @@ function normalizeAuthSummary(ev: ActivityEventItem): ActivityDisplay | null {
 function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
   const refiner = normalizeRefinerSummary(ev);
   if (refiner) return refiner;
-  const pruner = normalizePrunerSummary(ev);
-  if (pruner) return pruner;
   const auth = normalizeAuthSummary(ev);
   if (auth) return auth;
 
@@ -494,12 +400,7 @@ function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
         : "info";
   return {
     title: eventOptionLabel(ev.event_type),
-    summary:
-      ev.module === "refiner"
-        ? "Refiner activity"
-        : ev.module === "pruner"
-          ? "Pruner activity"
-          : "System event",
+    summary: ev.module === "refiner" ? "Refiner activity" : "System event",
     detail: ev.detail ?? null,
     chip: eventOptionLabel(ev.event_type),
     tone,
@@ -526,139 +427,9 @@ function ActivitySummaryCard({
   );
 }
 
-function StructuredMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function ChipsRow({ label, items }: { label: string; items: string[] }) {
-  if (items.length === 0) return null;
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {items.map((item) => (
-          <span
-            key={`${label}-${item}`}
-            className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]"
-          >
-            {item}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
   const parsed = parseDetail(ev.detail);
   if (!parsed) return null;
-
-  if (
-    ev.event_type === "pruner.preview_succeeded" ||
-    ev.event_type === "pruner.preview_unsupported" ||
-    ev.event_type === "pruner.preview_failed"
-  ) {
-    const filters = [
-      ...asStringArray(parsed.preview_include_genres),
-      ...asStringArray(parsed.preview_include_people),
-      ...asStringArray(parsed.preview_include_studios),
-      ...asStringArray(parsed.preview_include_collections),
-    ];
-    return (
-      <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StructuredMetric
-            label="Candidates"
-            value={asNumber(parsed.candidate_count) ?? 0}
-          />
-          <StructuredMetric
-            label="Trigger"
-            value={asString(parsed.trigger) ?? "Manual"}
-          />
-          <StructuredMetric
-            label="Scope"
-            value={scopeLabel(asString(parsed.media_scope))}
-          />
-          <StructuredMetric
-            label="Rule"
-            value={asString(parsed.rule_family_id) ?? "General preview"}
-          />
-        </div>
-        {filters.length > 0 ? (
-          <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-            <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">
-              Show preview filters
-            </summary>
-            <div className="mt-3">
-              <ChipsRow label="Applied filters" items={filters} />
-            </div>
-          </details>
-        ) : null}
-        {asString(parsed.error) ? (
-          <p className="text-sm text-red-200">{asString(parsed.error)}</p>
-        ) : null}
-        {asString(parsed.unsupported_detail) ? (
-          <p className="text-sm text-amber-100">
-            {asString(parsed.unsupported_detail)}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (
-    ev.event_type === "pruner.apply_library_removal_completed" ||
-    ev.event_type === "pruner.apply_library_removal_failed"
-  ) {
-    return (
-      <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StructuredMetric
-            label="Removed"
-            value={asNumber(parsed.removed) ?? 0}
-          />
-          <StructuredMetric
-            label="Skipped"
-            value={asNumber(parsed.skipped) ?? 0}
-          />
-          <StructuredMetric
-            label="Failed"
-            value={asNumber(parsed.failed) ?? 0}
-          />
-          <StructuredMetric
-            label="Action"
-            value={
-              asString(parsed.action_label) ??
-              asString(parsed.action) ??
-              "Delete"
-            }
-          />
-        </div>
-        {asString(parsed.note) ? (
-          <p className="text-sm text-[var(--mm-text2)]">
-            {asString(parsed.note)}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
 
   if (ev.event_type === "system.reconciliation.repair") {
     return (
@@ -1225,7 +996,7 @@ export function ActivityPage() {
       const out = await resetHistory.mutateAsync(confirm);
       setClearPreview(null);
       setNotice(
-        `History cleared. Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")}, ${plural(out.refiner_jobs_deleted, "finished Refiner job", "finished Refiner jobs")} and ${plural(out.pruner_jobs_deleted, "finished Pruner job", "finished Pruner jobs")}. No media file was touched.`,
+        `History cleared. Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")} and ${plural(out.refiner_jobs_deleted, "finished Refiner job", "finished Refiner jobs")}. No media file was touched.`,
       );
       await refreshAfterRemoval();
     } catch (e) {
@@ -1254,9 +1025,9 @@ export function ActivityPage() {
           Live activity timeline for MediaMop, newest first.
         </p>
         <p className="mm-page__lead">
-          Use this page to understand what just happened across Refiner, Pruner,
-          and the platform. It updates live and keeps the language focused on
-          what the action means.
+          Use this page to understand what just happened across Refiner and the
+          platform. It updates live and keeps the language focused on what the
+          action means.
         </p>
         {typeof retentionDays === "number" ? (
           <p

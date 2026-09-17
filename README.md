@@ -20,7 +20,6 @@ MediaMop is a self-hosted media operations app for people who want more control 
 It brings a few focused tools together in one place:
 
 - **Refiner** cleans up media files by remuxing them into a cleaner, more consistent result.
-- **Pruner** finds media that matches your cleanup rules so you can preview or remove it safely.
 - **Dashboard, Activity, and Settings** give you a live view of system health, recent work, logs, and core app configuration.
 
 The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
@@ -31,9 +30,9 @@ The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
 | --- | --- |
 | ![Dashboard](screenshots/dashboard.png) | ![Activity](screenshots/activity.png) |
 
-| Refiner | Pruner |
-| --- | --- |
-| ![Refiner](screenshots/refiner.png) | ![Pruner](screenshots/pruner.png) |
+| Refiner |
+| --- |
+| ![Refiner](screenshots/refiner.png) |
 
 | Settings |
 | --- |
@@ -63,7 +62,7 @@ From the repository root:
    ```
 
 2. Copy `apps/backend/.env.example` to `apps/backend/.env` and set `MEDIAMOP_SESSION_SECRET`. Set
-   `MEDIAMOP_CREDENTIALS_SECRET` as a separate long random value before saving Pruner, Sonarr, or Radarr
+   `MEDIAMOP_CREDENTIALS_SECRET` as a separate long random value before saving Sonarr or Radarr
    credentials. To rotate `MEDIAMOP_CREDENTIALS_SECRET`, put the old value in `MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS`,
    restart MediaMop, then re-save provider credentials so they are written with the new secret. Changing
    `MEDIAMOP_SESSION_SECRET` later can require re-entering credentials that were still encrypted with the old session

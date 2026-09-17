@@ -9,7 +9,6 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 
@@ -17,19 +16,15 @@ from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 class StartupJobRecoveryResult:
     refiner_requeued: int = 0
     refiner_failed: int = 0
-    pruner_requeued: int = 0
-    pruner_failed: int = 0
 
     @property
     def total_recovered(self) -> int:
-        return self.refiner_requeued + self.refiner_failed + self.pruner_requeued + self.pruner_failed
+        return self.refiner_requeued + self.refiner_failed
 
     def as_log_dict(self) -> dict[str, int]:
         return {
             "refiner_requeued": self.refiner_requeued,
             "refiner_failed": self.refiner_failed,
-            "pruner_requeued": self.pruner_requeued,
-            "pruner_failed": self.pruner_failed,
         }
 
 
@@ -54,20 +49,9 @@ def recover_incomplete_jobs_after_startup(session: Session, *, now: datetime | N
         module_name="Refiner",
         now=when,
     )
-    pr, pf = _recover_table(
-        session,
-        model=PrunerJob,
-        leased_status=PrunerJobStatus.LEASED.value,
-        pending_status=PrunerJobStatus.PENDING.value,
-        failed_status=PrunerJobStatus.FAILED.value,
-        module_name="Pruner",
-        now=when,
-    )
     return StartupJobRecoveryResult(
         refiner_requeued=rr,
         refiner_failed=rf,
-        pruner_requeued=pr,
-        pruner_failed=pf,
     )
 
 

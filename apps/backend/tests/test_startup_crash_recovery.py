@@ -10,7 +10,6 @@ import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
 from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
@@ -33,44 +32,29 @@ def test_startup_recovery_requeues_leased_jobs_with_attempts_remaining(tmp_path:
     factory = _session_factory(tmp_path)
     now = datetime(2026, 4, 29, 12, 0, tzinfo=UTC)
     with factory() as session, session.begin():
-        session.add_all(
-            [
-                RefinerJob(
-                    dedupe_key="refiner-recover",
-                    job_kind="refiner.test.v1",
-                    status=RefinerJobStatus.LEASED.value,
-                    lease_owner="dead-refiner",
-                    lease_expires_at=now + timedelta(hours=1),
-                    attempt_count=1,
-                    max_attempts=3,
-                ),
-                PrunerJob(
-                    dedupe_key="pruner-recover",
-                    job_kind="pruner.test.v1",
-                    status=PrunerJobStatus.LEASED.value,
-                    lease_owner="dead-pruner",
-                    lease_expires_at=now + timedelta(hours=1),
-                    attempt_count=1,
-                    max_attempts=2,
-                ),
-            ],
+        session.add(
+            RefinerJob(
+                dedupe_key="refiner-recover",
+                job_kind="refiner.test.v1",
+                status=RefinerJobStatus.LEASED.value,
+                lease_owner="dead-refiner",
+                lease_expires_at=now + timedelta(hours=1),
+                attempt_count=1,
+                max_attempts=3,
+            ),
         )
 
     with factory() as session, session.begin():
         result = recover_incomplete_jobs_after_startup(session, now=now)
 
     assert result.refiner_requeued == 1
-    assert result.pruner_requeued == 1
     with factory() as session:
-        for row in (
-            session.get(RefinerJob, 1),
-            session.get(PrunerJob, 1),
-        ):
-            assert row is not None
-            assert row.status == "pending"
-            assert row.lease_owner is None
-            assert row.lease_expires_at is None
-            assert "queued for another safe attempt" in str(row.last_error)
+        row = session.get(RefinerJob, 1)
+        assert row is not None
+        assert row.status == "pending"
+        assert row.lease_owner is None
+        assert row.lease_expires_at is None
+        assert "queued for another safe attempt" in str(row.last_error)
 
 
 def test_startup_recovery_fails_leased_jobs_after_final_attempt(tmp_path: Path) -> None:
