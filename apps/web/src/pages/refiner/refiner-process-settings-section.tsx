@@ -76,7 +76,7 @@ export function RefinerProcessSettingsSection() {
   }, [q.data]);
 
   if (q.isPending || me.isPending) {
-    return <PageLoading label="Loading Refiner processing settings" />;
+    return <PageLoading label="Loading processing settings" />;
   }
   if (q.isError) {
     return (
@@ -84,9 +84,7 @@ export function RefinerProcessSettingsSection() {
         className="mm-module-surface w-full min-w-0 rounded border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200"
         role="alert"
       >
-        <p className="font-semibold">
-          Could not load Refiner processing settings
-        </p>
+        <p className="font-semibold">Could not load processing settings</p>
         <p className="mt-1">
           {isLikelyNetworkFailure(q.error)
             ? "Check that the Weir API is running."
@@ -220,13 +218,13 @@ export function RefinerProcessSettingsSection() {
 
   return (
     <section className="mm-module-surface flex w-full min-w-0 flex-col rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7">
-      <p className="mm-page__eyebrow">Global Refiner controls</p>
+      <p className="mm-page__eyebrow">All libraries</p>
       <h2 className="mt-1 text-lg font-semibold text-[var(--mm-text)]">
         Processing, safety and records
       </h2>
       <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
-        These defaults apply across Refiner. A library can still narrow its own
-        intake, schedule and concurrency above.
+        These defaults apply to every library. Each library can still narrow its
+        own intake, schedule and concurrency above.
       </p>
       <div className="mm-card-action-body mt-6 flex-1 min-h-0">
         <div className="grid gap-4 xl:grid-cols-2">
@@ -294,7 +292,7 @@ export function RefinerProcessSettingsSection() {
                 Admission safety
               </h3>
               <p className="mt-1 text-xs leading-5 text-[var(--mm-text3)]">
-                Final global guardrails before Refiner probes or writes. Keep
+                Final guardrails before Weir probes or writes a file. Keep
                 downloader limits too; these protect the processing host.
               </p>
             </div>
@@ -360,7 +358,7 @@ export function RefinerProcessSettingsSection() {
                 )}
                 {toggleField(
                   "Delete source after a terminal failure",
-                  "High risk: removes the original release folder after Refiner gives up. Successful processing cleanup is separate and remains automatic.",
+                  "High risk: removes the original release folder after Weir gives up. Successful processing cleanup is separate and remains automatic.",
                   failureCleanupEnabled,
                   setFailureCleanupEnabled,
                   true,

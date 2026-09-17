@@ -30,7 +30,7 @@ export async function fetchRefinerJobsInspection(
 ): Promise<RefinerJobsInspectionOut> {
   const path = refinerJobsInspectionPath(opts);
   const r = await apiFetch(path);
-  await requireOk(path, r, "Could not load Refiner jobs");
+  await requireOk(path, r, "Could not load jobs");
   return readJson<RefinerJobsInspectionOut>(r);
 }
 
@@ -44,7 +44,7 @@ export async function postRefinerJobCancelPending(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token }),
   });
-  await requireOk(path, r, "Could not cancel Refiner job");
+  await requireOk(path, r, "Could not cancel job");
   return readJson<RefinerJobCancelPendingOut>(r);
 }
 
@@ -58,6 +58,6 @@ export async function postRefinerJobRecoverFinalizeFailed(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token }),
   });
-  await requireOk(path, r, "Could not recover that Refiner result");
+  await requireOk(path, r, "Could not recover that result");
   return readJson<RefinerJobRecoverFinalizeFailedOut>(r);
 }

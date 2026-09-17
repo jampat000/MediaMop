@@ -32,18 +32,18 @@ type RefinerPageTabId =
 
 const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
   overview:
-    "Review remux throughput, recent outcomes, and overall Refiner status.",
+    "What needs you, how processing is going, and every library at a glance.",
   libraries:
-    "Add and configure Refiner libraries — folders, file types, schedule and guardrails, one set per library.",
+    "Add and configure libraries: folders, file types, schedule and guardrails, one set per library.",
   "audio-subtitles":
     "Build reusable audio, subtitle and metadata profiles, then attach the right profile to each library.",
   schedules:
     "Set optional schedule windows and run manual watched-folder scans when needed.",
   files:
-    "Every file Refiner has looked at, and why it is or is not being processed.",
+    "Every file Weir has looked at, and why it is or is not being processed.",
   library:
-    "Clean files already in a library, in place, with the library's own rules. Separate from the download pipeline above.",
-  jobs: "View queued, running, and recent Refiner jobs for troubleshooting and progress.",
+    "Clean files that are already in your library, in place, with the library's own rules. Separate from new downloads.",
+  jobs: "Queued, running and recent jobs, for troubleshooting and progress.",
   maintenance:
     "Housekeeping Weir runs on a schedule, and what this instance is configured with. Start one now if you need to.",
 };
@@ -54,13 +54,13 @@ const REFINER_TABS = [
   { id: "audio-subtitles", label: "Audio & subtitles" },
   { id: "schedules", label: "Schedules" },
   { id: "files", label: "Files" },
-  { id: "library", label: "Library" },
+  { id: "library", label: "Existing library" },
   { id: "jobs", label: "Jobs" },
   { id: "maintenance", label: "Maintenance" },
 ] as const satisfies readonly WorkspaceTabOption<RefinerPageTabId>[];
 
 const REFINER_CAPABILITY_NOTE =
-  "Standalone watched-folder remux works after local safety gates. A media manager adds upstream import protection, library discovery, and safe manager-truth-dependent cleanup; no signal is never treated as an empty queue.";
+  "A library works on its own once its folders are set. Linking a media manager adds import protection, library discovery and safe cleanup; if the manager does not answer, Weir waits rather than assuming its queue is empty.";
 
 function refinerTabFromQuery(value: string | null): RefinerPageTabId {
   const allowed: RefinerPageTabId[] = [
@@ -108,15 +108,12 @@ export function RefinerPage() {
 
   return (
     <WorkspacePage
-      eyebrow="Weir"
-      title="Refiner"
+      title="Processing"
       dataTestId="refiner-scope-page"
       description={
         <>
-          Refiner remuxes <strong className="text-[var(--mm-text)]">TV</strong>{" "}
-          and <strong className="text-[var(--mm-text)]">Movies</strong> into the
-          audio and subtitle layout you want. Each library stays on its own.
-          When jobs finish, details are on{" "}
+          Weir keeps the audio and subtitle tracks you want in each download and
+          removes the rest, library by library. Finished work shows on{" "}
           <Link
             className="font-semibold text-[var(--mm-text)] underline-offset-2 hover:underline"
             to="/activity"
@@ -131,7 +128,7 @@ export function RefinerPage() {
         tabs={REFINER_TABS}
         activeId={tab}
         onSelect={selectTab}
-        ariaLabel="Refiner sections"
+        ariaLabel="Processing sections"
         idPrefix="refiner-tab"
         panelId="refiner-panel"
         dataTestId="refiner-section-tabs"

@@ -314,7 +314,7 @@ it("says there is nothing to watch before any watched folder is set (#459)", asy
   expect(await screen.findByText("Nothing to watch yet")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Set up a library" }),
-  ).toHaveAttribute("href", "/refiner?tab=libraries");
+  ).toHaveAttribute("href", "/processing?tab=libraries");
 });
 
 it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", async () => {
@@ -337,5 +337,5 @@ it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", 
   expect(await screen.findByText("2 jobs failed")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Review failed jobs" }),
-  ).toHaveAttribute("href", "/refiner?tab=jobs&status=failed");
+  ).toHaveAttribute("href", "/processing?tab=jobs&status=failed");
 });

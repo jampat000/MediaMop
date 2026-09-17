@@ -719,7 +719,7 @@ export function RefinerLibrariesSection() {
 
       {rows.length === 0 ? (
         <p className="text-sm text-[var(--mm-text3)]">
-          No libraries yet. Add one to tell Refiner which folder to watch.
+          No libraries yet. Add one to tell Weir which folder to watch.
         </p>
       ) : null}
 
@@ -921,8 +921,8 @@ export function RefinerLibrariesSection() {
                 Intake rules
               </h4>
               <p className="text-xs text-[var(--mm-text3)]">
-                Decide which files belong here before Refiner spends time
-                probing or processing them. A maximum of 0 means no limit.
+                Decide which files belong here before Weir spends time probing
+                or processing them. A maximum of 0 means no limit.
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">

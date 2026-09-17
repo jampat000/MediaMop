@@ -137,7 +137,7 @@ function guidanceForFile(
     case "processing_failed":
       return {
         title: "This attempt failed.",
-        next: "Fix the reason and use Try again, or use Pass through unchanged when this is an intentional edge case you want delivered without Refiner rules.",
+        next: "Fix the reason and use Try again, or use Pass through unchanged when this is an intentional edge case you want delivered without your rules.",
       };
     case "skipped":
       return {
@@ -162,7 +162,7 @@ function guidanceForFile(
     case "disabled":
       return {
         title: "This library is switched off.",
-        next: "Enable the library in Refiner → Libraries before processing its files.",
+        next: "Turn the library on in Processing → Libraries before processing its files.",
       };
     case "processed":
       return {
@@ -171,7 +171,7 @@ function guidanceForFile(
       };
     case "processing":
       return {
-        title: "Refiner is working on this file.",
+        title: "Weir is working on this file.",
         next: "No action is needed. Open Processing record after it finishes.",
       };
   }
@@ -658,15 +658,15 @@ export function RefinerFilesSection() {
     >
       <div className="mm-refiner-workbench-intro">
         <div>
-          <p className="mm-page__eyebrow">Refiner workbench</p>
+          <p className="mm-page__eyebrow">Files</p>
           <h2 className="text-xl font-semibold tracking-tight text-[var(--mm-text1)]">
             Give every file a useful next step.
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--mm-text2)]">
-            This is the control room for files Refiner has seen. Select rows to
-            start, retry, or re-check them together. Pass through unchanged is
-            the explicit exception: it validates an unchanged output first, then
-            performs the library&apos;s normal successful source cleanup.
+            Every file Weir has seen. Select rows to start, retry, or re-check
+            them together. Pass through unchanged is the explicit exception: it
+            validates an unchanged output first, then performs the
+            library&apos;s normal successful source cleanup.
           </p>
         </div>
         <div
@@ -941,8 +941,7 @@ export function RefinerFilesSection() {
 
       {rows.length === 0 ? (
         <p className="text-sm text-[var(--mm-text3)]">
-          No files match. Refiner records a file the first time a scan looks at
-          it.
+          No files match. Weir records a file the first time a scan looks at it.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -1136,7 +1135,7 @@ export function RefinerFilesSection() {
                             })}
                             onClick={() => void passThroughFile(file)}
                             data-testid={`refiner-file-pass-through-${file.id}`}
-                            title="Bypasses Refiner track and metadata rules, safely places an unchanged validated copy in the output folder, then performs normal successful source cleanup."
+                            title="Skips your track and metadata rules, safely places an unchanged validated copy in the output folder, then performs normal successful source cleanup."
                           >
                             Pass through unchanged
                           </button>

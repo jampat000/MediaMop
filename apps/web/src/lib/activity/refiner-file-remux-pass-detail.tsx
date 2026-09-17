@@ -322,7 +322,7 @@ export function RefinerFileRemuxPassActivityDetail({
             ? "Yes"
             : "No",
     },
-    { k: "What Refiner planned", v: parsed.plan_summary },
+    { k: "What Weir planned", v: parsed.plan_summary },
     ...cleanupRows.map((row) => ({ k: row.label, v: row.value })),
     { k: "Safety note", v: parsed.output_completeness_note || undefined },
     { k: "Reason", v: parsed.reason },
@@ -472,10 +472,10 @@ export function RefinerFileProcessingProgressDetail({
           : "mm-activity-processing--processing";
   const message =
     status === "finished"
-      ? "Refiner finished processing this file."
+      ? "Weir finished processing this file."
       : status === "failed"
-        ? parsed.message || "Refiner could not finish this file."
-        : parsed.message || `Refiner is processing ${fileName}.`;
+        ? parsed.message || "Weir could not finish this file."
+        : parsed.message || `Weir is processing ${fileName}.`;
   const primaryMetric =
     status === "finished"
       ? "Finished"

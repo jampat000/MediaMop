@@ -62,7 +62,7 @@ export type ConfigurationBundle = Record<string, unknown> & {
 export async function fetchSuiteSettings(): Promise<SuiteSettingsOut> {
   const path = suiteSettingsPath();
   const r = await apiFetch(path);
-  await requireOk(path, r, "Could not load suite settings");
+  await requireOk(path, r, "Could not load settings");
   return readJson<SuiteSettingsOut>(r);
 }
 
@@ -76,7 +76,7 @@ export async function putSuiteSettings(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, csrf_token }),
   });
-  await requireOk(path, r, "Could not save suite settings");
+  await requireOk(path, r, "Could not save settings");
   return readJson<SuiteSettingsOut>(r);
 }
 

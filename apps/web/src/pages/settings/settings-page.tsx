@@ -325,7 +325,6 @@ export function SettingsPage() {
     return (
       <div className="mm-page" data-testid="suite-settings-page">
         <header className="mm-page__intro">
-          <p className="mm-page__eyebrow">System</p>
           <h1 className="mm-page__title">Settings</h1>
           <p className="mm-page__lead">
             {isLikelyNetworkFailure(err)
@@ -492,13 +491,13 @@ export function SettingsPage() {
 
   return (
     <WorkspacePage
-      eyebrow="System"
       title="Settings"
       dataTestId="suite-settings-page"
       description={
         <>
-          Weir-wide choices that are not part of Refiner. Library and processing
-          details stay on the Refiner page.
+          How Weir itself runs: time zone, history, security, backups, updates
+          and connections. Libraries and processing rules are on the Processing
+          page.
         </>
       }
     >

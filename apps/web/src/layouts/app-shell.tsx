@@ -82,7 +82,6 @@ export function AppShell() {
             </span>
           </button>
           <nav className="mm-sidebar-nav" aria-label="Primary">
-            <p className="mm-sidebar-section-label">Overview</p>
             <NavLink
               to="/"
               end
@@ -107,20 +106,18 @@ export function AppShell() {
               <span className="mm-sidebar-link-label">Activity</span>
             </NavLink>
 
-            <p className="mm-sidebar-section-label">Processing</p>
             <NavLink
-              to="/refiner"
+              to="/processing"
               className={sidebarNavClass}
-              title="Refiner"
+              title="Processing"
               onClick={() => setSidebarOpen(false)}
             >
               <span className="mm-sidebar-link-icon" aria-hidden="true">
                 <NavIconRefiner />
               </span>
-              <span className="mm-sidebar-link-label">Refiner</span>
+              <span className="mm-sidebar-link-label">Processing</span>
             </NavLink>
 
-            <p className="mm-sidebar-section-label">System</p>
             <NavLink
               to="/settings"
               className={sidebarNavClass}

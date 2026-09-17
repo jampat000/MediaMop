@@ -7,6 +7,6 @@ export const refinerRuntimeSettingsPath = () =>
 export async function fetchRefinerRuntimeSettings(): Promise<RefinerRuntimeSettingsOut> {
   const path = refinerRuntimeSettingsPath();
   const r = await apiFetch(path);
-  await requireOk(path, r, "Could not load Refiner runtime settings");
+  await requireOk(path, r, "Could not load runtime settings");
   return readJson<RefinerRuntimeSettingsOut>(r);
 }

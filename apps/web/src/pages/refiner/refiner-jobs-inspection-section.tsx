@@ -146,8 +146,7 @@ export function RefinerJobsInspectionSection() {
           Jobs
         </h2>
         <p className="mt-1 text-sm text-[var(--mm-text2)]">
-          Current and recent Refiner work, with a clear next step when you need
-          to act.
+          Current and recent work, with a clear next step when you need to act.
         </p>
       </header>
       <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
@@ -185,7 +184,7 @@ export function RefinerJobsInspectionSection() {
                 ? "The server refused this request. Sign in again, then try this page."
                 : q.error instanceof Error
                   ? q.error.message
-                  : "Could not load Refiner jobs."}
+                  : "Could not load jobs."}
           </p>
         ) : null}
 
@@ -276,7 +275,7 @@ export function RefinerJobsInspectionSection() {
         ) : null}
 
         <p className="text-xs text-[var(--mm-text2)]">
-          Full detail on Refiner outcomes is in the{" "}
+          Full detail on each outcome is in the{" "}
           <Link to="/activity" className="text-[var(--mm-accent)] underline">
             Activity log
           </Link>

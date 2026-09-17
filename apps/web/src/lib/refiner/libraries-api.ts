@@ -270,7 +270,7 @@ const libraryPath = (id: number) => `${refinerLibrariesPath()}/${id}`;
 export async function fetchRefinerLibraries(): Promise<RefinerLibrary[]> {
   const path = refinerLibrariesPath();
   const r = await apiFetch(path);
-  await requireOk(path, r, "Could not load Refiner libraries");
+  await requireOk(path, r, "Could not load libraries");
   return readJson<RefinerLibrary[]>(r);
 }
 
@@ -466,7 +466,7 @@ const refinerRuleSetsPath = () => "/api/v1/refiner/rule-sets";
 export async function fetchRefinerRuleSets(): Promise<RefinerRuleSet[]> {
   const path = refinerRuleSetsPath();
   const response = await apiFetch(path);
-  await requireOk(path, response, "Could not load Refiner rule sets");
+  await requireOk(path, response, "Could not load rule sets");
   return readJson<RefinerRuleSet[]>(response);
 }
 
