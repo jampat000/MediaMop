@@ -1,0 +1,69 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2
+      ],
+      "subtitles": [],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 2,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 448000,
+          "codec_rank": 13,
+          "codec_name": "ac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "jpn flac 2 ch (stream 1): removed (not selected — eng ac3 6 ch (stream 2) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected eng ac3 6 ch (stream 2) using quality across all languages (policy: quality across all languages).",
+        "Removed non-selected jpn flac 2 ch (stream 1) after selecting eng ac3 6 ch (stream 2)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "Japanese 2.0 FLAC · English 5.1 AC-3",
+      "audio_after": "English 5.1 AC-3",
+      "subtitle_before": "—",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

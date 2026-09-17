@@ -35,13 +35,19 @@ public sealed record TrackSorter(string Field, string? Value = null, bool Revers
     {
         if (Value is null)
         {
-            // The reference computes "lowest first" for the fields where larger is better, so the
-            // default list describes channels and bitrate as "lowest first" although it ranks the
-            // highest first. Kept as-is: the notes must match the reference byte for byte.
-            var direction = Reversed != TrackSorters.LargerIsBetter(Field) ? "lowest first" : "highest first";
-            if (Field is "default" or "forced" or "commentary")
+            // Issue #537 item 1: the reference's notes said the opposite of what the code did
+            // (claiming "lowest first" for channels/bitrate, which actually rank highest first,
+            // and "commentary first" when commentary is in fact ranked last). Fixed here so the
+            // note matches the real ranking; see golden/overrides for the affected golden cases.
+            if (Field is "default" or "forced")
             {
                 return $"{Field} {(Reversed ? "last" : "first")}";
+            }
+
+            if (Field == "commentary")
+            {
+                // Commentary is a demotion: it naturally sorts last, not first.
+                return $"{Field} {(Reversed ? "first" : "last")}";
             }
 
             if (Field is "codec" or "language" or "title")
@@ -49,6 +55,8 @@ public sealed record TrackSorter(string Field, string? Value = null, bool Revers
                 return $"{Field} order";
             }
 
+            // The only fields left (bitrate, channels) are both "larger is better".
+            var direction = Reversed ? "lowest first" : "highest first";
             return $"{Field} {direction}";
         }
 

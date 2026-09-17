@@ -1,0 +1,83 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "subtitles": [
+        5,
+        6
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 4,
+          "lang_label": "fre",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 1509000,
+          "codec_rank": 15,
+          "codec_name": "dts",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "eng (commentary excluded — remove commentary enabled)",
+        "eng truehd 8 ch (stream 1): removed (not selected — fre dts 6 ch (stream 4) kept)",
+        "eng ac3 6 ch (stream 2): removed (not selected — fre dts 6 ch (stream 4) kept)"
+      ],
+      "removed_subtitles": [
+        "eng",
+        "fre"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Excluded commentary track (stream 3) because remove commentary is enabled.",
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected fre dts 6 ch (stream 4) as the only track in the first matching language tier.",
+        "Removed non-selected eng truehd 8 ch (stream 1) after selecting fre dts 6 ch (stream 4).",
+        "Removed non-selected eng ac3 6 ch (stream 2) after selecting fre dts 6 ch (stream 4).",
+        "Ignored eng truehd 8 ch (stream 1) because preferred languages (tiered quality) had candidates in 'fre' first.",
+        "Ignored eng ac3 6 ch (stream 2) because preferred languages (tiered quality) had candidates in 'fre' first."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 7.1 TrueHD · English 5.1 AC-3 · English 2.0 AAC · French 5.1 DTS",
+      "audio_after": "French 5.1 DTS",
+      "subtitle_before": "English · French",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

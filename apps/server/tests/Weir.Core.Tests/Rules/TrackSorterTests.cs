@@ -271,6 +271,31 @@ public sealed class TrackSorterTests
         Assert.Equal("not title commentary", TrackSorters.Describe([new TrackSorter("title", "commentary", Reversed: true)]));
     }
 
+    // --- issue #537 item 1: the notes must say the true ranking direction ----------------
+
+    [Fact]
+    public void The_default_notes_say_the_true_ranking_direction()
+    {
+        var text = TrackSorters.Describe(TrackSorters.DefaultAudioSorters);
+
+        // channels and bitrate rank highest first; commentary is a demotion, so it ranks last.
+        Assert.Contains("channels highest first", text, StringComparison.Ordinal);
+        Assert.Contains("bitrate highest first", text, StringComparison.Ordinal);
+        Assert.Contains("commentary last", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("lowest first", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("commentary first", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_reversed_sorter_is_described_with_the_flipped_direction()
+    {
+        Assert.Equal("channels lowest first", TrackSorters.Describe([new TrackSorter("channels", Reversed: true)]));
+        Assert.Equal("bitrate lowest first", TrackSorters.Describe([new TrackSorter("bitrate", Reversed: true)]));
+        // Reversing the demotion puts commentary first instead of last.
+        Assert.Equal("commentary first", TrackSorters.Describe([new TrackSorter("commentary", Reversed: true)]));
+        Assert.Equal("default last", TrackSorters.Describe([new TrackSorter("default", Reversed: true)]));
+    }
+
     [Fact]
     public void Choosing_a_policy_fills_the_sorter_list_so_it_can_then_be_edited()
     {

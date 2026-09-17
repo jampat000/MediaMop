@@ -1,0 +1,105 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "subtitles": [
+        5,
+        6
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 1,
+          "lang_label": "english",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 448000,
+          "codec_rank": 13,
+          "codec_name": "ac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [
+        {
+          "input_index": 5,
+          "lang_label": "pt",
+          "commentary": false,
+          "forced": false,
+          "default": false,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        },
+        {
+          "input_index": 6,
+          "lang_label": "zh",
+          "commentary": false,
+          "forced": false,
+          "default": false,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        }
+      ],
+      "removed_audio": [
+        "pt aac 2 ch (stream 2): removed (not selected — english ac3 6 ch (stream 1) kept)",
+        "zh aac 2 ch (stream 3): removed (not selected — english ac3 6 ch (stream 1) kept)",
+        "a-very-long- aac 2 ch (stream 4): removed (not selected — english ac3 6 ch (stream 1) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Fell back to english ac3 6 ch (stream 1) because no track matched configured language tiers (eng, jpn); ranked by quality with preferred-language matches first.",
+        "Removed non-selected pt aac 2 ch (stream 2) after selecting english ac3 6 ch (stream 1).",
+        "Removed non-selected zh aac 2 ch (stream 3) after selecting english ac3 6 ch (stream 1).",
+        "Removed non-selected a-very-long- aac 2 ch (stream 4) after selecting english ac3 6 ch (stream 1)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "ENGLISH 5.1 AC-3 · PT 2.0 AAC · ZH 2.0 AAC · A-VERY-LONG- 2.0 AAC",
+      "audio_after": "ENGLISH 5.1 AC-3",
+      "subtitle_before": "PT · ZH",
+      "subtitle_after": "PT · ZH",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

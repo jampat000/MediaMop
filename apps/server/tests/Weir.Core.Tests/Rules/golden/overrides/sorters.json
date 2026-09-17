@@ -1,0 +1,1612 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "cases": [
+    {
+      "index": 0,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "ok": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "ok": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "ok": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "The track sorter list is not valid JSON."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 4,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "The track sorter list must be a list."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 5,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "ok": "[]"
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 6,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "Sorter 1 is not an object."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 7,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "The track sorter list is not valid JSON."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 8,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "The track sorter list must be a list."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 9,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "Sorter 1 uses an unknown field 'loudness'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 10,
+      "expected": {
+        "parsed": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false}]",
+        "described": "channels highest first",
+        "validated": {
+          "error": "Sorter 1 uses an unknown field 'loudness'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+        },
+        "keys": [
+          [
+            0,
+            -6,
+            0
+          ],
+          [
+            0,
+            -8,
+            1
+          ],
+          [
+            0,
+            -2,
+            2
+          ],
+          [
+            1,
+            0,
+            3
+          ],
+          [
+            0,
+            -1,
+            4
+          ],
+          [
+            0,
+            -6,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          2,
+          4,
+          3
+        ]
+      }
+    },
+    {
+      "index": 11,
+      "expected": {
+        "parsed": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":true}]",
+        "described": "channels highest first, then bitrate lowest first",
+        "validated": {
+          "ok": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":true}]"
+        },
+        "keys": [
+          [
+            0,
+            -6,
+            0,
+            640000,
+            0
+          ],
+          [
+            0,
+            -8,
+            0,
+            1509000,
+            1
+          ],
+          [
+            0,
+            -2,
+            0,
+            128000,
+            2
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            3
+          ],
+          [
+            0,
+            -1,
+            0,
+            96000,
+            4
+          ],
+          [
+            0,
+            -6,
+            0,
+            640000,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          2,
+          4,
+          3
+        ]
+      }
+    },
+    {
+      "index": 12,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "Sorter 1 uses an unknown field '5'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 31,
+      "expected": {
+        "parsed": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":true}]",
+        "described": "channels highest first, then bitrate lowest first",
+        "validated": {
+          "ok": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":true}]"
+        },
+        "keys": [
+          [
+            0,
+            -6,
+            0,
+            640000,
+            0
+          ],
+          [
+            0,
+            -8,
+            0,
+            1509000,
+            1
+          ],
+          [
+            0,
+            -2,
+            0,
+            128000,
+            2
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            3
+          ],
+          [
+            0,
+            -1,
+            0,
+            96000,
+            4
+          ],
+          [
+            0,
+            -6,
+            0,
+            640000,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          2,
+          4,
+          3
+        ]
+      }
+    },
+    {
+      "index": 32,
+      "expected": {
+        "parsed": "[{\"field\":\"default\",\"value\":null,\"reversed\":false},{\"field\":\"forced\",\"value\":null,\"reversed\":true},{\"field\":\"commentary\",\"value\":null,\"reversed\":false}]",
+        "described": "default first, then forced last, then commentary last",
+        "validated": {
+          "ok": "[{\"field\":\"default\",\"value\":null,\"reversed\":false},{\"field\":\"forced\",\"value\":null,\"reversed\":true},{\"field\":\"commentary\",\"value\":null,\"reversed\":false}]"
+        },
+        "keys": [
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1,
+            2
+          ],
+          [
+            1,
+            0,
+            0,
+            3
+          ],
+          [
+            1,
+            0,
+            0,
+            4
+          ],
+          [
+            1,
+            0,
+            0,
+            5
+          ]
+        ],
+        "ranking": [
+          0,
+          1,
+          3,
+          4,
+          5,
+          2
+        ]
+      }
+    },
+    {
+      "index": 33,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":true},{\"field\":\"default\",\"value\":null,\"reversed\":true}]",
+        "described": "commentary first, then default last",
+        "validated": {
+          "ok": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":true},{\"field\":\"default\",\"value\":null,\"reversed\":true}]"
+        },
+        "keys": [
+          [
+            1,
+            1,
+            0
+          ],
+          [
+            1,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2
+          ],
+          [
+            1,
+            0,
+            3
+          ],
+          [
+            1,
+            0,
+            4
+          ],
+          [
+            1,
+            0,
+            5
+          ]
+        ],
+        "ranking": [
+          2,
+          1,
+          3,
+          4,
+          5,
+          0
+        ]
+      }
+    },
+    {
+      "index": 37,
+      "expected": {
+        "parsed": "[{\"field\":\"language\",\"value\":\"eng\",\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false}]",
+        "described": "language eng, then channels highest first",
+        "validated": {
+          "ok": "[{\"field\":\"language\",\"value\":\"eng\",\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false}]"
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            0
+          ],
+          [
+            1,
+            0,
+            -8,
+            1
+          ],
+          [
+            0,
+            0,
+            -2,
+            2
+          ],
+          [
+            1,
+            1,
+            0,
+            3
+          ],
+          [
+            1,
+            0,
+            -1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            5
+          ]
+        ],
+        "ranking": [
+          0,
+          5,
+          2,
+          1,
+          4,
+          3
+        ]
+      }
+    },
+    {
+      "index": 38,
+      "expected": {
+        "parsed": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":true}]",
+        "described": "channels highest first, then bitrate lowest first",
+        "validated": {
+          "ok": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":true}]"
+        },
+        "keys": [
+          [
+            0,
+            -6,
+            0,
+            640000,
+            0
+          ],
+          [
+            0,
+            -8,
+            0,
+            1509000,
+            1
+          ],
+          [
+            0,
+            -2,
+            0,
+            128000,
+            2
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            3
+          ],
+          [
+            0,
+            -1,
+            0,
+            96000,
+            4
+          ],
+          [
+            0,
+            -6,
+            0,
+            640000,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          2,
+          4,
+          3
+        ]
+      }
+    },
+    {
+      "index": 39,
+      "expected": {
+        "parsed": "[{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"language\",\"value\":null,\"reversed\":false},{\"field\":\"title\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false},{\"field\":\"forced\",\"value\":null,\"reversed\":false},{\"field\":\"commentary\",\"value\":null,\"reversed\":false}]",
+        "described": "bitrate highest first, then channels highest first, then codec order, then language order, then title order, then default first, then forced first, then commentary last",
+        "validated": {
+          "ok": "[{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"language\",\"value\":null,\"reversed\":false},{\"field\":\"title\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false},{\"field\":\"forced\",\"value\":null,\"reversed\":false},{\"field\":\"commentary\",\"value\":null,\"reversed\":false}]"
+        },
+        "keys": [
+          [
+            0,
+            -640000,
+            0,
+            -6,
+            12,
+            0,
+            101,
+            110,
+            103,
+            0,
+            101,
+            110,
+            103,
+            108,
+            105,
+            115,
+            104,
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            -1509000,
+            0,
+            -8,
+            15,
+            0,
+            102,
+            114,
+            101,
+            0,
+            102,
+            114,
+            97,
+            110,
+            231,
+            97,
+            105,
+            115,
+            32,
+            55,
+            46,
+            49,
+            1,
+            1,
+            0,
+            1
+          ],
+          [
+            0,
+            -128000,
+            0,
+            -2,
+            16,
+            0,
+            101,
+            110,
+            103,
+            0,
+            99,
+            111,
+            109,
+            109,
+            101,
+            110,
+            116,
+            97,
+            114,
+            121,
+            1,
+            0,
+            1,
+            2
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            55,
+            1,
+            1,
+            1,
+            1,
+            0,
+            3
+          ],
+          [
+            0,
+            -96000,
+            0,
+            -1,
+            0,
+            0,
+            106,
+            112,
+            110,
+            0,
+            100,
+            101,
+            115,
+            99,
+            114,
+            105,
+            112,
+            116,
+            105,
+            118,
+            101,
+            32,
+            97,
+            117,
+            100,
+            105,
+            111,
+            1,
+            1,
+            0,
+            4
+          ],
+          [
+            0,
+            -640000,
+            0,
+            -6,
+            12,
+            0,
+            101,
+            110,
+            103,
+            0,
+            101,
+            110,
+            103,
+            108,
+            105,
+            115,
+            104,
+            1,
+            1,
+            0,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          2,
+          4,
+          3
+        ]
+      }
+    },
+    {
+      "index": 40,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "Sorter 1 uses an unknown field 'codecé'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "index": 41,
+      "expected": {
+        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "validated": {
+          "error": "Sorter 1 uses an unknown field \"o'k\". Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+        },
+        "keys": [
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            -8,
+            15,
+            0,
+            -1509000,
+            1,
+            1
+          ],
+          [
+            1,
+            0,
+            -2,
+            16,
+            0,
+            -128000,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            0,
+            55,
+            1,
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            0,
+            -1,
+            0,
+            0,
+            -96000,
+            1,
+            4
+          ],
+          [
+            0,
+            0,
+            -6,
+            12,
+            0,
+            -640000,
+            1,
+            5
+          ]
+        ],
+        "ranking": [
+          1,
+          0,
+          5,
+          4,
+          3,
+          2
+        ]
+      }
+    }
+  ]
+}

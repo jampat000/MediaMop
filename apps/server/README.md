@@ -51,6 +51,25 @@ apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py          
 apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py --check  # compare only
 ```
 
+### Golden overrides (deliberate divergence from Python)
+
+Issue #537 fixed defects in the rules engine that the golden corpus had pinned as "today's behaviour" (its items 1, 2, 3, 5 and 6 — see the issue for each one). `apps/backend` is being retired (ADR-0017) and is not touched to "fix" these in Python, so regenerating the golden files from Python would just re-record the same bugs. Instead, a case whose correct answer now differs from Python's recorded one gets a same-named file in `tests/Weir.Core.Tests/Rules/golden/overrides/`, holding the issue number, which item(s) of it, and the new expected output, e.g.:
+
+```json
+{
+  "issue": 537,
+  "items": [1, 5],
+  "expected": { "...": "the plan the fixed engine actually produces" }
+}
+```
+
+`GoldenParityTests` reads this instead of the original file's `expected` for that one case; every other case is still compared against Python's recorded output, byte for byte. `sorters.json` holds several cases in one file, so its override has the same shape plus a `cases` list of `{"index": N, "expected": {...}}` keyed by position in that file's `cases` array, overriding only the cases named in it. `Every_override_names_a_real_golden_case` guards against a stale or misnamed override file.
+
+### Known rules-engine gaps
+
+- **Issue #537 item 4 (prefer the original language) is not wired up.** `RefinerRulesConfig.PreferredAudioIndices` and `OriginalLanguageNote` already flow straight into `RemuxRules.PlanRemux` unchanged, and `RefinerRulesConfig.WithOriginalLanguage(OriginalLanguageOutcome)` lets a caller copy an `OriginalLanguage.SelectTracks` decision into a config in one call. What is missing is the remux pass itself calling that lookup — it needs the manager/TMDb metadata lookup from #520, which is not ported yet. The item stays open until a contract scenario proves a manager's original language actually decides the kept audio track end to end.
+- **Issue #495 (track flags from names) is engine-only so far.** `Weir.Core.Rules.TrackFlagsReader.Detect` and the new `RefinerRulesConfig.RemoveHearingImpairedSubs` field are wired into `RemuxRules.PlanRemux` (subtitle forced/hearing-impaired handling, audio commentary/dub/audio-description). Persisting the new setting, exposing it over the API, and the web checkbox are not in scope here — they wait on the settings/refiner-config API port that is already in flight.
+
 ## ffmpeg parity
 
 `Weir.Core.Media` ports the decisions in `refiner_remux_mux.py` and `refiner_hardware_acceleration.py`: ffprobe and ffmpeg command lines (token for token), unreadable-media classification, output and duration validation, progress parsing and hardware choice. `Weir.Infrastructure.Media.MediaTools` runs the tools through `IProcessRunner` (`ProcessRunner` kills the whole process tree on timeout or cancellation). `tests/Weir.Core.Tests/Media/golden/*.json` record what the Python functions did with their processes replaced by recorded inputs, including log payloads and exception messages; `MediaGoldenParityTests` and `MediaToolsGoldenTests` require the same. Regenerate after a change to those Python modules:

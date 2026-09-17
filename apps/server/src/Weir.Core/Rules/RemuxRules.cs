@@ -30,7 +30,10 @@ public sealed record RefinerRulesConfig
     public required bool RemoveCommentary { get; init; }
     public required string SubtitleMode { get; init; }
 
-    /// <summary>Compared as stored: the planner does not normalize these, so "ENG" never matches a normalized "eng" tag.</summary>
+    /// <summary>
+    /// Issue #537 item 3: normalized the same way a track's own language tag is (<see cref="RemuxRules.NormalizeLang"/>),
+    /// so "ENG" or "en-US" matches a file tagged "eng". Stored values were compared as-is before the fix.
+    /// </summary>
     public required IReadOnlyList<string> SubtitleLangs { get; init; }
 
     public required bool PreserveForcedSubs { get; init; }
@@ -39,6 +42,12 @@ public sealed record RefinerRulesConfig
 
     /// <summary>The ordered sorter list, as stored JSON. Empty means the seeded default.</summary>
     public string AudioSortersJson { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Issue #495: remove a subtitle track whose <see cref="TrackFlags.HearingImpaired"/> flag is
+    /// set (SDH/CC), from its disposition or its name. Off by default, so an upgrade changes nothing.
+    /// </summary>
+    public bool RemoveHearingImpairedSubs { get; init; }
 
     /// <summary>Metadata and attachment stripping. All off by default.</summary>
     public MetadataRules Metadata { get; init; } = new();
@@ -51,6 +60,19 @@ public sealed record RefinerRulesConfig
 
     /// <summary>The sentence explaining which mechanism chose, appended to the selection notes.</summary>
     public string OriginalLanguageNote { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Issue #537 item 4: how a caller feeds an original-language decision in cleanly, once the
+    /// remux pass can look one up (it needs the manager/TMDb metadata lookup from #520, not ported
+    /// yet — see apps/server/README.md). <see cref="PreferredAudioIndices"/> and
+    /// <see cref="OriginalLanguageNote"/> already flow straight into <see cref="RemuxRules.PlanRemux"/>
+    /// unchanged; this just saves a caller from copying both fields by hand.
+    /// </summary>
+    public RefinerRulesConfig WithOriginalLanguage(OriginalLanguageOutcome outcome)
+    {
+        ArgumentNullException.ThrowIfNull(outcome);
+        return this with { PreferredAudioIndices = outcome.PreferredIndices, OriginalLanguageNote = outcome.Note };
+    }
 }
 
 public enum TrackKind
@@ -281,14 +303,49 @@ public static partial class RemuxRules
         return new SplitProbeStreams(SortByIndex(video), SortByIndex(audio), SortByIndex(subtitles));
     }
 
-    /// <summary><c>list.sort(key=lambda x: int(x.get("index", 0)))</c>: every key is computed first, and the sort is stable.</summary>
+    /// <summary>
+    /// <c>list.sort(key=lambda x: int(x.get("index", 0)))</c>: every key is computed first, and the
+    /// sort is stable. Issue #537 item 6: a present-but-unreadable index (<c>null</c>, or text that
+    /// is not a number) sorts as if it were 0 rather than failing the whole plan; the stream is
+    /// dropped later, at the point a real index is actually needed.
+    /// </summary>
     private static List<ProbeStreamInfo> SortByIndex(List<ProbeStreamInfo> streams)
     {
-        var keys = streams.Select(s => s.Get("index") is { } index ? Py.Int(index) : 0).ToList();
+        var keys = streams.Select(s => Py.TryInt(s.Get("index"), out var n) ? n : 0).ToList();
         return streams.Select((stream, i) => (stream, key: keys[i])).OrderBy(p => p.key).Select(p => p.stream).ToList();
     }
 
     private static int IndexOf(ProbeStreamInfo stream) => Py.ToInt32(Py.Int(Py.Item(stream.Json, "index")));
+
+    /// <summary>
+    /// Issue #537 item 6: a stream with no usable <c>index</c> (missing, <c>null</c>, or not a
+    /// number) is skipped rather than failing the whole plan.
+    /// </summary>
+    private static bool TryIndexOf(ProbeStreamInfo stream, out int index)
+    {
+        try
+        {
+            index = IndexOf(stream);
+            return true;
+        }
+        catch (RulesInputException)
+        {
+            index = 0;
+            return false;
+        }
+    }
+
+    /// <summary>Streams with a usable index, paired with it, in the order given.</summary>
+    private static IEnumerable<(ProbeStreamInfo Stream, int Index)> WithIndex(IEnumerable<ProbeStreamInfo> streams)
+    {
+        foreach (var stream in streams)
+        {
+            if (TryIndexOf(stream, out var index))
+            {
+                yield return (stream, index);
+            }
+        }
+    }
 
     private static long DispositionFlag(ProbeStreamInfo stream, string name) => stream.Disposition.GetValueOrDefault(name, 0);
 
@@ -309,26 +366,26 @@ public static partial class RemuxRules
             return true;
         }
 
-        var probeAudioIndices = audioProbe.Select(IndexOf).ToList();
+        var probeAudioIndices = WithIndex(audioProbe).Select(p => p.Index).ToList();
         if (!plan.Audio.Select(t => t.InputIndex).SequenceEqual(probeAudioIndices))
         {
             return true;
         }
 
-        var probeSubtitleIndices = subtitleProbe.Select(IndexOf).ToList();
+        var probeSubtitleIndices = WithIndex(subtitleProbe).Select(p => p.Index).ToList();
         if (!plan.Subtitles.Select(t => t.InputIndex).SequenceEqual(probeSubtitleIndices))
         {
             return true;
         }
 
-        var oldAudio = audioProbe.Select(s => (IndexOf(s), DispositionFlag(s, "default"))).ToList();
+        var oldAudio = WithIndex(audioProbe).Select(p => (p.Index, DispositionFlag(p.Stream, "default"))).ToList();
         var newAudio = plan.Audio.Select(t => (t.InputIndex, t.Default ? 1L : 0L)).ToList();
         if (!oldAudio.SequenceEqual(newAudio))
         {
             return true;
         }
 
-        var oldSubtitles = subtitleProbe.Select(s => (IndexOf(s), DispositionFlag(s, "forced"), DispositionFlag(s, "default"))).ToList();
+        var oldSubtitles = WithIndex(subtitleProbe).Select(p => (p.Index, DispositionFlag(p.Stream, "forced"), DispositionFlag(p.Stream, "default"))).ToList();
         var newSubtitles = plan.Subtitles.Select(t => (t.InputIndex, t.Forced ? 1L : 0L, t.Default ? 1L : 0L)).ToList();
         return !oldSubtitles.SequenceEqual(newSubtitles);
     }
@@ -353,39 +410,62 @@ public static partial class RemuxRules
     internal sealed record AudioCandidate(
         int InputIndex,
         string LangLabel,
+        string Title,
         bool Commentary,
         bool Default,
         int Channels,
         long Bitrate,
         int CodecRank,
-        string CodecName);
+        string CodecName,
+        TrackFlags Flags);
 
-    private static AudioCandidate CandidateFromStream(ProbeStreamInfo s)
+    /// <summary>
+    /// Issue #537 item 6: <c>bit_rate</c> text ffprobe cannot parse (<c>"N/A"</c> is a real value it
+    /// emits for an unknown rate) is treated as unknown rather than failing the whole plan.
+    /// </summary>
+    private static long ReadBitRate(ProbeStreamInfo s)
+    {
+        try
+        {
+            return Py.Truthy(s.Get("bit_rate")) ? Py.Int(s.Get("bit_rate")) : 0;
+        }
+        catch (RulesInputException)
+        {
+            return 0;
+        }
+    }
+
+    private static AudioCandidate CandidateFromStream(ProbeStreamInfo s, int index)
     {
         var tags = s.Tags;
-        var index = IndexOf(s);
         var lang = NormalizeLang(tags.GetValueOrDefault("language"));
         var disposition = s.Disposition;
         var codecName = Py.StrOr(s.Get("codec_name"), string.Empty);
         var channels = Py.ToInt32(Py.Truthy(s.Get("channels")) ? Py.Int(s.Get("channels")) : 0);
-        var bitrate = Py.Truthy(s.Get("bit_rate")) ? Py.Int(s.Get("bit_rate")) : 0;
+        var bitrate = ReadBitRate(s);
+        var flags = TrackFlagsReader.Detect(s);
         return new AudioCandidate(
             InputIndex: index,
             LangLabel: lang,
-            Commentary: IsCommentaryAudio(s),
+            // Issue #537 item 5: a non-string title tag (a list, say) is missing, not stringified.
+            Title: tags.GetValueOrDefault("title") ?? string.Empty,
+            Commentary: flags.Commentary.Value,
             Default: disposition.GetValueOrDefault("default") != 0,
             Channels: channels,
             Bitrate: bitrate,
             CodecRank: AudioCodecQualityRank(codecName),
-            CodecName: codecName.Length > 0 ? codecName : "unknown");
+            CodecName: codecName.Length > 0 ? codecName : "unknown",
+            Flags: flags);
     }
 
     private static SortableTrack CandidateAsTrack(AudioCandidate c) => new()
     {
         Index = c.InputIndex,
         Language = c.LangLabel,
-        // The reference hands the codec name to the "title" sorter, so a title sorter matches codec names. Kept as-is for parity.
-        Title = c.CodecName,
+        // Issue #537 item 2: a "title" sorter now compares the stream's own title tag. The reference
+        // handed it the codec name instead, so "demote a title containing X" could never match a
+        // real track; kept only in golden/overrides for the cases that pinned the old behaviour.
+        Title = c.Title,
         Commentary = c.Commentary,
         Default = c.Default,
         Forced = false,
@@ -572,18 +652,21 @@ public static partial class RemuxRules
         var notes = new List<string>();
         var candidates = new List<AudioCandidate>();
 
-        foreach (var s in audio)
+        foreach (var (s, streamIndex) in WithIndex(audio))
         {
-            var commentary = IsCommentaryAudio(s);
-            if (config.RemoveCommentary && commentary)
+            // Issue #495: commentary now flows through TrackFlags (disposition first, then the
+            // name), which behaves exactly like the older title/comment-tag check for every track
+            // that has no disposition.comment flag set — the only source ffprobe fixtures use today.
+            var flags = TrackFlagsReader.Detect(s);
+            if (config.RemoveCommentary && flags.Commentary.Value)
             {
                 var lang = NormalizeLang(s.Tag("language"));
                 removedAudio.Add($"{(lang.Length > 0 ? lang : "und")} (commentary excluded — remove commentary enabled)");
-                notes.Add($"Excluded commentary track (stream {IndexOf(s)}) because remove commentary is enabled.");
+                notes.Add($"Excluded commentary track (stream {streamIndex}) because remove commentary is enabled.");
                 continue;
             }
 
-            candidates.Add(CandidateFromStream(s));
+            candidates.Add(CandidateFromStream(s, streamIndex));
         }
 
         var policy = NormalizeAudioPreferenceMode(config.AudioPreferenceMode);
@@ -592,6 +675,18 @@ public static partial class RemuxRules
         if (winner is null)
         {
             return null;
+        }
+
+        // Issue #495 step 5: say when the selected track's dub or audio-description flag came from
+        // its name rather than a stream flag, since the operator otherwise has no way to know.
+        if (winner.Flags.Dub.FromName)
+        {
+            notes.Add($"The selected track ({DescribeCandidate(winner)}) looks like a dub track from its name; ffprobe reported no dub flag.");
+        }
+
+        if (winner.Flags.AudioDescription.FromName)
+        {
+            notes.Add($"The selected track ({DescribeCandidate(winner)}) looks like an audio-description track from its name; ffprobe reported no such flag.");
         }
 
         // Retention: one winner; every other audio stream is removed.
@@ -624,7 +719,7 @@ public static partial class RemuxRules
             }
         }
 
-        var winnerStream = audio.FirstOrDefault(s => (s.Get("index") is { } i ? Py.Int(i) : -1) == winnerIndex);
+        var winnerStream = WithIndex(audio).Where(p => p.Index == winnerIndex).Select(p => p.Stream).FirstOrDefault();
         var winnerDisposition = winnerStream?.Disposition ?? new Dictionary<string, long>();
         var codecName = winnerStream is null ? string.Empty : Py.StrOr(winnerStream.Get("codec_name"), string.Empty);
 
@@ -655,10 +750,11 @@ public static partial class RemuxRules
         }
         else
         {
-            var selected = new HashSet<string>(config.SubtitleLangs, StringComparer.Ordinal);
-            foreach (var s in subtitles)
+            // Issue #537 item 3: configured subtitle languages are normalized the same way a
+            // track's own tag is, so "ENG" or "en-US" matches a file tagged "eng".
+            var selected = new HashSet<string>(config.SubtitleLangs.Select(NormalizeLang), StringComparer.Ordinal);
+            foreach (var (s, index) in WithIndex(subtitles))
             {
-                var index = IndexOf(s);
                 var lang = NormalizeLang(s.Tag("language"));
                 var disposition = s.Disposition;
                 if (lang.Length == 0 || !selected.Contains(lang))
@@ -667,11 +763,28 @@ public static partial class RemuxRules
                     continue;
                 }
 
+                // Issue #495: forced now also comes from the name (a signs track counts as forced),
+                // and a hearing-impaired track can be dropped outright when the rule is enabled.
+                var flags = TrackFlagsReader.Detect(s);
+                if (config.RemoveHearingImpairedSubs && flags.HearingImpaired.Value)
+                {
+                    removedSubtitleLabels.Add(lang.Length > 0 ? lang : "und");
+                    var hiSource = flags.HearingImpaired.Source == TrackFlagSource.Disposition ? "its hearing-impaired flag" : "its name";
+                    notes.Add($"Removed hearing-impaired subtitle track (stream {index}) because remove hearing-impaired subtitles is enabled ({hiSource}).");
+                    continue;
+                }
+
+                var forced = config.PreserveForcedSubs && flags.Forced.Value;
+                if (forced && flags.Forced.Source == TrackFlagSource.Name)
+                {
+                    notes.Add($"Subtitle track (stream {index}) counts as forced because its name says so; ffprobe reported no forced flag.");
+                }
+
                 keptSubtitles.Add(new PlannedTrack
                 {
                     InputIndex = index,
                     LangLabel = lang,
-                    Forced = config.PreserveForcedSubs && disposition.GetValueOrDefault("forced") != 0,
+                    Forced = forced,
                     Default = config.PreserveDefaultSubs && disposition.GetValueOrDefault("default") != 0,
                     Kind = TrackKind.Subtitle,
                 });
@@ -681,7 +794,7 @@ public static partial class RemuxRules
             var rank = new Dictionary<string, int>(StringComparer.Ordinal);
             for (var n = 0; n < config.SubtitleLangs.Count; n++)
             {
-                rank[config.SubtitleLangs[n]] = n;
+                rank[NormalizeLang(config.SubtitleLangs[n])] = n;
             }
 
             keptSubtitles = [.. keptSubtitles.OrderBy(t => rank.GetValueOrDefault(t.LangLabel, 99)).ThenBy(t => t.InputIndex)];
@@ -716,5 +829,6 @@ public static partial class RemuxRules
         PreserveForcedSubs = true,
         PreserveDefaultSubs = true,
         AudioPreferenceMode = RemuxRuleValues.PolicyPreferredLangsQuality,
+        RemoveHearingImpairedSubs = false,
     };
 }

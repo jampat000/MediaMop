@@ -1,0 +1,73 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0,
+        1,
+        2
+      ],
+      "audio": [
+        3
+      ],
+      "subtitles": [],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 3,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 640000,
+          "codec_rank": 12,
+          "codec_name": "eac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected eng eac3 6 ch (stream 3) as the only track in the first matching language tier."
+      ],
+      "removed_images": [
+        "embedded image (mjpeg, 600x900)",
+        "embedded image (png, 600x900)"
+      ],
+      "removed_attachments": [],
+      "metadata_notes": [
+        "Removed embedded image (mjpeg, 600x900).",
+        "Removed embedded image (png, 600x900)."
+      ],
+      "metadata": {
+        "remove_images": true,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 5.1 E-AC-3",
+      "audio_after": "English 5.1 E-AC-3",
+      "subtitle_before": "—",
+      "subtitle_after": "None",
+      "metadata_removed": "Removed embedded image (mjpeg, 600x900). · Removed embedded image (png, 600x900)."
+    },
+    "metadata_argv": []
+  }
+}

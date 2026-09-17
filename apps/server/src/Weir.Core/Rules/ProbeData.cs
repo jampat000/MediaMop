@@ -80,8 +80,12 @@ public sealed record ProbeStreamInfo
     public string CodecName => Py.StrOr(Get("codec_name"), string.Empty);
 
     /// <summary>
-    /// The tags as the reference reads them (<c>_stream_tags</c>): every key and value through
-    /// <c>str()</c>, so a JSON <c>null</c> reads as <c>"None"</c>; empty when tags are not an object.
+    /// The tags as the rules read them, string-valued entries only. Issue #537 item 5: the port
+    /// originally ran every value through <c>str()</c>, so a JSON <c>null</c> language became the
+    /// text <c>"none"</c> (read as a real, if bogus, language code) and a list- or dict-valued
+    /// title could still match a "commentary" substring test after being stringified. ffprobe never
+    /// legitimately puts a non-string value in a tag, so a non-string value is now treated the same
+    /// as an absent key; empty when tags are not an object.
     /// </summary>
     public IReadOnlyDictionary<string, string> Tags
     {
@@ -96,7 +100,10 @@ public sealed record ProbeStreamInfo
 
             foreach (var (key, value) in Py.Items(tags!.Value))
             {
-                result[key] = Py.Str(value);
+                if (Py.IsStr(value))
+                {
+                    result[key] = value.GetString()!;
+                }
             }
 
             return result;
