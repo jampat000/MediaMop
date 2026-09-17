@@ -38,7 +38,12 @@ from tests.contract.support.polling import wait_until
 REMUX_CRASH = "Conversion failed: the fake ffmpeg was told to fail"
 
 
-@pytest.mark.known_bug(issue=531, backends=("python", "dotnet"))
+# dotnet fixed by this integration: the watched-folder scan's automatic retry (previous.Status ==
+# ProcessingFailed, due for another attempt) used to enqueue through RequeueStore.RequeueFileAsync, whose
+# "manual retry" reset (failure_attempts back to 0, backoff cleared) is meant for a human's "retry now", not
+# an automatic, policy-governed retry — RetryPolicy/RecordFailureAsync own that. Every scan cycle silently
+# wiped the counter this test checks. Fixed by enqueueing the same way a fresh candidate would instead.
+@pytest.mark.known_bug(issue=531, backends=("python",))
 def test_a_hand_offs_fingerprint_is_recorded_up_front_so_a_scan_never_resets_its_failures(
     server_factory, client_factory, fake_ffmpeg, fake_managers, tmp_path: Path
 ) -> None:

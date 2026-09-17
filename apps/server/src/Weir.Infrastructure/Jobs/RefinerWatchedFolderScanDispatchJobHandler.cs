@@ -158,17 +158,18 @@ public sealed class RefinerWatchedFolderScanDispatchJobHandler : IJobHandler
                     var retryAt = previous.NextRetryAt?.AsUtc;
                     if (retryAt is { } r && r <= now.UtcDateTime)
                     {
-                        // Automatic retry: the manual-requeue store applies here too — same job kind,
-                        // same reset shape. RefinerJobStore writes through its own connection, outside
-                        // uow's, so any write uow is still holding (from an earlier file this scan) must
-                        // be released first or the two connections deadlock against SQLite's single writer.
+                        // Automatic retry: enqueue the same way a fresh candidate would, not through
+                        // RequeueStore — that store's reset (failure_attempts back to 0, backoff cleared)
+                        // is deliberately for a human's "retry now"; RequeueStore's own docs say the
+                        // automatic, policy-governed half belongs to record_failure/RetryPolicy alone. Using
+                        // it here wiped the counter every scan cycle, so a file could never accumulate
+                        // enough consecutive failures to quarantine — RecordFailureAsync (run when the new
+                        // attempt's own outcome comes back) is the only thing that should touch these fields.
+                        // Same cross-connection deadlock hazard as the fresh-candidate path below: release
+                        // uow's write lock before RefinerJobStore opens its own connection.
                         await uow.CommitAsync().ConfigureAwait(false);
-                        var requeue = new RequeueStore(_jobStore);
-                        var retried = await requeue.RequeueFileAsync(uow, previous).ConfigureAwait(false);
-                        if (retried.Requeued > 0)
-                        {
-                            continue;
-                        }
+                        await EnqueueRemuxPassAsync(uow, context, library, mediaScope, rel, scanTrigger, previous).ConfigureAwait(false);
+                        continue;
                     }
 
                     await uow.ExecuteAsync(
