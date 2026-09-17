@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_reconciliation_service.py (report and safe repairs over HTTP)."""
+"""Contract port of the retired Python backend's tests/test_reconciliation_service.py (report and safe repairs over HTTP)."""
 
 from __future__ import annotations
 

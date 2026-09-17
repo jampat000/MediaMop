@@ -1,11 +1,7 @@
-# Clear local users + sessions so /setup (first admin) works again. See scripts/dev_reset_auth.py.
+# Clear local users + sessions so /setup (first admin) works again. See scripts/dev-reset-auth.mjs.
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\weir-env.ps1"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$script = Join-Path $repoRoot "scripts\dev_reset_auth.py"
-$venvPy = Join-Path $repoRoot "apps\backend\.venv\Scripts\python.exe"
-if (Test-Path $venvPy) {
-    & $venvPy $script @args
-} else {
-    py -3 $script @args
-}
+Import-WeirDotEnv -RepoRoot $repoRoot
+& node (Join-Path $PSScriptRoot "dev-reset-auth.mjs") @args
 exit $LASTEXITCODE

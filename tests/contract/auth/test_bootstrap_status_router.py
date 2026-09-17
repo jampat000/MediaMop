@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_bootstrap_status_router.py.
+"""Contract port of the retired Python backend's tests/test_bootstrap_status_router.py.
 
 The original injects database errors into ``bootstrap_allowed``. Black-box, the one failure a
 running server can be put into is a database whose ``users`` table is missing.

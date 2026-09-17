@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_activity_history.py (filter, export, retention, removal)."""
+"""Contract port of the retired Python backend's tests/test_activity_history.py (filter, export, retention, removal)."""
 
 from __future__ import annotations
 

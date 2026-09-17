@@ -1,4 +1,4 @@
-"""Port of apps/backend/tests/test_alembic_revision_startup.py (schema revision checks at startup)."""
+"""Port of the retired Python backend's tests/test_alembic_revision_startup.py (schema revision checks at startup)."""
 
 from __future__ import annotations
 

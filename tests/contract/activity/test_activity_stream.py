@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_activity_stream.py (the activity SSE freshness stream)."""
+"""Contract port of the retired Python backend's tests/test_activity_stream.py (the activity SSE freshness stream)."""
 
 from __future__ import annotations
 

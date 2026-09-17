@@ -4,8 +4,9 @@
     Local pre-push checks - same gates as CI, run before every push.
 
 .DESCRIPTION
-    Runs ruff, prettier, and an OpenAPI spec/types drift check so formatting
-    and sync errors are caught locally rather than burning a CI run.
+    Runs the contract suite's ruff lint, prettier,
+    the dead-code guard and an OpenAPI types drift check so formatting and sync errors
+    are caught locally rather than burning a CI run.
 
     Called automatically by .githooks/pre-push.
     Run manually: powershell -ExecutionPolicy Bypass -File scripts/pre-push-check.ps1
@@ -25,19 +26,19 @@ function Pass($label) { Write-Host "[pre-push] $label OK" -ForegroundColor Green
 function Skip($label) { Write-Host "[pre-push] $label skipped" -ForegroundColor Yellow }
 function Fail($msg)   { Write-Host "[pre-push] FAIL: $msg" -ForegroundColor Red; exit 1 }
 
-# ---- ruff -------------------------------------------------------------------
-$ruff = "$REPO\apps\backend\.venv\Scripts\ruff.exe"
-if (-not (Test-Path $ruff)) {
-    Skip "ruff (run: python -m pip install --require-hashes -r requirements.lock in apps/backend)"
+# ---- ruff (contract suite) ---------------------------------------------------
+$ruff = Get-Command ruff -ErrorAction SilentlyContinue
+if (-not $ruff) {
+    Skip "ruff (run: python -m pip install --require-hashes -r tests/requirements.txt)"
 } else {
     Step "ruff"
-    Push-Location "$REPO\apps\backend"
-    & $ruff check src tests alembic
+    Push-Location $REPO
+    & $ruff.Source check tests/contract
     if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "ruff check failed" }
-    & $ruff format --check src tests alembic
+    & $ruff.Source format --check tests/contract
     if ($LASTEXITCODE -ne 0) {
         Pop-Location
-        Write-Host "  Fix: ruff format src tests alembic" -ForegroundColor Yellow
+        Write-Host "  Fix: ruff format tests/contract" -ForegroundColor Yellow
         Fail "ruff format --check failed"
     }
     Pop-Location
@@ -71,25 +72,22 @@ if (-not (Test-Path $prettierBin)) {
     Pass "dead-code guard"
 }
 
-# ---- OpenAPI spec + types drift ---------------------------------------------
-$venvPython = "$REPO\apps\backend\.venv\Scripts\python.exe"
-if (-not (Test-Path $prettierBin) -or -not (Test-Path $venvPython)) {
-    Skip "api:types drift (missing node_modules or venv)"
+# ---- OpenAPI types drift -----------------------------------------------------
+# apps/web/openapi/weir-openapi.json is the committed API contract (the server embeds it); the web
+# app's generated types must match it.
+if (-not (Test-Path $prettierBin)) {
+    Skip "api:types drift (missing node_modules)"
 } else {
     Step "api:types drift check"
     Push-Location "$REPO\apps\web"
-
-    $env:WEIR_PYTHON = $venvPython
-    $env:PYTHONPATH = "$REPO\apps\backend\src"
-    npm run api:types:sync
-
-    $diff = git diff -- openapi/weir-openapi.json src/lib/api/generated/openapi-types.ts
+    npm run api:types:generate
+    $diff = git diff -- src/lib/api/generated/openapi-types.ts
     if ($diff) {
-        Write-Host "[pre-push] OpenAPI spec or types differ - auto-committing the sync." -ForegroundColor Yellow
+        Write-Host "[pre-push] Generated API types differ - auto-committing the sync." -ForegroundColor Yellow
         Pop-Location
-        git -C $REPO add apps/web/openapi/weir-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
-        git -C $REPO commit -m "chore: sync OpenAPI spec and generated types"
-        if ($LASTEXITCODE -ne 0) { Fail "Failed to auto-commit OpenAPI sync" }
+        git -C $REPO add apps/web/src/lib/api/generated/openapi-types.ts
+        git -C $REPO commit -m "chore: sync generated OpenAPI types"
+        if ($LASTEXITCODE -ne 0) { Fail "Failed to auto-commit OpenAPI types sync" }
     } else {
         Pop-Location
     }

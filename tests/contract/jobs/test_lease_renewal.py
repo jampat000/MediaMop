@@ -1,7 +1,7 @@
 """Correct behaviour for #540 item 1: a job that runs longer than its lease must never be claimed by
 a second worker while the first is still running it.
 
-On Python, nothing renews a lease: ``process_one_refiner_job`` (``apps/backend/src/weir/refiner/worker_loop.py``)
+On Python, nothing renews a lease: ``process_one_refiner_job`` (``the retired Python backend's weir/refiner/worker_loop.py``)
 claims with a fixed ``lease_seconds=DEFAULT_REFINER_JOB_LEASE_SECONDS`` (300) and nothing extends it
 while the handler runs, so a remux running longer than five minutes can be claimed by a second
 worker while the first is still writing the same file. ``DEFAULT_REFINER_JOB_LEASE_SECONDS`` is a

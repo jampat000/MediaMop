@@ -1,22 +1,38 @@
-# Run the API from repo root (or any cwd). Sets PYTHONPATH for apps/backend/src.
-# Default bind is scripts/dev-ports.json (development.apiHost / development.apiPort).
+# Run the .NET server from the repository (any cwd) for local development.
+# Loads the repository-root .env (shell variables win), binds to scripts/dev-ports.json
+# (development.apiHost / development.apiPort), and serves the built web app when apps/web/dist exists.
+# The server creates or migrates its SQLite database under WEIR_HOME on start; there is no separate
+# migration step.
 $ErrorActionPreference = "Stop"
+. "$PSScriptRoot\weir-env.ps1"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$backend = Join-Path $repoRoot "apps\backend"
+$serverProject = Join-Path $repoRoot "apps\server\src\Weir.Host"
 $portsPath = Join-Path $PSScriptRoot "dev-ports.json"
 
-if (-not (Test-Path $backend)) {
-    Write-Error "Expected apps/backend under $repoRoot"
+if (-not (Test-Path $serverProject)) {
+    Write-Error "Expected apps/server/src/Weir.Host under $repoRoot"
 }
 if (-not (Test-Path $portsPath)) {
     Write-Error "Missing scripts/dev-ports.json (repo dev port registry)."
 }
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+    Write-Error "The .NET 10 SDK is required (dotnet not on PATH). See docs/local-development.md."
+}
 
+Import-WeirDotEnv -RepoRoot $repoRoot
+
+if (-not ($env:WEIR_HOME -and $env:WEIR_HOME.Trim())) {
+    $env:WEIR_HOME = Join-Path $repoRoot ".local-dev-home"
+}
 $sec = if ($env:WEIR_SESSION_SECRET) { $env:WEIR_SESSION_SECRET.Trim() } else { "" }
 if (-not $sec) {
     Write-Warning "WEIR_SESSION_SECRET is empty; set a long random value before using login/bootstrap."
 }
-Write-Host "SQLite: data under WEIR_HOME (see apps/backend/.env.example). Run .\scripts\dev-migrate.ps1 once before first API use." -ForegroundColor DarkGray
+$webDist = Join-Path $repoRoot "apps\web\dist"
+if (-not ($env:WEIR_WEB_DIST -and $env:WEIR_WEB_DIST.Trim()) -and (Test-Path (Join-Path $webDist "index.html"))) {
+    $env:WEIR_WEB_DIST = $webDist
+}
+Write-Host "SQLite and runtime files under WEIR_HOME=$($env:WEIR_HOME) (see .env.example)." -ForegroundColor DarkGray
 Write-Host ""
 
 $ports = Get-Content $portsPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -34,19 +50,6 @@ if ($busyApi) {
     )
 }
 
-$env:PYTHONPATH = "src"
-Set-Location $backend
-
-$venvPython = Join-Path $backend '.venv\Scripts\python.exe'
-if (Test-Path $venvPython) {
-    $pyExe = $venvPython
-} else {
-    $py = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $py) { $py = Get-Command py -ErrorAction SilentlyContinue }
-    if (-not $py) {
-        Write-Error 'Python not on PATH. From apps/backend run: py -3 -m venv .venv; .\.venv\Scripts\Activate.ps1; python -m pip install --require-hashes -r requirements-runtime.lock; python -m pip install --no-deps --no-build-isolation -e .'
-    }
-    $pyExe = $py.Source
-}
-
-& $pyExe -m uvicorn weir.api.main:app --host $apiHost --port $apiPort --reload
+# `dotnet watch` rebuilds and restarts on source changes, like the old --reload.
+& dotnet watch run --project $serverProject -- --host $apiHost --port $apiPort
+exit $LASTEXITCODE

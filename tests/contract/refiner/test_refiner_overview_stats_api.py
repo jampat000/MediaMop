@@ -1,4 +1,4 @@
-"""Port of apps/backend/tests/test_refiner_overview_stats_api.py."""
+"""Port of the retired Python backend's tests/test_refiner_overview_stats_api.py."""
 
 from __future__ import annotations
 

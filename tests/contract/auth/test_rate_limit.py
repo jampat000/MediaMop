@@ -1,4 +1,4 @@
-"""HTTP-observable rate limiting (apps/backend/tests/test_rate_limit.py tests the limiter class directly).
+"""HTTP-observable rate limiting (the retired Python backend's tests/test_rate_limit.py tests the limiter class directly).
 
 Login and bootstrap each have a per-address sliding window configured by
 ``WEIR_AUTH_LOGIN_RATE_*`` and ``WEIR_BOOTSTRAP_RATE_*``; exceeding it answers 429 with ``Retry-After``.

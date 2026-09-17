@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Spawns the Weir API like `scripts/dev-backend.ps1` (cwd apps/backend, PYTHONPATH=src,
- * host/port from scripts/dev-ports.json). Used by `npm run dev` so Vite and uvicorn start together.
+ * Spawns the Weir .NET server like `scripts/dev-backend.ps1` (`dotnet watch run` on
+ * apps/server/src/Weir.Host, host/port from scripts/dev-ports.json). Used by `npm run dev` so Vite
+ * and the API start together. The server creates or migrates its own SQLite database on start.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -11,8 +12,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webDir = path.join(__dirname, "..");
 const repoRoot = path.resolve(webDir, "..", "..");
-const backendDir = path.join(repoRoot, "apps", "backend");
+const serverProject = path.join(repoRoot, "apps", "server", "src", "Weir.Host");
 const portsPath = path.join(repoRoot, "scripts", "dev-ports.json");
+const envFilePath = path.join(repoRoot, ".env");
 const defaultDevHome = path.join(repoRoot, ".local-dev-home");
 const defaultDevSessionSecret = "dev-session-secret-32-chars-minimum!!";
 
@@ -22,32 +24,38 @@ function readPorts() {
   return j.development;
 }
 
-/** Prefer backend venv, then system interpreters (matches dev-backend.ps1 intent). */
-function resolvePythonCmd() {
-  const winVenv = path.join(backendDir, ".venv", "Scripts", "python.exe");
-  const unixVenv3 = path.join(backendDir, ".venv", "bin", "python3");
-  const unixVenv = path.join(backendDir, ".venv", "bin", "python");
-  if (process.platform === "win32" && existsSync(winVenv)) {
-    return { command: winVenv, prefixArgs: [] };
+/** The repository `.env` (KEY=value lines); variables already in the environment win. */
+function readDotEnv() {
+  if (!existsSync(envFilePath)) {
+    return {};
   }
-  if (existsSync(unixVenv3)) {
-    return { command: unixVenv3, prefixArgs: [] };
-  }
-  if (existsSync(unixVenv)) {
-    return { command: unixVenv, prefixArgs: [] };
-  }
-  if (process.platform === "win32") {
-    const pyProbe = spawnSync("py", ["-3", "--version"], {
-      cwd: backendDir,
-      stdio: "ignore",
-      shell: false,
-    });
-    if (pyProbe.status === 0) {
-      return { command: "py", prefixArgs: ["-3"] };
+  const values = {};
+  for (const rawLine of readFileSync(envFilePath, "utf8").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq < 1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if (
+      value.length >= 2 &&
+      ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'")))
+    ) {
+      value = value.slice(1, -1);
     }
-    return { command: "python", prefixArgs: [] };
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) values[key] = value;
   }
-  return { command: "python3", prefixArgs: [] };
+  return values;
+}
+
+const dotnetProbe = spawnSync("dotnet", ["--version"], { stdio: "ignore", shell: false });
+if (dotnetProbe.error || dotnetProbe.status !== 0) {
+  console.error(
+    "[dev-api] The .NET 10 SDK is required to run the API (dotnet was not found). " +
+      "See docs/local-development.md.",
+  );
+  process.exit(1);
 }
 
 const { apiHost, apiPort: portFromFile } = readPorts();
@@ -55,52 +63,35 @@ const apiPort = process.env.WEIR_DEV_API_PORT?.trim()
   ? Number(process.env.WEIR_DEV_API_PORT.trim())
   : Number(portFromFile);
 
-const pythonCmd = resolvePythonCmd();
-const childEnv = {
-  ...process.env,
-  PYTHONPATH: "src",
-  WEIR_HOME: (process.env.WEIR_HOME || "").trim() || defaultDevHome,
-  WEIR_SESSION_SECRET:
-    (process.env.WEIR_SESSION_SECRET || "").trim() || defaultDevSessionSecret,
-};
+const fromFile = readDotEnv();
+const childEnv = { ...fromFile };
+for (const [key, value] of Object.entries(process.env)) {
+  if (value !== undefined && value.trim() !== "") childEnv[key] = value;
+}
+childEnv.WEIR_HOME = (childEnv.WEIR_HOME || "").trim() || defaultDevHome;
+childEnv.WEIR_SESSION_SECRET =
+  (childEnv.WEIR_SESSION_SECRET || "").trim() || defaultDevSessionSecret;
 
-/** Keep ``npm run dev:quick`` self-contained for a fresh WEIR_HOME. */
-const migration = spawnSync(
-  pythonCmd.command,
-  [...pythonCmd.prefixArgs, "-m", "alembic", "upgrade", "head"],
+const child = spawn(
+  "dotnet",
+  [
+    "watch",
+    "run",
+    "--project",
+    serverProject,
+    "--",
+    "--host",
+    apiHost,
+    "--port",
+    String(apiPort),
+  ],
   {
-    cwd: backendDir,
+    cwd: repoRoot,
     stdio: "inherit",
     env: childEnv,
     shell: false,
   },
 );
-if (migration.error || migration.status !== 0) {
-  console.error(
-    "[dev-api] Database migration preflight failed; the API was not started. " +
-      "Run .\\scripts\\dev-migrate.ps1 from the repository root, then retry npm run dev:quick.",
-  );
-  process.exit(migration.status ?? 1);
-}
-
-const uvicornArgs = [
-  ...pythonCmd.prefixArgs,
-  "-m",
-  "uvicorn",
-  "weir.api.main:app",
-  "--host",
-  apiHost,
-  "--port",
-  String(apiPort),
-  "--reload",
-];
-
-const child = spawn(pythonCmd.command, uvicornArgs, {
-  cwd: backendDir,
-  stdio: "inherit",
-  env: childEnv,
-  shell: false,
-});
 
 function forward(signal) {
   try {

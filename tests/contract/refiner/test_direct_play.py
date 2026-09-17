@@ -1,4 +1,4 @@
-"""Port of apps/backend/tests/test_direct_play.py (the HTTP parts)."""
+"""Port of the retired Python backend's tests/test_direct_play.py (the HTTP parts)."""
 
 from __future__ import annotations
 

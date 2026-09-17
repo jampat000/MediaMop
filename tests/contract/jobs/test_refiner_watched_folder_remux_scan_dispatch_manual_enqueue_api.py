@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_refiner_watched_folder_remux_scan_dispatch_manual_enqueue_api.py."""
+"""Contract port of the retired Python backend's tests/test_refiner_watched_folder_remux_scan_dispatch_manual_enqueue_api.py."""
 
 from __future__ import annotations
 

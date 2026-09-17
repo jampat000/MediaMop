@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_http_hardening.py.
+"""Contract port of the retired Python backend's tests/test_http_hardening.py.
 
 The original drives the trusted-proxy and compressed-asset middlewares on bare Starlette apps; here
 the same behaviour is observed on a real server: the forwarded scheme through the sign-in cookie's

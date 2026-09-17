@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_head_mirrors_get.py (HEAD answers like GET, without a body)."""
+"""Contract port of the retired Python backend's tests/test_head_mirrors_get.py (HEAD answers like GET, without a body)."""
 
 from __future__ import annotations
 

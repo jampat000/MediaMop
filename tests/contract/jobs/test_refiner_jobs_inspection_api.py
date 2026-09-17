@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_refiner_jobs_inspection_api.py (inspection + cancel-pending)."""
+"""Contract port of the retired Python backend's tests/test_refiner_jobs_inspection_api.py (inspection + cancel-pending)."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 """Basic contract coverage (auth, status codes, shapes) for system endpoints no original HTTP test covered.
 
 Not a port of one backend test file: the logs, metrics, notification channel, configuration backup,
-readiness, pause, security overview and update status routes in apps/backend/src/weir/platform/.
+readiness, pause, security overview and update status routes in the retired Python backend's weir/platform/.
 """
 
 from __future__ import annotations

@@ -7,8 +7,8 @@ packaged instance with a deliberate data/runtime boundary.
 
 Usage (from the repository root)::
 
-    WEIR_LIVE_BASE_URL=http://app-server:8791 \
-      apps/backend/.venv/Scripts/python.exe scripts/live-packaged-e2e.py
+    python -m pip install --require-hashes -r tests/requirements.txt
+    WEIR_LIVE_BASE_URL=http://app-server:8791 python scripts/live-packaged-e2e.py
 
 The audit covers the authenticated routes, every visible module/settings tab,
 the safe CRUD/test controls, responsive shell controls, and the public HTTP
@@ -30,7 +30,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-import tomllib
 from playwright.sync_api import (
     BrowserContext,
     Locator,
@@ -67,9 +66,11 @@ def project_version() -> str:
     explicit = os.environ.get("WEIR_LIVE_EXPECTED_VERSION", "").strip()
     if explicit:
         return explicit
-    project_file = Path(__file__).resolve().parents[1] / "apps/backend/pyproject.toml"
-    with project_file.open("rb") as handle:
-        return str(tomllib.load(handle)["project"]["version"])
+    props = Path(__file__).resolve().parents[1] / "apps/server/Directory.Build.props"
+    match = re.search(r"<WeirVersion>([^<]+)</WeirVersion>", props.read_text(encoding="utf-8"))
+    if match is None:
+        raise RuntimeError(f"WeirVersion was not found in {props}")
+    return match.group(1).strip()
 
 
 EXPECTED_VERSION = project_version()

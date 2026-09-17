@@ -1,4 +1,4 @@
-"""Contract port of the HTTP-observable parts of apps/backend/tests/test_csrf_unit.py.
+"""Contract port of the HTTP-observable parts of the retired Python backend's tests/test_csrf_unit.py.
 
 The original's only HTTP test is the 503 without a session secret. Its Origin/Referer and loopback
 pairing unit tests are expressed here through ``POST /auth/login`` on configured servers.

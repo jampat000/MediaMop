@@ -22,7 +22,6 @@
     "check:bundle-budget": "node ./scripts/check-bundle-budget.mjs",
     "preview": "vite preview",
     "test": "vitest run",
-    "api:openapi:export": "node ./scripts/export-openapi.mjs",
     "api:types:generate": "openapi-typescript ./openapi/weir-openapi.json -o ./src/lib/api/generated/openapi-types.ts && prettier --write --end-of-line auto ./src/lib/api/generated/openapi-types.ts",
     "api:types:sync": "npm run api:types:generate",
     "api:types:check": "npm run api:types:generate && git diff --exit-code -- openapi/weir-openapi.json src/lib/api/generated/openapi-types.ts",

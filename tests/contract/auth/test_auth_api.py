@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_auth_api.py."""
+"""Contract port of the retired Python backend's tests/test_auth_api.py."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Port of apps/backend/tests/test_refiner_library_media_type.py (the HTTP parts)."""
+"""Port of the retired Python backend's tests/test_refiner_library_media_type.py (the HTTP parts)."""
 
 from __future__ import annotations
 

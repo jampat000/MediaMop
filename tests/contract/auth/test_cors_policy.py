@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_cors_policy.py."""
+"""Contract port of the retired Python backend's tests/test_cors_policy.py."""
 
 from __future__ import annotations
 
