@@ -31,6 +31,17 @@ import {
 } from "../../lib/ui/display-density";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
+const WIZARD_DENSITY_OPTIONS: ReadonlyArray<{
+  id: DisplayDensity;
+  label: string;
+  hint: string;
+}> = [
+  { id: "compact", label: "Compact", hint: "Tighter, fits more" },
+  { id: "default", label: "Balanced", hint: "The default" },
+  { id: "comfortable", label: "Comfortable", hint: "Larger text" },
+  { id: "expanded", label: "Expanded", hint: "For big screens" },
+];
+
 const BACKUP_INTERVAL_OPTIONS = [
   { value: "24", label: "Every day" },
   { value: "48", label: "Every 2 days" },
@@ -47,12 +58,12 @@ function WizardSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-4">
-      <h2 className="text-base font-semibold text-[var(--mm-text1)]">
-        {title}
-      </h2>
-      <p className="mt-1 text-sm text-[var(--mm-text2)]">{description}</p>
-      <div className="mt-4 space-y-4">{children}</div>
+    <section className="mm-wizard-section">
+      <div className="mm-wizard-section__intro">
+        <h2 className="mm-wizard-section__title">{title}</h2>
+        <p className="mm-wizard-section__lead">{description}</p>
+      </div>
+      <div className="mm-wizard-section__body">{children}</div>
     </section>
   );
 }
@@ -164,8 +175,8 @@ export function SetupWizardPage() {
             <p className="mm-auth-eyebrow">Setup wizard</p>
             <h1 className="mm-auth-title">Could not load setup</h1>
             <p className="mm-auth-lead">
-              The wizard could not load the current suite settings. Open
-              Settings later and try again.
+              The wizard could not load the current settings. Open Settings
+              later and try again.
             </p>
             <p className="mm-auth-footer-link">
               <Link to="/">Continue to the app</Link>
@@ -180,37 +191,49 @@ export function SetupWizardPage() {
     saveSuite.isPending || createLibrary.isPending || updateLibrary.isPending;
 
   function renderFolderInput({
+    id,
+    label,
+    visibleLabel,
+    hint,
     value,
     setter,
-    placeholder,
-    title,
   }: {
+    id: string;
+    /** Full name for assistive tech, e.g. "Movies watched folder". */
+    label: string;
+    visibleLabel: string;
+    hint: string;
     value: string;
     setter: (value: string) => void;
-    placeholder: string;
-    title: string;
   }) {
     return (
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          className="mm-input w-full"
-          value={value}
-          onChange={(e) => setter(e.target.value)}
-          placeholder={placeholder}
-          disabled={savePending}
-        />
-        <ServerFolderPickerButton
-          title={title}
-          value={value}
-          disabled={savePending}
-          onSelect={setter}
-        />
+      <div className="min-w-0">
+        <label htmlFor={id} className="mm-wizard-label">
+          {visibleLabel}
+        </label>
+        <div className="mm-wizard-folder">
+          <input
+            id={id}
+            className="mm-input w-full"
+            value={value}
+            onChange={(e) => setter(e.target.value)}
+            placeholder={hint}
+            aria-label={label}
+            disabled={savePending}
+          />
+          <ServerFolderPickerButton
+            title={`Choose ${label}`}
+            value={value}
+            disabled={savePending}
+            onSelect={setter}
+          />
+        </div>
       </div>
     );
   }
 
   /**
-   * The wizard edits the first Refiner library of each media type. When there is none yet it
+   * The wizard edits the first library of each media type. When there is none yet it
    * adds one, but only if a folder was entered: an empty library would do nothing.
    */
   async function saveWizardLibrary(
@@ -258,13 +281,13 @@ export function SetupWizardPage() {
 
     if (tvWatchedFolder.trim() && !tvOutputFolder.trim()) {
       setStatusMessage(
-        "TV Refiner setup needs an output folder when a TV watched folder is set.",
+        "Add a TV output folder: it is needed when a TV watched folder is set.",
       );
       return;
     }
     if (movieWatchedFolder.trim() && !movieOutputFolder.trim()) {
       setStatusMessage(
-        "Movies Refiner setup needs an output folder when a Movies watched folder is set.",
+        "Add a Movies output folder: it is needed when a Movies watched folder is set.",
       );
       return;
     }
@@ -316,95 +339,114 @@ export function SetupWizardPage() {
         <AuthBrandStack />
         <div className="mm-auth-card mm-setup-wizard-card">
           <p className="mm-auth-eyebrow">First run</p>
-          <h1 className="mm-auth-title">Setup wizard</h1>
+          <h1 className="mm-auth-title">Set up Weir</h1>
           <p className="mm-auth-lead">
-            Set the basics, backup schedule, and starter connections now. You
-            can skip this and reopen it later from Settings.
+            A few basics to get Weir going. Everything here can be changed later
+            in Settings and Processing, and you can skip it for now.
           </p>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="mm-wizard-sections">
             <WizardSection
-              title="App basics"
-              description="Set the app clock and visual density."
+              title="Basics"
+              description="The clock Weir uses, and how dense the screens are in this browser."
             >
-              <div className="space-y-4">
-                <div className="max-w-md">
-                  <label
-                    id="setup-wizard-timezone"
-                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]"
-                  >
-                    Timezone
-                  </label>
+              <div className="mm-wizard-basics">
+                <div className="min-w-0">
+                  <span id="setup-wizard-timezone" className="mm-wizard-label">
+                    Time zone
+                  </span>
                   <MmListboxPicker
                     ariaLabelledBy="setup-wizard-timezone"
-                    placeholder="Select timezone"
+                    placeholder="Select time zone"
                     disabled={savePending}
                     options={timezoneOptions}
                     value={appTimezone}
                     onChange={(value) => setAppTimezone(value)}
                   />
                 </div>
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                  Display density
-                </p>
-                <div
-                  className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
-                  role="radiogroup"
-                  aria-label="Display density"
-                >
-                  {(
-                    [
-                      {
-                        id: "compact" as const,
-                        label: "Compact",
-                        hint: "Smaller layout",
-                      },
-                      {
-                        id: "default" as const,
-                        label: "Balanced",
-                        hint: "Readable default",
-                      },
-                      {
-                        id: "comfortable" as const,
-                        label: "Comfortable",
-                        hint: "Larger controls",
-                      },
-                      {
-                        id: "expanded" as const,
-                        label: "Expanded",
-                        hint: "Big-screen mode",
-                      },
-                    ] as const
-                  ).map(({ id, label, hint }) => (
-                    <label
-                      key={id}
-                      className={[
-                        "flex min-w-0 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
-                        displayDensity === id
-                          ? "border-[var(--mm-accent)] bg-[var(--mm-accent-soft)] text-[var(--mm-text)]"
-                          : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
-                      ].join(" ")}
-                    >
-                      <input
-                        type="radio"
-                        name="setup-display-density"
-                        className="h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                        checked={displayDensity === id}
-                        onChange={() => setDisplayDensity(id)}
-                      />
-                      <span className="min-w-0">
-                        <span className="block font-medium text-[var(--mm-text)]">
-                          {label}
+                <div className="min-w-0">
+                  <span id="setup-wizard-density" className="mm-wizard-label">
+                    Display density
+                  </span>
+                  <div
+                    className="mm-density-options mm-density-options--wide"
+                    role="radiogroup"
+                    aria-labelledby="setup-wizard-density"
+                  >
+                    {WIZARD_DENSITY_OPTIONS.map(({ id, label, hint }) => (
+                      <label
+                        key={id}
+                        className={`mm-density-option${displayDensity === id ? " mm-density-option--selected" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          name="setup-display-density"
+                          className="mm-density-option__input"
+                          checked={displayDensity === id}
+                          onChange={() => setDisplayDensity(id)}
+                        />
+                        <span className="min-w-0">
+                          <span className="mm-density-option__label">
+                            {label}
+                          </span>
+                          <span className="mm-density-option__hint">
+                            {hint}
+                          </span>
                         </span>
-                        <span className="block text-xs text-[var(--mm-text3)]">
-                          {hint}
-                        </span>
-                      </span>
-                    </label>
-                  ))}
+                      </label>
+                    ))}
+                  </div>
                 </div>
+              </div>
+            </WizardSection>
+
+            <WizardSection
+              title="Libraries"
+              description="Where your downloader finishes files, and where Weir puts them once cleaned for your media manager to import. This fills in your first Movies and TV library; add more, and set their audio and subtitle rules, on the Processing page."
+            >
+              <div className="mm-wizard-libraries">
+                {(
+                  [
+                    {
+                      key: "movie",
+                      heading: "Movies",
+                      watched: movieWatchedFolder,
+                      setWatched: setMovieWatchedFolder,
+                      output: movieOutputFolder,
+                      setOutput: setMovieOutputFolder,
+                    },
+                    {
+                      key: "tv",
+                      heading: "TV",
+                      watched: tvWatchedFolder,
+                      setWatched: setTvWatchedFolder,
+                      output: tvOutputFolder,
+                      setOutput: setTvOutputFolder,
+                    },
+                  ] as const
+                ).map((group) => (
+                  <fieldset key={group.key} className="mm-wizard-library">
+                    <legend className="mm-wizard-library__title">
+                      {group.heading}
+                    </legend>
+                    {renderFolderInput({
+                      id: `setup-wizard-${group.key}-watched`,
+                      label: `${group.heading} watched folder`,
+                      visibleLabel: "Watched folder",
+                      hint: "Where finished downloads land",
+                      value: group.watched,
+                      setter: group.setWatched,
+                    })}
+                    {renderFolderInput({
+                      id: `setup-wizard-${group.key}-output`,
+                      label: `${group.heading} output folder`,
+                      visibleLabel: "Output folder",
+                      hint: "Where cleaned files go",
+                      value: group.output,
+                      setter: group.setOutput,
+                    })}
+                  </fieldset>
+                ))}
               </div>
             </WizardSection>
 
@@ -412,19 +454,19 @@ export function SetupWizardPage() {
               title="Automatic backups"
               description="Keep a rolling local copy of your Weir configuration."
             >
-              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text1)]">
                 <input
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
                   checked={backupEnabled}
                   onChange={(e) => setBackupEnabled(e.target.checked)}
                 />
-                <span>Run automatic configuration backups</span>
+                <span>Back up the configuration automatically</span>
               </label>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    Minimum time between runs
+              <div className="mm-wizard-backup-fields">
+                <label className="block min-w-0">
+                  <span className="mm-wizard-label">
+                    Minimum time between backups
                   </span>
                   <select
                     className="mm-input w-full"
@@ -439,10 +481,8 @@ export function SetupWizardPage() {
                     ))}
                   </select>
                 </label>
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    Preferred backup time
-                  </span>
+                <label className="block min-w-0">
+                  <span className="mm-wizard-label">Preferred time</span>
                   <input
                     type="time"
                     className="mm-input w-full"
@@ -453,48 +493,6 @@ export function SetupWizardPage() {
                     }
                   />
                 </label>
-              </div>
-            </WizardSection>
-
-            <WizardSection
-              title="Refiner basics"
-              description="Choose watched and output folders for TV and Movies. These fill in the first Refiner library of each type, and Weir adds one if there is none yet. Add more libraries or change their rules on the Refiner page."
-            >
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-                    TV
-                  </h3>
-                  {renderFolderInput({
-                    value: tvWatchedFolder,
-                    setter: setTvWatchedFolder,
-                    placeholder: "TV watched folder",
-                    title: "Choose TV watched folder",
-                  })}
-                  {renderFolderInput({
-                    value: tvOutputFolder,
-                    setter: setTvOutputFolder,
-                    placeholder: "TV output folder",
-                    title: "Choose TV output folder",
-                  })}
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-                    Movies
-                  </h3>
-                  {renderFolderInput({
-                    value: movieWatchedFolder,
-                    setter: setMovieWatchedFolder,
-                    placeholder: "Movies watched folder",
-                    title: "Choose Movies watched folder",
-                  })}
-                  {renderFolderInput({
-                    value: movieOutputFolder,
-                    setter: setMovieOutputFolder,
-                    placeholder: "Movies output folder",
-                    title: "Choose Movies output folder",
-                  })}
-                </div>
               </div>
             </WizardSection>
           </div>

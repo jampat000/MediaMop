@@ -465,7 +465,7 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe);
     expect(screen.queryByText("Product name")).not.toBeInTheDocument();
     expect(screen.queryByText("Application logs")).not.toBeInTheDocument();
-    expect(screen.getByText("Timezone")).toBeInTheDocument();
+    expect(screen.getByText("Time zone")).toBeInTheDocument();
     expect(screen.getByText("Setup wizard")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute(
       "aria-selected",
@@ -618,8 +618,8 @@ describe("SettingsPage (suite settings)", () => {
 
   it("closes timezone dropdown and shows selected timezone", () => {
     renderSettings(operatorMe);
-    const trigger = screen.getByRole("button", { name: /Timezone/ });
-    expect(trigger).toHaveTextContent("Select timezone");
+    const trigger = screen.getByRole("button", { name: /Time zone/ });
+    expect(trigger).toHaveTextContent("Select time zone");
     fireEvent.click(trigger);
     const firstOption = within(screen.getByRole("listbox")).getAllByRole(
       "option",
@@ -628,14 +628,14 @@ describe("SettingsPage (suite settings)", () => {
     fireEvent.mouseDown(firstOption);
     fireEvent.click(firstOption);
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Timezone/ })).toHaveTextContent(
+    expect(screen.getByRole("button", { name: /Time zone/ })).toHaveTextContent(
       chosenLabel,
     );
   });
 
   it("closes timezone dropdown on outside click", () => {
     renderSettings(operatorMe);
-    const trigger = screen.getByRole("button", { name: /Timezone/ });
+    const trigger = screen.getByRole("button", { name: /Time zone/ });
     fireEvent.click(trigger);
     expect(screen.getByRole("listbox")).toBeInTheDocument();
     fireEvent.mouseDown(document.body);
@@ -644,7 +644,7 @@ describe("SettingsPage (suite settings)", () => {
 
   it("closes timezone dropdown on Escape", () => {
     renderSettings(operatorMe);
-    const trigger = screen.getByRole("button", { name: /Timezone/ });
+    const trigger = screen.getByRole("button", { name: /Time zone/ });
     fireEvent.click(trigger);
     expect(screen.getByRole("listbox")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
