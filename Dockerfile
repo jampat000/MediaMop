@@ -26,13 +26,14 @@ RUN npm run build
 # Runs on the build machine's own architecture (--platform=$BUILDPLATFORM): the .NET SDK cross-publishes
 # a self-contained app for another runtime without emulation (it only downloads the target runtime pack),
 # so this stage stays fast even when the final stage is emulated for a second architecture.
-# Pinned to the exact SDK in apps/server/global.json: newer SDKs add analyzer rules, and warnings are errors.
+# Pinned to the exact SDK in apps/server/global.json so image builds match CI.
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble AS server-build
 ARG TARGETARCH
 WORKDIR /src
 # The solution-level MSBuild files (Directory.Build.props holds the product version) and the server source.
 # Weir.Api embeds the committed OpenAPI document from apps/web/openapi.
-COPY apps/server/global.json apps/server/Directory.Build.props apps/server/Directory.Packages.props apps/server/NuGet.Config apps/server/Weir.slnx apps/server/
+# .editorconfig carries the analyzer severities the build relies on (warnings are errors), so it must come too.
+COPY apps/server/global.json apps/server/Directory.Build.props apps/server/Directory.Packages.props apps/server/NuGet.Config apps/server/Weir.slnx apps/server/.editorconfig apps/server/
 COPY apps/server/src apps/server/src
 COPY apps/web/openapi apps/web/openapi
 # Publish through the checked-in per-runtime profile (Weir.Host/Properties/PublishProfiles/*.pubxml), not
