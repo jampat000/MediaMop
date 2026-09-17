@@ -42,7 +42,7 @@
       ],
       "default_audio_output_index": 0,
       "audio_selection_notes": [
-        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Track ranking: content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first.",
         "Selected eng eac3 6 ch (stream 1) as the only track in the first matching language tier."
       ],
       "removed_images": [],
@@ -70,5 +70,11 @@
       "-metadata:s",
       "language="
     ]
+  },
+  "issue_497": {
+    "items": [
+      3
+    ],
+    "reason": "Default audio sorters now rank content tier (main > dub/audio description > commentary) first, replacing the plain commentary key; wording-only for this case (no track-selection change)."
   }
 }

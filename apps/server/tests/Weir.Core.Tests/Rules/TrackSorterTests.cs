@@ -278,10 +278,11 @@ public sealed class TrackSorterTests
     {
         var text = TrackSorters.Describe(TrackSorters.DefaultAudioSorters);
 
-        // channels and bitrate rank highest first; commentary is a demotion, so it ranks last.
+        // channels and bitrate rank highest first; issue #497 put content tier (main, then
+        // dub/audio description, then commentary) in place of the old plain "commentary" key.
         Assert.Contains("channels highest first", text, StringComparison.Ordinal);
         Assert.Contains("bitrate highest first", text, StringComparison.Ordinal);
-        Assert.Contains("commentary last", text, StringComparison.Ordinal);
+        Assert.Contains("content tier (main, then dub/audio description, then commentary)", text, StringComparison.Ordinal);
         Assert.DoesNotContain("lowest first", text, StringComparison.Ordinal);
         Assert.DoesNotContain("commentary first", text, StringComparison.Ordinal);
     }

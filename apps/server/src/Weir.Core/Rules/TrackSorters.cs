@@ -50,6 +50,15 @@ public sealed record TrackSorter(string Field, string? Value = null, bool Revers
                 return $"{Field} {(Reversed ? "first" : "last")}";
             }
 
+            if (Field == "content_tier")
+            {
+                // Issue #497: the default sorters' new leading key — main, then a dub or audio
+                // description track, then commentary — replacing the old plain "commentary" key.
+                return Reversed
+                    ? "content tier (commentary, then dub/audio description, then main)"
+                    : "content tier (main, then dub/audio description, then commentary)";
+            }
+
             if (Field is "codec" or "language" or "title")
             {
                 return $"{Field} order";
@@ -82,6 +91,14 @@ public sealed record SortableTrack
     public string Codec { get; init; } = string.Empty;
     public long CodecRank { get; init; }
 
+    /// <summary>
+    /// Issue #497: whether <see cref="TrackFlagsReader"/> detected this track as a dub or an audio
+    /// description, for the <c>content_tier</c> field (main &gt; dub/audio description &gt; commentary).
+    /// </summary>
+    public bool Dub { get; init; }
+
+    public bool AudioDescription { get; init; }
+
     /// <summary><c>track.get(field)</c>: a bool, a long, a string, or null for a key the track does not have.</summary>
     internal object? Get(string field) => field switch
     {
@@ -95,6 +112,9 @@ public sealed record SortableTrack
         "bitrate" => Bitrate,
         "codec" => Codec,
         "codec_rank" => CodecRank,
+        "dub" => Dub,
+        "audio_description" => AudioDescription,
+        "content_tier" => Commentary ? "commentary" : Dub || AudioDescription ? "dub" : "main",
         _ => null,
     };
 }
@@ -128,14 +148,23 @@ public sealed class SortKeyComparer : IComparer<IReadOnlyList<long>>
 /// </summary>
 public static partial class TrackSorters
 {
-    /// <summary>The vocabulary, in the reference's order.</summary>
+    /// <summary>
+    /// The vocabulary, in the reference's order, plus <c>content_tier</c> (issue #497), the
+    /// engine's own addition with no Python equivalent.
+    /// </summary>
     public static IReadOnlyList<string> Fields { get; } =
-        ["bitrate", "channels", "codec", "language", "title", "default", "forced", "commentary"];
+        ["bitrate", "channels", "codec", "language", "title", "default", "forced", "commentary", "content_tier"];
 
-    /// <summary>Exactly the ranking the fixed tuple applied.</summary>
+    /// <summary>
+    /// Exactly the ranking the fixed tuple applied, except that issue #497 replaced the leading
+    /// <c>commentary</c> key with the broader <c>content_tier</c> key (main &gt; dub/audio
+    /// description &gt; commentary), so a dub or audio-description track no longer ties with the
+    /// main track on this first key. <see cref="Presets"/>' <c>quality_all_languages</c> preset
+    /// keeps its own <c>commentary</c> key unchanged — the issue asks for this only on the default.
+    /// </summary>
     public static IReadOnlyList<TrackSorter> DefaultAudioSorters { get; } =
     [
-        new("commentary"),
+        new("content_tier"),
         new("channels"),
         new("codec"),
         new("bitrate"),
@@ -312,6 +341,14 @@ public static partial class TrackSorters
             }
 
             return [sorter.Reversed ? flag : 1 - flag];
+        }
+
+        if (sorter.Field == "content_tier")
+        {
+            // Issue #497: main (0) beats a dub or audio-description track (1), which beats
+            // commentary (2) — a superset of the old "commentary" demotion.
+            long tier = track.Commentary ? 2 : track.Dub || track.AudioDescription ? 1 : 0;
+            return [sorter.Reversed ? 2 - tier : tier];
         }
 
         if (LargerIsBetter(sorter.Field))
