@@ -31,6 +31,7 @@ public sealed class LibraryScanHandlerTests : IDisposable
         _fixture.Store.Database,
         new MediaTools(_media, new FixedResolver(), new ListLogger<MediaTools>(), TimeProvider.System),
         _fixture.Connections,
+        PhysicalHardlinkInspector.Instance,
         _fixture.Store.Clock,
         NullLogger<LibraryScanHandler>.Instance);
 

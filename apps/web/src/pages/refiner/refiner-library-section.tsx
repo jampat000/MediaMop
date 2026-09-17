@@ -1,21 +1,35 @@
 /**
- * Library mode (#505): clean files already in a library, in place. Weir server (.NET) only.
+ * The **Library** tab (issues #505 and #568). It shows what a library holds and the state of it, with its own
+ * sub-navigation — Overview, Files, Codecs, Languages, Problems — over one library at a time.
+ *
+ * Every total and breakdown is a SQL aggregate from the server (`library-overview`), and the Files table is
+ * server-sorted, server-filtered and paged (`library-files`), so a library of thousands of files never has to
+ * reach the browser to be counted (#568 point 7).
  */
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { LibraryRemovalConfirmationDialog } from "../../components/refiner/library-removal-confirmation-dialog";
 import { PageLoading } from "../../components/shared/page-loading";
+import {
+  WorkspaceTabList,
+  type WorkspaceTabOption,
+} from "../../components/shared/workspace-shell";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
   formatBytes,
-  LIBRARY_FILE_CLASSIFICATION_LABELS,
-  LIBRARY_MANAGER_FILTER_OPTIONS,
+  LIBRARY_FACET_LABELS,
   type LibraryConfirmationRequired,
-  type LibraryFileClassification,
+  type LibraryFacet,
+  type LibraryFileFilters,
+  type LibraryProblemKind,
+  type LibraryScanInfo,
 } from "../../lib/refiner/library-api";
 import {
   useCleanLibraryFiles,
   useLibraryFilesQuery,
+  useLibraryOverviewQuery,
+  useLibraryProblemsQuery,
   useLibraryRedownloadsQuery,
   useLibrarySettingsQuery,
   useRequestLibraryRedownload,
@@ -27,21 +41,78 @@ import {
 import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
 import {
   mmActionButtonClass,
-  mmCheckboxControlClass,
-  mmEditableTextFieldClass,
   mmSelectFieldClass,
 } from "../../lib/ui/mm-control-roles";
-import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
+import { LibraryBreakdownTable } from "./library/library-breakdown-table";
+import { LibraryFilesView } from "./library/library-files-view";
+import { LibraryOverviewView } from "./library/library-overview-view";
+import { LibraryProblemsView } from "./library/library-problems-view";
+import { LibraryRedownloadsPanel } from "./library/library-redownloads-panel";
+import { LibrarySettingsPanel } from "./library/library-settings-panel";
+
+/** The sub-views, in the order the tab strip shows them. */
+export type LibraryViewId =
+  "overview" | "files" | "codecs" | "languages" | "problems";
+
+const LIBRARY_VIEWS = [
+  { id: "overview", label: "Overview" },
+  { id: "files", label: "Files" },
+  { id: "codecs", label: "Codecs" },
+  { id: "languages", label: "Languages" },
+  { id: "problems", label: "Problems" },
+] as const satisfies readonly WorkspaceTabOption<LibraryViewId>[];
+
+/** The facets each of the two breakdown sub-views shows. */
+const CODEC_FACETS: LibraryFacet[] = ["video_codec", "resolution", "audio"];
+const LANGUAGE_FACETS: LibraryFacet[] = ["audio_language", "subtitle_language"];
+
+/**
+ * The sub-view named by `?view=`. Anything unknown (an old bookmark, a typo) falls back to Overview rather
+ * than rendering nothing.
+ */
+export function libraryViewFromQuery(value: string | null): LibraryViewId {
+  const allowed = LIBRARY_VIEWS.map((view) => view.id) as LibraryViewId[];
+  return allowed.includes(value as LibraryViewId)
+    ? (value as LibraryViewId)
+    : "overview";
+}
 
 function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
+
+function scanSentence(
+  scan: LibraryScanInfo | null | undefined,
+  hasFiles: boolean,
+): string {
+  if (!scan) return "This library has not been scanned yet.";
+  if (scan.running) return "Scanning now…";
+  if (scan.generated_at) {
+    return `Last scanned ${new Date(scan.generated_at * 1000).toLocaleString()}.`;
+  }
+  // Job-row retention can prune the scan job long after it ran, taking the timestamp with it but not the
+  // file index it produced (#557). Files without a date means that, not a scan that failed.
+  return hasFiles
+    ? "Scanned, though Weir no longer has a record of when."
+    : "The last scan did not finish.";
+}
+
+const SCAN_EXPLANATION =
+  "A scan reads every file in this library's folders and works out, with this library's rules, whether each one already matches, would change, or cannot be processed. It never writes to a file.";
 
 export function RefinerLibrarySection() {
   const me = useMeQuery();
   const editable = canEdit(me.data?.role);
   const libraries = useRefinerLibrariesQuery();
   const [libraryId, setLibraryId] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setView] = useState<LibraryViewId>(() =>
+    libraryViewFromQuery(searchParams.get("view")),
+  );
+
+  useEffect(() => {
+    setView(libraryViewFromQuery(searchParams.get("view")));
+  }, [searchParams]);
 
   useEffect(() => {
     if (libraryId === null && libraries.data && libraries.data.length > 0) {
@@ -49,13 +120,25 @@ export function RefinerLibrarySection() {
     }
   }, [libraries.data, libraryId]);
 
+  const selectView = (next: LibraryViewId) => {
+    setView(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "overview") params.delete("view");
+    else params.set("view", next);
+    setSearchParams(params, { replace: true });
+  };
+
   const settings = useLibrarySettingsQuery(libraryId ?? 0, libraryId !== null);
+  const overview = useLibraryOverviewQuery(libraryId ?? 0, libraryId !== null);
+  const problems = useLibraryProblemsQuery(
+    libraryId ?? 0,
+    libraryId !== null && view === "problems",
+  );
   const saveFolders = useSaveLibraryFolders(libraryId ?? 0);
   const savePreflight = useSaveLibraryPreflightSettings(libraryId ?? 0);
   const scheduleMutation = useSetLibrarySchedule(libraryId ?? 0);
   const scanMutation = useTriggerLibraryScan(libraryId ?? 0);
 
-  const [newFolder, setNewFolder] = useState("");
   const [folderError, setFolderError] = useState<string | null>(null);
   const [preflightError, setPreflightError] = useState<string | null>(null);
   const [cleanNotice, setCleanNotice] = useState<{
@@ -64,31 +147,20 @@ export function RefinerLibrarySection() {
     warnings: string[];
   } | null>(null);
 
-  const [classification, setClassification] = useState<
-    LibraryFileClassification | ""
-  >("");
-  const [manager, setManager] = useState("");
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<LibraryFileFilters>({});
   const files = useLibraryFilesQuery(
     libraryId ?? 0,
-    {
-      classification: classification || undefined,
-      manager: manager || undefined,
-      q: search || undefined,
-    },
-    libraryId !== null,
+    filters,
+    libraryId !== null && view === "files",
   );
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const cleanMutation = useCleanLibraryFiles(libraryId ?? 0);
   const redownloads = useLibraryRedownloadsQuery(
     libraryId ?? 0,
-    libraryId !== null,
+    libraryId !== null && view === "problems",
   );
   const redownloadMutation = useRequestLibraryRedownload(libraryId ?? 0);
-  const [confirmingRedownload, setConfirmingRedownload] = useState<
-    string | null
-  >(null);
   const [redownloadError, setRedownloadError] = useState<string | null>(null);
   const [cleanConfirmation, setCleanConfirmation] =
     useState<LibraryConfirmationRequired | null>(null);
@@ -97,10 +169,10 @@ export function RefinerLibrarySection() {
     useState<LibraryConfirmationRequired | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
-  const selectedFiles = useMemo(
-    () => (files.data?.files ?? []).filter((f) => selected.has(f.path)),
-    [files.data, selected],
-  );
+  const selectedPaths = useMemo(() => [...selected], [selected]);
+  const scan = overview.data?.scan ?? files.data?.scan ?? null;
+  const scanning = scanMutation.isPending || scan?.running === true;
+  const nothingScanned = (overview.data?.totals.files ?? 0) === 0;
 
   if (libraries.isLoading) {
     return <PageLoading label="Loading libraries…" />;
@@ -114,17 +186,13 @@ export function RefinerLibrarySection() {
     );
   }
 
-  const addFolder = () => {
-    const trimmed = newFolder.trim();
-    if (!trimmed || !settings.data || libraryId === null) return;
-    const next = Array.from(
-      new Set([...settings.data.library_folders, trimmed]),
-    );
+  const addFolder = (folder: string) => {
+    if (!settings.data || libraryId === null) return;
     setFolderError(null);
-    saveFolders.mutate(next, {
-      onSuccess: () => setNewFolder(""),
-      onError: (error) => setFolderError((error as Error).message),
-    });
+    saveFolders.mutate(
+      Array.from(new Set([...settings.data.library_folders, folder])),
+      { onError: (error) => setFolderError((error as Error).message) },
+    );
   };
 
   const removeFolder = (folder: string) => {
@@ -136,10 +204,10 @@ export function RefinerLibrarySection() {
   };
 
   const runClean = (confirm: boolean) => {
-    if (selectedFiles.length === 0 || libraryId === null) return;
+    if (selectedPaths.length === 0 || libraryId === null) return;
     setCleanError(null);
     cleanMutation.mutate(
-      { paths: selectedFiles.map((f) => f.path), confirm },
+      { paths: selectedPaths, confirm },
       {
         onSuccess: (result) => {
           if (result.kind === "confirmation_required") {
@@ -180,454 +248,302 @@ export function RefinerLibrarySection() {
     scheduleMutation.mutate(
       { enabled, confirm },
       {
-        onSuccess: (result) => {
-          if ("kind" in result) {
-            setScheduleConfirmation(result);
-          } else {
-            setScheduleConfirmation(null);
-          }
-        },
+        onSuccess: (result) =>
+          setScheduleConfirmation("kind" in result ? result : null),
         onError: (error) => setScheduleError((error as Error).message),
       },
     );
   };
 
-  const toggleSelected = (path: string) => {
+  const toggleSelected = (path: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
       return next;
     });
+
+  const selectAllOnPage = (paths: string[], select: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const path of paths) {
+        if (select) next.add(path);
+        else next.delete(path);
+      }
+      return next;
+    });
+
+  /** A "show files" link: jump to the Files sub-view with one facet pinned. */
+  const showFilesForFacet = (facet: LibraryFacet, value: string) => {
+    setFilters((current) => ({
+      ...current,
+      facets: { ...current.facets, [facet]: value },
+      problem: undefined,
+      page: 1,
+    }));
+    selectView("files");
   };
+
+  const showFilesForProblem = (kind: LibraryProblemKind) => {
+    setFilters((current) => ({ ...current, problem: kind, page: 1 }));
+    selectView("files");
+  };
+
+  const emptyState = (
+    <section
+      className="mm-bubble space-y-2 p-4"
+      data-testid="library-empty-state"
+    >
+      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+        Nothing scanned yet
+      </h3>
+      <p className="max-w-prose text-sm text-[var(--mm-text2)]">
+        {SCAN_EXPLANATION}
+      </p>
+      {settings.data && settings.data.library_folders.length === 0 ? (
+        <p className="text-sm text-[var(--mm-text3)]">
+          Add at least one library folder below, then scan.
+        </p>
+      ) : null}
+      {editable ? (
+        <button
+          type="button"
+          className={mmActionButtonClass({
+            variant: "primary",
+            disabled: scanning || settings.data?.library_folders.length === 0,
+          })}
+          disabled={scanning || settings.data?.library_folders.length === 0}
+          onClick={() => scanMutation.mutate()}
+        >
+          {scanning ? "Scanning…" : "Scan now"}
+        </button>
+      ) : null}
+    </section>
+  );
+
+  const totals = overview.data?.totals;
 
   return (
     <div className="mm-bubble-stack flex w-full min-w-0 flex-col gap-4">
-      <label className="block max-w-md text-sm font-medium text-[var(--mm-text1)]">
-        Library
-        <select
-          className={mmSelectFieldClass}
-          value={libraryId ?? ""}
-          onChange={(e) => {
-            setLibraryId(Number(e.target.value));
-            setSelected(new Set());
-          }}
-        >
-          {libraries.data.map((library) => (
-            <option key={library.id} value={library.id}>
-              {library.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {libraryId !== null && settings.data ? (
-        <section
-          className="mm-bubble space-y-3 p-4"
-          data-testid="library-folders-section"
-        >
-          <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-            Library folders
-          </h3>
-          <p className="text-xs text-[var(--mm-text3)]">
-            Where Weir looks for files to clean in place. Separate from this
-            library&apos;s watched, work and output folders — they may be the
-            same folders a media manager already watches, or different ones.
-          </p>
-          <ul className="space-y-1">
-            {settings.data.library_folders.map((folder) => (
-              <li
-                key={folder}
-                className="flex items-center justify-between gap-2 rounded border border-[var(--mm-border)] px-2 py-1 text-sm"
-              >
-                <span className="break-all">{folder}</span>
-                {editable ? (
-                  <button
-                    type="button"
-                    className={mmActionButtonClass({ variant: "tertiary" })}
-                    onClick={() => removeFolder(folder)}
-                    disabled={saveFolders.isPending}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </li>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <label className="block max-w-md text-sm font-medium text-[var(--mm-text1)]">
+          Library
+          <select
+            className={mmSelectFieldClass}
+            value={libraryId ?? ""}
+            onChange={(e) => {
+              setLibraryId(Number(e.target.value));
+              setSelected(new Set());
+              setFilters({});
+            }}
+          >
+            {libraries.data.map((library) => (
+              <option key={library.id} value={library.id}>
+                {library.name}
+              </option>
             ))}
-            {settings.data.library_folders.length === 0 ? (
-              <li className="text-sm text-[var(--mm-text3)]">
-                No library folders yet.
-              </li>
-            ) : null}
-          </ul>
-          {editable ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                className={mmEditableTextFieldClass}
-                style={{ maxWidth: "24rem" }}
-                placeholder="/srv/media/movies-4k"
-                value={newFolder}
-                onChange={(e) => setNewFolder(e.target.value)}
-              />
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "secondary",
-                  disabled: saveFolders.isPending || newFolder.trim() === "",
-                })}
-                disabled={saveFolders.isPending || newFolder.trim() === ""}
-                onClick={addFolder}
-              >
-                Add folder
-              </button>
-            </div>
-          ) : null}
-          {folderError ? (
-            <p
-              className="text-sm text-[var(--mm-status-failed-text)]"
-              role="alert"
-            >
-              {folderError}
-            </p>
-          ) : null}
+          </select>
+        </label>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--mm-border)] pt-3">
-            <MmOnOffSwitch
-              id="library-schedule-toggle"
-              label="Scheduled scan and clean (uses this library's schedule window)"
-              enabled={settings.data.library_schedule_enabled}
-              disabled={!editable || scheduleMutation.isPending}
-              onChange={(next) => toggleSchedule(next, false)}
-            />
+        <div className="flex flex-wrap items-center gap-3">
+          <span
+            className="text-sm text-[var(--mm-text2)]"
+            data-testid="library-scan-state"
+          >
+            {scanSentence(scan, !nothingScanned)}
+            {totals && totals.files > 0
+              ? ` ${totals.files} file(s), ${formatBytes(totals.size_bytes)}.`
+              : ""}
+          </span>
+          {editable ? (
             <button
               type="button"
               className={mmActionButtonClass({
                 variant: "secondary",
                 disabled:
-                  scanMutation.isPending ||
-                  settings.data.library_folders.length === 0,
+                  scanning || settings.data?.library_folders.length === 0,
               })}
-              disabled={
-                scanMutation.isPending ||
-                settings.data.library_folders.length === 0
-              }
+              disabled={scanning || settings.data?.library_folders.length === 0}
               onClick={() => scanMutation.mutate()}
+              data-testid="library-scan-button"
             >
-              {scanMutation.isPending ? "Scanning…" : "Scan now"}
+              {scanning ? "Scanning…" : "Scan now"}
             </button>
-          </div>
-          {scheduleError ? (
-            <p
-              className="text-sm text-[var(--mm-status-failed-text)]"
-              role="alert"
-            >
-              {scheduleError}
-            </p>
           ) : null}
+        </div>
+      </div>
 
-          <div className="space-y-2 border-t border-[var(--mm-border)] pt-3">
-            <MmOnOffSwitch
-              id="library-clean-hardlinked-toggle"
-              label="Clean files still shared with a download (seeding)"
-              enabled={settings.data.clean_hardlinked_files}
-              disabled={!editable || savePreflight.isPending}
-              onChange={(next) =>
-                togglePreflightSetting("clean_hardlinked_files", next)
-              }
-            />
-            <p className="text-xs text-[var(--mm-text3)]">
-              Off by default: cleaning a file another name still shares data
-              with doesn&apos;t free anything, since the original bytes stay
-              allocated under the other name.
-            </p>
-            <MmOnOffSwitch
-              id="library-skip-redownload-risk-toggle"
-              label="Skip a clean that would make a manager re-download the title"
-              enabled={settings.data.skip_if_manager_would_redownload}
-              disabled={!editable || savePreflight.isPending}
-              onChange={(next) =>
-                togglePreflightSetting("skip_if_manager_would_redownload", next)
-              }
-            />
-          </div>
-          {preflightError ? (
-            <p
-              className="text-sm text-[var(--mm-status-failed-text)]"
-              role="alert"
-            >
-              {preflightError}
-            </p>
-          ) : null}
-        </section>
+      {scan?.errors?.length ? (
+        <div
+          className="mm-bubble space-y-1 p-3 text-sm text-[var(--mm-status-warning-text)]"
+          data-testid="library-scan-errors"
+        >
+          {scan.errors.map((error) => (
+            <p key={error}>{error}</p>
+          ))}
+        </div>
       ) : null}
 
-      {libraryId !== null ? (
-        <section
-          className="mm-bubble space-y-3 p-4"
-          data-testid="library-files-section"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              className={mmSelectFieldClass}
-              style={{ maxWidth: "16rem" }}
-              value={classification}
-              onChange={(e) =>
-                setClassification(
-                  e.target.value as LibraryFileClassification | "",
+      <WorkspaceTabList
+        tabs={LIBRARY_VIEWS}
+        activeId={view}
+        onSelect={selectView}
+        ariaLabel="Library sections"
+        idPrefix="library-view-tab"
+        panelId="library-view-panel"
+        dataTestId="library-view-tabs"
+      />
+
+      <section
+        id="library-view-panel"
+        role="tabpanel"
+        aria-labelledby={`library-view-tab-${view}`}
+        className="flex w-full min-w-0 flex-col gap-4"
+      >
+        {view === "overview" ? (
+          <>
+            {overview.isLoading ? (
+              <PageLoading label="Loading this library…" />
+            ) : null}
+            {overview.data ? (
+              <LibraryOverviewView
+                overview={overview.data}
+                onShowFiles={showFilesForFacet}
+                onOpenProblems={() => selectView("problems")}
+                emptyState={emptyState}
+              />
+            ) : null}
+            {settings.data ? (
+              <LibrarySettingsPanel
+                settings={settings.data}
+                editable={editable}
+                savingFolders={saveFolders.isPending}
+                savingPreflight={savePreflight.isPending}
+                savingSchedule={scheduleMutation.isPending}
+                folderError={folderError}
+                preflightError={preflightError}
+                scheduleError={scheduleError}
+                onAddFolder={addFolder}
+                onRemoveFolder={removeFolder}
+                onToggleSchedule={(enabled) => toggleSchedule(enabled, false)}
+                onTogglePreflight={togglePreflightSetting}
+              />
+            ) : null}
+          </>
+        ) : null}
+
+        {view === "files" && libraryId !== null ? (
+          <>
+            <LibraryFilesView
+              libraryId={libraryId}
+              editable={editable}
+              filters={filters}
+              onFiltersChange={setFilters}
+              files={files.data}
+              loading={files.isLoading}
+              breakdowns={overview.data?.breakdowns}
+              selected={selected}
+              onToggleSelected={toggleSelected}
+              onSelectAllOnPage={selectAllOnPage}
+              onClean={() => runClean(false)}
+              cleaning={cleanMutation.isPending}
+              cleanError={cleanError}
+              emptyState={
+                nothingScanned ? (
+                  emptyState
+                ) : (
+                  <p className="text-sm text-[var(--mm-text3)]">
+                    No file matches these filters.
+                  </p>
                 )
               }
-            >
-              <option value="">All files</option>
-              {(
-                Object.keys(
-                  LIBRARY_FILE_CLASSIFICATION_LABELS,
-                ) as LibraryFileClassification[]
-              ).map((value) => (
-                <option key={value} value={value}>
-                  {LIBRARY_FILE_CLASSIFICATION_LABELS[value]}
-                </option>
-              ))}
-            </select>
-            <select
-              className={mmSelectFieldClass}
-              style={{ maxWidth: "12rem" }}
-              value={manager}
-              onChange={(e) => setManager(e.target.value)}
-              aria-label="Filter by manager"
-            >
-              <option value="">All managers</option>
-              {LIBRARY_MANAGER_FILTER_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <input
-              className={mmEditableTextFieldClass}
-              style={{ maxWidth: "20rem" }}
-              placeholder="Search path"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
-
-          {files.data ? (
-            <p
-              className="text-sm text-[var(--mm-text2)]"
-              data-testid="library-files-summary"
-            >
-              {files.data.summary.matches} match the rules,{" "}
-              {files.data.summary.would_change} would change,{" "}
-              {files.data.summary.cannot_process} cannot be processed. Estimated
-              size saved if all &quot;would change&quot; files were cleaned:{" "}
-              {formatBytes(files.data.summary.estimated_bytes_saved)}.
-            </p>
-          ) : null}
-
-          {files.isLoading ? <PageLoading label="Loading files…" /> : null}
-
-          {files.data ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[40rem] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--mm-border)] text-[var(--mm-text3)]">
-                    <th className="w-8 py-1" />
-                    <th className="py-1">Path</th>
-                    <th className="py-1">Status</th>
-                    <th className="py-1">Manager</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {files.data.files.map((file) => (
-                    <tr
-                      key={file.path}
-                      className="border-b border-[var(--mm-border)]/50 align-top"
-                      data-testid="library-file-row"
-                    >
-                      <td className="py-2">
-                        <input
-                          type="checkbox"
-                          className={mmCheckboxControlClass}
-                          checked={selected.has(file.path)}
-                          onChange={() => toggleSelected(file.path)}
-                          disabled={
-                            !editable || file.classification !== "would_change"
-                          }
-                          aria-label={`Select ${file.path}`}
-                        />
-                      </td>
-                      <td className="py-2 break-all">{file.path}</td>
-                      <td className="py-2">
-                        <div>
-                          {
-                            LIBRARY_FILE_CLASSIFICATION_LABELS[
-                              file.classification
-                            ]
-                          }
-                        </div>
-                        <div className="text-xs text-[var(--mm-text3)]">
-                          {file.summary ?? file.reason ?? ""}
-                        </div>
-                      </td>
-                      <td className="py-2 text-xs text-[var(--mm-text3)]">
-                        {file.manager_title
-                          ? `${file.manager_title}${file.manager_kind ? ` (${file.manager_kind})` : ""}`
-                          : "Unmatched"}
-                      </td>
-                    </tr>
-                  ))}
-                  {files.data.files.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-4 text-[var(--mm-text3)]">
-                        No files yet. Scan this library first.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          {editable ? (
-            <button
-              type="button"
-              className={mmActionButtonClass({
-                variant: "primary",
-                disabled: selectedFiles.length === 0 || cleanMutation.isPending,
-              })}
-              disabled={selectedFiles.length === 0 || cleanMutation.isPending}
-              onClick={() => runClean(false)}
-              data-testid="library-clean-button"
-            >
-              Clean selected ({selectedFiles.length})
-            </button>
-          ) : null}
-          {cleanError ? (
-            <p
-              className="text-sm text-[var(--mm-status-failed-text)]"
-              role="alert"
-            >
-              {cleanError}
-            </p>
-          ) : null}
-          {cleanNotice ? (
-            <div
-              className="space-y-1 rounded border border-[var(--mm-border)] p-2 text-sm text-[var(--mm-text2)]"
-              data-testid="library-clean-notice"
-            >
-              <p>
-                {cleanNotice.queued} file(s) queued to clean
-                {cleanNotice.skipped.length > 0
-                  ? `; ${cleanNotice.skipped.length} skipped (still shared with a download)`
-                  : ""}
-                .
-              </p>
-              {cleanNotice.warnings.map((warning) => (
-                <p key={warning} className="text-xs text-[var(--mm-text3)]">
-                  {warning}
-                </p>
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {libraryId !== null &&
-      redownloads.data &&
-      redownloads.data.titles.length > 0 ? (
-        <section
-          className="mm-bubble space-y-3 p-4"
-          data-testid="library-redownloads-section"
-        >
-          <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-            Titles missing tracks your new rules keep
-          </h3>
-          <p className="text-xs text-[var(--mm-text3)]">
-            A past clean removed these tracks for good; the only way to get one
-            back is downloading the title again.
-          </p>
-          <ul className="space-y-2">
-            {redownloads.data.titles.map((title) => (
-              <li
-                key={title.path}
-                className="rounded border border-[var(--mm-border)] p-2 text-sm"
-                data-testid="library-redownload-row"
+            {cleanNotice ? (
+              <div
+                className="mm-bubble space-y-1 p-3 text-sm text-[var(--mm-text2)]"
+                data-testid="library-clean-notice"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="break-all font-medium text-[var(--mm-text1)]">
-                      {title.manager_title ?? title.path}
-                    </div>
-                    <div className="text-xs text-[var(--mm-text3)]">
-                      {title.removed_tracks
-                        .map((t) => `${t.language} ${t.type}`)
-                        .join(", ")}
-                    </div>
-                  </div>
-                  {editable && title.can_redownload ? (
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({ variant: "secondary" })}
-                      onClick={() => setConfirmingRedownload(title.path)}
-                    >
-                      Download again
-                    </button>
+                <p>
+                  {cleanNotice.queued} file(s) queued to clean
+                  {cleanNotice.skipped.length > 0
+                    ? `; ${cleanNotice.skipped.length} skipped (still shared with a download)`
+                    : ""}
+                  .
+                </p>
+                {cleanNotice.warnings.map((warning) => (
+                  <p key={warning} className="text-xs text-[var(--mm-text3)]">
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+
+        {view === "codecs" || view === "languages" ? (
+          <>
+            {overview.isLoading ? (
+              <PageLoading label="Loading breakdowns…" />
+            ) : null}
+            {overview.data && nothingScanned ? emptyState : null}
+            {overview.data && !nothingScanned
+              ? (view === "codecs" ? CODEC_FACETS : LANGUAGE_FACETS).map(
+                  (facet) => (
+                    <LibraryBreakdownTable
+                      key={facet}
+                      facet={facet}
+                      heading={LIBRARY_FACET_LABELS[facet]}
+                      rows={overview.data.breakdowns[facet] ?? []}
+                      onShowFiles={showFilesForFacet}
+                      emptyMessage="Nothing scanned carries this yet."
+                    />
+                  ),
+                )
+              : null}
+          </>
+        ) : null}
+
+        {view === "problems" ? (
+          <>
+            {problems.isLoading ? (
+              <PageLoading label="Loading problems…" />
+            ) : null}
+            {problems.data ? (
+              <LibraryProblemsView
+                groups={problems.data.groups}
+                onShowFiles={showFilesForProblem}
+                emptyState={
+                  nothingScanned ? (
+                    emptyState
                   ) : (
-                    <span className="text-xs text-[var(--mm-text3)]">
-                      {title.unavailable_reason}
-                    </span>
-                  )}
-                </div>
-                {confirmingRedownload === title.path ? (
-                  <div className="mt-2 space-y-2 border-t border-[var(--mm-border)] pt-2">
-                    <p className="text-sm text-[var(--mm-status-failed-text)]">
-                      {title.confirmation_message}
+                    <p
+                      className="text-sm text-[var(--mm-text2)]"
+                      data-testid="library-no-problems"
+                    >
+                      Nothing is in the way: every file Weir found is either
+                      already right or ready to clean.
                     </p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "primary",
-                          disabled: redownloadMutation.isPending,
-                        })}
-                        disabled={redownloadMutation.isPending}
-                        onClick={() => {
-                          setRedownloadError(null);
-                          redownloadMutation.mutate(title.path, {
-                            onSuccess: () => setConfirmingRedownload(null),
-                            onError: (error) =>
-                              setRedownloadError((error as Error).message),
-                          });
-                        }}
-                      >
-                        {redownloadMutation.isPending
-                          ? "Requesting…"
-                          : "Confirm download again"}
-                      </button>
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "tertiary",
-                        })}
-                        onClick={() => setConfirmingRedownload(null)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          {redownloadError ? (
-            <p
-              className="text-sm text-[var(--mm-status-failed-text)]"
-              role="alert"
-            >
-              {redownloadError}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+                  )
+                }
+              />
+            ) : null}
+            <LibraryRedownloadsPanel
+              titles={redownloads.data?.titles ?? []}
+              editable={editable}
+              requesting={redownloadMutation.isPending}
+              error={redownloadError}
+              onRequest={(path, done) => {
+                setRedownloadError(null);
+                redownloadMutation.mutate(path, {
+                  onSuccess: done,
+                  onError: (error) =>
+                    setRedownloadError((error as Error).message),
+                });
+              }}
+            />
+          </>
+        ) : null}
+      </section>
 
       {cleanConfirmation ? (
         <LibraryRemovalConfirmationDialog

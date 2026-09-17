@@ -28,6 +28,8 @@ public static class LibraryModeEndpoints
         endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-settings", GetSettingsAsync);
         endpoints.MapV1("PUT", "/refiner/libraries/{library_id}/library-settings", PutSettingsAsync);
         endpoints.MapV1("POST", "/refiner/libraries/{library_id}/library-scan", PostScanAsync);
+        endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-overview", GetOverviewAsync);
+        endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-problems", GetProblemsAsync);
         endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-files", GetFilesAsync);
         endpoints.MapV1("POST", "/refiner/libraries/{library_id}/library-files/clean", PostCleanAsync);
         endpoints.MapV1("POST", "/refiner/libraries/{library_id}/library-schedule", PostScheduleAsync);
@@ -133,18 +135,172 @@ public static class LibraryModeEndpoints
         return ApiRoutes.Ok(new PyDict().Set("job_id", job.Id).Set("status", job.Status).Set("already_running", false));
     }
 
-    private static PyDict FileOut(LibraryScanFileEntry entry) => new PyDict()
-        .Set("path", entry.Path)
-        .Set("size_bytes", entry.SizeBytes)
-        .Set("classification", LibraryScanFileEntry.ClassificationName(entry.Classification))
-        .Set("summary", entry.Summary)
-        .Set("reason", entry.Reason)
-        .Set("removed_audio_tracks", entry.RemovedAudioCount)
-        .Set("removed_subtitle_tracks", entry.RemovedSubtitleCount)
-        .Set("estimated_bytes_saved", entry.EstimatedBytesSaved)
-        .Set("manager_kind", entry.ManagerKind)
-        .Set("manager_title", entry.ManagerTitle);
+    private static PyDict FileOut(LibraryFileRow row) => new PyDict()
+        .Set("path", row.Path)
+        .Set("size_bytes", row.SizeBytes)
+        .Set("modified_at", row.ModifiedTimeUnixSeconds)
+        .Set("classification", LibraryScanFileEntry.ClassificationName(row.Classification))
+        .Set("summary", row.Summary)
+        .Set("reason", row.Reason)
+        .Set("removed_audio_tracks", row.RemovedAudioCount)
+        .Set("removed_subtitle_tracks", row.RemovedSubtitleCount)
+        .Set("estimated_bytes_saved", row.EstimatedBytesSaved)
+        .Set("manager_kind", row.ManagerKind)
+        .Set("manager_title", row.ManagerTitle)
+        .Set("video_codec", row.VideoCodec)
+        .Set("video_height", row.VideoHeight)
+        .Set("resolution_class", row.ResolutionClass)
+        .Set("audio_track_count", row.AudioTrackCount)
+        .Set("subtitle_track_count", row.SubtitleTrackCount)
+        .Set("audio_summary", row.AudioSummary)
+        .Set("subtitle_summary", row.SubtitleSummary)
+        .Set("link_count", row.LinkCount)
+        .Set("problem_kind", row.ProblemKind is { } kind ? LibraryProblems.Name(kind) : null);
 
+    /// <summary>
+    /// The scan's own state for the header: which job, what it is doing, when it last finished and anything it
+    /// could not do. <c>running</c> is what the "Scan now" button and its progress read.
+    /// </summary>
+    private static async Task<PyJson> ScanOutAsync(Weir.Infrastructure.Sqlite.UnitOfWork uow, long libraryId)
+    {
+        var latest = await LibraryScanStore.LatestAsync(uow, libraryId).ConfigureAwait(false);
+        var snapshot = await LibraryScanStore.LatestSnapshotAsync(uow, libraryId).ConfigureAwait(false);
+        if (latest is null)
+        {
+            return snapshot is null
+                ? PyJson.Null
+                : new PyDict().Set("job_id", PyJson.Null).Set("status", "completed").Set("running", false)
+                    .Set("generated_at", snapshot.GeneratedAt.ToUnixTimeSeconds()).Set("errors", new PyList([]));
+        }
+
+        var running = latest.Status is "pending" or "leased";
+        return new PyDict()
+            .Set("job_id", latest.JobId)
+            .Set("status", latest.Status)
+            .Set("running", running)
+            .Set("generated_at", snapshot?.GeneratedAt.ToUnixTimeSeconds())
+            .Set("errors", new PyList((snapshot?.Errors ?? []).Select(e => (PyJson)new PyStr(e))));
+    }
+
+    /// <summary>Reads the Files table's filters, sort and page off the query string.</summary>
+    private static LibraryFileQuery QueryFrom(ApiRequest request)
+    {
+        var facets = new List<LibraryFileFacet>();
+        foreach (var facet in LibraryFacets.All)
+        {
+            if (request.Query(facet) is { Length: > 0 } value)
+            {
+                facets.Add(new LibraryFileFacet(facet, value));
+            }
+        }
+
+        return new LibraryFileQuery
+        {
+            Classification = NullIfBlank(request.Query("classification")),
+            ManagerKind = NullIfBlank(request.Query("manager")),
+            Search = NullIfBlank(request.Query("q")),
+            Facets = facets,
+            ProblemKind = LibraryProblems.Parse(request.Query("problem")),
+            Sort = LibraryFileSort.Normalize(request.Query("sort")),
+            Descending = string.Equals(request.Query("direction"), "desc", StringComparison.OrdinalIgnoreCase),
+            Page = PositiveInt(request.Query("page"), 1),
+            PageSize = Math.Clamp(PositiveInt(request.Query("page_size"), LibraryFileSort.DefaultPageSize), 1, LibraryFileSort.MaxPageSize),
+        };
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private static int PositiveInt(string? value, int fallback) =>
+        int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0
+            ? parsed
+            : fallback;
+
+    /// <summary>
+    /// #568's Overview: what the library holds and how much of it the rules would touch, plus the breakdowns by
+    /// codec, resolution class and language. Every number is a SQL aggregate over <c>library_files</c> and its
+    /// facet rows (issue #568 point 7) — this never sends thousands of file rows for the browser to add up.
+    /// </summary>
+    private static async Task<ApiResult> GetOverviewAsync(ApiRequest request)
+    {
+        await request.RequireUserAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var libraryId = request.PathInt("library_id", issues);
+        issues.ThrowIfAny();
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
+        var settings = await LibrarySettingsStore.GetAsync(uow, libraryId).ConfigureAwait(false);
+        var totals = await LibraryViewStore.TotalsAsync(uow, libraryId).ConfigureAwait(false);
+        var breakdowns = await LibraryViewStore.AllBreakdownsAsync(uow, libraryId).ConfigureAwait(false);
+        var problems = await LibraryViewStore.ProblemsAsync(uow, libraryId, settings.CleanHardlinkedFiles).ConfigureAwait(false);
+
+        var breakdownsOut = new PyDict();
+        foreach (var facet in LibraryFacets.All)
+        {
+            var rows = breakdowns.GetValueOrDefault(facet, []);
+            breakdownsOut.Set(facet, new PyList(rows.Select(row => (PyJson)BreakdownRowOut(row, totals.Files))));
+        }
+
+        return ApiRoutes.Ok(new PyDict()
+            .Set("library_id", libraryId)
+            .Set("folders_configured", settings.Folders.Count)
+            .Set("scan", await ScanOutAsync(uow, libraryId).ConfigureAwait(false))
+            .Set("totals", TotalsOut(totals))
+            .Set("breakdowns", breakdownsOut)
+            .Set("problems", new PyList(problems.Select(group => (PyJson)ProblemGroupOut(group)))));
+    }
+
+    private static PyDict TotalsOut(LibraryTotals totals) => new PyDict()
+        .Set("files", totals.Files)
+        .Set("size_bytes", totals.SizeBytes)
+        .Set("matches", totals.Matches)
+        .Set("would_change", totals.WouldChange)
+        .Set("cannot_process", totals.CannotProcess)
+        .Set("estimated_bytes_saved", totals.EstimatedBytesSaved)
+        .Set("total_removed_audio_tracks", totals.RemovedAudioTracks)
+        .Set("total_removed_subtitle_tracks", totals.RemovedSubtitleTracks);
+
+    /// <summary><c>share</c> is computed here, not in the browser, so every bar in the UI is drawn from one number.</summary>
+    private static PyDict BreakdownRowOut(LibraryBreakdownRow row, long totalFiles) => new PyDict()
+        .Set("value", row.Value)
+        .Set("files", row.Files)
+        .Set("size_bytes", row.SizeBytes)
+        .Set("share", totalFiles > 0 ? Math.Round((double)row.Files / totalFiles, 4) : 0.0);
+
+    private static PyDict ProblemGroupOut(LibraryProblemGroup group) => new PyDict()
+        .Set("kind", LibraryProblems.Name(group.Kind))
+        .Set("title", LibraryProblems.Title(group.Kind))
+        .Set("what_to_do", LibraryProblems.WhatToDo(group.Kind))
+        .Set("files", group.Files)
+        .Set("size_bytes", group.SizeBytes)
+        .Set("sample_paths", new PyList(group.SampleFiles.Select(path => (PyJson)new PyStr(path))));
+
+    /// <summary>#568's Problems view: every reason a file is not something Weir will clean, grouped, with advice.</summary>
+    private static async Task<ApiResult> GetProblemsAsync(ApiRequest request)
+    {
+        await request.RequireUserAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var libraryId = request.PathInt("library_id", issues);
+        issues.ThrowIfAny();
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
+        var settings = await LibrarySettingsStore.GetAsync(uow, libraryId).ConfigureAwait(false);
+        var groups = await LibraryViewStore.ProblemsAsync(uow, libraryId, settings.CleanHardlinkedFiles).ConfigureAwait(false);
+        return ApiRoutes.Ok(new PyDict()
+            .Set("library_id", libraryId)
+            .Set("scan", await ScanOutAsync(uow, libraryId).ConfigureAwait(false))
+            .Set("groups", new PyList(groups.Select(group => (PyJson)ProblemGroupOut(group))))
+            .Set("total", groups.Sum(group => group.Files)));
+    }
+
+    /// <summary>
+    /// #568's Files table: one page of the library's files, sorted by any of
+    /// <see cref="LibraryFileSort.Columns"/> and narrowed by classification, manager, a path/title search, any of
+    /// the breakdown facets, or a Problems group. <c>summary</c> is the whole library's totals (what the header
+    /// says), <c>filtered</c> the totals for what the filters select, and <c>total</c> the row count behind the
+    /// paging.
+    /// </summary>
     private static async Task<ApiResult> GetFilesAsync(ApiRequest request)
     {
         await request.RequireUserAsync().ConfigureAwait(false);
@@ -152,47 +308,25 @@ public static class LibraryModeEndpoints
         var libraryId = request.PathInt("library_id", issues);
         issues.ThrowIfAny();
 
-        var classification = request.Query("classification");
-        var manager = request.Query("manager");
-        var search = request.Query("q");
-
         var uow = await request.DbAsync().ConfigureAwait(false);
         await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
-        var latest = await LibraryScanStore.LatestAsync(uow, libraryId).ConfigureAwait(false);
-        var snapshot = await LibraryScanStore.LatestSnapshotAsync(uow, libraryId).ConfigureAwait(false);
 
-        var files = (snapshot?.Files ?? []).AsEnumerable();
-        if (!string.IsNullOrWhiteSpace(classification))
-        {
-            files = files.Where(f => string.Equals(LibraryScanFileEntry.ClassificationName(f.Classification), classification, StringComparison.OrdinalIgnoreCase));
-        }
+        var query = QueryFrom(request);
+        var overall = await LibraryViewStore.TotalsAsync(uow, libraryId).ConfigureAwait(false);
+        var filtered = await LibraryViewStore.TotalsAsync(uow, libraryId, query).ConfigureAwait(false);
+        var rows = await LibraryViewStore.ListFilesAsync(uow, libraryId, query).ConfigureAwait(false);
 
-        if (!string.IsNullOrWhiteSpace(manager))
-        {
-            files = files.Where(f => string.Equals(f.ManagerKind, manager, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            files = files.Where(f => f.Path.Contains(search, StringComparison.OrdinalIgnoreCase));
-        }
-
-        var filtered = files.ToList();
-        var all = snapshot?.Files ?? [];
         return ApiRoutes.Ok(new PyDict()
             .Set("library_id", libraryId)
-            .Set("scan", latest is null
-                ? PyJson.Null
-                : new PyDict().Set("job_id", latest.JobId).Set("status", latest.Status).Set("generated_at", snapshot?.GeneratedAt.ToUnixTimeSeconds()))
-            .Set("summary", new PyDict()
-                .Set("matches", all.Count(f => f.Classification == LibraryFileClassification.Matches))
-                .Set("would_change", all.Count(f => f.Classification == LibraryFileClassification.WouldChange))
-                .Set("cannot_process", all.Count(f => f.Classification == LibraryFileClassification.CannotProcess))
-                .Set("total_removed_audio_tracks", (long)all.Sum(f => f.RemovedAudioCount))
-                .Set("total_removed_subtitle_tracks", (long)all.Sum(f => f.RemovedSubtitleCount))
-                .Set("estimated_bytes_saved", all.Sum(f => f.EstimatedBytesSaved)))
-            .Set("files", new PyList(filtered.Select(f => (PyJson)FileOut(f))))
-            .Set("total", filtered.Count));
+            .Set("scan", await ScanOutAsync(uow, libraryId).ConfigureAwait(false))
+            .Set("summary", TotalsOut(overall))
+            .Set("filtered", TotalsOut(filtered))
+            .Set("files", new PyList(rows.Select(row => (PyJson)FileOut(row))))
+            .Set("total", filtered.Files)
+            .Set("page", query.Page)
+            .Set("page_size", query.PageSize)
+            .Set("sort", query.Sort)
+            .Set("direction", query.Descending ? "desc" : "asc"));
     }
 
     /// <summary>The final-removal confirmation numbers for a set of files (#505 point 5), shared by Clean and the schedule toggle.</summary>
@@ -370,9 +504,22 @@ public static class LibraryModeEndpoints
             .ConfigureAwait(false);
         var preflight = preflightResults.ToDictionary(r => r.FilePath, StringComparer.Ordinal);
 
+        // #568: the Problems view groups "still shared with a download" and "the manager would download it again"
+        // from the file's own row. Only a preflight can know either, and a preflight costs a filesystem read and
+        // (for the second) two manager calls per file, so this records what it just found rather than making the
+        // Problems view re-run it over a whole library. Even a request that ends in the confirmation dialog below
+        // has already done the work, so the notes are recorded either way.
+        foreach (var result in preflightResults)
+        {
+            await LibraryViewStore.RecordPreflightProblemAsync(uow, libraryId, result.FilePath, result.ProblemKind).ConfigureAwait(false);
+        }
+
         var (removingFiles, removingTracks, bytesSaved) = RemovalTotals(selected);
         if (removingFiles > 0 && !confirmed)
         {
+            // Nothing is queued, but the preflight notes just recorded above are real observations worth keeping
+            // even if the operator cancels the dialog, so they are committed rather than rolled back with it.
+            await request.CommitAsync().ConfigureAwait(false);
             return ConfirmationRequired(removingFiles, removingTracks, bytesSaved, PreflightWarningMessages(preflight.Values));
         }
 

@@ -27,7 +27,9 @@ public sealed record LibraryScanFileEntry(
     long? ManagerConnectionId = null,
     string? ManagerTitleId = null,
     long? ManagerFileId = null,
-    long? ManagerQualityProfileId = null)
+    long? ManagerQualityProfileId = null,
+    LibraryProblemKind? ProblemKind = null,
+    int? LinkCount = null)
 {
     /// <summary>Whether a freshly-walked file is the same one this entry already probed (path, size and mtime all agree).</summary>
     public bool MatchesFile(string path, long sizeBytes, long modifiedTimeUnixSeconds) =>
@@ -49,7 +51,9 @@ public sealed record LibraryScanFileEntry(
         .Set("manager_connection_id", ManagerConnectionId)
         .Set("manager_title_id", ManagerTitleId)
         .Set("manager_file_id", ManagerFileId)
-        .Set("manager_quality_profile_id", ManagerQualityProfileId);
+        .Set("manager_quality_profile_id", ManagerQualityProfileId)
+        .Set("problem_kind", ProblemKind is { } kind ? LibraryProblems.Name(kind) : null)
+        .Set("link_count", LinkCount);
 
     public static LibraryScanFileEntry? FromPyDict(PyJson value)
     {
@@ -74,7 +78,9 @@ public sealed record LibraryScanFileEntry(
             LongOrNull(dict.Get("manager_connection_id")),
             StrOrNull(dict.Get("manager_title_id")),
             LongOrNull(dict.Get("manager_file_id")),
-            LongOrNull(dict.Get("manager_quality_profile_id")));
+            LongOrNull(dict.Get("manager_quality_profile_id")),
+            LibraryProblems.Parse(StrOrNull(dict.Get("problem_kind"))),
+            LongOrNull(dict.Get("link_count")) is { } links ? (int)links : null);
     }
 
     public static string ClassificationName(LibraryFileClassification classification) => classification switch
