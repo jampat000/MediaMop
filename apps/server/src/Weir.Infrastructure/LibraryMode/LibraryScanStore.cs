@@ -94,30 +94,43 @@ public static class LibraryScanStore
     }
 
     /// <summary>
-    /// The latest completed scan's snapshot (the file index / plan cache), or null when none has finished
-    /// yet. The job payload only carries <c>generated_at</c>/<c>errors</c> now (#557 moved the file list to
-    /// <c>library_files</c>); <see cref="LibraryScanSnapshot.FromPayload"/> reads those, and the files are
-    /// read from the table separately.
+    /// The latest completed scan's snapshot (the file index / plan cache), or null when nothing has ever
+    /// been scanned. The job payload only carries <c>generated_at</c>/<c>errors</c> now (#557 moved the
+    /// file list to <c>library_files</c>), so those two come from the latest completed job's payload when
+    /// it still exists, but <c>library_files</c> itself is read unconditionally: job-row retention can
+    /// prune the tracking job long after a scan completed, and the whole point of #557 is that doing so no
+    /// longer loses the file index that scan produced.
     /// </summary>
     public static async Task<LibraryScanSnapshot?> LatestSnapshotAsync(UnitOfWork uow, long libraryId)
     {
+        var files = await FilesForLibraryAsync(uow, libraryId).ConfigureAwait(false);
         var latest = await LatestAsync(uow, libraryId).ConfigureAwait(false);
-        if (latest is not { Status: RefinerJobStatus.Completed, PayloadJson: { } json } || string.IsNullOrWhiteSpace(json))
+        if (latest is not { Status: RefinerJobStatus.Completed })
         {
-            return null;
+            // No completed job survives to say a scan ever ran. If library_files still has rows for this
+            // library (its own tracking job was pruned), that is itself proof one did; otherwise, nothing
+            // has been scanned yet.
+            return files.Count == 0 ? null : new LibraryScanSnapshot(libraryId, DateTimeOffset.UnixEpoch, files, []);
         }
 
-        LibraryScanSnapshot? snapshot;
-        try
+        var generatedAt = DateTimeOffset.UnixEpoch;
+        IReadOnlyList<string> errors = [];
+        if (latest.PayloadJson is { Length: > 0 } json)
         {
-            snapshot = PyJsonParser.Parse(json) is PyDict dict ? LibraryScanSnapshot.FromPayload(dict, libraryId) : null;
-        }
-        catch (PyJsonDecodeException)
-        {
-            return null;
+            try
+            {
+                if (PyJsonParser.Parse(json) is PyDict dict && LibraryScanSnapshot.FromPayload(dict, libraryId) is { } parsed)
+                {
+                    generatedAt = parsed.GeneratedAt;
+                    errors = parsed.Errors;
+                }
+            }
+            catch (PyJsonDecodeException)
+            {
+            }
         }
 
-        return snapshot is null ? null : snapshot with { Files = await FilesForLibraryAsync(uow, libraryId).ConfigureAwait(false) };
+        return new LibraryScanSnapshot(libraryId, generatedAt, files, errors);
     }
 
     /// <summary>
