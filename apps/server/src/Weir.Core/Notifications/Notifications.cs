@@ -126,6 +126,16 @@ public static class NotificationRules
     }
 
     /// <summary>
+    /// Display names for module keys whose plain capitalization would not read as a person expects. The
+    /// "refiner" module key is unchanged (it feeds the stored <c>{module}_job_{eventKind}</c> event name),
+    /// but the app that runs it is just called Weir now.
+    /// </summary>
+    private static readonly Dictionary<string, string> ModuleDisplayNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["refiner"] = "Weir",
+    };
+
+    /// <summary>
     /// The title and detail <c>dispatch_job_notification</c> sends. <paramref name="willRetry"/> is
     /// meaningless for <c>completed</c> and defaults to <see langword="false"/> for every other caller.
     /// </summary>
@@ -136,16 +146,6 @@ public static class NotificationRules
     /// wrong on its own terms). This reuses the retry-aware vocabulary <c>WorkerFailures</c> already has
     /// from #488, so the wording is correct independently of that guard.
     /// </remarks>
-    /// <summary>
-    /// Display names for module keys whose plain capitalization would not read as a person expects. The
-    /// "refiner" module key is unchanged (it feeds the stored <c>{module}_job_{eventKind}</c> event name),
-    /// but the app that runs it is just called Weir now.
-    /// </summary>
-    private static readonly Dictionary<string, string> ModuleDisplayNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["refiner"] = "Weir",
-    };
-
     public static (string Event, string Title, string Detail) JobNotification(string module, string eventKind, long jobId, string jobKind, bool willRetry = false)
     {
         ArgumentNullException.ThrowIfNull(module);
