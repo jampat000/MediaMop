@@ -12,8 +12,9 @@ public sealed record MetadataProviderView(string Provider, string BaseUrl, bool 
 
 /// <summary>
 /// Port of the settings half of <c>refiner_metadata_provider_api.py</c> and <c>provider_service.py</c>: the
-/// key is stored encrypted and never returned. The network provider itself (asking TMDB a real question in
-/// <c>POST /test</c>) is out of scope — it is the metadata network integration, ported separately.
+/// key is stored encrypted and never returned. <c>POST /test</c> asks the real provider through
+/// <see cref="Weir.Infrastructure.MediaManagers.MetadataProviderService"/> (#520) when a key is configured;
+/// <see cref="Test"/> here only covers the not-configured answer.
 /// </summary>
 public static class MetadataProviderStore
 {
@@ -53,25 +54,17 @@ public static class MetadataProviderStore
     }
 
     /// <summary>
-    /// <c>test_provider</c>: proves a saved connection works. Asking the real provider is out of scope
-    /// (see the type doc), so this reports <c>not_configured</c> honestly and otherwise says the live check
-    /// is not yet available in this build, rather than fabricating <c>matched</c>/<c>no_match</c>.
+    /// <c>test_provider</c>'s not-configured answer: no key means no manager can be asked, so the endpoint
+    /// reports this honestly instead of calling <see cref="Weir.Infrastructure.MediaManagers.MetadataProviderService"/>
+    /// (which needs a saved key). When a key is configured, the endpoint asks that service instead.
     /// </summary>
     public static LookupResult Test(SuiteSettingsRecord row)
     {
-        if (string.IsNullOrWhiteSpace(row.MetadataProviderKeyCiphertext) || string.IsNullOrWhiteSpace(row.MetadataProvider))
-        {
-            return new LookupResult
-            {
-                Status = LookupResult.StatusNotConfigured,
-                Detail = "No metadata provider is configured, so Weir uses the language preferences on each rule set.",
-            };
-        }
-
+        ArgumentNullException.ThrowIfNull(row);
         return new LookupResult
         {
-            Status = LookupResult.StatusUnreachable,
-            Detail = "A metadata provider is configured, but live provider lookups are not available in this build yet.",
+            Status = LookupResult.StatusNotConfigured,
+            Detail = "No metadata provider is configured, so Weir uses the language preferences on each rule set.",
         };
     }
 }

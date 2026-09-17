@@ -7,6 +7,7 @@ using Weir.Core.Media;
 using Weir.Core.Refiner;
 using Weir.Core.Validation;
 using Weir.Infrastructure.Media;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Settings;
 
@@ -371,7 +372,9 @@ public static class RefinerSettingsEndpoints
         var uow = await request.DbAsync().ConfigureAwait(false);
         var row = await SuiteSettingsStore.EnsureAsync(uow).ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
-        var result = MetadataProviderStore.Test(row);
+        var result = string.IsNullOrWhiteSpace(row.MetadataProviderKeyCiphertext) || string.IsNullOrWhiteSpace(row.MetadataProvider)
+            ? MetadataProviderStore.Test(row)
+            : await request.Service<MetadataProviderService>().TestProviderAsync(uow, request.Context.RequestAborted).ConfigureAwait(false);
         return ApiRoutes.Ok(new PyDict().Set("status", result.Status).Set("detail", result.Detail));
     }
 }

@@ -6,14 +6,16 @@ using Weir.Core.Json;
 using Weir.Core.Refiner;
 using Weir.Core.Time;
 using Weir.Core.Validation;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Api.Endpoints;
 
 /// <summary>Refiner libraries and rule sets — <c>/api/v1/refiner/libraries</c>, <c>/refiner/rule-sets</c>
-/// (port of <c>refiner_libraries_api.py</c>). Discovery/import/drift/unlink and the reject-support gate
-/// are not ported: they need the media-manager port (#520).</summary>
+/// (port of <c>refiner_libraries_api.py</c>). Manager coverage now reads the linked connections' saved
+/// test results (#520). Discovery/import/drift/unlink and the reject-support gate are still not ported:
+/// they need manager-manifest capability negotiation, ported separately.</summary>
 public static class RefinerLibraryEndpoints
 {
     public static IEndpointRouteBuilder MapRefinerLibraryEndpoints(this IEndpointRouteBuilder endpoints)
@@ -44,22 +46,39 @@ public static class RefinerLibraryEndpoints
         var managerIds = await LibraryStore.ManagerConnectionIdsAsync(uow, row.Id).ConfigureAwait(false);
         var activeJobs = await LibraryStore.ActiveJobCountAsync(uow, row).ConfigureAwait(false);
 
-        // The manager-coverage gate needs live connection health (#520); until then, "no manager linked"
-        // is reported exactly as Python does, and any linked manager is reported as unreachable rather than
-        // guessed healthy — never a false "connected".
+        // Port of _library_out's manager_coverage: the linked connections' last saved connection-test
+        // result (no live call — a listing must not depend on every linked manager answering right now).
+        var managerRows = new List<MediaManagerConnectionRecord?>(managerIds.Count);
+        foreach (var connectionId in managerIds)
+        {
+            managerRows.Add(await MediaManagerConnectionStore.GetAsync(uow, connectionId).ConfigureAwait(false));
+        }
+
         string coverage;
         string coverageDetail;
-        if (managerIds.Count == 0)
+        if (managerRows.Count == 0)
         {
             coverage = "no_upstream_signal";
             coverageDetail = "No media manager is linked. Watched-folder remux can still run after local safety gates, " +
                               "but upstream import protection is reduced.";
         }
-        else
+        else if (managerRows.Any(item => item is null || !item.Enabled || item.LastTestOk == false))
         {
             coverage = "unreachable";
             coverageDetail = "A linked media manager did not answer its last connection test. Remux remains local, " +
                               "but manager-truth-dependent cleanup is held until the connection is available.";
+        }
+        else if (managerRows.Any(item => item!.LastTestOk != true))
+        {
+            coverage = "no_upstream_signal";
+            coverageDetail = "A manager is linked but has not returned a successful connection signal yet. " +
+                              "This is not the same as an empty queue.";
+        }
+        else
+        {
+            coverage = "connected";
+            coverageDetail = "The linked manager connection is healthy. Upstream checks and manager-truth-dependent " +
+                              "cleanup can use its latest answer.";
         }
 
         return new PyDict()
