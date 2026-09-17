@@ -74,6 +74,17 @@ public sealed record WeirOptions
     public required int RefinerJobLeaseSeconds { get; init; }
     public required bool RefinerWatcherEnabled { get; init; }
     public required double RefinerWatcherDebounceSeconds { get; init; }
+    /// <summary>
+    /// #533: the global kill switch for the periodic watched-folder scan timer itself
+    /// (<c>WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED</c>, default on). Distinct
+    /// from <see cref="RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs"/>, which only
+    /// controls whether a periodic scan that *does* run may queue remux work off what it finds — with
+    /// this off, no periodic scan runs at all for any scope, regardless of that other setting or of a
+    /// library's own <c>schedule_enabled</c>/<c>enabled</c> columns. A manual scan (the HTTP enqueue
+    /// route) is unaffected: it is a one-off request, not the timer this switch stops.
+    /// </summary>
+    public required bool RefinerWatchedFolderRemuxScanDispatchScheduleEnabled { get; init; }
+
     public required bool RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs { get; init; }
     public required int RefinerProbeSizeMb { get; init; }
     public required int RefinerAnalyzeDurationSeconds { get; init; }

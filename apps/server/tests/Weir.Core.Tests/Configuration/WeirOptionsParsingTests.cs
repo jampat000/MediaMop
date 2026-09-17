@@ -281,9 +281,11 @@ public sealed class WeirOptionsParsingTests
     public void Refiner_toggles_are_read()
     {
         var options = TestRuntime.Load(
+            ("WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", "false"),
             ("WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS", "false"),
             ("WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED", "true"),
             ("WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED", "1"));
+        Assert.False(options.RefinerWatchedFolderRemuxScanDispatchScheduleEnabled);
         Assert.False(options.RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs);
         Assert.True(options.RefinerMovieFailureCleanupScheduleEnabled);
         Assert.True(options.RefinerTvFailureCleanupScheduleEnabled);

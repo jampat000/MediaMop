@@ -3,8 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Weir.Api.Endpoints;
 using Weir.Core.Configuration;
+using Weir.Core.Jobs;
+using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Processes;
+using Weir.Infrastructure.Scheduling;
 
 namespace Weir.Api;
 
@@ -23,8 +26,21 @@ public static class RefinerApi
         services.TryAddSingleton<IMediaToolResolver>(sp => new MediaToolResolver(sp.GetRequiredService<WeirOptions>().WeirHome));
         services.TryAddSingleton<IProcessRunner, ProcessRunner>();
         services.TryAddSingleton<MediaTools>();
-        // Processing-record retention is hosted once, by AddWeirJobs (RefinerFileLogRetentionTask); registering
-        // FileLogRetentionTask here as well ran the same hourly prune twice.
+
+        // Not registered here: Weir.Infrastructure.Refiner.FileLogRetentionTask duplicates
+        // Weir.Infrastructure.Jobs.RefinerFileLogRetentionTask (registered by AddWeirJobs) — both port the
+        // same refiner_file_log_retention_periodic sweep under the identical periodic-task name
+        // "refiner-file-log-retention", an accidental collision from #519 and #522 having each ported it
+        // independently. Registering both here doubled the periodic task list under one name and made two
+        // separate pruning passes race each other for no benefit; the jobs one already runs unconditionally,
+        // so this one is left unregistered rather than deleting either #519's or #522's file outright.
+
+        // Watched-folder scan dispatch (#522 part 5): the job handler that runs a scan, and the periodic
+        // scheduler that enqueues one per library. Additive: the job handler registry (AddWeirJobs) simply
+        // gains one more kind it can claim, and the periodic task joins the others already registered.
+        services.AddSingleton<RefinerWatchedFolderScanDispatchJobHandler>();
+        services.AddSingleton<IJobHandler>(sp => sp.GetRequiredService<RefinerWatchedFolderScanDispatchJobHandler>());
+        services.AddSingleton<IPeriodicTask, RefinerWatchedFolderScanDispatchScheduleTask>();
         return services;
     }
 
@@ -39,6 +55,7 @@ public static class RefinerApi
         endpoints.MapRefinerRemuxPassEndpoints();
         endpoints.MapRefinerOverviewMaintenanceEndpoints();
         endpoints.MapRefinerSettingsEndpoints();
+        endpoints.MapRefinerWatchedFolderScanDispatchEndpoints();
         return endpoints;
     }
 }

@@ -143,10 +143,12 @@ class ServerUnderTest:
             "WEIR_AUTH_LOGIN_RATE_MAX_ATTEMPTS": "10000",
             # Quiet by default, like the backend's HTTP tests: no in-process workers, no file-system
             # watcher, and periodic scans that do not queue files. Scenarios turn workers on.
-            # Periodic scan *jobs* are still queued for every enabled library with a watched folder
-            # (nothing switches the scan timer off any more), so count only the jobs a test caused.
-            # That is #533: WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED is
-            # documented but nothing reads it. The correct behaviour is asserted in
+            # Periodic scan *jobs* are still queued for every enabled library with a watched folder by
+            # default here (this env block does not set the switch below), so count only the jobs a
+            # test caused, or pass WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED=0
+            # to turn the timer off outright. That variable is #533: on Python nothing reads it (removed
+            # from WeirSettings in #329, though a fossil comment still calls it documented); the .NET
+            # port (#522) honours it as a real, working kill switch. The correct behaviour is asserted in
             # tests/contract/jobs/test_watched_folder_scan_schedule_toggle.py.
             "WEIR_REFINER_WORKER_COUNT": "0",
             "WEIR_REFINER_WATCHER_ENABLED": "0",
