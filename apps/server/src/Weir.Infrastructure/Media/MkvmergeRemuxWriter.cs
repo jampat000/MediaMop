@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using Weir.Core.Media;
 using Weir.Core.Rules;
 
@@ -108,41 +107,24 @@ public sealed class MkvmergeRemuxWriter(MediaTools tools, IMediaToolResolver res
 }
 
 /// <summary>
-/// Picks the writer for one output, honouring the <see cref="RemuxWriterChoice"/> setting and falling back to
-/// ffmpeg whenever mkvmerge cannot take the job — a non-Matroska container, or mkvmerge not installed.
+/// Picks the writer for one output, honouring the library's <see cref="RemuxWriterChoice"/> and falling back
+/// to ffmpeg whenever mkvmerge cannot take the job — a non-Matroska container, or mkvmerge not installed.
 /// </summary>
-public sealed partial class RemuxWriterSelector(
-    FfmpegRemuxWriter ffmpeg,
-    MkvmergeRemuxWriter mkvmerge,
-    ILogger<RemuxWriterSelector> logger)
+public sealed class RemuxWriterSelector(FfmpegRemuxWriter ffmpeg, MkvmergeRemuxWriter mkvmerge)
 {
     /// <summary>
-    /// The writer for <paramref name="destination"/> under <paramref name="choice"/>.
-    /// <see cref="RemuxWriterChoice.Mkvmerge"/> and <see cref="RemuxWriterChoice.Auto"/> differ only in what is
-    /// logged: neither can make ffmpeg-only containers go through mkvmerge, so "mkvmerge" means "prefer it
-    /// wherever it is possible", and a file it cannot write is reported rather than failed.
+    /// The writer for <paramref name="destination"/> under <paramref name="choice"/>. Choosing the best tool
+    /// never means failing a file the best tool cannot write: ffmpeg takes those, here and again at write
+    /// time if mkvmerge declines one it thought it could take.
     /// </summary>
-    public IRemuxWriter Select(string destination, RemuxWriterChoice choice)
+    public IRemuxWriter Select(string destination, string? choice)
     {
         ArgumentNullException.ThrowIfNull(destination);
-        if (choice == RemuxWriterChoice.Ffmpeg)
+        if (!RemuxWriterChoice.PrefersBestTool(choice))
         {
             return ffmpeg;
         }
 
-        if (mkvmerge.CanWrite(destination))
-        {
-            return mkvmerge;
-        }
-
-        if (choice == RemuxWriterChoice.Mkvmerge)
-        {
-            LogFellBackToFfmpeg(destination);
-        }
-
-        return ffmpeg;
+        return mkvmerge.CanWrite(destination) ? mkvmerge : ffmpeg;
     }
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "mkvmerge cannot write {Destination}; ffmpeg is writing it instead.")]
-    private partial void LogFellBackToFfmpeg(string destination);
 }

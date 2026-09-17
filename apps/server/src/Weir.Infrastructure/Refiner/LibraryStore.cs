@@ -23,7 +23,9 @@ public static class LibraryStore
         "hold_minutes, file_detection_interval_seconds, ignore_size_changes, file_system_events_enabled, skip_access_tests, " +
         "schedule_enabled, schedule_hours_limited, schedule_days, schedule_grid, schedule_start, schedule_end, max_attempts, " +
         "retry_backoff_seconds, retry_execution_failures, retry_preflight_failures, failure_policy, max_concurrent_files, " +
-        "priority, rule_set_id, discovered_from_connection_id, discovered_library_key, created_at, updated_at";
+        "priority, rule_set_id, discovered_from_connection_id, discovered_library_key, created_at, updated_at, " +
+        // #548: appended, not inserted - ReadLibrary reads by position.
+        "remux_writer, rewrite_with_ffmpeg";
 
     private const string RuleSetColumns =
         "id, name, primary_audio_lang, secondary_audio_lang, tertiary_audio_lang, default_audio_slot, remove_commentary, " +
@@ -327,7 +329,8 @@ public static class LibraryStore
             "hold_minutes, file_detection_interval_seconds, ignore_size_changes, file_system_events_enabled, skip_access_tests, " +
             "schedule_enabled, schedule_hours_limited, schedule_days, schedule_grid, schedule_start, schedule_end, max_attempts, " +
             "retry_backoff_seconds, retry_execution_failures, retry_preflight_failures, failure_policy, max_concurrent_files, " +
-            "priority, rule_set_id, discovered_from_connection_id, discovered_library_key) VALUES (@name, @enabled, @media_type, " +
+            "priority, rule_set_id, discovered_from_connection_id, discovered_library_key, remux_writer, rewrite_with_ffmpeg) " +
+            "VALUES (@name, @enabled, @media_type, " +
             "@display_order, @watched_folder, @work_folder, @output_folder, " +
             "@media_extensions_csv, @exclude_markers_csv, @include_patterns_csv, @exclude_patterns_csv, @min_file_size_mb, @max_file_size_mb, " +
             "@rejected_file_action, @min_file_age_seconds, @created_after, @created_before, @modified_after, @modified_before, " +
@@ -336,7 +339,7 @@ public static class LibraryStore
             "@hold_minutes, @file_detection_interval_seconds, @ignore_size_changes, @file_system_events_enabled, @skip_access_tests, " +
             "@schedule_enabled, @schedule_hours_limited, @schedule_days, @schedule_grid, @schedule_start, @schedule_end, @max_attempts, " +
             "@retry_backoff_seconds, @retry_execution_failures, @retry_preflight_failures, @failure_policy, @max_concurrent_files, " +
-            "@priority, @rule_set_id, @discovered_from_connection_id, @discovered_library_key)",
+            "@priority, @rule_set_id, @discovered_from_connection_id, @discovered_library_key, @remux_writer, @rewrite_with_ffmpeg)",
             LibraryParameters(row)).ConfigureAwait(false);
     }
 
@@ -358,7 +361,8 @@ public static class LibraryStore
             "schedule_grid=@schedule_grid, schedule_start=@schedule_start, schedule_end=@schedule_end, max_attempts=@max_attempts, " +
             "retry_backoff_seconds=@retry_backoff_seconds, retry_execution_failures=@retry_execution_failures, " +
             "retry_preflight_failures=@retry_preflight_failures, failure_policy=@failure_policy, max_concurrent_files=@max_concurrent_files, " +
-            "priority=@priority, rule_set_id=@rule_set_id, updated_at=CURRENT_TIMESTAMP WHERE id=@id",
+            "priority=@priority, rule_set_id=@rule_set_id, remux_writer=@remux_writer, rewrite_with_ffmpeg=@rewrite_with_ffmpeg, " +
+            "updated_at=CURRENT_TIMESTAMP WHERE id=@id",
             [.. LibraryParameters(row), ("@id", row.Id)]).ConfigureAwait(false);
     }
 
@@ -392,6 +396,8 @@ public static class LibraryStore
         ("@hardware_device", row.HardwareDevice),
         ("@hardware_disabled_vendors_csv", row.HardwareDisabledVendorsCsv),
         ("@ffmpeg_strictness", row.FfmpegStrictness),
+        ("@remux_writer", row.RemuxWriter),
+        ("@rewrite_with_ffmpeg", row.RewriteWithFfmpeg ? 1 : 0),
         ("@scan_interval_seconds", row.ScanIntervalSeconds),
         ("@hold_minutes", row.HoldMinutes),
         ("@file_detection_interval_seconds", row.FileDetectionIntervalSeconds),
@@ -556,6 +562,8 @@ public static class LibraryStore
         DiscoveredLibraryKey = SqliteValues.GetStringOrNull(reader, 50),
         CreatedAt = SqliteValues.GetDateTime(reader, 51),
         UpdatedAt = SqliteValues.GetDateTime(reader, 52),
+        RemuxWriter = SqliteValues.GetString(reader, 53),
+        RewriteWithFfmpeg = SqliteValues.GetBool(reader, 54),
     };
 
     private static RefinerRuleSetRecord ReadRuleSet(SqliteDataReader reader) => new()

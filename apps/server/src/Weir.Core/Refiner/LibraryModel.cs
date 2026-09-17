@@ -128,6 +128,12 @@ public sealed record RefinerLibraryRecord
     public string HardwareDisabledVendorsCsv { get; init; } = string.Empty;
     public string FfmpegStrictness { get; init; } = "normal";
 
+    /// <summary>#548: which tool writes the output. See <see cref="Weir.Core.Media.RemuxWriterChoice"/>.</summary>
+    public string RemuxWriter { get; init; } = Weir.Core.Media.RemuxWriterChoice.Best;
+
+    /// <summary>#548: rewrite with ffmpeg when the preferred writer cannot write or validate a file.</summary>
+    public bool RewriteWithFfmpeg { get; init; } = true;
+
     public long ScanIntervalSeconds { get; init; } = 300;
     public long HoldMinutes { get; init; }
     public long FileDetectionIntervalSeconds { get; init; } = 30;

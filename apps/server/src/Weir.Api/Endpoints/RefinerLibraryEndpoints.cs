@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Weir.Api.Http;
 using Weir.Core.Auth;
 using Weir.Core.Json;
+using Weir.Core.Media;
 using Weir.Core.Refiner;
 using Weir.Core.Rules;
 using Weir.Core.Time;
@@ -133,6 +134,8 @@ public static class RefinerLibraryEndpoints
             .Set("hardware_device", row.HardwareDevice)
             .Set("hardware_disabled_vendors_csv", row.HardwareDisabledVendorsCsv)
             .Set("ffmpeg_strictness", row.FfmpegStrictness.Length > 0 ? row.FfmpegStrictness : "normal")
+            .Set("remux_writer", RemuxWriterChoice.Normalize(row.RemuxWriter))
+            .Set("rewrite_with_ffmpeg", row.RewriteWithFfmpeg)
             .Set("file_detection_interval_seconds", row.FileDetectionIntervalSeconds)
             .Set("ignore_size_changes", row.IgnoreSizeChanges)
             .Set("skip_access_tests", row.SkipAccessTests)
@@ -299,6 +302,9 @@ public static class RefinerLibraryEndpoints
         var hardwareDevice = model.OptionalStr("hardware_device", defaultValue: "", maxLength: 32) ?? string.Empty;
         var hardwareDisabledVendorsCsv = model.OptionalStr("hardware_disabled_vendors_csv", defaultValue: "", maxLength: 200) ?? string.Empty;
         var ffmpegStrictness = model.Literal("ffmpeg_strictness", ["very", "strict", "normal", "unofficial", "experimental"], defaultValue: "normal");
+        // #548: two values, because "mkvmerge" and "auto" would behave identically - see RemuxWriterChoice.
+        var remuxWriter = model.Literal("remux_writer", [.. RemuxWriterChoice.All], defaultValue: RemuxWriterChoice.Best);
+        var rewriteWithFfmpeg = model.Bool("rewrite_with_ffmpeg", defaultValue: true);
         var scanIntervalSeconds = model.Number("scan_interval_seconds", 300, required: false, ge: 10, le: 604800);
         var holdMinutes = model.Number("hold_minutes", 0, required: false, ge: 0, le: 10080);
         var fileDetectionIntervalSeconds = model.Number("file_detection_interval_seconds", 30, required: false, ge: 0, le: 3600);
@@ -350,6 +356,8 @@ public static class RefinerLibraryEndpoints
             HardwareDevice = hardwareDevice,
             HardwareDisabledVendorsCsv = hardwareDisabledVendorsCsv,
             FfmpegStrictness = ffmpegStrictness,
+            RemuxWriter = remuxWriter,
+            RewriteWithFfmpeg = rewriteWithFfmpeg,
             ScanIntervalSeconds = scanIntervalSeconds,
             HoldMinutes = holdMinutes,
             FileDetectionIntervalSeconds = fileDetectionIntervalSeconds,
