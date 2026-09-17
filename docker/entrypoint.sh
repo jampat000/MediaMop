@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# Entrypoint for the Weir image (Dockerfile). Validates the runtime settings, remaps the weir
+# user to WEIR_PUID/WEIR_PGID, makes sure a session secret exists, then runs the .NET server as
+# the unprivileged weir user. There is no separate migration step: the server creates or migrates
+# its own SQLite database on start (apps/server/src/Weir.Host/WeirServer.cs, OpenDatabase).
+
 export WEIR_HOME="${WEIR_HOME:-/data/weir}"
 WEIR_PUID="${WEIR_PUID:-${PUID:-1000}}"
 WEIR_PGID="${WEIR_PGID:-${PGID:-1000}}"
@@ -74,17 +79,6 @@ bool_enabled() {
   esac
 }
 
-resolve_db_path() {
-  if [ -n "${WEIR_DB_PATH:-}" ]; then
-    case "$WEIR_DB_PATH" in
-      /*) printf '%s\n' "$WEIR_DB_PATH" ;;
-      *) printf '%s/%s\n' "$WEIR_HOME" "$WEIR_DB_PATH" ;;
-    esac
-    return
-  fi
-  printf '%s/data/weir.sqlite3\n' "$WEIR_HOME"
-}
-
 update_runtime_identity() {
   current_gid="$(getent group weir | cut -d: -f3)"
   current_uid="$(id -u weir)"
@@ -103,59 +97,20 @@ ensure_runtime_home_ownership() {
   chown -R weir:weir "$WEIR_HOME" /opt/weir /home/weir
 }
 
-apply_refiner_permissions() {
-  include_watched=0
-  include_temp=0
-  include_output=0
-  if bool_enabled "$WEIR_CHOWN_WATCHED" || [ -n "$WEIR_DIR_MODE_WATCHED" ]; then
-    include_watched=1
+warn_unported_refiner_permissions() {
+  if bool_enabled "$WEIR_CHOWN_WATCHED" || [ -n "$WEIR_DIR_MODE_WATCHED" ] ||
+     bool_enabled "$WEIR_CHOWN_TEMP" || [ -n "$WEIR_DIR_MODE_TEMP" ] ||
+     bool_enabled "$WEIR_CHOWN_OUTPUT" || [ -n "$WEIR_DIR_MODE_OUTPUT" ]; then
+    # The old policy read folders from refiner_path_settings, a table removed when folders moved
+    # onto libraries (#363), so it had already stopped changing anything. See docker/README.md.
+    log_info "WEIR_CHOWN_*/WEIR_DIR_MODE_* are set, but this image does not apply the Refiner" \
+      "folder ownership policy (see docker/README.md). Ignoring them."
   fi
-  if bool_enabled "$WEIR_CHOWN_TEMP" || [ -n "$WEIR_DIR_MODE_TEMP" ]; then
-    include_temp=1
-  fi
-  if bool_enabled "$WEIR_CHOWN_OUTPUT" || [ -n "$WEIR_DIR_MODE_OUTPUT" ]; then
-    include_output=1
-  fi
-
-  if [ "$include_watched" -eq 0 ] &&
-     [ "$include_temp" -eq 0 ] &&
-     [ "$include_output" -eq 0 ]; then
-    return
-  fi
-
-  db_path="$(resolve_db_path)"
-  set -- /opt/weir/.venv/bin/python -m weir.platform.docker_runtime apply-refiner-permissions \
-    --db-path "$db_path" \
-    --uid "$WEIR_PUID" \
-    --gid "$WEIR_PGID"
-
-  if [ "$include_watched" -eq 1 ]; then
-    set -- "$@" --include-watched
-  fi
-  if [ "$include_temp" -eq 1 ]; then
-    set -- "$@" --include-temp
-  fi
-  if [ "$include_output" -eq 1 ]; then
-    set -- "$@" --include-output
-  fi
-  if [ -n "$WEIR_DIR_MODE_WATCHED" ]; then
-    set -- "$@" --watched-dir-mode "$WEIR_DIR_MODE_WATCHED"
-  fi
-  if [ -n "$WEIR_DIR_MODE_TEMP" ]; then
-    set -- "$@" --temp-dir-mode "$WEIR_DIR_MODE_TEMP"
-  fi
-  if [ -n "$WEIR_DIR_MODE_OUTPUT" ]; then
-    set -- "$@" --output-dir-mode "$WEIR_DIR_MODE_OUTPUT"
-  fi
-
-  log_info "Applying optional Refiner path ownership policy"
-  "$@"
 }
 
 run_app() {
-  cd /opt/weir/apps/backend
-  alembic upgrade head
-  exec uvicorn weir.api.main:app --host 0.0.0.0 --port "${PORT:-8788}" --no-server-header
+  cd /opt/weir
+  exec ./Weir --port "${PORT:-8788}"
 }
 
 validate_uint "$WEIR_PUID" "WEIR_PUID"
@@ -167,12 +122,13 @@ validate_dir_mode "$WEIR_DIR_MODE_WATCHED" "WEIR_DIR_MODE_WATCHED"
 validate_dir_mode "$WEIR_DIR_MODE_TEMP" "WEIR_DIR_MODE_TEMP"
 validate_dir_mode "$WEIR_DIR_MODE_OUTPUT" "WEIR_DIR_MODE_OUTPUT"
 mkdir -p "$WEIR_HOME"
+warn_unported_refiner_permissions
 
 generate_secret() {
-  python - <<'PY'
-import secrets
-print(secrets.token_urlsafe(48))
-PY
+  # No Python interpreter in this image. 48 random bytes, base64url-encoded without padding —
+  # the same entropy as docker/entrypoint.sh's secrets.token_urlsafe(48), produced with coreutils
+  # (already present in the runtime-deps base) instead.
+  head -c 48 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=\n'
 }
 
 if [ -z "${WEIR_SESSION_SECRET:-}" ]; then
@@ -199,10 +155,8 @@ if [ "$(id -u)" -eq 0 ]; then
   if [ -f "$WEIR_HOME/session.secret" ]; then
     chown weir:weir "$WEIR_HOME/session.secret"
   fi
-  gosu weir sh -c 'cd /opt/weir/apps/backend && alembic upgrade head'
-  apply_refiner_permissions
-  cd /opt/weir/apps/backend
-  exec gosu weir uvicorn weir.api.main:app --host 0.0.0.0 --port "${PORT:-8788}" --no-server-header
+  cd /opt/weir
+  exec gosu weir ./Weir --port "${PORT:-8788}"
 fi
 
 run_app

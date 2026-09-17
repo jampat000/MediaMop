@@ -456,23 +456,15 @@ sealed class TrayApp : IDisposable
     private void PrepareEnvironment()
     {
         var serverExeDir = FindServerExeDirectory();
-        var webDist = Path.Combine(serverExeDir, "_internal", "web-dist");
+        var webDist = Path.Combine(serverExeDir, "web-dist");
         if (!File.Exists(Path.Combine(webDist, "index.html")))
-        {
-            webDist = Path.Combine(serverExeDir, "web-dist");
-            if (!File.Exists(Path.Combine(webDist, "index.html")))
-                throw new InvalidOperationException("Bundled web assets are missing from the Weir desktop package.");
-        }
+            throw new InvalidOperationException("Bundled web assets are missing from the Weir desktop package.");
 
         Environment.SetEnvironmentVariable("WEIR_ENV", "production");
         Environment.SetEnvironmentVariable("WEIR_HOME", _runtimeHome);
         Environment.SetEnvironmentVariable("WEIR_WEB_DIST", webDist);
         Environment.SetEnvironmentVariable("WEIR_SESSION_COOKIE_SECURE", "false");
         Environment.SetEnvironmentVariable("WEIR_SESSION_SECRET", EnsureSessionSecret());
-
-        var alembicRoot = Path.Combine(serverExeDir, "_internal");
-        if (File.Exists(Path.Combine(alembicRoot, "alembic.ini")))
-            Environment.SetEnvironmentVariable("WEIR_ALEMBIC_ROOT", alembicRoot);
     }
 
     private string EnsureSessionSecret()
@@ -534,7 +526,7 @@ sealed class TrayApp : IDisposable
         _serverProcess = Process.Start(new ProcessStartInfo
         {
             FileName = serverExe,
-            Arguments = $"--serve --port {_port}",
+            Arguments = $"--port {_port}",
             WorkingDirectory = Path.GetDirectoryName(serverExe),
             UseShellExecute = false,
             CreateNoWindow = true,

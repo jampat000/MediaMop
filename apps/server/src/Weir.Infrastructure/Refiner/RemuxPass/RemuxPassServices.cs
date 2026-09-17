@@ -74,7 +74,7 @@ public static class RemuxPassServices
         ArgumentNullException.ThrowIfNull(options);
         services.AddWeirPlatform(options);
         services.AddWeirMediaManagers(options);
-        services.TryAddSingleton<IMediaToolResolver>(sp => new MediaToolResolver(sp.GetRequiredService<WeirOptions>().WeirHome));
+        services.TryAddSingleton<IMediaToolResolver>(sp => MediaToolResolver.ForCurrentProcess(sp.GetRequiredService<WeirOptions>().WeirHome));
         services.TryAddSingleton<IProcessRunner, ProcessRunner>();
         services.TryAddSingleton<MediaTools>();
         services.TryAddSingleton(sp => new RefinerJobStore(

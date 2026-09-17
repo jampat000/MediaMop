@@ -1,15 +1,28 @@
 param(
   [switch]$SkipWebBuild,
-  [switch]$SkipDotnetPublish
+  [switch]$SkipDotnetPublish,
+  [switch]$SkipSmoke
 )
 
 $ErrorActionPreference = "Stop"
 
+# Builds the Weir Windows package (Velopack): the web app, the .NET server
+# (apps/server/src/Weir.Host, self-contained single-file win-x64), the tray app (apps/tray/Weir.Tray)
+# and a checksum-verified ffmpeg, packed as packId Weir with Weir.exe (the tray) as the main exe.
+# Output: dist\windows\releases\{Weir-win-Setup.exe, Weir-win-Portable.zip, *.nupkg, RELEASES, ...}.
+#
+# Layout of the pack directory (dist\windows\pack), which is what gets installed:
+#   Weir.exe                          the tray app; it starts and watches the server
+#   server\WeirServer.exe             the server (Weir.Host publishes as Weir.exe, renamed so it does
+#                                     not collide with the tray's own Weir.exe; the tray's
+#                                     FindServerExeDirectory looks for this name)
+#   server\web-dist\                  the built web app (the tray sets WEIR_WEB_DIST to it)
+#   server\bin\ffmpeg\{ffmpeg,ffprobe}.exe
+#                                     found by the server's MediaToolResolver as <app>\bin\ffmpeg
+#
+# scripts/smoke-windows-package.ps1 then proves the assembled server works end to end.
+
 # ── Phase timing ──
-# The Windows package build is the critical path of every release and nobody knew
-# where its minutes went, so it reports them. Each phase prints its own duration and
-# a summary lands at the end; on Actions the summary is also a ::notice:: so it shows
-# without opening the log.
 $script:PhaseTimings = [ordered]@{}
 $script:PhaseStopwatch = $null
 $script:PhaseName = $null
@@ -37,7 +50,7 @@ function Write-BuildPhaseSummary {
   if ($script:PhaseTimings.Count -eq 0) { return }
   $total = ($script:PhaseTimings.Values | Measure-Object -Sum).Sum
   Write-Host ""
-  Write-Host "=== Windows package build timings ==="
+  Write-Host "=== Windows .NET package build timings ==="
   foreach ($entry in $script:PhaseTimings.GetEnumerator()) {
     $share = if ($total -gt 0) { [math]::Round(100 * $entry.Value / $total) } else { 0 }
     Write-Host ("  {0,-38} {1,7}s  {2,3}%" -f $entry.Key, $entry.Value, $share)
@@ -45,87 +58,24 @@ function Write-BuildPhaseSummary {
   Write-Host ("  {0,-38} {1,7}s" -f "TOTAL", [math]::Round($total, 1))
   if ($env:GITHUB_ACTIONS -eq "true") {
     $parts = $script:PhaseTimings.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)s" }
-    Write-Host ("::notice title=Windows package build::" + ($parts -join ", "))
+    Write-Host ("::notice title=Windows .NET package build::" + ($parts -join ", "))
   }
 }
 
-
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..")).Path
-$backendDir = Join-Path $repoRoot "apps\\backend"
+$serverProjectDir = Join-Path $repoRoot "apps\\server\\src\\Weir.Host"
 $webDir = Join-Path $repoRoot "apps\\web"
 $trayDir = Join-Path $repoRoot "apps\\tray\\Weir.Tray"
-$serverSpecPath = Join-Path $PSScriptRoot "weir-server.spec"
 $distRoot = Join-Path $repoRoot "dist\\windows"
 $velopackOut = Join-Path $distRoot "releases"
 $trayPublishDir = Join-Path $distRoot "tray-publish"
+$serverPublishDir = Join-Path $distRoot "server-publish"
+# Ignored by version control and reused between builds: Ensure-WindowsFfmpegRuntime downloads again
+# only when the vendored copy no longer matches the upstream checksum (CI caches this folder too).
 $ffmpegVendorDir = Join-Path $PSScriptRoot "vendor\\ffmpeg"
-$venvScriptsDir = Join-Path $backendDir ".venv\\Scripts"
-$py = Join-Path $venvScriptsDir "python.exe"
 $ffmpegArchiveName = "ffmpeg-master-latest-win64-lgpl.zip"
 $ffmpegArchiveUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/$ffmpegArchiveName"
 $ffmpegChecksumsUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/checksums.sha256"
-
-function Resolve-VenvExecutable {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$ScriptsDir,
-
-    [Parameter(Mandatory = $true)]
-    [string]$NamePattern,
-
-    [Parameter(Mandatory = $true)]
-    [string]$MissingMessage
-  )
-
-  $matches = Get-ChildItem -Path $ScriptsDir -Filter $NamePattern -ErrorAction SilentlyContinue | Sort-Object Name
-  if (-not $matches -or $matches.Count -eq 0) {
-    throw $MissingMessage
-  }
-  return $matches[0].FullName
-}
-
-function Resolve-SystemPython {
-  $candidates = @()
-  $pyLauncher = Get-Command py.exe -ErrorAction SilentlyContinue
-  if ($pyLauncher -and $pyLauncher.Source) {
-    $candidates += $pyLauncher.Source
-  }
-  $pythonExe = Get-Command python.exe -ErrorAction SilentlyContinue
-  if ($pythonExe -and $pythonExe.Source) {
-    $candidates += $pythonExe.Source
-  }
-
-  foreach ($candidate in $candidates) {
-    try {
-      if ($candidate -like '*\WindowsApps\*') {
-        continue
-      }
-
-      if ($candidate -match '\\py(?:thon)?(?:\.exe)?$') {
-        & $candidate -3 -c "import sys" *> $null
-        if ($LASTEXITCODE -eq 0) {
-          return @{
-            FilePath = $candidate
-            Arguments = @('-3')
-          }
-        }
-        continue
-      }
-
-      & $candidate -c "import sys" *> $null
-      if ($LASTEXITCODE -eq 0) {
-        return @{
-          FilePath = $candidate
-          Arguments = @()
-        }
-      }
-    } catch {
-      continue
-    }
-  }
-
-  throw "No usable system Python was found. Install Python 3 or ensure py.exe is available."
-}
 
 function Invoke-Native {
   param(
@@ -143,9 +93,6 @@ function Invoke-Native {
 }
 
 function Get-ExpectedFfmpegSha256 {
-  # A few KB, against ~90 MB for the archive. Worth fetching every time so the
-  # rolling "latest" build is still tracked, rather than pinning whatever was
-  # vendored first.
   $checksumsPath = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-ffmpeg-checksums-" + [System.Guid]::NewGuid().ToString("N") + ".sha256")
   try {
     Invoke-WebRequest -Uri $ffmpegChecksumsUrl -OutFile $checksumsPath -UseBasicParsing
@@ -171,8 +118,6 @@ function Ensure-WindowsFfmpegRuntime {
   Write-Host "Resolving Windows FFmpeg checksum..."
   $expectedSha256 = Get-ExpectedFfmpegSha256
 
-  # Reuse what is already vendored, but only when it came from exactly this
-  # archive. The stamp is what makes that safe to assert.
   if ((Test-Path -LiteralPath $ffmpegExe) -and
       (Test-Path -LiteralPath $ffprobeExe) -and
       (Test-Path -LiteralPath $stampPath)) {
@@ -186,7 +131,6 @@ function Ensure-WindowsFfmpegRuntime {
 
   $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-ffmpeg-" + [System.Guid]::NewGuid().ToString("N"))
   $archivePath = Join-Path $downloadRoot $ffmpegArchiveName
-  $checksumsPath = Join-Path $downloadRoot "checksums.sha256"
   $extractRoot = Join-Path $downloadRoot "extract"
   try {
     New-Item -ItemType Directory -Path $downloadRoot | Out-Null
@@ -218,8 +162,6 @@ function Ensure-WindowsFfmpegRuntime {
       }
       Copy-Item -LiteralPath $src -Destination (Join-Path $ffmpegVendorDir $name) -Force
     }
-    # Written last, so a build interrupted mid-copy leaves no stamp and the next
-    # run re-downloads rather than trusting a half-populated folder.
     Set-Content -LiteralPath (Join-Path $ffmpegVendorDir ".ffmpeg-archive.sha256") -Value $expectedSha256 -Encoding ascii
   } finally {
     if (Test-Path $downloadRoot) {
@@ -228,30 +170,24 @@ function Ensure-WindowsFfmpegRuntime {
   }
 }
 
-# ── Resolve version from backend pyproject.toml ──
-$backendProjectVersion = ((Get-Content -Path (Join-Path $backendDir "pyproject.toml")) | Where-Object { $_ -match '^version = ' } | Select-Object -First 1).Split('"')[1]
+# ── Resolve version from apps/server/Directory.Build.props (WeirVersion) ──
+# The one product version; the server's own assembly version is stamped from the same line.
+$propsPath = Join-Path $repoRoot "apps\\server\\Directory.Build.props"
+$propsMatch = [regex]::Match((Get-Content -LiteralPath $propsPath -Raw), '<WeirVersion>([^<]+)</WeirVersion>')
+if (-not $propsMatch.Success) {
+  throw "WeirVersion was not found in $propsPath."
+}
+$projectVersion = $propsMatch.Groups[1].Value.Trim()
 $buildVersion = if ($env:WEIR_BUILD_VERSION) {
   $env:WEIR_BUILD_VERSION
 } else {
-  $backendProjectVersion
+  $projectVersion
 }
 if ($buildVersion.StartsWith("v")) {
   $buildVersion = $buildVersion.Substring(1)
 }
-if ($buildVersion -ne $backendProjectVersion) {
-  throw "WEIR_BUILD_VERSION '$buildVersion' does not match backend project version '$backendProjectVersion'."
-}
-
-# ── Python venv ──
-Start-BuildPhase "Python venv"
-if (-not (Test-Path $py)) {
-  $systemPython = Resolve-SystemPython
-  Push-Location $backendDir
-  try {
-    Invoke-Native -FilePath $systemPython.FilePath -ArgumentList @($systemPython.Arguments + @("-m", "venv", ".venv"))
-  } finally {
-    Pop-Location
-  }
+if ($buildVersion -ne $projectVersion) {
+  throw "WEIR_BUILD_VERSION '$buildVersion' does not match WeirVersion '$projectVersion' in apps/server/Directory.Build.props."
 }
 
 # ── Web build ──
@@ -300,35 +236,18 @@ if (-not $SkipWebBuild) {
     }
   }
 }
-
-# ── Backend install + PyInstaller (server-only) ──
-Start-BuildPhase "Backend pip install"
-Push-Location $backendDir
-try {
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "ensurepip", "--upgrade")
-  # Invoke pip through Python because the lock deliberately includes pip itself.  A
-  # direct pip.exe invocation refuses to upgrade the interpreter that launched it.
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--require-hashes", "--upgrade", "-r", "requirements.lock")
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--no-deps", "--no-build-isolation", "--upgrade", "--force-reinstall", "-e", ".")
-  $installedBackendVersion = (& $py -c "import importlib.metadata as m; print(m.version('weir-backend'))").Trim()
-  if (-not $installedBackendVersion) {
-    throw "Could not resolve installed weir-backend version after editable install."
-  }
-  if ($installedBackendVersion -ne $backendProjectVersion) {
-    throw "Installed weir-backend version '$installedBackendVersion' does not match backend project version '$backendProjectVersion'."
-  }
-  $pyinstaller = Resolve-VenvExecutable -ScriptsDir $venvScriptsDir -NamePattern "pyinstaller*.exe" -MissingMessage "pyinstaller launcher was not installed in the backend virtual environment."
-} finally {
-  Pop-Location
+$webDistDir = Join-Path $webDir "dist"
+if (-not (Test-Path -LiteralPath (Join-Path $webDistDir "index.html"))) {
+  throw "Expected a built web app at $webDistDir (index.html missing). Re-run without -SkipWebBuild."
 }
 
 # ── Clean dist ──
 if ($SkipDotnetPublish) {
-  if (-not (Test-Path -LiteralPath $trayPublishDir)) {
-    throw "-SkipDotnetPublish requires an existing tray publish output at $trayPublishDir."
+  if (-not (Test-Path -LiteralPath $trayPublishDir) -or -not (Test-Path -LiteralPath $serverPublishDir)) {
+    throw "-SkipDotnetPublish requires existing publish output at $trayPublishDir and $serverPublishDir."
   }
   Get-ChildItem -LiteralPath $distRoot -Force |
-    Where-Object { $_.Name -ne "tray-publish" } |
+    Where-Object { $_.Name -notin @("tray-publish", "server-publish") } |
     Remove-Item -Recurse -Force
 } elseif (Test-Path $distRoot) {
   Remove-Item -LiteralPath $distRoot -Recurse -Force
@@ -337,29 +256,96 @@ New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 
 # ── FFmpeg ──
 Start-BuildPhase "FFmpeg download + vendor"
-# Deliberately not deleted first. Doing so made the skip inside
-# Ensure-WindowsFfmpegRuntime unreachable and cost 203.8s of a 444.9s build. The
-# function decides for itself, by comparing the vendored copy against the current
-# upstream checksum, so a stale copy is still refreshed.
 Ensure-WindowsFfmpegRuntime
 
-# ── PyInstaller: server-only ──
-Start-BuildPhase "PyInstaller bundle"
-Push-Location $repoRoot
-try {
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", $distRoot, "--workpath", (Join-Path $distRoot "build"), $serverSpecPath)
-} finally {
-  Pop-Location
+# ── .NET server publish (self-contained single-file, via the checked-in win-x64 publish
+#    profile — apps/server/src/Weir.Host/Properties/PublishProfiles/win-x64.pubxml — the same
+#    way apps/server/README.md documents, NOT by repeating --self-contained/-p:PublishSingleFile
+#    etc. as separate command-line switches). That distinction matters: a command-line
+#    -p:PublishSingleFile=true is a *global* MSBuild property, applied to every project in the
+#    build graph including Weir.Infrastructure, which makes its build fail with error IL3000
+#    ("Assembly.Location always returns an empty string in a single-file app") on the
+#    Assembly.Location check in Runtime/SystemServices.cs (DetectInstallType) — code that reads
+#    that empty string ON PURPOSE, to detect single-file mode. Weir.Host.csproj's own
+#    RID-conditioned PropertyGroup (and the .pubxml profiles built on top of it) set the same
+#    properties, but scoped to the Weir.Host project only, which is what the analyzer actually
+#    expects; publishing this way never triggers IL3000. Verified locally (see
+#    apps/server/README.md) — do not "simplify" this back to explicit -p: flags.
+Start-BuildPhase ".NET server publish"
+if (-not $SkipDotnetPublish) {
+  Write-Host "Publishing .NET server..."
+  if (Test-Path $serverPublishDir) {
+    Remove-Item -LiteralPath $serverPublishDir -Recurse -Force
+  }
+  Invoke-Native -FilePath dotnet -ArgumentList @(
+    "publish", $serverProjectDir,
+    "-p:PublishProfile=win-x64",
+    "-p:Version=$buildVersion",
+    "-p:PublishDir=$serverPublishDir\"
+  )
+}
+$publishedServerExe = Join-Path $serverPublishDir "Weir.exe"
+if (-not (Test-Path -LiteralPath $publishedServerExe)) {
+  throw "Expected published .NET server executable was not found: $publishedServerExe"
+}
+$serverVersion = (& $publishedServerExe --version).Trim()
+if ($serverVersion -ne $buildVersion) {
+  throw "Published Weir.exe (server) reports version '$serverVersion' but expected build version is '$buildVersion'."
 }
 
-$serverOutputDir = Join-Path $distRoot "WeirServer"
-$serverExe = Join-Path $serverOutputDir "WeirServer.exe"
-if (-not (Test-Path -LiteralPath $serverExe)) {
-  throw "Expected packaged executable was not found: $serverExe"
-}
-$serverVersion = (& $serverExe --version).Trim()
-if ($serverVersion -ne $buildVersion) {
-  throw "Packaged WeirServer.exe reports version '$serverVersion' but expected build version is '$buildVersion'."
+# ── Smoke: the raw published server exe, before packing (temp WEIR_HOME + the built web dist) ──
+if (-not $SkipSmoke) {
+  Start-BuildPhase "Server publish smoke"
+  $smokeHome = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-dotnet-server-smoke-" + [System.Guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Path $smokeHome | Out-Null
+  $smokePort = 8799
+  $smokeProc = $null
+  $oldHome = $env:WEIR_HOME
+  $oldWebDist = $env:WEIR_WEB_DIST
+  $oldSecret = $env:WEIR_SESSION_SECRET
+  $oldCookieSecure = $env:WEIR_SESSION_COOKIE_SECURE
+  try {
+    $env:WEIR_HOME = $smokeHome
+    $env:WEIR_WEB_DIST = $webDistDir
+    $env:WEIR_SESSION_SECRET = "package-build-smoke-session-secret-32chars-min"
+    $env:WEIR_SESSION_COOKIE_SECURE = "false"
+    $smokeProc = Start-Process -FilePath $publishedServerExe `
+      -ArgumentList @("--port", [string]$smokePort) `
+      -WorkingDirectory $serverPublishDir `
+      -RedirectStandardOutput (Join-Path $smokeHome "server.stdout.log") `
+      -RedirectStandardError (Join-Path $smokeHome "server.stderr.log") `
+      -WindowStyle Hidden `
+      -PassThru
+    $healthUrl = "http://127.0.0.1:$smokePort/health"
+    $deadline = (Get-Date).AddSeconds(30)
+    $healthy = $false
+    do {
+      if ($smokeProc.HasExited) {
+        throw "Published .NET server exited early with code $($smokeProc.ExitCode) during the publish smoke test."
+      }
+      try {
+        $response = Invoke-RestMethod -Uri $healthUrl -Method Get -TimeoutSec 2
+        Write-Host ("Smoke /health responded: {0}" -f ($response | ConvertTo-Json -Compress))
+        $healthy = $true
+        break
+      } catch {
+        Start-Sleep -Milliseconds 250
+      }
+    } while ((Get-Date) -lt $deadline)
+    if (-not $healthy) {
+      throw "Published .NET server did not answer $healthUrl within 30s."
+    }
+    Write-Host "Server publish smoke passed: $healthUrl"
+  } finally {
+    if ($smokeProc -and -not $smokeProc.HasExited) {
+      Stop-Process -Id $smokeProc.Id -Force -ErrorAction SilentlyContinue
+    }
+    if ($null -ne $oldHome) { $env:WEIR_HOME = $oldHome } else { Remove-Item Env:\WEIR_HOME -ErrorAction SilentlyContinue }
+    if ($null -ne $oldWebDist) { $env:WEIR_WEB_DIST = $oldWebDist } else { Remove-Item Env:\WEIR_WEB_DIST -ErrorAction SilentlyContinue }
+    if ($null -ne $oldSecret) { $env:WEIR_SESSION_SECRET = $oldSecret } else { Remove-Item Env:\WEIR_SESSION_SECRET -ErrorAction SilentlyContinue }
+    if ($null -ne $oldCookieSecure) { $env:WEIR_SESSION_COOKIE_SECURE = $oldCookieSecure } else { Remove-Item Env:\WEIR_SESSION_COOKIE_SECURE -ErrorAction SilentlyContinue }
+    Remove-Item -LiteralPath $smokeHome -Recurse -Force -ErrorAction SilentlyContinue
+  }
 }
 
 # ── .NET tray app publish ──
@@ -387,11 +373,32 @@ New-Item -ItemType Directory -Path $packDir | Out-Null
 Write-Host "Assembling Velopack pack directory..."
 Copy-Item -Path (Join-Path $trayPublishDir "*") -Destination $packDir -Recurse -Force
 
+# The tray app looks for "server\WeirServer.exe" (Program.cs, FindServerExeDirectory). Weir.Host's own
+# AssemblyName is "Weir" (it would collide with the tray's own Weir.exe at the pack root if copied under
+# its published name), so the publish output is renamed on the way in.
 $serverDestDir = Join-Path $packDir "server"
 New-Item -ItemType Directory -Path $serverDestDir | Out-Null
-Copy-Item -Path (Join-Path $serverOutputDir "*") -Destination $serverDestDir -Recurse -Force
+Copy-Item -Path (Join-Path $serverPublishDir "*") -Destination $serverDestDir -Recurse -Force
+Move-Item -LiteralPath (Join-Path $serverDestDir "Weir.exe") -Destination (Join-Path $serverDestDir "WeirServer.exe") -Force
+$serverPdb = Join-Path $serverDestDir "Weir.pdb"
+if (Test-Path -LiteralPath $serverPdb) {
+  # Not expected (Directory.Build.props sets DebugType=embedded), but if a future change
+  # reintroduces a companion .pdb, keep its name aligned with the renamed executable.
+  Move-Item -LiteralPath $serverPdb -Destination (Join-Path $serverDestDir "WeirServer.pdb") -Force
+}
 
-# ── vpk pack ──
+# Falls back to "server\web-dist" when "server\_internal\web-dist" is absent (Program.cs,
+# PrepareEnvironment) — always true here, since a .NET single-file publish has no "_internal".
+Copy-Item -Path $webDistDir -Destination (Join-Path $serverDestDir "web-dist") -Recurse -Force
+
+# Matches the <packaged-app-dir>\bin\ffmpeg candidate in
+# apps/server/src/Weir.Core/Media/MediaToolLocations.cs.
+$serverFfmpegDir = Join-Path $serverDestDir "bin\\ffmpeg"
+New-Item -ItemType Directory -Path $serverFfmpegDir -Force | Out-Null
+Copy-Item -Path (Join-Path $ffmpegVendorDir "ffmpeg.exe") -Destination $serverFfmpegDir -Force
+Copy-Item -Path (Join-Path $ffmpegVendorDir "ffprobe.exe") -Destination $serverFfmpegDir -Force
+
+# ── vpk pack (packId Weir, mainExe Weir.exe: the install identity every release keeps) ──
 Start-BuildPhase "vpk pack"
 Write-Host "Running vpk pack..."
 $trayProjectPath = Join-Path $trayDir "Weir.Tray.csproj"
