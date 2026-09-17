@@ -51,4 +51,7 @@ def get_db_session(request: Request) -> Generator[Session, None, None]:
         session.close()
 
 
-DbSessionDep = Annotated[Session, Depends(get_db_session)]
+# ``scope="function"``: commit before the response is sent. FastAPI's default ("request") runs this
+# exit code after the response, so a client could be told 200 for a write that was not committed
+# yet (or never, if the process stopped in between) and read stale data on its next request.
+DbSessionDep = Annotated[Session, Depends(get_db_session, scope="function")]
