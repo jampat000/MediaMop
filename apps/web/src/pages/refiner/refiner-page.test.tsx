@@ -153,12 +153,19 @@ function renderRefinerPage() {
 }
 
 describe("RefinerPage", () => {
-  it("renders the Refiner shell", () => {
+  it("renders the Processing page", () => {
     renderRefinerPage();
     expect(screen.getByTestId("refiner-scope-page")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Processing" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Existing library" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Refiner/)).toBeNull();
   });
 
-  it("Overview is the default tab, stays Refiner-scoped, and links Activity without leaking env keys", () => {
+  it("Overview is the default tab and links Activity without leaking env keys", () => {
     renderRefinerPage();
     expect(screen.getByTestId("refiner-overview-panel")).toBeInTheDocument();
     const overview =
@@ -186,39 +193,82 @@ describe("RefinerPage", () => {
   it("Overview lists every library, including two of the same media type", () => {
     renderRefinerPage();
     const rows = screen.getAllByTestId("refiner-overview-library");
-    expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringContaining("Films · Movies"),
-      expect.stringContaining("4K films · Movies"),
-      expect.stringContaining("Shows · TV episodes"),
+    expect(rows.map((row) => row.querySelector("th")?.textContent)).toEqual([
+      "FilmsMovies",
+      "4K filmsMovies",
+      // A name that already says what it is gets no repeated type badge.
+      "Shows",
     ]);
-    expect(rows[0].textContent).toMatch(/Watched · Set/);
-    expect(rows[1].textContent).toMatch(/Watched · Not set/);
-    expect(rows[2].textContent).toMatch(/every hour/);
+    expect(within(rows[0]).getAllByText("Set")).toHaveLength(2);
+    expect(within(rows[1]).getAllByText("Not set")).toHaveLength(2);
+    expect(rows[2].textContent).toMatch(/Every hour/);
     const attention = screen.getByTestId("refiner-overview-needs-attention");
     expect(attention.textContent).toMatch(
       /2 libraries have no watched folder \(4K films, Shows\)/,
     );
+    // One contextual panel: attention items replace the setup checklist once a folder is set.
+    expect(screen.queryByTestId("refiner-guided-setup")).toBeNull();
+    expect(screen.queryByText(/Next steps/i)).toBeNull();
   });
 
   it("Overview shows last-30-day stats card", () => {
     renderRefinerPage();
     const panel = screen.getByTestId("refiner-overview-at-a-glance");
     const last30 = screen.getByTestId("refiner-overview-last-30-days");
-    expect(panel.textContent).toMatch(/30-day results/i);
-    expect(last30.textContent).toMatch(/Completed/i);
+    expect(last30.textContent).toMatch(/Processed/i);
     expect(last30.textContent).toMatch(/42/);
     expect(last30.textContent).toMatch(/Failed/i);
-    expect(last30.textContent).toMatch(/Success/i);
+    expect(last30.textContent).toMatch(/Success rate/i);
     expect(last30.textContent).toMatch(/97.7%/);
-    expect(panel.textContent).toMatch(/Throughput & safety/i);
+    expect(last30.textContent).toMatch(/Up to 1 at once/i);
+    expect(panel.textContent).toMatch(/not changed for 60 seconds/i);
   });
 
-  it("Jobs tab shows Refiner jobs inspection with honest split from Activity", () => {
+  it("Overview shows a dash for the success rate before any job has finished", () => {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    seedRefinerQueries(qc);
+    qc.setQueryData(refinerOverviewStatsQueryKey, {
+      window_days: 30,
+      files_processed: 0,
+      files_failed: 0,
+      success_rate_percent: 0,
+    });
+    qc.setQueryData(qk.me, operatorMe);
+    render(wrap(<RefinerPage />, qc));
+    const last30 = screen.getByTestId("refiner-overview-last-30-days");
+    expect(last30.textContent).toMatch(/Success rate—/);
+    expect(last30.textContent).not.toMatch(/0%/);
+  });
+
+  it("Overview shows the setup checklist instead of attention items when no folder is set", () => {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    seedRefinerQueries(qc);
+    qc.setQueryData(refinerLibrariesKey, [
+      library({ id: 1, name: "Movies" }),
+      library({ id: 2, name: "TV", media_type: "tv" }),
+    ]);
+    qc.setQueryData(qk.me, operatorMe);
+    render(wrap(<RefinerPage />, qc));
+    expect(screen.getByTestId("refiner-guided-setup")).toHaveTextContent(
+      "Get started",
+    );
+    expect(screen.queryByTestId("refiner-overview-needs-attention")).toBeNull();
+    const names = screen
+      .getAllByTestId("refiner-overview-library")
+      .map((row) => row.querySelector("th")?.textContent);
+    expect(names).toEqual(["Movies", "TV"]);
+  });
+
+  it("Jobs tab shows jobs inspection with honest split from Activity", () => {
     renderRefinerPage();
     openTab("Jobs");
     const block = screen.getByTestId("refiner-jobs-inspection-section");
     expect(block.textContent).toMatch(/Activity/i);
-    expect(block.textContent).toMatch(/Current and recent Refiner work/i);
+    expect(block.textContent).toMatch(/Current and recent work/i);
     expect(block.textContent).toMatch(/clear next step/i);
   });
 
