@@ -2755,6 +2755,132 @@
         "title": "RefinerFileStoryStepOut",
         "type": "object"
       },
+      "RefinerFileTrackOut": {
+        "description": "One ffprobe stream on a held file, with what the saved rules would do to it and why (issue #501).",
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "type": {
+            "description": "video, audio, subtitle, image, attachment or other.",
+            "title": "Type",
+            "type": "string"
+          },
+          "codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codec"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels"
+          },
+          "default": {
+            "description": "The stream's own disposition on the held source, not what the rules would choose.",
+            "title": "Default",
+            "type": "boolean"
+          },
+          "forced": {
+            "description": "The stream's own disposition on the held source, not what the rules would choose.",
+            "title": "Forced",
+            "type": "boolean"
+          },
+          "rule_would_keep": {
+            "title": "Rule Would Keep",
+            "type": "boolean"
+          },
+          "rule_reason": {
+            "title": "Rule Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "type",
+          "codec",
+          "language",
+          "title",
+          "channels",
+          "default",
+          "forced",
+          "rule_would_keep",
+          "rule_reason"
+        ],
+        "title": "RefinerFileTrackOut",
+        "type": "object"
+      },
+      "RefinerFileTracksOut": {
+        "description": "A fresh ffprobe of a held file's source, and what the saved rules would do with it (issue #501).",
+        "properties": {
+          "file_id": {
+            "title": "File Id",
+            "type": "integer"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "media_scope": {
+            "title": "Media Scope",
+            "type": "string"
+          },
+          "source_fingerprint": {
+            "$ref": "#/components/schemas/RefinerSourceFingerprintOut"
+          },
+          "streams": {
+            "items": {
+              "$ref": "#/components/schemas/RefinerFileTrackOut"
+            },
+            "title": "Streams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "file_id",
+          "relative_path",
+          "media_scope",
+          "source_fingerprint",
+          "streams"
+        ],
+        "title": "RefinerFileTracksOut",
+        "type": "object"
+      },
       "RefinerFilesBulkRequeueIn": {
         "additionalProperties": false,
         "description": "Requeue everything matching a filter, described the same way the list is filtered.",
@@ -4316,6 +4442,93 @@
         "title": "RefinerLibraryUpdateIn",
         "type": "object"
       },
+      "RefinerManualPlanKeepIn": {
+        "description": "One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.",
+        "properties": {
+          "index": {
+            "minimum": 0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "default": {
+            "default": false,
+            "title": "Default",
+            "type": "boolean"
+          },
+          "forced": {
+            "default": false,
+            "title": "Forced",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "index"
+        ],
+        "title": "RefinerManualPlanKeepIn",
+        "type": "object"
+      },
+      "RefinerManualPlanIn": {
+        "additionalProperties": false,
+        "description": "An operator's hand-picked track choice for a held file (issue #501). At least one video and one\naudio track must be kept, every index must exist on a fresh probe of the source, and at most one\naudio track and one subtitle track may be marked default. order must list every kept index exactly once.",
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "keep": {
+            "items": {
+              "$ref": "#/components/schemas/RefinerManualPlanKeepIn"
+            },
+            "minItems": 1,
+            "title": "Keep",
+            "type": "array"
+          },
+          "order": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Order",
+            "type": "array"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "keep",
+          "order"
+        ],
+        "title": "RefinerManualPlanIn",
+        "type": "object"
+      },
+      "RefinerManualPlanOut": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "integer"
+          },
+          "dedupe_key": {
+            "title": "Dedupe Key",
+            "type": "string"
+          },
+          "job_kind": {
+            "title": "Job Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "job_id",
+          "dedupe_key",
+          "job_kind"
+        ],
+        "title": "RefinerManualPlanOut",
+        "type": "object"
+      },
       "RefinerOperatorSettingsOut": {
         "additionalProperties": false,
         "properties": {
@@ -5820,6 +6033,35 @@
           "work_temp_stale_sweep_periodic_configuration_note"
         ],
         "title": "RefinerRuntimeSettingsOut",
+        "type": "object"
+      },
+      "RefinerSourceFingerprintOut": {
+        "description": "The source's identity and content state at the moment it was probed (issue #501): device, inode, size and modified time. Compared again when the pass runs, to detect a file that changed since the operator chose its tracks.",
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "integer"
+          },
+          "inode": {
+            "title": "Inode",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "modified_time_ns": {
+            "title": "Modified Time Ns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "device",
+          "inode",
+          "size_bytes",
+          "modified_time_ns"
+        ],
+        "title": "RefinerSourceFingerprintOut",
         "type": "object"
       },
       "RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn": {
@@ -9167,6 +9409,61 @@
         ]
       }
     },
+    "/api/v1/refiner/files/{file_id}/manual-plan": {
+      "post": {
+        "description": "Queue a remux pass built from an operator's hand-picked track choice (issue #501).\n\nValidates at least one video and one audio track kept, every index against a fresh probe\nof the held source, and at most one default per audio and subtitle. The pass re-probes\nbefore running: if the source changed, or a chosen track is missing or changed type, it\nfails asking the operator to choose again rather than guessing.",
+        "operationId": "post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerManualPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerManualPlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner File Manual Plan",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
     "/api/v1/refiner/files/{file_id}/move-to-top": {
       "post": {
         "description": "Put this file's queued work ahead of everything else waiting.\n\nOnly affects work that has not started. A file already being processed cannot be\nstarted earlier, and saying so is more use than a button that appears to work.",
@@ -9271,6 +9568,51 @@
           }
         },
         "summary": "Requeue Refiner File",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/files/{file_id}/tracks": {
+      "get": {
+        "description": "A fresh ffprobe of a held file's source: every stream with its index, type, codec, language,\ntitle, channels and disposition, and what the saved rules would do with it and why (issue #501).",
+        "operationId": "get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerFileTracksOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner File Tracks",
         "tags": [
           "refiner",
           "refiner"

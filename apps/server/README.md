@@ -164,6 +164,7 @@ Fixes included:
 - **Rollback and sweep** judge from the files alone: backup present and original missing → rename it back; backup and original present → delete the backup; temp → delete. A locked file (sharing violation, `EBUSY`) is the `InUse` outcome, requeued after 5, 15 and 60 minutes (`SafeSwapRules.InUseRetryDelay`).
 - **Persistence:** progress is recorded on the job row, not in a new table, because ADR-0017 keeps the SQLite schema fixed until the switch (#523). `RefinerJobSwapJournal` adds `library_swap` (`state`: `writing`, `committing`, `committed`, `finished`, `rolled_back`, `recovered`, plus the three paths) and `swap_committed: true` to `refiner_jobs.payload_json`, keeping every other key. The sweep visits the paths of unfinished swaps first; walking library folders is a fallback. No migration and no schema-parity change.
 - **Tests:** `SafeSwapTests` injects a failure, a failure after the effect, a crash and a crash after the effect at every one of the swap's 23 filesystem and journal operations and proves exactly one intact file remains (original content before the commit rename, cleaned content after), with the journal alone enough to recover every crash. `PhysicalSwapTests` run the swap and sweep on real files and a real job row, including a file held open by another handle.
+
 ### Fixed in #545
 
 Defects the .NET port kept parity with while porting the remux pass (#522 part 3); fixed here, after the switch-over, so `apps/backend` is not touched.
@@ -173,6 +174,50 @@ Defects the .NET port kept parity with while porting the remux pass (#522 part 3
 3. **An undelivered pass-through or reject reported nothing.** Once such a job exhausted its own retries it dropped out of `JobsForAsync`'s pending/leased filter and vanished from the hand-off status API. `JobsForAsync` now also returns a `failed`-status row for these two job kinds, and `HandoffLedgerStore.CurrentStatusAsync` reports a pending one as `scheduled` (never `queued` — that field means the remux queue, not a decided disposition about to run) or `working` while leased, and a permanently failed one as `failed` with the job's own `last_error` as the reason.
 4. **Stored subtitle mode wasn't normalized on both rule-config paths.** `RemuxPassPaths.RulesConfigFor` (the live pass) used to pass the stored mode through unchanged, while `RuleSetConversion.ToRulesConfig` (the rule-less fallback) normalized it. Both now call `RuleSetConversion.NormalizeSubtitleMode`.
 5. **Measured media facts and collision decisions landed on every library's row.** `RemuxPassFileState.RecordMeasuredMediaFactsAsync` and `RecordOutputCollisionAsync` matched on `relative_path` alone, so two libraries that happened to share a path both got the write. Both now also filter on `library_id` (threaded through as `MeasuredMediaFacts.LibraryId` and a new `libraryId` parameter, from `RemuxPassRequest.LibraryId`/`PassThroughDeliverySettings.LibraryId`); a null library id skips the write rather than falling back to the old cross-library match.
+
+### Manual track plans (choosing tracks by hand, issue #501)
+
+`GET /api/v1/refiner/files/{id}/tracks` and `POST /api/v1/refiner/files/{id}/manual-plan` let an
+operator finish a held file by hand instead of changing a library's rules. This is a C#-only
+feature: ADR-0017 freezes the SQLite schema until the backend switch-over (#523), and `apps/backend`
+is retiring, so nothing here is ported from or mirrored back to Python.
+
+- **No migration, no new column.** The chosen plan is never persisted as file state; it lives only
+  in the enqueued job's `payload_json`, alongside the source fingerprint taken at submission time
+  (`manual_plan` and `source_fingerprint`, see `ManualPlanJson`). This is why: the schema is frozen,
+  a manual plan is a one-off instruction for exactly one queued pass rather than a durable setting,
+  and the job row already is the mechanism Weir uses to carry a one-time instruction to a worker
+  (compare `pass_through_unchanged` and `origin` on the same payload). If the pass fails, the
+  operator chooses again from a fresh probe rather than a stale plan being retried blind.
+- **`GET .../tracks`** (`Weir.Api/Endpoints/RefinerFilesEndpoints.cs`, `ManualPlanSupport.LoadAsync`)
+  re-probes the held source with ffprobe — never the last recorded metadata — and returns every
+  stream (video, audio, subtitle, image, attachment) with its codec, language, title, channels and
+  disposition, plus what the saved rules would do with it and why. The reasoning comes from
+  `Weir.Core.Rules.RemuxRules.ExplainTracks`, a read-only, per-stream account of the same decisions
+  `PlanRemux` makes (candidate ranking, commentary/hearing-impaired exclusion, language matching),
+  so the UI can show a reason next to each row without duplicating the engine's logic by hand.
+- **`POST .../manual-plan`** (operator + CSRF) takes `{keep: [{index, default, forced}], order}`,
+  re-probes to validate every index against the live source, and enforces at least one video and
+  one audio track kept and at most one default per audio/subtitle type
+  (`Weir.Core.Refiner.ManualTrackPlan.TryValidate`). On success it enqueues a
+  `refiner.file.remux_pass.v1` job carrying the choice and fingerprint, and records
+  `refiner.file_manual_plan_queued` with the actor. The file's own status is left alone (`on_hold`),
+  which already reads as `queued` on the hand-off ledger (`HandoffLedgerRules.FileState`) the moment
+  a job exists for it, and as `working` once the worker claims it — so held → queued → working needs
+  no new state, only the existing ledger mapping.
+- **In the pass** (`RemuxPassRunner.RunInnerAsync`), a manual plan re-probes the source and checks
+  the fingerprint taken at submission against the one taken now, plus every chosen index against a
+  fresh classification of the live streams (`ManualTrackPlan.ClassifyIndices`). Either kind of
+  mismatch — the file changed, or an index no longer exists or changed type — fails with the same
+  sentence: "The file changed since you chose its tracks; choose again." Otherwise
+  `ManualTrackPlan.BuildPlan` builds the `RemuxPlan` directly from the choice, skipping `PlanRemux`
+  entirely (no candidate ranking, no name-derived flags, no metadata stripping) — the precedent this
+  issue names is muxarr's `CustomConversionEditor`/`ConversionPlan`, where a custom plan is
+  authoritative and the automatic mutations do not apply; the owner cleared following that
+  precedent. Normal output validation, collision handling and cleanup run unchanged afterward.
+- The activity classifier's Python-parity test (`ActivityClassifierTests`) has one deliberate
+  exemption (`CSharpOnlyEventTypes`) for `RefinerFileManualPlanQueued`, the only activity event type
+  with no Python constant, for the reason above.
 
 ## Activity
 

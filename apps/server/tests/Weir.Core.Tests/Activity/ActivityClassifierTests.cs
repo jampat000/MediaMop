@@ -71,11 +71,27 @@ public sealed partial class ActivityClassifierTests
         var python = PythonConstant().Matches(File.ReadAllText(constants))
             .ToDictionary(match => match.Groups[1].Value.Replace("_", string.Empty, StringComparison.Ordinal).ToUpperInvariant(), match => match.Groups[2].Value);
         var dotnet = typeof(ActivityEventTypes).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => !CSharpOnlyEventTypes.Contains(field.Name))
             .ToDictionary(field => field.Name.ToUpperInvariant(), field => (string)field.GetValue(null)!);
 
         Assert.NotEmpty(python);
         Assert.Equal(python.OrderBy(pair => pair.Key, StringComparer.Ordinal), dotnet.OrderBy(pair => pair.Key, StringComparer.Ordinal));
+        foreach (var name in CSharpOnlyEventTypes)
+        {
+            Assert.NotNull(typeof(ActivityEventTypes).GetField(name, BindingFlags.Public | BindingFlags.Static));
+        }
     }
+
+    /// <summary>
+    /// Event types for features added after ADR-0017 froze the switch-over plan, with no Python equivalent — Python
+    /// is retiring (#523) and is not touched to add a constant for a C#-only feature.
+    /// </summary>
+    private static readonly HashSet<string> CSharpOnlyEventTypes = new(StringComparer.Ordinal)
+    {
+        // Issue #501: choosing tracks by hand for a held file. The manual-plan endpoints and the remux pass's
+        // handling of them exist only in the .NET server.
+        nameof(ActivityEventTypes.RefinerFileManualPlanQueued),
+    };
 
     private static string FindBackendFile(params string[] parts)
     {

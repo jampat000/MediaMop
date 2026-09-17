@@ -5,6 +5,7 @@ using Weir.Core.Json;
 using Weir.Core.Media;
 using Weir.Core.MediaManagers;
 using Weir.Core.Metrics;
+using Weir.Core.Refiner;
 using Weir.Core.Refiner.RemuxPass;
 using Weir.Core.Rules;
 using Weir.Infrastructure.Media;
@@ -31,6 +32,16 @@ public sealed record RemuxPassRequest
 
     /// <summary>The hand-off this file came from, when it did: its release name feeds the original-language lookup.</summary>
     public HandoffOrigin? Origin { get; init; }
+
+    /// <summary>
+    /// An operator's hand-picked track choice (issue #501). When set, the pass re-probes, checks the source fingerprint
+    /// and every kept index against <see cref="ManualPlanFingerprint"/>, and builds the plan straight from the choice
+    /// instead of calling <see cref="RemuxRules.PlanRemux"/>.
+    /// </summary>
+    public ManualPlanChoice? ManualPlan { get; init; }
+
+    /// <summary>The source fingerprint recorded when the operator chose the tracks in <see cref="ManualPlan"/>.</summary>
+    public SourceFingerprint? ManualPlanFingerprint { get; init; }
 }
 
 /// <summary>
@@ -311,15 +322,36 @@ public sealed class RemuxPassRunner
 
         var config = request.RulesConfig ?? RemuxRules.DefaultConfig();
         PyDict? originalLanguage = null;
-        if (!passThrough && config.OriginalLanguage is { Enabled: true } originalRules)
+        if (!passThrough && request.ManualPlan is null && config.OriginalLanguage is { Enabled: true } originalRules)
         {
             (config, originalLanguage) = await ApplyOriginalLanguageAsync(config, originalRules, scope, relativeMediaPath, request.Origin, audio, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        var plan = passThrough
-            ? RemuxPassMedia.PassThroughPlan(video, audio, subtitles)
-            : RemuxRules.PlanRemux(video, audio, subtitles, config, RemuxRules.AttachmentStreams(probe));
+        RemuxPlan? plan;
+        if (request.ManualPlan is { } manualChoice)
+        {
+            // Issue #501: the operator's choice is authoritative. A stale fingerprint or an index that no longer
+            // exists (or changed type) both mean the same thing to the operator, so both fail with the same sentence.
+            var splitForManual = new SplitProbeStreams(video, audio, subtitles);
+            var kinds = ManualTrackPlan.ClassifyIndices(splitForManual);
+            var stillValid = request.ManualPlanFingerprint is { } expectedManualFingerprint
+                && expectedManualFingerprint == expected
+                && ManualTrackPlan.TryValidate(manualChoice, kinds, out _);
+            if (!stillValid)
+            {
+                return FailBefore(relativeMediaPath, ManualTrackPlan.ChangedMessage, inspected);
+            }
+
+            plan = ManualTrackPlan.BuildPlan(splitForManual, manualChoice);
+        }
+        else
+        {
+            plan = passThrough
+                ? RemuxPassMedia.PassThroughPlan(video, audio, subtitles)
+                : RemuxRules.PlanRemux(video, audio, subtitles, config, RemuxRules.AttachmentStreams(probe));
+        }
+
         if (plan is null)
         {
             return FailBefore(

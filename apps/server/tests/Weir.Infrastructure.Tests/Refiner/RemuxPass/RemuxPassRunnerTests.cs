@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Weir.Core.Json;
 using Weir.Core.MediaManagers;
+using Weir.Core.Refiner;
 using Weir.Core.Refiner.RemuxPass;
 using Weir.Core.Rules;
 using Weir.Infrastructure.Media;
@@ -240,7 +241,9 @@ public sealed class RemuxPassRunnerTests : IDisposable
         long? minAge = 0,
         RefinerRulesConfig? rules = null,
         long minimumFreeMb = 0,
-        RemuxPassRunner? runner = null) =>
+        RemuxPassRunner? runner = null,
+        Weir.Core.Refiner.ManualPlanChoice? manualPlan = null,
+        SourceFingerprint? manualPlanFingerprint = null) =>
         (runner ?? Runner()).RunAsync(new RemuxPassRequest
         {
             Runtime = runtime ?? _folders.Runtime(),
@@ -253,6 +256,8 @@ public sealed class RemuxPassRunnerTests : IDisposable
             MinimumFreeDiskSpaceMb = minimumFreeMb,
             CurrentJobId = 1,
             ProgressReporter = _progress.Add,
+            ManualPlan = manualPlan,
+            ManualPlanFingerprint = manualPlanFingerprint,
         });
 
     private static string Str(PyDict result, string key) => PyConvert.Str(result[key]);
@@ -715,5 +720,63 @@ public sealed class RemuxPassRunnerTests : IDisposable
         Assert.Empty(_language.Asked);
         Assert.Contains("0:1", Assert.Single(_media.Remuxes));
         Assert.False(plain.ContainsKey("original_language"));
+    }
+
+    // ---- Issue #501: manual track plans ------------------------------------------------------
+
+    [Fact]
+    public async Task A_manual_plan_builds_its_plan_directly_from_the_choice_skipping_PlanRemux()
+    {
+        var source = _folders.Source(Path.Join("Show", "ep.mkv"));
+        _media.Probes["ep.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+        var fingerprint = SourceFiles.Fingerprint(source);
+        // Keep the Japanese track (not what the automatic rules would have picked) and mark it default.
+        var choice = new ManualPlanChoice(
+            [new ManualKeepEntry(0, Default: false, Forced: false), new ManualKeepEntry(2, Default: true, Forced: false)],
+            [0, 2]);
+
+        var result = await Run("Show/ep.mkv", manualPlan: choice, manualPlanFingerprint: fingerprint);
+
+        Assert.True(Bool(result, "ok"), PyJsonWriter.Dumps(result, PyJsonFormat.Compact));
+        var executed = Assert.Single(_media.Remuxes);
+        var maps = executed.Select((token, i) => (token, i)).Where(p => p.token == "-map").Select(p => executed[p.i + 1]).ToList();
+        Assert.Equal(["0:0", "0:2"], maps);
+        Assert.DoesNotContain("0:1", executed);
+        var dispositionIndex = executed.ToList().IndexOf("-disposition:a:0");
+        Assert.True(dispositionIndex >= 0);
+        Assert.Equal("default", executed[dispositionIndex + 1]);
+        Assert.Contains("chose these tracks by hand", string.Join(" ", ((PyList)result["audio_selection_notes"]).Items.Select(PyConvert.Str)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_manual_plan_with_a_stale_fingerprint_fails_with_the_choose_again_message()
+    {
+        _folders.Source(Path.Join("Show", "ep2.mkv"));
+        _media.Probes["ep2.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+        var staleFingerprint = new SourceFingerprint(0, 0, 999_999, 1);
+        var choice = new ManualPlanChoice([new ManualKeepEntry(0, false, false), new ManualKeepEntry(1, true, false)], [0, 1]);
+
+        var result = await Run("Show/ep2.mkv", manualPlan: choice, manualPlanFingerprint: staleFingerprint);
+
+        Assert.False(Bool(result, "ok"));
+        Assert.Equal(RemuxPassOutcomes.FailedBeforeExecution, Str(result, "outcome"));
+        Assert.Equal(ManualTrackPlan.ChangedMessage, Str(result, "reason"));
+        Assert.Empty(_media.Remuxes);
+    }
+
+    [Fact]
+    public async Task A_manual_plan_referencing_a_track_that_no_longer_exists_fails_with_the_choose_again_message()
+    {
+        var source = _folders.Source(Path.Join("Show", "ep3.mkv"));
+        // Only indices 0 (video) and 1 (audio) exist now — the operator chose index 2 before the file changed.
+        _media.Probes["ep3.mkv"] = FakeMediaRunner.EnglishOnly;
+        var fingerprint = SourceFiles.Fingerprint(source);
+        var choice = new ManualPlanChoice([new ManualKeepEntry(0, false, false), new ManualKeepEntry(2, true, false)], [0, 2]);
+
+        var result = await Run("Show/ep3.mkv", manualPlan: choice, manualPlanFingerprint: fingerprint);
+
+        Assert.False(Bool(result, "ok"));
+        Assert.Equal(ManualTrackPlan.ChangedMessage, Str(result, "reason"));
+        Assert.Empty(_media.Remuxes);
     }
 }

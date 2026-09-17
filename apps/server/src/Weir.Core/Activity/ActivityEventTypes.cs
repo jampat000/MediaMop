@@ -43,4 +43,7 @@ public static class ActivityEventTypes
 
     /// <summary>The manager cancelled a hand-off Weir had not started (#480).</summary>
     public const string RefinerHandoffCancelled = "refiner.handoff_cancelled";
+
+    /// <summary>An operator queued a hand-picked track choice for a held file (#501).</summary>
+    public const string RefinerFileManualPlanQueued = "refiner.file_manual_plan_queued";
 }

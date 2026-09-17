@@ -669,6 +669,31 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/files/{file_id}/manual-plan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner File Manual Plan
+     * @description Queue a remux pass built from an operator's hand-picked track choice (issue #501).
+     *
+     *     Validates at least one video and one audio track kept, every index against a fresh probe
+     *     of the held source, and at most one default per audio and subtitle. The pass re-probes
+     *     before running: if the source changed, or a chosen track is missing or changed type, it
+     *     fails asking the operator to choose again rather than guessing.
+     */
+    post: operations["post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/files/{file_id}/move-to-top": {
     parameters: {
       query?: never;
@@ -710,6 +735,27 @@ export interface paths {
      *     because the automatic attempts are spent — would answer a question they did not ask.
      */
     post: operations["requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/files/{file_id}/tracks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner File Tracks
+     * @description A fresh ffprobe of a held file's source: every stream with its index, type, codec, language,
+     *     title, channels and disposition, and what the saved rules would do with it and why (issue #501).
+     */
+    get: operations["get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -3021,6 +3067,56 @@ export interface components {
       tone: string;
     };
     /**
+     * RefinerFileTrackOut
+     * @description One ffprobe stream on a held file, with what the saved rules would do to it and why (issue #501).
+     */
+    RefinerFileTrackOut: {
+      /** Index */
+      index: number;
+      /**
+       * Type
+       * @description video, audio, subtitle, image, attachment or other.
+       */
+      type: string;
+      /** Codec */
+      codec: string | null;
+      /** Language */
+      language: string | null;
+      /** Title */
+      title: string | null;
+      /** Channels */
+      channels: number | null;
+      /**
+       * Default
+       * @description The stream's own disposition on the held source, not what the rules would choose.
+       */
+      default: boolean;
+      /**
+       * Forced
+       * @description The stream's own disposition on the held source, not what the rules would choose.
+       */
+      forced: boolean;
+      /** Rule Would Keep */
+      rule_would_keep: boolean;
+      /** Rule Reason */
+      rule_reason: string;
+    };
+    /**
+     * RefinerFileTracksOut
+     * @description A fresh ffprobe of a held file's source, and what the saved rules would do with it (issue #501).
+     */
+    RefinerFileTracksOut: {
+      /** File Id */
+      file_id: number;
+      /** Relative Path */
+      relative_path: string;
+      /** Media Scope */
+      media_scope: string;
+      source_fingerprint: components["schemas"]["RefinerSourceFingerprintOut"];
+      /** Streams */
+      streams: components["schemas"]["RefinerFileTrackOut"][];
+    };
+    /**
      * RefinerFilesBulkRequeueIn
      * @description Requeue everything matching a filter, described the same way the list is filtered.
      */
@@ -3894,6 +3990,49 @@ export interface components {
        */
       work_folder: string;
     };
+    /**
+     * RefinerManualPlanKeepIn
+     * @description One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.
+     */
+    RefinerManualPlanKeepIn: {
+      /** Index */
+      index: number;
+      /**
+       * Default
+       * @default false
+       */
+      default: boolean;
+      /**
+       * Forced
+       * @default false
+       */
+      forced: boolean;
+    };
+    /**
+     * RefinerManualPlanIn
+     * @description An operator's hand-picked track choice for a held file (issue #501). At least one video and one
+     *     audio track must be kept, every index must exist on a fresh probe of the source, and at most one
+     *     audio track and one subtitle track may be marked default. order must list every kept index exactly once.
+     */
+    RefinerManualPlanIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Keep */
+      keep: components["schemas"]["RefinerManualPlanKeepIn"][];
+      /** Order */
+      order: number[];
+    };
+    /** RefinerManualPlanOut */
+    RefinerManualPlanOut: {
+      /** Ok */
+      ok: boolean;
+      /** Job Id */
+      job_id: number;
+      /** Dedupe Key */
+      dedupe_key: string;
+      /** Job Kind */
+      job_kind: string;
+    };
     /** RefinerOperatorSettingsOut */
     RefinerOperatorSettingsOut: {
       /**
@@ -4666,6 +4805,20 @@ export interface components {
        * @description Plain-language summary for 0 / 1 / >1 Refiner workers.
        */
       worker_mode_summary: string;
+    };
+    /**
+     * RefinerSourceFingerprintOut
+     * @description The source's identity and content state at the moment it was probed (issue #501): device, inode, size and modified time. Compared again when the pass runs, to detect a file that changed since the operator chose its tracks.
+     */
+    RefinerSourceFingerprintOut: {
+      /** Device */
+      device: number;
+      /** Inode */
+      inode: number;
+      /** Size Bytes */
+      size_bytes: number;
+      /** Modified Time Ns */
+      modified_time_ns: number;
     };
     /**
      * RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn
@@ -6463,6 +6616,41 @@ export interface operations {
       };
     };
   };
+  post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerManualPlanIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerManualPlanOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post: {
     parameters: {
       query?: never;
@@ -6520,6 +6708,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerRequeueOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerFileTracksOut"];
         };
       };
       /** @description Validation Error */

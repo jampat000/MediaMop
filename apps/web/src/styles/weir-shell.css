@@ -3280,6 +3280,121 @@ button.mm-inhand-row__name:focus-visible {
   color: var(--mm-text3);
 }
 
+/* Choose tracks by hand (#501): a wider panel, since the table needs the room. */
+.mm-tracks-panel {
+  width: min(52rem, 100%);
+}
+
+.mm-tracks-table-wrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+}
+
+.mm-tracks-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mm-type-caption);
+}
+
+.mm-tracks-table th,
+.mm-tracks-table td {
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--mm-border);
+  white-space: nowrap;
+}
+
+.mm-tracks-table tr:last-child td {
+  border-bottom: none;
+}
+
+.mm-tracks-table th {
+  color: var(--mm-text3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  font-size: 0.68rem;
+}
+
+.mm-tracks-table__track {
+  color: var(--mm-text1);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.mm-tracks-table__rule {
+  color: var(--mm-text2);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 16rem;
+}
+
+.mm-tracks-order,
+.mm-tracks-dropped {
+  margin-top: 1.25rem;
+}
+
+.mm-tracks-order__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mm-tracks-order__list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--mm-border);
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text2);
+  overflow-wrap: anywhere;
+}
+
+.mm-tracks-order__list li:last-child {
+  border-bottom: none;
+}
+
+.mm-tracks-order__buttons {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}
+
+.mm-tracks-order__buttons button {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: none;
+  color: var(--mm-text2);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.mm-tracks-order__buttons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.mm-tracks-order__buttons button:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: 2px;
+}
+
+.mm-tracks-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mm-border);
+}
+
 /* Direct Play badge (#467). Secondary information, so it stays quiet: caption size, muted
    text, and only the verdict mark carries a tint. The verdict is always in words as well. */
 .mm-direct-play {

@@ -5,13 +5,16 @@ import {
   fetchRefinerFiles,
   forgetRefinerFile,
   fetchRefinerFileLog,
+  fetchRefinerFileTracks,
   fetchRefinerWhyHeld,
   moveRefinerFileToTop,
+  postRefinerManualPlan,
   requeueRefinerFile,
   requeueRefinerFiles,
   type RefinerBulkRequeueQuery,
   type RefinerFilesPage,
   type RefinerFilesQuery,
+  type RefinerManualPlanChoice,
 } from "./files-api";
 import { postRefinerWatchedFolderRemuxScanDispatchEnqueue } from "./watched-folder-scan-api";
 
@@ -74,6 +77,29 @@ export function useRefinerFileLog() {
   // A mutation rather than a query: a processing record is read when someone opens it,
   // not for every row on every render.
   return useMutation({ mutationFn: (id: number) => fetchRefinerFileLog(id) });
+}
+
+export function useRefinerFileTracks() {
+  // A mutation rather than a query: the tracks come from a fresh ffprobe of the source, done
+  // only when an operator opens "Choose tracks" for one file, not for every row on every render.
+  return useMutation({
+    mutationFn: (id: number) => fetchRefinerFileTracks(id),
+  });
+}
+
+export function useSubmitRefinerManualPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      choice,
+    }: {
+      id: number;
+      choice: RefinerManualPlanChoice;
+    }) => postRefinerManualPlan(id, choice),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["refiner", "files"] }),
+  });
 }
 
 export function useProcessRefinerFileNow() {

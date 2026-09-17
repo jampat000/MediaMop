@@ -487,6 +487,154 @@ it("asks the managers why a file is held and shows their own words", async () =>
   );
 });
 
+it("offers Choose tracks only for held files, and lists a fresh probe with the rules' verdict", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({ id: 1, status: "on_hold" }),
+        file({ id: 2, status: "unprocessed" }),
+      ],
+    }),
+  );
+  vi.spyOn(api, "fetchRefinerFileTracks").mockResolvedValue({
+    file_id: 1,
+    relative_path: "Some Film/film.mkv",
+    media_scope: "movie",
+    source_fingerprint: {
+      device: 0,
+      inode: 0,
+      size_bytes: 100,
+      modified_time_ns: 1,
+    },
+    streams: [
+      {
+        index: 0,
+        type: "video",
+        codec: "h264",
+        language: null,
+        title: null,
+        channels: null,
+        default: true,
+        forced: false,
+        rule_would_keep: true,
+        rule_reason: "Kept as the video track.",
+      },
+      {
+        index: 1,
+        type: "audio",
+        codec: "aac",
+        language: "eng",
+        title: null,
+        channels: 2,
+        default: true,
+        forced: false,
+        rule_would_keep: true,
+        rule_reason:
+          "Kept: selected as the best audio track (eng aac 2 ch (stream 1)).",
+      },
+      {
+        index: 2,
+        type: "audio",
+        codec: "aac",
+        language: "jpn",
+        title: null,
+        channels: 2,
+        default: false,
+        forced: false,
+        rule_would_keep: false,
+        rule_reason:
+          "Removed: not selected (eng aac 2 ch (stream 1) was kept instead).",
+      },
+    ],
+  });
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  expect(
+    screen.queryByTestId("refiner-file-choose-tracks-2"),
+  ).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByTestId("refiner-file-choose-tracks-1"));
+
+  const panel = await screen.findByTestId("choose-tracks-panel");
+  expect(panel).toHaveTextContent("eng");
+  expect(panel).toHaveTextContent("jpn");
+  expect(panel).toHaveTextContent("Kept: selected as the best audio track");
+  // Seeded from the rules: the English track (the winner) starts checked, the Japanese one does not.
+  expect(screen.getByTestId("choose-tracks-keep-1")).toBeChecked();
+  expect(screen.getByTestId("choose-tracks-keep-2")).not.toBeChecked();
+});
+
+it("queues a hand-picked track choice and shows the confirmation", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 1, status: "on_hold" })] }),
+  );
+  vi.spyOn(api, "fetchRefinerFileTracks").mockResolvedValue({
+    file_id: 1,
+    relative_path: "Some Film/film.mkv",
+    media_scope: "movie",
+    source_fingerprint: {
+      device: 0,
+      inode: 0,
+      size_bytes: 100,
+      modified_time_ns: 1,
+    },
+    streams: [
+      {
+        index: 0,
+        type: "video",
+        codec: "h264",
+        language: null,
+        title: null,
+        channels: null,
+        default: true,
+        forced: false,
+        rule_would_keep: true,
+        rule_reason: "Kept as the video track.",
+      },
+      {
+        index: 1,
+        type: "audio",
+        codec: "aac",
+        language: "eng",
+        title: null,
+        channels: 2,
+        default: true,
+        forced: false,
+        rule_would_keep: true,
+        rule_reason: "Kept: selected as the best audio track.",
+      },
+    ],
+  });
+  const postManualPlan = vi
+    .spyOn(api, "postRefinerManualPlan")
+    .mockResolvedValue({
+      ok: true,
+      job_id: 42,
+      dedupe_key: "refiner.file.remux_pass.v1:manual-plan:1:abc",
+      job_kind: "refiner.file.remux_pass.v1",
+    });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-choose-tracks-1"));
+  await screen.findByTestId("choose-tracks-panel");
+  fireEvent.click(screen.getByTestId("choose-tracks-submit"));
+
+  await waitFor(() =>
+    expect(postManualPlan).toHaveBeenCalledWith(1, {
+      keep: [
+        { index: 0, default: false, forced: false },
+        { index: 1, default: true, forced: false },
+      ],
+      order: [0, 1],
+    }),
+  );
+  expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
+    "Queued your track choice for Some Film/film.mkv",
+  );
+});
+
 it("opens a processing record and offers it as a download", async () => {
   asOperator();
   vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
