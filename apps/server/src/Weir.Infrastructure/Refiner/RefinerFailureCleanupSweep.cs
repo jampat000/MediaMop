@@ -68,7 +68,7 @@ public static class RefinerFailureCleanupActivity
 /// shrug: every manager covering the scope has to answer before anything is removed.
 /// </summary>
 /// <remarks>
-/// The queue-block check (<c>HeldByManager</c>) uses <see cref="QueueRowAdapter"/>'s exact output-path match
+/// The queue-block check (<c>HeldByManager</c>) uses <see cref="QueueRowMapping"/>'s exact output-path match
 /// only, matching Python's <c>_held_by_manager</c> — it does not (yet) fall back to the title/year anchor the watched-folder
 /// scan port uses elsewhere, since that needs pieces the scan port (#522 part 5) has not landed yet.
 /// </remarks>
@@ -374,7 +374,7 @@ public sealed class RefinerFailureCleanupSweep
     /// <summary><c>_held_by_manager</c>: the connection whose queue still names this exact file, or null. Path equality only.</summary>
     private static string? HeldByManager(IReadOnlyList<ManagerQueueSignal> signals, string mediaScope, string mediaFile)
     {
-        var dialect = QueueRowAdapter.ForScope(mediaScope);
+        var dialect = QueueRowMapping.DialectForScope(mediaScope);
         var candidatePath = RemuxPassPaths.Resolve(mediaFile);
         foreach (var signal in signals)
         {
@@ -390,7 +390,7 @@ public sealed class RefinerFailureCleanupSweep
                     continue;
                 }
 
-                if (QueueRowAdapter.MapToView(row.Payload, dialect, candidatePath).AppliesToFile)
+                if (QueueRowMapping.MapQueueRowToRefinerView(row.Payload, dialect, candidatePath).AppliesToFile)
                 {
                     return signal.Connection.Label;
                 }
