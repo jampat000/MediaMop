@@ -33,6 +33,8 @@ public sealed record RefinerRulesConfig
     /// <summary>
     /// Issue #537 item 3: normalized the same way a track's own language tag is (<see cref="RemuxRules.NormalizeLang"/>),
     /// so "ENG" or "en-US" matches a file tagged "eng". Stored values were compared as-is before the fix.
+    /// Issue #496: a recognized variant identifier ("fre-CA", or "fr-CA" as a BCP 47 tag) is kept
+    /// instead of being reduced to its base language, so a list can single out a regional dub.
     /// </summary>
     public required IReadOnlyList<string> SubtitleLangs { get; init; }
 
@@ -95,6 +97,12 @@ public sealed record PlannedTrack
     public int CodecRank { get; init; } = RemuxRules.CodecUnknownRank;
     public string CodecName { get; init; } = string.Empty;
     public TrackKind Kind { get; init; } = TrackKind.Audio;
+
+    /// <summary>
+    /// Issue #496: the regional/script variant detected for this track (<c>"fre-CA"</c>), or null
+    /// when none was detected or the base language rule matched regardless of variant.
+    /// </summary>
+    public string? Variant { get; init; }
 }
 
 /// <summary>What one pass writes (<c>RemuxPlan</c>).</summary>
@@ -199,7 +207,9 @@ public static partial class RemuxRules
         var result = new List<string>();
         foreach (var part in (raw ?? string.Empty).Replace("\n", ",", StringComparison.Ordinal).Split(','))
         {
-            var lang = NormalizeLang(part);
+            // Issue #496: preserves a recognized variant identifier instead of reducing it to its
+            // base language; identical to NormalizeLang for every plain code (no fixture regresses).
+            var lang = LanguageVariants.NormalizeLanguageOrVariant(part);
             if (lang.Length > 0 && !result.Contains(lang))
             {
                 result.Add(lang);
@@ -397,7 +407,9 @@ public static partial class RemuxRules
         var result = new List<string>();
         foreach (var raw in new[] { config.PrimaryAudioLang, config.SecondaryAudioLang, config.TertiaryAudioLang })
         {
-            var lang = NormalizeLang(raw);
+            // Issue #496: preserves a recognized variant identifier ("fre-CA") instead of reducing
+            // it to its base language; identical to NormalizeLang for every plain code.
+            var lang = LanguageVariants.NormalizeLanguageOrVariant(raw);
             if (lang.Length > 0 && !result.Contains(lang))
             {
                 result.Add(lang);
@@ -405,6 +417,20 @@ public static partial class RemuxRules
         }
 
         return result;
+    }
+
+    /// <summary>The first configured tier a track matches (base or variant), or -1 when none does.</summary>
+    private static int TierIndexOf(List<string> preferred, string lang, string? variant)
+    {
+        for (var i = 0; i < preferred.Count; i++)
+        {
+            if (LanguageVariants.Matches(preferred[i], lang, variant))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     internal sealed record AudioCandidate(
@@ -417,7 +443,8 @@ public static partial class RemuxRules
         long Bitrate,
         int CodecRank,
         string CodecName,
-        TrackFlags Flags);
+        TrackFlags Flags,
+        VariantDetection Variant);
 
     /// <summary>
     /// Issue #537 item 6: <c>bit_rate</c> text ffprobe cannot parse (<c>"N/A"</c> is a real value it
@@ -438,24 +465,28 @@ public static partial class RemuxRules
     private static AudioCandidate CandidateFromStream(ProbeStreamInfo s, int index)
     {
         var tags = s.Tags;
-        var lang = NormalizeLang(tags.GetValueOrDefault("language"));
+        var rawLanguageTag = tags.GetValueOrDefault("language");
+        var lang = NormalizeLang(rawLanguageTag);
         var disposition = s.Disposition;
         var codecName = Py.StrOr(s.Get("codec_name"), string.Empty);
         var channels = Py.ToInt32(Py.Truthy(s.Get("channels")) ? Py.Int(s.Get("channels")) : 0);
         var bitrate = ReadBitRate(s);
         var flags = TrackFlagsReader.Detect(s);
+        // Issue #537 item 5: a non-string title tag (a list, say) is missing, not stringified.
+        var title = tags.GetValueOrDefault("title") ?? string.Empty;
         return new AudioCandidate(
             InputIndex: index,
             LangLabel: lang,
-            // Issue #537 item 5: a non-string title tag (a list, say) is missing, not stringified.
-            Title: tags.GetValueOrDefault("title") ?? string.Empty,
+            Title: title,
             Commentary: flags.Commentary.Value,
             Default: disposition.GetValueOrDefault("default") != 0,
             Channels: channels,
             Bitrate: bitrate,
             CodecRank: AudioCodecQualityRank(codecName),
             CodecName: codecName.Length > 0 ? codecName : "unknown",
-            Flags: flags);
+            Flags: flags,
+            // Issue #496: regional/script variant from the track's name or an explicit BCP 47 tag.
+            Variant: LanguageVariants.Detect(title, lang, rawLanguageTag));
     }
 
     private static SortableTrack CandidateAsTrack(AudioCandidate c) => new()
@@ -507,13 +538,15 @@ public static partial class RemuxRules
     }
 
     /// <summary><c>min(pool, key=...)</c>: the first candidate with the smallest key.</summary>
-    private static AudioCandidate PickBest(List<AudioCandidate> pool, HashSet<string> preferredSet, bool useFallbackPenalty, IReadOnlyList<TrackSorter> sorters)
+    private static AudioCandidate PickBest(List<AudioCandidate> pool, List<string> preferredList, bool useFallbackPenalty, IReadOnlyList<TrackSorter> sorters)
     {
         AudioCandidate? best = null;
         List<long>? bestKey = null;
         foreach (var c in pool)
         {
-            int? penalty = useFallbackPenalty ? (c.LangLabel.Length > 0 && preferredSet.Contains(c.LangLabel) ? 0 : 1) : null;
+            int? penalty = useFallbackPenalty
+                ? (c.LangLabel.Length > 0 && preferredList.Any(p => LanguageVariants.Matches(p, c.LangLabel, c.Variant.Identifier)) ? 0 : 1)
+                : null;
             var key = QualitySortKey(c, penalty, sorters);
             if (bestKey is null || SortKeyComparer.Instance.Compare(key, bestKey) < 0)
             {
@@ -536,7 +569,6 @@ public static partial class RemuxRules
     {
         var policy = NormalizeAudioPreferenceMode(config.AudioPreferenceMode);
         var preferredList = OrderedPreferenceLangs(config);
-        var preferredSet = new HashSet<string>(preferredList, StringComparer.Ordinal);
         var sorters = TrackSorters.Parse(config.AudioSortersJson);
         notes.Add($"Track ranking: {TrackSorters.Describe([.. sorters])}.");
 
@@ -565,42 +597,45 @@ public static partial class RemuxRules
 
         if (policy == RemuxRuleValues.PolicyQualityAllLanguages)
         {
-            var w = PickBest(candidates, preferredSet, useFallbackPenalty: false, sorters);
+            var w = PickBest(candidates, preferredList, useFallbackPenalty: false, sorters);
             notes.Add($"Selected {DescribeCandidate(w)} using quality across all languages (policy: quality across all languages).");
             return w;
         }
 
         if (policy == RemuxRuleValues.PolicyPreferredLangsStrict)
         {
-            var primary = NormalizeLang(config.PrimaryAudioLang);
+            // Issue #496: a variant identifier is accepted here too, same as the tier walk below.
+            var primary = LanguageVariants.NormalizeLanguageOrVariant(config.PrimaryAudioLang);
             if (primary.Length == 0)
             {
                 notes.Add("Strict policy requires a primary language; none configured.");
                 return null;
             }
 
-            var pool = candidates.Where(c => c.LangLabel == primary).ToList();
+            var pool = candidates.Where(c => LanguageVariants.Matches(primary, c.LangLabel, c.Variant.Identifier)).ToList();
             if (pool.Count == 0)
             {
                 notes.Add($"No audio tracks matched primary language '{primary}' (strict policy — no fallback to secondary or other languages).");
                 return null;
             }
 
-            var w = PickBest(pool, preferredSet, useFallbackPenalty: false, sorters);
+            var w = PickBest(pool, preferredList, useFallbackPenalty: false, sorters);
             notes.Add($"Selected {DescribeCandidate(w)} using primary language only (strict policy).");
             return w;
         }
 
-        // preferred_langs_quality: tier walk, then fallback.
+        // preferred_langs_quality: tier walk, then fallback. Issue #496: a tier that is a plain
+        // base language ("fre") matches every variant of it, unchanged; a tier that is a variant
+        // identifier ("fre-CA") matches only a track detected as that exact variant.
         foreach (var tierLang in preferredList)
         {
-            var pool = candidates.Where(c => c.LangLabel == tierLang).ToList();
+            var pool = candidates.Where(c => LanguageVariants.Matches(tierLang, c.LangLabel, c.Variant.Identifier)).ToList();
             if (pool.Count == 0)
             {
                 continue;
             }
 
-            var w = PickBest(pool, preferredSet, useFallbackPenalty: false, sorters);
+            var w = PickBest(pool, preferredList, useFallbackPenalty: false, sorters);
             var others = pool.Where(c => c.InputIndex != w.InputIndex).ToList();
             if (others.Count > 0)
             {
@@ -615,7 +650,7 @@ public static partial class RemuxRules
             return w;
         }
 
-        var fallback = PickBest(candidates, preferredSet, useFallbackPenalty: true, sorters);
+        var fallback = PickBest(candidates, preferredList, useFallbackPenalty: true, sorters);
         var tiers = preferredList.Count > 0 ? string.Join(", ", preferredList) : "none";
         notes.Add(
             $"Fell back to {DescribeCandidate(fallback)} because no track matched configured language tiers ({tiers}); ranked by quality with preferred-language matches first.");
@@ -689,6 +724,16 @@ public static partial class RemuxRules
             notes.Add($"The selected track ({DescribeCandidate(winner)}) looks like an audio-description track from its name; ffprobe reported no such flag.");
         }
 
+        // Issue #496: say which regional/script variant the selected track was detected as, and
+        // where that came from, since ffprobe otherwise reports only the base language.
+        if (winner.Variant.Found)
+        {
+            var provenance = winner.Variant.Source == VariantSource.Tag
+                ? $"the language tag '{winner.Variant.Marker}'"
+                : $"the track name '{winner.Variant.Marker}'";
+            notes.Add($"{LanguageVariants.DisplayName(winner.Variant.Identifier!)}, from {provenance}.");
+        }
+
         // Retention: one winner; every other audio stream is removed.
         var winnerIndex = winner.InputIndex;
         foreach (var c in candidates.Where(c => c.InputIndex != winnerIndex))
@@ -700,9 +745,11 @@ public static partial class RemuxRules
         if (policy == RemuxRuleValues.PolicyPreferredLangsQuality)
         {
             var preferred = OrderedPreferenceLangs(config);
-            if (preferred.Count > 1 && preferred.Contains(winner.LangLabel))
+            // Issue #496: a variant tier ("fre-CA") only ever matches its own variant, so this
+            // looks up the tier by base-or-variant match instead of the track's plain language.
+            var winnerTier = TierIndexOf(preferred, winner.LangLabel, winner.Variant.Identifier);
+            if (preferred.Count > 1 && winnerTier >= 0)
             {
-                var winnerTier = preferred.IndexOf(winner.LangLabel);
                 foreach (var c in candidates)
                 {
                     if (c.InputIndex == winnerIndex)
@@ -710,7 +757,7 @@ public static partial class RemuxRules
                         continue;
                     }
 
-                    if (preferred.Contains(c.LangLabel) && preferred.IndexOf(c.LangLabel) > winnerTier)
+                    if (TierIndexOf(preferred, c.LangLabel, c.Variant.Identifier) > winnerTier)
                     {
                         notes.Add(
                             $"Ignored {DescribeCandidate(c)} because preferred languages (tiered quality) had candidates in '{winner.LangLabel}' first.");
@@ -736,6 +783,7 @@ public static partial class RemuxRules
             CodecRank = winner.CodecRank,
             CodecName = codecName,
             Kind = TrackKind.Audio,
+            Variant = winner.Variant.Identifier,
         };
 
         var keptSubtitles = new List<PlannedTrack>();
@@ -751,13 +799,28 @@ public static partial class RemuxRules
         else
         {
             // Issue #537 item 3: configured subtitle languages are normalized the same way a
-            // track's own tag is, so "ENG" or "en-US" matches a file tagged "eng".
-            var selected = new HashSet<string>(config.SubtitleLangs.Select(NormalizeLang), StringComparer.Ordinal);
+            // track's own tag is, so "ENG" or "en-US" matches a file tagged "eng". Issue #496: a
+            // repeated language keeps its last position (as before); a variant identifier
+            // ("fre-CA") is kept distinct from its base ("fre") rather than collapsed into it.
+            var rank = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var n = 0; n < config.SubtitleLangs.Count; n++)
+            {
+                rank[LanguageVariants.NormalizeLanguageOrVariant(config.SubtitleLangs[n])] = n;
+            }
+
             foreach (var (s, index) in WithIndex(subtitles))
             {
-                var lang = NormalizeLang(s.Tag("language"));
+                var rawLanguageTag = s.Tag("language");
+                var lang = NormalizeLang(rawLanguageTag);
                 var disposition = s.Disposition;
-                if (lang.Length == 0 || !selected.Contains(lang))
+
+                // A variant-specific tier ("fre-CA") takes priority over a broader base tier
+                // ("fre") when a track matches both; a plain base tier still matches every variant.
+                var variant = LanguageVariants.DetectVariant(s.Tag("title"), lang, rawLanguageTag);
+                var matchedTier = variant is not null && rank.TryGetValue(variant, out var variantRank)
+                    ? variantRank
+                    : rank.GetValueOrDefault(lang, -1);
+                if (lang.Length == 0 || matchedTier < 0)
                 {
                     removedSubtitleLabels.Add(lang.Length > 0 ? lang : "und");
                     continue;
@@ -787,17 +850,13 @@ public static partial class RemuxRules
                     Forced = forced,
                     Default = config.PreserveDefaultSubs && disposition.GetValueOrDefault("default") != 0,
                     Kind = TrackKind.Subtitle,
+                    Variant = variant,
                 });
             }
 
-            // {lang: position}, where a repeated language keeps its last position.
-            var rank = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (var n = 0; n < config.SubtitleLangs.Count; n++)
-            {
-                rank[NormalizeLang(config.SubtitleLangs[n])] = n;
-            }
-
-            keptSubtitles = [.. keptSubtitles.OrderBy(t => rank.GetValueOrDefault(t.LangLabel, 99)).ThenBy(t => t.InputIndex)];
+            keptSubtitles = [.. keptSubtitles
+                .OrderBy(t => t.Variant is not null && rank.TryGetValue(t.Variant, out var vr) ? vr : rank.GetValueOrDefault(t.LangLabel, 99))
+                .ThenBy(t => t.InputIndex)];
         }
 
         return new RemuxPlan
