@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Weir.Api.Endpoints;
 using Weir.Core.Configuration;
 using Weir.Core.Jobs;
+using Weir.Core.Refiner;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Processes;
@@ -44,6 +45,12 @@ public static class RefinerApi
         services.AddSingleton<RefinerWatchedFolderScanDispatchJobHandler>();
         services.AddSingleton<IJobHandler>(sp => sp.GetRequiredService<RefinerWatchedFolderScanDispatchJobHandler>());
         services.AddSingleton<IPeriodicTask, RefinerWatchedFolderScanDispatchScheduleTask>();
+
+        // Watched-folder filesystem watcher (#552): FileSystemWatcher per enabled/watched library, feeding
+        // the same scan-dispatch enqueue above. Runs independently of the periodic scheduler — see
+        // RefinerWatchedFolderWatcherService's own docs for what it does and how it diverges from Python.
+        services.TryAddSingleton<WatcherStateStore>();
+        services.AddHostedService<RefinerWatchedFolderWatcherService>();
         return services;
     }
 

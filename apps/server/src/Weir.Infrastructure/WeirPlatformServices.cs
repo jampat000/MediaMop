@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Weir.Core.Activity;
 using Weir.Core.Configuration;
+using Weir.Core.Refiner;
 using Weir.Core.Time;
 using Weir.Core.Workers;
 using Weir.Infrastructure.Activity;
@@ -22,6 +23,7 @@ public static class WeirPlatformServices
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(_ => new SqliteDatabase(options.DbPath));
         services.TryAddSingleton<WorkerHeartbeats>();
+        services.TryAddSingleton<WatcherStateStore>();
         services.TryAddSingleton<ITimeZoneResolver, IanaTimeZoneResolver>();
         services.TryAddSingleton<IActivityWriter, SqliteActivityWriter>();
         services.TryAddSingleton(sp => ActivityNotifications.For(sp.GetRequiredService<SqliteDatabase>()));

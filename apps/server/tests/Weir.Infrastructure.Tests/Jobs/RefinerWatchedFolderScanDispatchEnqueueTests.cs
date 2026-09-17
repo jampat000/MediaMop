@@ -184,4 +184,63 @@ public sealed class RefinerWatchedFolderScanDispatchEnqueueTests
         await using var uow = await UnitOfWork.OpenAsync(db.Database);
         return await LibraryStore.GetAsync(uow, id) ?? throw new InvalidOperationException("Library not found.");
     }
+
+    // --- the watcher's own enqueue path: identical apart from the trigger label ------------------------
+
+    [Fact]
+    public async Task Try_enqueue_for_watcher_event_inserts_with_the_filesystem_event_trigger()
+    {
+        using var dir = new TempDirectory();
+        using var db = new JobsTestDatabase();
+        var watched = dir.Join("watched");
+        var output = dir.Join("output");
+        Directory.CreateDirectory(watched);
+        Directory.CreateDirectory(output);
+        var libraryId = await CreateLibraryAsync(db, "Movies", RefinerMediaScopes.Movie, watched, output);
+        var library = await GetLibraryAsync(db, libraryId);
+
+        await using var uow = await UnitOfWork.OpenAsync(db.Database);
+        var (inserted, skip) = await RefinerWatchedFolderScanDispatchEnqueue.TryEnqueueForWatcherEventAsync(uow, db.Store, library, enqueueRemuxJobs: true);
+        await uow.CommitAsync();
+
+        Assert.True(inserted);
+        Assert.Null(skip);
+        var job = await db.Store.GetAsync(1);
+        Assert.Contains("\"scan_trigger\":\"filesystem_event\"", job?.PayloadJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Try_enqueue_for_watcher_event_skips_when_an_active_scan_already_covers_the_library()
+    {
+        using var db = new JobsTestDatabase();
+        var libraryId = await CreateLibraryAsync(db, "Movies", RefinerMediaScopes.Movie);
+        var library = await GetLibraryAsync(db, libraryId);
+        db.Execute(
+            "INSERT INTO refiner_jobs (dedupe_key, job_kind, status, max_attempts, payload_json) VALUES ('wf-active', @kind, 'pending', 3, @payload)",
+            ("@kind", RefinerWatchedFolderScanDispatchJobKinds.ScanDispatch),
+            ("@payload", $"{{\"media_scope\":\"movie\",\"library_id\":{libraryId}}}"));
+
+        await using var uow = await UnitOfWork.OpenAsync(db.Database);
+        var (inserted, skip) = await RefinerWatchedFolderScanDispatchEnqueue.TryEnqueueForWatcherEventAsync(uow, db.Store, library, enqueueRemuxJobs: true);
+
+        Assert.False(inserted);
+        Assert.Equal("active_scan_already_queued", skip);
+    }
+
+    [Fact]
+    public async Task Try_enqueue_for_watcher_event_skips_a_watched_folder_with_no_output_when_live_remux_is_on()
+    {
+        using var dir = new TempDirectory();
+        using var db = new JobsTestDatabase();
+        var watched = dir.Join("watched");
+        Directory.CreateDirectory(watched);
+        var libraryId = await CreateLibraryAsync(db, "Movies", RefinerMediaScopes.Movie, watched, output: "");
+        var library = await GetLibraryAsync(db, libraryId);
+
+        await using var uow = await UnitOfWork.OpenAsync(db.Database);
+        var (inserted, skip) = await RefinerWatchedFolderScanDispatchEnqueue.TryEnqueueForWatcherEventAsync(uow, db.Store, library, enqueueRemuxJobs: true);
+
+        Assert.False(inserted);
+        Assert.Equal("missing_output_for_live_remux", skip);
+    }
 }
