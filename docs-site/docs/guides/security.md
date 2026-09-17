@@ -70,9 +70,21 @@ signing key and the database both live under `WEIR_HOME`.
 
 ### If you forgot your password
 
-The current Weir server does not include a password recovery command. To get back in, clear the
-account and use first-run setup again, as described in
-[Clearing the account](#clearing-the-account) below.
+Run the recovery command where Weir is installed. It sets a new password, re-activates the
+account, and signs out every existing session. This works only from the server's own console —
+it is not reachable over HTTP — because reaching the server's shell is the proof of identity
+recovery relies on.
+
+```bash
+docker exec weir /opt/weir/Weir recover
+```
+
+On a Windows install, run `Weir.exe recover` from the installation directory. Building from
+source, use `dotnet run --project apps/server/src/Weir.Host -- recover`.
+
+You will be prompted for the new password (typed without being echoed to the screen), which
+keeps it out of your shell history. For scripted use, pass `--password`. To see the accounts
+without changing anything, use `--list`.
 
 ### If you signed in but are sent straight back to the login page
 
@@ -86,8 +98,10 @@ then restart.
 
 ### Clearing the account
 
-You can clear the accounts directly and use first-run setup again. Everything else — libraries,
-connections and settings — lives in other tables and survives.
+The recovery command above still needs Weir's own process to run, so it is no help when Weir
+itself will not start. As a last resort, with Weir stopped, you can clear the accounts directly
+and use first-run setup again. Everything else — libraries, connections and settings — lives in
+other tables and survives.
 
 The database is at `$WEIR_HOME/data/weir.sqlite3` — `/data/weir/data/weir.sqlite3` inside
 Docker, and `C:\ProgramData\Weir\data\weir.sqlite3` on a default Windows install.

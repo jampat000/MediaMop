@@ -55,6 +55,34 @@ public static class AuthStore
             ("$username", username),
             ("$id", userId));
 
+    public static Task<int> SetActiveAsync(UnitOfWork uow, long userId, bool isActive) =>
+        Checked(uow).ExecuteAsync(
+            "UPDATE users SET is_active=$active, updated_at=CURRENT_TIMESTAMP WHERE users.id = $id",
+            ("$active", isActive ? 1 : 0),
+            ("$id", userId));
+
+    /// <summary><c>_list_accounts</c>: every account, alphabetically.</summary>
+    public static Task<List<UserRecord>> ListUsersByUsernameAsync(UnitOfWork uow) =>
+        Checked(uow).QueryAsync($"SELECT {UserColumns} FROM users ORDER BY users.username", ReadUser);
+
+    /// <summary>
+    /// <c>_load_account</c>: the named account (case-insensitive), or — when no username is given — the
+    /// very first account by id (only meaningful when exactly one exists, the caller's job to check).
+    /// </summary>
+    public static Task<UserRecord?> FindAccountForRecoveryAsync(UnitOfWork uow, string? username)
+    {
+        if (string.IsNullOrEmpty(username))
+        {
+            return Checked(uow).QuerySingleAsync($"SELECT {UserColumns} FROM users ORDER BY users.id LIMIT 1 OFFSET 0", ReadUser);
+        }
+
+        var folded = username.Trim().ToLowerInvariant();
+        return Checked(uow).QuerySingleAsync(
+            $"SELECT {UserColumns} FROM users WHERE lower(users.username) = $folded ORDER BY users.id LIMIT 1 OFFSET 0",
+            ReadUser,
+            ("$folded", folded));
+    }
+
     public static Task<UserSessionRecord?> FindSessionByTokenHashAsync(UnitOfWork uow, string tokenHash) =>
         Checked(uow).QuerySingleAsync(
             $"SELECT {SessionColumns} FROM user_sessions WHERE user_sessions.token_hash = $hash LIMIT 1 OFFSET 0",
