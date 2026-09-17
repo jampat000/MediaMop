@@ -19,28 +19,34 @@ Weir is a self-hosted media operations app for people who want more control over
 
 It brings a few focused tools together in one place:
 
-- **Refiner** cleans up media files by remuxing them into a cleaner, more consistent result.
+- **Processing** cleans up media files by remuxing them into a cleaner, more consistent result, library by library, and can also clean files already sitting in an existing library.
 - **In hand, Activity, and Settings** give you a live view of what Weir is holding, recent work, logs, and core app configuration.
 
 The app ships as a C# / .NET 10 server with SQLite and a React + Vite web UI.
 
 ## Screenshots
 
-| Dashboard | Activity |
+| In hand | Activity |
 | --- | --- |
-| ![Dashboard](screenshots/dashboard.png) | ![Activity](screenshots/activity.png) |
+| ![In hand](screenshots/in-hand.png) | ![Activity](screenshots/activity.png) |
 
-| Refiner |
-| --- |
-| ![Refiner](screenshots/refiner.png) |
+| Processing | Existing library |
+| --- | --- |
+| ![Processing](screenshots/processing.png) | ![Existing library](screenshots/existing-library.png) |
 
 | Settings |
 | --- |
 | ![Settings](screenshots/settings.png) |
 
-### Refiner activity detail
+### Processing record detail
 
-![Refiner activity detail](screenshots/refiner-activity.png)
+![Processing record detail](screenshots/processing-detail.png)
+
+### Dark, light, and on your phone
+
+| Light mode | On your phone |
+| --- | --- |
+| ![In hand in light mode](screenshots/in-hand-light.png) | ![In hand on a phone](screenshots/in-hand-mobile.png) |
 
 ## Quick start
 

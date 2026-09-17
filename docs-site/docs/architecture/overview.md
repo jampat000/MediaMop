@@ -56,7 +56,7 @@ but the .NET migrations are now the only source of schema changes.
 |-----------|---------------|
 | `src/app` | App-level router and providers |
 | `src/layouts` | Shell/navigation layout |
-| `src/pages` | Feature pages (In hand, Refiner, Activity, Settings, setup) |
+| `src/pages` | Feature pages (In hand, Processing, Activity, Settings, setup) |
 | `src/lib` | API clients, query hooks, typed data helpers |
 | `src/components` | Reusable UI and brand components |
 
