@@ -79,7 +79,11 @@ internal sealed class StoreFixture : IDisposable
         await command.ExecuteNonQueryAsync();
     }
 
-    public void Dispose() => Home.Dispose();
+    public void Dispose()
+    {
+        Database.ClearPool();
+        Home.Dispose();
+    }
 }
 
 internal sealed class MovableClock(DateTimeOffset start) : TimeProvider

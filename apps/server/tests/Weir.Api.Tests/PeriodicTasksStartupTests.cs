@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Weir.Infrastructure.Jobs;
@@ -43,7 +42,7 @@ public sealed class PeriodicTasksStartupTests
                     command.ExecuteNonQuery();
                 }
 
-                SqliteConnection.ClearAllPools();
+                database.ClearPool();
             });
 
         var database = server.Services.GetRequiredService<SqliteDatabase>();

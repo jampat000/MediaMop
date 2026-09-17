@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Weir.Core.Jobs;
 using Weir.Infrastructure.Jobs;
@@ -35,7 +34,7 @@ public sealed class JobsStartupTests
                     "VALUES ('crash', 'refiner.file.remux_pass.v1', '{\"media_scope\":\"movie\",\"relative_media_path\":\"Crash.Test.2020/film.mkv\"}', " +
                     "'leased', 'killed-host-1-w0', '2999-01-01 00:00:00+00:00', 1)";
                 command.ExecuteNonQuery();
-                SqliteConnection.ClearAllPools();
+                database.ClearPool();
             });
 
         var report = server.Services.GetRequiredService<JobsStartupRecoveryService>().LastReport;

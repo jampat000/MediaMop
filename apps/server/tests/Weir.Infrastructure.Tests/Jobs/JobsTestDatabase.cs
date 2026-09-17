@@ -1,5 +1,4 @@
 using System.Globalization;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Weir.Core.Activity;
 using Weir.Core.Jobs;
@@ -154,7 +153,7 @@ internal sealed class JobsTestDatabase : IDisposable
 
     public void Dispose()
     {
-        SqliteConnection.ClearAllPools();
+        Database.ClearPool();
         _directory.Dispose();
     }
 }

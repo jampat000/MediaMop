@@ -16,8 +16,9 @@ public sealed class SchemaMigratorTests
         var schemaVersionBefore = SchemaSnapshot.ScalarLong(path, "PRAGMA schema_version");
         var changesBefore = SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM suite_settings");
 
-        var outcome = new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead();
-        SqliteConnection.ClearAllPools();
+        var database = new SqliteDatabase(path);
+        var outcome = new SchemaMigrator(database).EnsureAtHead();
+        database.ClearPool();
 
         Assert.Equal(SchemaStartupOutcome.AlreadyCurrent, outcome);
         Assert.Equal(before, SchemaSnapshot.Describe(path));
@@ -33,6 +34,7 @@ public sealed class SchemaMigratorTests
         Assert.Equal(SchemaStartupOutcome.Created, new SchemaMigrator(database).EnsureAtHead());
         Assert.Equal(SchemaStartupOutcome.AlreadyCurrent, new SchemaMigrator(database).EnsureAtHead());
         Assert.Equal(1, SchemaSnapshot.ScalarLong(database.DatabasePath, "SELECT COUNT(*) FROM alembic_version WHERE version_num = '0036_drop_pruner_tables'"));
+        database.ClearPool();
     }
 
     [Fact]
@@ -42,8 +44,9 @@ public sealed class SchemaMigratorTests
         var path = AlembicDatabaseAt(temp, "0035_direct_play_facts");
         var before = SchemaSnapshot.Describe(path);
 
-        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead());
-        SqliteConnection.ClearAllPools();
+        var database = new SqliteDatabase(path);
+        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(database).EnsureAtHead());
+        database.ClearPool();
 
         Assert.Equal(SchemaMismatchKind.BehindHead, error.Kind);
         Assert.Equal(
@@ -60,7 +63,9 @@ public sealed class SchemaMigratorTests
         using var temp = new TempDirectory();
         var path = AlembicDatabaseAt(temp, "0099_from_the_future");
 
-        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead());
+        var database = new SqliteDatabase(path);
+        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(database).EnsureAtHead());
+        database.ClearPool();
 
         Assert.Equal(SchemaMismatchKind.UnknownRevision, error.Kind);
         Assert.Equal(
@@ -76,8 +81,9 @@ public sealed class SchemaMigratorTests
         var path = temp.Join("other.sqlite3");
         SchemaSnapshot.Execute(path, "CREATE TABLE something_else (id INTEGER PRIMARY KEY);");
 
-        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead());
-        SqliteConnection.ClearAllPools();
+        var database = new SqliteDatabase(path);
+        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(database).EnsureAtHead());
+        database.ClearPool();
 
         Assert.Equal(SchemaMismatchKind.Unversioned, error.Kind);
         Assert.StartsWith(
@@ -104,8 +110,9 @@ public sealed class SchemaMigratorTests
             SchemaSnapshot.Execute(path, "PRAGMA user_version = 0; VACUUM;");
         }
 
-        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead());
-        SqliteConnection.ClearAllPools();
+        var database = new SqliteDatabase(path);
+        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(database).EnsureAtHead());
+        database.ClearPool();
 
         Assert.Equal(SchemaMismatchKind.Unversioned, error.Kind);
         Assert.StartsWith("No Alembic revision is recorded for this database", error.Message, StringComparison.Ordinal);
@@ -122,8 +129,9 @@ public sealed class SchemaMigratorTests
         using var temp = new TempDirectory();
         var path = temp.Join("weir.sqlite3");
 
-        Assert.Equal(SchemaStartupOutcome.Created, new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead());
-        SqliteConnection.ClearAllPools();
+        var database = new SqliteDatabase(path);
+        Assert.Equal(SchemaStartupOutcome.Created, new SchemaMigrator(database).EnsureAtHead());
+        database.ClearPool();
 
         Assert.Equal(1, SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM alembic_version"));
     }
@@ -134,13 +142,17 @@ public sealed class SchemaMigratorTests
         using var temp = new TempDirectory();
         var empty = temp.Join("empty.sqlite3");
         SchemaSnapshot.Execute(empty, "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL);");
+        var emptyDatabase = new SqliteDatabase(empty);
         Assert.Equal(
             SchemaMismatchKind.Unversioned,
-            Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(new SqliteDatabase(empty)).EnsureAtHead()).Kind);
+            Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(emptyDatabase).EnsureAtHead()).Kind);
+        emptyDatabase.ClearPool();
 
         var several = temp.Join("several.sqlite3");
         SchemaSnapshot.Execute(several, "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL); INSERT INTO alembic_version VALUES ('a'), ('b');");
-        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(new SqliteDatabase(several)).EnsureAtHead());
+        var severalDatabase = new SqliteDatabase(several);
+        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(severalDatabase).EnsureAtHead());
+        severalDatabase.ClearPool();
         Assert.Equal(SchemaMismatchKind.Incompatible, error.Kind);
         Assert.Contains("('a', 'b')", error.Message, StringComparison.Ordinal);
     }
@@ -150,12 +162,15 @@ public sealed class SchemaMigratorTests
     {
         using var temp = new TempDirectory();
         var database = new SqliteDatabase(temp.Join("weir.sqlite3"));
-        using var connection = database.Open();
+        using (var connection = database.Open())
+        {
+            Assert.Equal("wal", Pragma(connection, "journal_mode"));
+            Assert.Equal("1", Pragma(connection, "foreign_keys"));
+            Assert.Equal("30000", Pragma(connection, "busy_timeout"));
+            Assert.Equal("1", Pragma(connection, "synchronous"));
+        }
 
-        Assert.Equal("wal", Pragma(connection, "journal_mode"));
-        Assert.Equal("1", Pragma(connection, "foreign_keys"));
-        Assert.Equal("30000", Pragma(connection, "busy_timeout"));
-        Assert.Equal("1", Pragma(connection, "synchronous"));
+        database.ClearPool();
     }
 
     [Fact]
@@ -164,8 +179,12 @@ public sealed class SchemaMigratorTests
         using var temp = new TempDirectory();
         var database = new SqliteDatabase(temp.Join("weir.sqlite3"));
         Assert.True(await database.IsConnectedAsync());
-        using var connection = database.Open();
-        Assert.Equal("30000", Pragma(connection, "busy_timeout"));
+        using (var connection = database.Open())
+        {
+            Assert.Equal("30000", Pragma(connection, "busy_timeout"));
+        }
+
+        database.ClearPool();
     }
 
     [Fact]
@@ -209,6 +228,8 @@ public sealed class SchemaMigratorTests
             command.CommandText = "SELECT count(*) FROM suite_settings";
             Assert.Equal(1L, command.ExecuteScalar());
         }
+
+        database.ClearPool();
     }
 
     private static string AlembicDatabaseAt(TempDirectory temp, string revision)
