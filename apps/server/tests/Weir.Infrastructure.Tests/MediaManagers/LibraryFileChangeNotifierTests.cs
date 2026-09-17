@@ -136,7 +136,11 @@ public sealed class LibraryFileChangeNotifierTests
             .Json(HttpMethod.Post, "/api/v3/command", """{"id":1}""", HttpStatusCode.Created);
 
         var notifier = Notifier(fixture);
-        await notifier.NotifyAsync(new LibraryFileChange("movie", @"D:\Data\Movies\Solaris\f.mkv", LocalLibraryRoot: @"D:\Data\Movies"));
+        // Local paths use this OS's own form: a Windows drive path only parses as a path on Windows.
+        var (localFile, localRoot) = OperatingSystem.IsWindows()
+            ? (@"D:\Data\Movies\Solaris\f.mkv", @"D:\Data\Movies")
+            : ("/data/movies/Solaris/f.mkv", "/data/movies");
+        await notifier.NotifyAsync(new LibraryFileChange("movie", localFile, LocalLibraryRoot: localRoot));
 
         var command = Assert.Single(fixture.Http.RequestsTo(HttpMethod.Post, "/api/v3/command"));
         Assert.Equal("""{"name":"RescanMovie","movieId":7}""", PyJsonWriter.Dumps(command.Json!, PyJsonFormat.Compact));
