@@ -1,13 +1,25 @@
-# Grouped updates match Dependabot PR titles like "bump the pip group" / "bump the actions group".
+# Grouped updates match Dependabot PR titles like "bump the server group" / "bump the actions group".
 version: 2
 updates:
-  - package-ecosystem: pip
-    directory: /apps/backend
+  # The .NET server. Versions are pinned centrally in apps/server/Directory.Packages.props.
+  - package-ecosystem: nuget
+    directory: /apps/server
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
-      pip:
+      server:
+        patterns:
+          - "*"
+
+  # The Python test runners (contract suite, E2E, packaged live audit): tests/requirements.txt.
+  - package-ecosystem: pip
+    directory: /tests
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      test-runners:
         patterns:
           - "*"
 
