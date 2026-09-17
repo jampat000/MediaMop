@@ -7,31 +7,26 @@ namespace Weir.Core.LibraryMode;
 /// Library mode's job kinds (#505) and where they sort against the download pipeline's jobs.
 /// </summary>
 /// <remarks>
-/// Built while ADR-0017 froze the SQLite schema, so none of #505's state lives in a new table or column; it is stored on job
-/// rows and can move to proper tables in a later migration now that the freeze has ended (#523).
-/// <see cref="SettingsKind"/> and <see cref="ScanKind"/> are <c>refiner_jobs</c> rows used as a durable JSON store, the same trick
-/// <c>RefinerJobSwapJournal</c> (#506) already uses for the swap journal — see <c>apps/server/README.md</c>, "Library mode" for
-/// the full storage decision.
+/// Built while ADR-0017 froze the SQLite schema, so #505's state originally lived on job rows rather than
+/// new tables. Issue #557 (after the freeze ended with #523) moved the per-library settings
+/// (<see cref="LibrarySettings"/>) onto real <c>refiner_libraries</c> columns and the <c>library_folders</c>
+/// table, and the scan index onto <c>library_files</c> — see <c>Weir.Infrastructure.LibraryMode.LibrarySettingsStore</c>/
+/// <c>LibraryScanStore</c> and <c>apps/server/README.md</c>, "Library mode" for the current storage.
+/// <see cref="ScanKind"/> is still an ordinary <c>refiner_jobs</c> row (a scan is real, visible work with a
+/// lifecycle); only its bulky per-file payload moved to <c>library_files</c>.
 /// </remarks>
 public static class LibraryModeJobKinds
 {
     /// <summary>
-    /// One permanent row per library, status always <c>completed</c> (never claimed): its payload is
-    /// <c>{"library_id","library_folders","library_schedule_enabled"}</c>. Never queued as work.
-    /// </summary>
-    public const string SettingsKind = "refiner.library.settings.v1";
-
-    /// <summary>
-    /// One row per requested scan, an ordinary job. Its completed payload's <c>scan_result</c> is the file
-    /// index / plan cache for the library: the latest completed row for a library is read as that library's
-    /// current file list.
+    /// One row per requested scan, an ordinary job. Its completed payload keeps only a small
+    /// <c>ok</c>/<c>generated_at</c>/<c>errors</c> outcome; the file list itself lives in
+    /// <c>library_files</c> (see <c>LibraryScanStore</c>). The latest completed row for a library is read
+    /// as that library's current scan status.
     /// </summary>
     public const string ScanKind = "refiner.library.scan.v1";
 
     /// <summary>One row per file Weir is asked to clean in place. Runs the remux pass in <c>mode: library</c>, then the #506 safe swap.</summary>
     public const string CleanKind = "refiner.library.clean.v1";
-
-    public static string SettingsDedupeKey(long libraryId) => $"{SettingsKind}:{libraryId}";
 
     public static string ScanDedupeKey(long libraryId) => $"{ScanKind}:{libraryId}:{Guid.NewGuid():N}";
 

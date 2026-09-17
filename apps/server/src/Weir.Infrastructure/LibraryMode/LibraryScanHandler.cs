@@ -62,7 +62,7 @@ public sealed class LibraryScanHandler : IJobHandler
         RefinerLibraryRecord? library;
         LibrarySettings settings;
         RefinerRulesConfig rules;
-        LibraryScanSnapshot? previous;
+        IReadOnlyList<LibraryScanFileEntry> previousFiles;
         List<ManagerConnection> connections;
         await using (uow.ConfigureAwait(false))
         {
@@ -100,12 +100,12 @@ public sealed class LibraryScanHandler : IJobHandler
 
             var ruleSet = library.RuleSetId is { } ruleSetId ? await LibraryStore.GetRuleSetAsync(uow, ruleSetId).ConfigureAwait(false) : null;
             rules = ruleSet is not null ? RemuxPassPaths.RulesConfigFor(ruleSet) : RuleSetConversion.ToRulesConfig(null);
-            previous = await LibraryScanStore.PreviousSnapshotForCacheAsync(uow, libraryId, context.Id).ConfigureAwait(false);
+            previousFiles = await LibraryScanStore.PreviousFilesForCacheAsync(uow, libraryId).ConfigureAwait(false);
             connections = await _connections.ConnectionsForScopeAsync(uow, library.MediaType).ConfigureAwait(false);
             await uow.CommitAsync().ConfigureAwait(false);
         }
 
-        var previousByPath = (previous?.Files ?? []).ToDictionary(f => f.Path, StringComparer.Ordinal);
+        var previousByPath = previousFiles.ToDictionary(f => f.Path, StringComparer.Ordinal);
 
         var entries = new List<LibraryScanFileEntry>();
         var errors = new List<string>();
