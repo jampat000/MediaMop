@@ -44,6 +44,12 @@ public sealed class RequeueStore(RefinerJobStore jobStore)
             "UPDATE refiner_files SET status = @status, status_reason = @reason, failure_attempts = 0, failure_class = NULL, " +
             "next_retry_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
             ("@status", RefinerFileStatuses.Unprocessed), ("@reason", detail), ("@id", row.Id)).ConfigureAwait(false);
+
+        // RefinerJobStore writes through its own connection, outside uow's. Committing here (rather than
+        // leaving it to the caller) releases uow's write lock before the next file's EnqueueOrGetAsync call
+        // in a bulk requeue needs one — otherwise the two connections deadlock against each other's
+        // uncommitted BEGIN IMMEDIATE / deferred-write locks until SQLite's busy timeout.
+        await uow.CommitAsync().ConfigureAwait(false);
         return new RequeueResult(1, 0, detail);
     }
 

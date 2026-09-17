@@ -71,6 +71,7 @@ public static class SuiteSettingsStore
         Compare("processing_paused", before.ProcessingPaused, after.ProcessingPaused, v => v ? 1 : 0);
         Compare("processing_paused_until", before.ProcessingPausedUntil, after.ProcessingPausedUntil, v => SqliteValues.ToSqlite(v));
         Compare("scan_while_paused", before.ScanWhilePaused, after.ScanWhilePaused, v => v ? 1 : 0);
+        Compare("direct_play_devices", before.DirectPlayDevices, after.DirectPlayDevices, v => v);
         Compare("metadata_provider", before.MetadataProvider, after.MetadataProvider, v => v);
         Compare("metadata_provider_base_url", before.MetadataProviderBaseUrl, after.MetadataProviderBaseUrl, v => v);
         Compare("metadata_provider_key_ciphertext", before.MetadataProviderKeyCiphertext, after.MetadataProviderKeyCiphertext, v => v);
