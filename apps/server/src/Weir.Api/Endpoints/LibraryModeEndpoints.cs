@@ -35,7 +35,9 @@ public static class LibraryModeEndpoints
 
     private static PyDict SettingsOut(LibrarySettings settings) => new PyDict()
         .Set("library_folders", new PyList(settings.Folders.Select(f => (PyJson)new PyStr(f))))
-        .Set("library_schedule_enabled", settings.ScheduleEnabled);
+        .Set("library_schedule_enabled", settings.ScheduleEnabled)
+        .Set("clean_hardlinked_files", settings.CleanHardlinkedFiles)
+        .Set("skip_if_manager_would_redownload", settings.SkipIfManagerWouldRedownload);
 
     private static async Task<ApiResult> GetSettingsAsync(ApiRequest request)
     {
@@ -57,6 +59,8 @@ public static class LibraryModeEndpoints
         var libraryId = request.PathInt("library_id", issues);
         var model = new BodyModel(payload, issues);
         var folders = model.StrList("library_folders", []);
+        var cleanHardlinkedFiles = model.OptionalBool("clean_hardlinked_files");
+        var skipIfManagerWouldRedownload = model.OptionalBool("skip_if_manager_would_redownload");
         var csrfToken = model.Str("csrf_token", minLength: 1);
         model.Finish(ExtraFields.Forbid);
         issues.ThrowIfAny();
@@ -77,7 +81,12 @@ public static class LibraryModeEndpoints
         }
 
         var existing = await LibrarySettingsStore.GetAsync(uow, libraryId).ConfigureAwait(false);
-        var updated = existing with { Folders = validated };
+        var updated = existing with
+        {
+            Folders = validated,
+            CleanHardlinkedFiles = cleanHardlinkedFiles ?? existing.CleanHardlinkedFiles,
+            SkipIfManagerWouldRedownload = skipIfManagerWouldRedownload ?? existing.SkipIfManagerWouldRedownload,
+        };
         await LibrarySettingsStore.SetAsync(uow, libraryId, updated).ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
         return ApiRoutes.Ok(SettingsOut(updated));
@@ -189,9 +198,11 @@ public static class LibraryModeEndpoints
     /// <summary>
     /// The 400 the web renders as the #505 point 5 confirmation dialog. <c>detail</c> is the exact required sentence; the web
     /// combines it with <c>estimated_bytes_saved</c> for "the size saved" and re-sends the same request with
-    /// <c>confirm_final_removal: true</c> once the user agrees.
+    /// <c>confirm_final_removal: true</c> once the user agrees. <paramref name="warnings"/> is #508's per-file preflight
+    /// notes (seeding, re-download risk) — shown alongside the removal count, whether or not they caused a file to be
+    /// skipped outright.
     /// </summary>
-    private static JsonApiResult ConfirmationRequired(int files, int tracks, long bytesSaved) => new(
+    private static JsonApiResult ConfirmationRequired(int files, int tracks, long bytesSaved, IReadOnlyList<string> warnings) => new(
         StatusCodes.Status400BadRequest,
         new PyDict()
             .Set("error", "confirm_final_removal_required")
@@ -199,9 +210,40 @@ public static class LibraryModeEndpoints
             .Set("files_count", files)
             .Set("tracks_count", tracks)
             .Set("estimated_bytes_saved", bytesSaved)
-            // Empty until #508's LibraryCleanPreflight (seeding/re-download risk) lands; the field's shape is
-            // stable now so the web dialog (which already renders it) needs no change when it is populated.
-            .Set("warnings", new PyList()));
+            .Set("warnings", new PyList(warnings.Select(w => (PyJson)new PyStr(w)))));
+
+    /// <summary>
+    /// #508's hardlink preflight (step 1) for a set of already-scanned files, run at request time rather than trusting the
+    /// scan's own cached classification, since a download client can start seeding a file at any moment after it was scanned.
+    /// The re-download-risk half (step 2) needs the manager's file id and quality profile id, which #505's title matching does
+    /// not resolve yet (<c>apps/server/README.md</c>, "Seams for #507, #508 and #509") — <see cref="LibraryCleanPreflight"/> is
+    /// still the single place that decision is made, it just never receives a risk assessment here.
+    /// </summary>
+    private static List<LibraryFilePreflightResult> Preflight(
+        IEnumerable<LibraryScanFileEntry> files, LibrarySettings settings, IHardlinkInspector inspector)
+    {
+        var results = new List<LibraryFilePreflightResult>();
+        foreach (var file in files)
+        {
+            int? linkCount;
+            try
+            {
+                linkCount = inspector.LinkCount(file.Path);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                linkCount = null;
+            }
+
+            var hardlink = HardlinkPolicy.Evaluate(linkCount, settings.CleanHardlinkedFiles);
+            results.Add(LibraryCleanPreflight.Evaluate(file.Path, hardlink, redownloadRisk: null));
+        }
+
+        return results;
+    }
+
+    private static List<string> PreflightWarningMessages(IEnumerable<LibraryFilePreflightResult> preflight) =>
+        preflight.Where(r => r.Skip).Select(r => $"{Path.GetFileName(r.FilePath)}: {string.Join(" ", r.SkipReasons)}").ToList();
 
     private static async Task<ApiResult> PostCleanAsync(ApiRequest request)
     {
@@ -233,18 +275,30 @@ public static class LibraryModeEndpoints
             throw new ApiException(StatusCodes.Status400BadRequest, "None of the selected files are in the latest scan. Scan the library again first.");
         }
 
+        var settings = await LibrarySettingsStore.GetAsync(uow, libraryId).ConfigureAwait(false);
+        var preflight = Preflight(selected, settings, request.Service<IHardlinkInspector>()).ToDictionary(r => r.FilePath, StringComparer.Ordinal);
+
         var (removingFiles, removingTracks, bytesSaved) = RemovalTotals(selected);
         if (removingFiles > 0 && !confirmed)
         {
-            return ConfirmationRequired(removingFiles, removingTracks, bytesSaved);
+            return ConfirmationRequired(removingFiles, removingTracks, bytesSaved, PreflightWarningMessages(preflight.Values));
         }
 
         var jobStore = request.Service<RefinerJobStore>();
         var jobIds = new List<long>();
+        var skipped = new List<string>();
         foreach (var entry in selected)
         {
             if (entry.Classification != LibraryFileClassification.WouldChange)
             {
+                continue;
+            }
+
+            // #508: a file still shared with a download is never queued, confirmation or not — clean_hardlinked_files
+            // is the only thing that can allow it, since this is a data-safety fact, not a "are you sure" question.
+            if (preflight.TryGetValue(entry.Path, out var fileResult) && fileResult.Skip)
+            {
+                skipped.Add(entry.Path);
                 continue;
             }
 
@@ -259,7 +313,9 @@ public static class LibraryModeEndpoints
             .Set("job_ids", new PyList(jobIds.Select(id => (PyJson)new PyInt(id))))
             .Set("files_count", removingFiles)
             .Set("tracks_count", removingTracks)
-            .Set("estimated_bytes_saved", bytesSaved));
+            .Set("estimated_bytes_saved", bytesSaved)
+            .Set("skipped_paths", new PyList(skipped.Select(p => (PyJson)new PyStr(p))))
+            .Set("warnings", new PyList(PreflightWarningMessages(preflight.Values).Select(w => (PyJson)new PyStr(w)))));
     }
 
     private static async Task<ApiResult> PostScheduleAsync(ApiRequest request)
@@ -285,10 +341,12 @@ public static class LibraryModeEndpoints
         {
             // #505 point 7: turning the schedule on shows the same final-removal warning once, using whatever the last scan found.
             var snapshot = await LibraryScanStore.LatestSnapshotAsync(uow, libraryId).ConfigureAwait(false);
-            var (removingFiles, removingTracks, bytesSaved) = RemovalTotals(snapshot?.Files ?? []);
+            var files = snapshot?.Files ?? [];
+            var (removingFiles, removingTracks, bytesSaved) = RemovalTotals(files);
             if (removingFiles > 0 && !confirmed)
             {
-                return ConfirmationRequired(removingFiles, removingTracks, bytesSaved);
+                var preflight = Preflight(files, settings, request.Service<IHardlinkInspector>());
+                return ConfirmationRequired(removingFiles, removingTracks, bytesSaved, PreflightWarningMessages(preflight));
             }
         }
 

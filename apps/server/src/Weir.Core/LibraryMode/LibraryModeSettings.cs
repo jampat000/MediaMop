@@ -57,15 +57,26 @@ public static class LibraryModePriority
     public const int Low = -1_000_000;
 }
 
-/// <summary>One library's #505 settings: where it looks, and whether the off-by-default schedule runs.</summary>
-public sealed record LibrarySettings(IReadOnlyList<string> Folders, bool ScheduleEnabled)
+/// <summary>
+/// One library's #505 settings: where it looks, whether the off-by-default schedule runs, and #508's two
+/// preflight settings — whether cleaning touches a file still shared with a download (default false, since
+/// cleaning one doubles disk use instead of reducing it) and whether a clean that would make a manager
+/// re-download the title is skipped rather than performed (default true, the safer default).
+/// </summary>
+public sealed record LibrarySettings(
+    IReadOnlyList<string> Folders,
+    bool ScheduleEnabled,
+    bool CleanHardlinkedFiles = false,
+    bool SkipIfManagerWouldRedownload = true)
 {
     public static LibrarySettings Empty { get; } = new([], false);
 
     public PyDict ToPayload(long libraryId) => new PyDict()
         .Set("library_id", libraryId)
         .Set("library_folders", new PyList(Folders.Select(f => (PyJson)new PyStr(f))))
-        .Set("library_schedule_enabled", ScheduleEnabled);
+        .Set("library_schedule_enabled", ScheduleEnabled)
+        .Set("clean_hardlinked_files", CleanHardlinkedFiles)
+        .Set("skip_if_manager_would_redownload", SkipIfManagerWouldRedownload);
 
     public static LibrarySettings FromPayload(PyDict? payload)
     {
@@ -78,7 +89,10 @@ public sealed record LibrarySettings(IReadOnlyList<string> Folders, bool Schedul
             ? list.Items.OfType<PyStr>().Select(s => s.Value).Where(s => s.Length > 0).ToList()
             : [];
         var scheduleEnabled = payload.Get("library_schedule_enabled") is PyBool { Value: true };
-        return new LibrarySettings(folders, scheduleEnabled);
+        // Absent on a settings row written before #508 (or a brand-new library): the documented defaults.
+        var cleanHardlinkedFiles = payload.Get("clean_hardlinked_files") is PyBool { Value: true };
+        var skipIfManagerWouldRedownload = payload.Get("skip_if_manager_would_redownload") is not PyBool { Value: false };
+        return new LibrarySettings(folders, scheduleEnabled, cleanHardlinkedFiles, skipIfManagerWouldRedownload);
     }
 }
 

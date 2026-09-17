@@ -29,6 +29,7 @@ public sealed class LibraryCleanHandler : IJobHandler
     private readonly MediaTools _tools;
     private readonly SafeSwap _swap;
     private readonly ILibraryFileChangeNotifier _notifier;
+    private readonly IHardlinkInspector _hardlinkInspector;
     private readonly TimeProvider _time;
     private readonly ILogger<LibraryCleanHandler> _logger;
 
@@ -37,6 +38,7 @@ public sealed class LibraryCleanHandler : IJobHandler
         MediaTools tools,
         SafeSwap swap,
         ILibraryFileChangeNotifier notifier,
+        IHardlinkInspector hardlinkInspector,
         TimeProvider time,
         ILogger<LibraryCleanHandler> logger)
     {
@@ -44,6 +46,7 @@ public sealed class LibraryCleanHandler : IJobHandler
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
         _swap = swap ?? throw new ArgumentNullException(nameof(swap));
         _notifier = notifier ?? throw new ArgumentNullException(nameof(notifier));
+        _hardlinkInspector = hardlinkInspector ?? throw new ArgumentNullException(nameof(hardlinkInspector));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -77,6 +80,7 @@ public sealed class LibraryCleanHandler : IJobHandler
 
         RefinerLibraryRecord? library;
         RefinerRulesConfig rules;
+        LibrarySettings settings;
         await using (var uow = await UnitOfWork.OpenAsync(_database, cancellationToken).ConfigureAwait(false))
         {
             library = libraryId > 0 ? await LibraryStore.GetAsync(uow, libraryId).ConfigureAwait(false) : null;
@@ -89,7 +93,30 @@ public sealed class LibraryCleanHandler : IJobHandler
 
             var ruleSet = library.RuleSetId is { } ruleSetId ? await LibraryStore.GetRuleSetAsync(uow, ruleSetId).ConfigureAwait(false) : null;
             rules = ruleSet is not null ? RemuxPassPaths.RulesConfigFor(ruleSet) : RuleSetConversion.ToRulesConfig(null);
+            settings = await LibrarySettingsStore.GetAsync(uow, libraryId).ConfigureAwait(false);
             await uow.CommitAsync().ConfigureAwait(false);
+        }
+
+        // #508 step 1: a file another name still shares data with (almost always a download client still seeding
+        // it) is skipped before any read/plan/write work, unless the library allows cleaning hardlinked files. An
+        // unreadable link count (no such file, an unsupported volume) is treated as "cannot tell", which
+        // HardlinkPolicy already resolves to "do not block" rather than guessing.
+        int? linkCount;
+        try
+        {
+            linkCount = _hardlinkInspector.LinkCount(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            linkCount = null;
+        }
+
+        var hardlinkDecision = HardlinkPolicy.Evaluate(linkCount, settings.CleanHardlinkedFiles);
+        if (hardlinkDecision.Skip)
+        {
+            var preflight = LibraryCleanPreflight.Evaluate(path, hardlinkDecision, redownloadRisk: null);
+            await RecordAsync(libraryId, path, trigger, LibraryActivityEventTypes.FileSkipped, string.Join(" ", preflight.SkipReasons)).ConfigureAwait(false);
+            return;
         }
 
         ProbeResult probe;

@@ -32,6 +32,11 @@ public static class LibraryModeServices
         services.TryAddSingleton<SafeSwap>();
         services.TryAddSingleton<SwapRecoverySweep>();
 
+        // #508 preflight: hardlink (pure filesystem) and re-download-risk (arr custom-format prediction) checks.
+        services.TryAddSingleton<IHardlinkInspector>(_ => PhysicalHardlinkInspector.Instance);
+        services.TryAddSingleton<IRedownloadRiskGateway, ArrRedownloadRiskGateway>();
+        services.TryAddSingleton<RedownloadRiskChecker>();
+
         // #507's notify seam: AddWeirMediaManagers (above) registers the real LibraryFileChangeNotifier.
         services.TryAddSingleton<LibraryScanHandler>();
         services.TryAddSingleton<LibraryCleanHandler>();
