@@ -269,11 +269,17 @@ public sealed class MetadataRulesTests
     {
         var (plan, _) = Plan(Probe(Video0, Audio(1)), Config());
 
-        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan);
+        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
 
-        Assert.DoesNotContain(argv, a => a.StartsWith("-metadata:s:a", StringComparison.Ordinal)
-            || a.StartsWith("-metadata:s:s", StringComparison.Ordinal)
-            || a.StartsWith("-metadata:s:v", StringComparison.Ordinal));
+        // #547 item 3 always clears stale per-track statistics tags via "-metadata:s:{v,a,s}:N KEY=" regardless of
+        // any option, so this only asserts that no *track naming* ("title=...") value reaches ffmpeg by default.
+        var titleValues = argv
+            .Select((token, i) => (token, i))
+            .Where(t => t.token.StartsWith("-metadata:s:a", StringComparison.Ordinal)
+                || t.token.StartsWith("-metadata:s:s", StringComparison.Ordinal)
+                || t.token.StartsWith("-metadata:s:v", StringComparison.Ordinal))
+            .Select(t => argv[t.i + 1]);
+        Assert.DoesNotContain(titleValues, v => v.StartsWith("title=", StringComparison.Ordinal));
         Assert.DoesNotContain("-map_chapters", argv);
     }
 
@@ -294,9 +300,11 @@ public sealed class MetadataRulesTests
 
         var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
 
-        Assert.Equal("title=English 5.1 E-AC-3", argv[argv.IndexOf("-metadata:s:a:0") + 1]);
-        Assert.Equal("title=English", argv[argv.IndexOf("-metadata:s:s:0") + 1]);
-        Assert.Equal("title=French", argv[argv.IndexOf("-metadata:s:s:1") + 1]);
+        // #547 item 3's stale-statistics clears reuse the same "-metadata:s:{a,s}:N" flag earlier in the argv, so
+        // the track-naming value (written after) is the *last* occurrence of each flag, not the first.
+        Assert.Equal("title=English 5.1 E-AC-3", argv[argv.LastIndexOf("-metadata:s:a:0") + 1]);
+        Assert.Equal("title=English", argv[argv.LastIndexOf("-metadata:s:s:0") + 1]);
+        Assert.Equal("title=French", argv[argv.LastIndexOf("-metadata:s:s:1") + 1]);
     }
 
     [Fact]
@@ -313,7 +321,7 @@ public sealed class MetadataRulesTests
 
         var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
 
-        Assert.Equal("title=English Forced", argv[argv.IndexOf("-metadata:s:s:0") + 1]);
+        Assert.Equal("title=English Forced", argv[argv.LastIndexOf("-metadata:s:s:0") + 1]);
     }
 
     [Fact]
@@ -323,7 +331,7 @@ public sealed class MetadataRulesTests
 
         var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
 
-        Assert.Equal("title=", argv[argv.IndexOf("-metadata:s:v:0") + 1]);
+        Assert.Equal("title=", argv[argv.LastIndexOf("-metadata:s:v:0") + 1]);
     }
 
     [Fact]
