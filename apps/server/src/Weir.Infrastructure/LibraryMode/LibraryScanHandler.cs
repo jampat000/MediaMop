@@ -4,10 +4,12 @@ using Weir.Core.Jobs;
 using Weir.Core.Json;
 using Weir.Core.LibraryMode;
 using Weir.Core.Media;
+using Weir.Core.MediaManagers;
 using Weir.Core.Refiner;
 using Weir.Core.Rules;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Media;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Refiner.RemuxPass;
 using Weir.Infrastructure.Sqlite;
@@ -20,26 +22,30 @@ namespace Weir.Infrastructure.LibraryMode;
 /// exact same engine the download pipeline plans with. Read-only: no file is written, moved or queued for cleaning by a scan.
 /// </summary>
 /// <remarks>
-/// Title matching (#505: "Blade Runner 2049 (Radarr)") needs <c>IMediaManagerPort.ListLibraryFilesAsync</c>, which is being
-/// added on the separate <c>feat/507-file-changed</c> branch with a different shape than a first draft here used
-/// (<c>Task&lt;ManagerLibraryFilesSignal&gt; ListLibraryFilesAsync(connection, mediaScope, ct)</c>). Wiring it in before that
-/// branch lands would invent a seam #507 does not share, so every file is reported unmatched for now — #505 explicitly
-/// allows that ("An unmatched file is still processable") — and the manager/title columns are wired up once #507 merges.
+/// Title matching (#551, "Blade Runner 2049 (Radarr)"): for every enabled connection covering the library's media scope,
+/// <c>IMediaManagerPort.ListLibraryFilesAsync</c> (#507) is asked which files it knows, then each is matched to one of this
+/// scan's own walked files with <see cref="LibraryTitleMatcher.MatchLocalPath"/> (a direct path comparison, or the reverse
+/// of the local-&gt;manager path translation #507's notify step already uses). A manager that cannot be reached is recorded
+/// as a scan error ("couldn't ask Radarr...") rather than failing the scan; its files, like any file no connection claims,
+/// stay unmatched and processable (#505 explicitly allows this).
 /// </remarks>
 public sealed class LibraryScanHandler : IJobHandler
 {
     private readonly SqliteDatabase _database;
     private readonly MediaTools _tools;
+    private readonly MediaManagerConnectionService _connections;
     private readonly TimeProvider _time;
 
     public LibraryScanHandler(
         SqliteDatabase database,
         MediaTools tools,
+        MediaManagerConnectionService connections,
         TimeProvider time,
         ILogger<LibraryScanHandler> logger)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
+        _connections = connections ?? throw new ArgumentNullException(nameof(connections));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         // Kept in the constructor for DI symmetry with LibraryCleanHandler; nothing here logs yet.
         ArgumentNullException.ThrowIfNull(logger);
@@ -57,6 +63,7 @@ public sealed class LibraryScanHandler : IJobHandler
         LibrarySettings settings;
         RefinerRulesConfig rules;
         LibraryScanSnapshot? previous;
+        List<ManagerConnection> connections;
         await using (uow.ConfigureAwait(false))
         {
             PyDict payload;
@@ -94,6 +101,7 @@ public sealed class LibraryScanHandler : IJobHandler
             var ruleSet = library.RuleSetId is { } ruleSetId ? await LibraryStore.GetRuleSetAsync(uow, ruleSetId).ConfigureAwait(false) : null;
             rules = ruleSet is not null ? RemuxPassPaths.RulesConfigFor(ruleSet) : RuleSetConversion.ToRulesConfig(null);
             previous = await LibraryScanStore.PreviousSnapshotForCacheAsync(uow, libraryId, context.Id).ConfigureAwait(false);
+            connections = await _connections.ConnectionsForScopeAsync(uow, library.MediaType).ConfigureAwait(false);
             await uow.CommitAsync().ConfigureAwait(false);
         }
 
@@ -106,6 +114,9 @@ public sealed class LibraryScanHandler : IJobHandler
             cancellationToken.ThrowIfCancellationRequested();
             entries.Add(await ClassifyOneAsync(walked, rules, previousByPath, cancellationToken).ConfigureAwait(false));
         }
+
+        // #551: match each walked file to the title a linked Sonarr/Radarr connection already knows it under.
+        errors.AddRange(await MatchManagerTitlesAsync(connections, library.MediaType, settings.Folders, entries, cancellationToken).ConfigureAwait(false));
 
         var snapshot = new LibraryScanSnapshot(libraryId, _time.GetUtcNow(), entries, errors);
         var wouldChange = entries.Count(e => e.Classification == LibraryFileClassification.WouldChange);
@@ -177,5 +188,87 @@ public sealed class LibraryScanHandler : IJobHandler
             null,
             probeJson,
             classification.EstimatedBytesSaved);
+    }
+
+    /// <summary>
+    /// #551: asks every connection covering this library's scope which files it knows, matches each to one of
+    /// <paramref name="entries"/>' own paths, and mutates the first match's manager fields in place (a path
+    /// already claimed by an earlier connection is left alone — first reported match wins). Returns one plain
+    /// note per connection Weir could not ask, for the scan's own error list ("couldn't ask Radarr..."); an
+    /// unreachable manager never fails the scan, and every file it would have covered simply stays unmatched.
+    /// </summary>
+    private async Task<List<string>> MatchManagerTitlesAsync(
+        List<ManagerConnection> connections,
+        string mediaScope,
+        IReadOnlyList<string> localFolders,
+        List<LibraryScanFileEntry> entries,
+        CancellationToken cancellationToken)
+    {
+        var notes = new List<string>();
+        if (entries.Count == 0 || connections.Count == 0)
+        {
+            return notes;
+        }
+
+        var localPaths = entries.Select(e => e.Path).ToList();
+        var matchedPaths = new HashSet<string>(StringComparer.Ordinal);
+        var indexByPath = entries
+            .Select((entry, index) => (entry.Path, index))
+            .ToDictionary(pair => pair.Path, pair => pair.index, StringComparer.Ordinal);
+
+        foreach (var connection in connections)
+        {
+            if (_connections.Ports.PortForKind(connection.Kind) is not { } port)
+            {
+                continue;
+            }
+
+            ManagerLibraryFilesSignal signal;
+            try
+            {
+                signal = await port.ListLibraryFilesAsync(connection, mediaScope, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is MediaManagerHttpException or MediaManagerUnreachableException)
+            {
+                notes.Add($"Weir couldn't ask {connection.Label} which titles it manages: {exception.Message}");
+                continue;
+            }
+
+            if (signal.Status == SignalStatus.Unreachable)
+            {
+                notes.Add($"Weir couldn't ask {connection.Label} which titles it manages: {signal.Detail}");
+                continue;
+            }
+
+            if (signal.Status != SignalStatus.Reported || signal.Files.Count == 0)
+            {
+                continue;
+            }
+
+            var description = await port.DescribeAsync(connection, cancellationToken).ConfigureAwait(false);
+            var managerLibraries = description.Status == SignalStatus.Reported ? description.Libraries : [];
+
+            foreach (var file in signal.Files)
+            {
+                var localPath = LibraryTitleMatcher.MatchLocalPath(file.FilePath, localPaths, managerLibraries, localFolders);
+                if (localPath is null || !matchedPaths.Add(localPath))
+                {
+                    continue;
+                }
+
+                var index = indexByPath[localPath];
+                entries[index] = entries[index] with
+                {
+                    ManagerKind = connection.Kind,
+                    ManagerTitle = file.TitleName,
+                    ManagerConnectionId = connection.ConnectionId,
+                    ManagerTitleId = file.TitleId,
+                    ManagerFileId = file.FileId,
+                    ManagerQualityProfileId = file.QualityProfileId,
+                };
+            }
+        }
+
+        return notes;
     }
 }

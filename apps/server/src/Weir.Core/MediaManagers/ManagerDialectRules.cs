@@ -171,7 +171,9 @@ public static class ManagerDialectRules
             }
 
             var idText = id.ToString(CultureInfo.InvariantCulture);
-            files.Add(new ManagerLibraryFile(idText, PyValues.FirstText(row, "title") ?? idText, path));
+            var fileId = PyValues.FirstNumber(file, "id") is { } fileNumber ? (long)fileNumber : (long?)null;
+            var qualityProfileId = PyValues.FirstNumber(row, "qualityProfileId") is { } profileNumber ? (long)profileNumber : (long?)null;
+            files.Add(new ManagerLibraryFile(idText, PyValues.FirstText(row, "title") ?? idText, path, fileId, qualityProfileId));
         }
 
         return files;
@@ -179,18 +181,21 @@ public static class ManagerDialectRules
 
     /// <summary>
     /// list_library_files (#507), the series half: one series' <c>/api/v3/episodefile?seriesId=</c> rows, each
-    /// tagged with the series id/title the caller already looked up (verified: Sonarr's <c>EpisodeFileController
-    /// .GetEpisodeFiles</c> throws <c>BadRequestException</c> without <c>seriesId</c> or <c>episodeFileIds</c>,
-    /// so listing every file means walking <c>/api/v3/series</c> first, one call per series).
+    /// tagged with the series id/title/quality-profile-id the caller already looked up from <c>/api/v3/series</c>
+    /// (verified: Sonarr's <c>EpisodeFileController.GetEpisodeFiles</c> throws <c>BadRequestException</c> without
+    /// <c>seriesId</c> or <c>episodeFileIds</c>, so listing every file means walking <c>/api/v3/series</c> first,
+    /// one call per series). #551's <see cref="ManagerLibraryFile.FileId"/> is each row's own <c>id</c> — the
+    /// individual episode file, not the series.
     /// </summary>
-    public static List<ManagerLibraryFile> ArrEpisodeLibraryFiles(PyJson? payload, string seriesId, string seriesTitle)
+    public static List<ManagerLibraryFile> ArrEpisodeLibraryFiles(PyJson? payload, string seriesId, string seriesTitle, long? seriesQualityProfileId = null)
     {
         var files = new List<ManagerLibraryFile>();
         foreach (var row in PyValues.Dicts(payload))
         {
             if (PyValues.Text(row.Get("path")) is { } path)
             {
-                files.Add(new ManagerLibraryFile(seriesId, seriesTitle, path));
+                var fileId = PyValues.FirstNumber(row, "id") is { } fileNumber ? (long)fileNumber : (long?)null;
+                files.Add(new ManagerLibraryFile(seriesId, seriesTitle, path, fileId, seriesQualityProfileId));
             }
         }
 

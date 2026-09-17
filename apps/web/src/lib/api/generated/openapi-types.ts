@@ -2462,7 +2462,7 @@ export interface components {
     };
     /**
      * LibraryRedownloadOut
-     * @description Issue #509 step 3's answer. Always outcome 'unsupported' today — see LibraryRedownloadTitleOut.can_redownload's remarks.
+     * @description Issue #509 step 3's answer: outcome is 'requested', 'deleted_but_search_failed', 'unsupported' (no manager, or issue #551's title matching never resolved this file) or 'failed' (the manager call itself could not be reached).
      */
     LibraryRedownloadOut: {
       /** Message */
@@ -2479,7 +2479,7 @@ export interface components {
     LibraryRedownloadTitleOut: {
       /**
        * Can Redownload
-       * @description Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a manager file id Weir can act on. Always false until #505's title matching resolves that id.
+       * @description Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a file issue #551's title matching actually resolved to one of that manager's titles.
        */
       can_redownload: boolean;
       /**

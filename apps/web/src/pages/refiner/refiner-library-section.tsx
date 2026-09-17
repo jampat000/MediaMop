@@ -9,6 +9,7 @@ import { useMeQuery } from "../../lib/auth/queries";
 import {
   formatBytes,
   LIBRARY_FILE_CLASSIFICATION_LABELS,
+  LIBRARY_MANAGER_FILTER_OPTIONS,
   type LibraryConfirmationRequired,
   type LibraryFileClassification,
 } from "../../lib/refiner/library-api";
@@ -66,10 +67,15 @@ export function RefinerLibrarySection() {
   const [classification, setClassification] = useState<
     LibraryFileClassification | ""
   >("");
+  const [manager, setManager] = useState("");
   const [search, setSearch] = useState("");
   const files = useLibraryFilesQuery(
     libraryId ?? 0,
-    { classification: classification || undefined, q: search || undefined },
+    {
+      classification: classification || undefined,
+      manager: manager || undefined,
+      q: search || undefined,
+    },
     libraryId !== null,
   );
 
@@ -378,6 +384,20 @@ export function RefinerLibrarySection() {
               ).map((value) => (
                 <option key={value} value={value}>
                   {LIBRARY_FILE_CLASSIFICATION_LABELS[value]}
+                </option>
+              ))}
+            </select>
+            <select
+              className={mmSelectFieldClass}
+              style={{ maxWidth: "12rem" }}
+              value={manager}
+              onChange={(e) => setManager(e.target.value)}
+              aria-label="Filter by manager"
+            >
+              <option value="">All managers</option>
+              {LIBRARY_MANAGER_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>

@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Weir.Core.Jobs;
 using Weir.Core.LibraryMode;
+using Weir.Core.MediaManagers;
 using Weir.Infrastructure.LibraryMode;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Tests.Media;
@@ -29,6 +30,7 @@ public sealed class LibraryScanHandlerTests : IDisposable
     private LibraryScanHandler Handler() => new(
         _fixture.Store.Database,
         new MediaTools(_media, new FixedResolver(), new ListLogger<MediaTools>(), TimeProvider.System),
+        _fixture.Connections,
         _fixture.Store.Clock,
         NullLogger<LibraryScanHandler>.Instance);
 
@@ -124,5 +126,134 @@ public sealed class LibraryScanHandlerTests : IDisposable
         var snapshot = await _fixture.Db(uow => LibraryScanStore.LatestSnapshotAsync(uow, library), commit: false);
         Assert.NotNull(snapshot);
         Assert.Empty(snapshot!.Files);
+    }
+
+    // --- #551: manager title matching --------------------------------------------------------------
+
+    [Fact]
+    public async Task A_scan_matches_a_file_to_a_fake_radarr_title_when_the_path_is_shared()
+    {
+        var library = await LibraryAsync();
+        await _fixture.Db(async uow => { await LibrarySettingsStore.SetAsync(uow, library, new LibrarySettings([_libraryFolder.Path], false)); return true; });
+        await _fixture.AddConnectionAsync("radarr", "Radarr");
+
+        var path = _libraryFolder.Join("english-and-japanese.mkv");
+        await File.WriteAllBytesAsync(path, [4, 5, 6]);
+        _media.Probes["english-and-japanese.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+
+        var jsonPath = path.Replace("\\", "\\\\", StringComparison.Ordinal);
+        _fixture.Http.Json(HttpMethod.Get, "/api/v3/movie",
+            """[{"id":7,"title":"Blade Runner 2049","qualityProfileId":3,"movieFile":{"id":42,"path":"__PATH__"}}]""".Replace("__PATH__", jsonPath, StringComparison.Ordinal));
+
+        var jobId = await EnqueueScanAsync(library);
+        await RunScanAsync(jobId);
+
+        var snapshot = await _fixture.Db(uow => LibraryScanStore.LatestSnapshotAsync(uow, library), commit: false);
+        var file = snapshot!.Files.Single();
+        Assert.Equal("radarr", file.ManagerKind);
+        Assert.Equal("Blade Runner 2049", file.ManagerTitle);
+        Assert.Equal("7", file.ManagerTitleId);
+        Assert.Equal(42L, file.ManagerFileId);
+        Assert.Equal(3L, file.ManagerQualityProfileId);
+        Assert.NotNull(file.ManagerConnectionId);
+    }
+
+    /// <summary>
+    /// #508/#551: a scan's own match data (connection id, manager file id, quality profile id) is exactly what
+    /// the re-download-risk preflight needs — no separate lookup — so wiring the two together produces a real
+    /// warning for a matched Sonarr/Radarr file, not the always-null placeholder #505 shipped with.
+    /// </summary>
+    [Fact]
+    public async Task A_scans_match_data_feeds_a_real_redownload_risk_warning()
+    {
+        var library = await LibraryAsync();
+        await _fixture.Db(async uow => { await LibrarySettingsStore.SetAsync(uow, library, new LibrarySettings([_libraryFolder.Path], false)); return true; });
+        await _fixture.AddConnectionAsync("radarr", "Radarr");
+
+        var path = _libraryFolder.Join("english-and-japanese.mkv");
+        await File.WriteAllBytesAsync(path, [4, 5, 6]);
+        _media.Probes["english-and-japanese.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+
+        var jsonPath = path.Replace("\\", "\\\\", StringComparison.Ordinal);
+        _fixture.Http.Json(HttpMethod.Get, "/api/v3/movie",
+            """[{"id":7,"title":"Blade Runner 2049","qualityProfileId":4,"movieFile":{"id":42,"path":"__PATH__"}}]""".Replace("__PATH__", jsonPath, StringComparison.Ordinal));
+
+        var jobId = await EnqueueScanAsync(library);
+        await RunScanAsync(jobId);
+
+        var snapshot = await _fixture.Db(uow => LibraryScanStore.LatestSnapshotAsync(uow, library), commit: false);
+        var file = snapshot!.Files.Single();
+        Assert.NotNull(file.ManagerConnectionId);
+        Assert.Equal(42L, file.ManagerFileId);
+        Assert.Equal(4L, file.ManagerQualityProfileId);
+
+        var connection = (await _fixture.Db(uow => _fixture.Connections.ConnectionsByIdAsync(uow, [file.ManagerConnectionId!.Value]), commit: false)).Single();
+        _fixture.Http
+            .Json(HttpMethod.Get, "/api/v3/moviefile/42",
+                """{"id":42,"languages":[{"id":1,"name":"English"}],"customFormats":[{"id":9,"name":"Multi-Audio","specifications":[{"implementation":"LanguageSpecification","implementationName":"Language","negate":false,"fields":[{"name":"value","value":1},{"name":"exceptLanguage","value":true}]}]}],"customFormatScore":50}""")
+            .Json(HttpMethod.Get, "/api/v3/qualityprofile/4",
+                """{"id":4,"upgradeAllowed":true,"cutoffFormatScore":60,"formatItems":[{"id":1,"format":9,"name":"Multi-Audio","score":50}]}""");
+
+        var checker = new RedownloadRiskChecker(new ArrRedownloadRiskGateway(_fixture.Http));
+        var risk = await checker.CheckAsync(
+            connection, MediaManagerKinds.Movie, file.ManagerFileId!.Value, file.ManagerQualityProfileId!.Value,
+            file.ManagerTitle!, ["jpn"], skipIfManagerWouldRedownload: true);
+
+        var preflight = LibraryCleanPreflight.Evaluate(file.Path, HardlinkDecision.Allow, risk);
+        Assert.True(preflight.Skip);
+        Assert.Contains("Blade Runner 2049", Assert.Single(preflight.SkipReasons), StringComparison.Ordinal);
+        Assert.Contains("Radarr", Assert.Single(preflight.SkipReasons), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_scan_matches_a_manager_path_by_reverse_translating_its_own_library_root()
+    {
+        var library = await LibraryAsync();
+        await _fixture.Db(async uow => { await LibrarySettingsStore.SetAsync(uow, library, new LibrarySettings([_libraryFolder.Path], false)); return true; });
+        await _fixture.AddConnectionAsync("radarr", "Radarr");
+
+        Directory.CreateDirectory(_libraryFolder.Join("Blade Runner 2049 (2017)"));
+        var path = _libraryFolder.Join("Blade Runner 2049 (2017)", "movie.mkv");
+        await File.WriteAllBytesAsync(path, [1, 2, 3]);
+        _media.Probes["movie.mkv"] = FakeMediaRunner.EnglishOnly;
+
+        // The manager's own root folder ("/movies") differs from Weir's local library folder: the match has to
+        // reverse-translate "/movies/Blade Runner 2049 (2017)/movie.mkv" back onto the local folder to find it.
+        _fixture.Http
+            .Json(HttpMethod.Get, "/api/v3/rootfolder", """[{"id":1,"path":"/movies"}]""")
+            .Json(HttpMethod.Get, "/api/v3/movie",
+                """[{"id":7,"title":"Blade Runner 2049","qualityProfileId":3,"movieFile":{"id":42,"path":"/movies/Blade Runner 2049 (2017)/movie.mkv"}}]""");
+
+        var jobId = await EnqueueScanAsync(library);
+        await RunScanAsync(jobId);
+
+        var snapshot = await _fixture.Db(uow => LibraryScanStore.LatestSnapshotAsync(uow, library), commit: false);
+        var file = snapshot!.Files.Single();
+        Assert.Equal("radarr", file.ManagerKind);
+        Assert.Equal("Blade Runner 2049", file.ManagerTitle);
+    }
+
+    [Fact]
+    public async Task An_unreachable_manager_is_recorded_as_a_scan_error_and_the_file_stays_unmatched()
+    {
+        var library = await LibraryAsync();
+        await _fixture.Db(async uow => { await LibrarySettingsStore.SetAsync(uow, library, new LibrarySettings([_libraryFolder.Path], false)); return true; });
+        await _fixture.AddConnectionAsync("radarr", "Radarr");
+        // No /api/v3/movie route is scripted: the fake HTTP client refuses the connection, which the port
+        // reports as SignalStatus.Unreachable rather than throwing out of ListLibraryFilesAsync.
+
+        var path = _libraryFolder.Join("film.mkv");
+        await File.WriteAllBytesAsync(path, [1, 2, 3]);
+        _media.Probes["film.mkv"] = FakeMediaRunner.EnglishOnly;
+
+        var jobId = await EnqueueScanAsync(library);
+        await RunScanAsync(jobId);
+
+        var snapshot = await _fixture.Db(uow => LibraryScanStore.LatestSnapshotAsync(uow, library), commit: false);
+        var file = snapshot!.Files.Single();
+        Assert.Null(file.ManagerKind);
+        Assert.Null(file.ManagerTitle);
+        Assert.Single(snapshot.Errors);
+        Assert.Contains("Radarr", snapshot.Errors[0], StringComparison.Ordinal);
     }
 }

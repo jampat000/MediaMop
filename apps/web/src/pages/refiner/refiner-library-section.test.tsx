@@ -145,6 +145,78 @@ it("shows the library's folders and files, with a would-change file selectable",
   );
 });
 
+it("shows a matched file's manager title and re-fetches when the manager filter changes", async () => {
+  asOperator();
+  vi.spyOn(librariesApi, "fetchRefinerLibraries").mockResolvedValue([
+    library(),
+  ]);
+  vi.spyOn(libraryApi, "fetchLibrarySettings").mockResolvedValue({
+    library_folders: ["/srv/movies/library"],
+    library_schedule_enabled: false,
+    clean_hardlinked_files: false,
+    skip_if_manager_would_redownload: true,
+  });
+  vi.spyOn(libraryApi, "fetchLibraryRedownloads").mockResolvedValue({
+    library_id: 1,
+    titles: [],
+    total: 0,
+  });
+  const fetchFiles = vi
+    .spyOn(libraryApi, "fetchLibraryFiles")
+    .mockResolvedValue({
+      library_id: 1,
+      scan: { job_id: 9, status: "completed", generated_at: 1700000000 },
+      summary: {
+        matches: 0,
+        would_change: 1,
+        cannot_process: 0,
+        total_removed_audio_tracks: 1,
+        total_removed_subtitle_tracks: 0,
+        estimated_bytes_saved: 1_048_576,
+      },
+      files: [
+        {
+          path: "/srv/movies/library/film.mkv",
+          size_bytes: 5_000_000,
+          classification: "would_change",
+          summary: "Would remove 1 audio track(s) (jpn).",
+          reason: null,
+          removed_audio_tracks: 1,
+          removed_subtitle_tracks: 0,
+          estimated_bytes_saved: 1_048_576,
+          manager_kind: "radarr",
+          manager_title: "Blade Runner 2049",
+        },
+      ],
+      total: 1,
+    });
+
+  render(<RefinerLibrarySection />, { wrapper });
+
+  expect(
+    await screen.findByText("Blade Runner 2049 (radarr)"),
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(fetchFiles).toHaveBeenCalledWith(1, {
+      classification: undefined,
+      manager: undefined,
+      q: undefined,
+    }),
+  );
+
+  fireEvent.change(screen.getByLabelText("Filter by manager"), {
+    target: { value: "radarr" },
+  });
+
+  await waitFor(() =>
+    expect(fetchFiles).toHaveBeenCalledWith(1, {
+      classification: undefined,
+      manager: "radarr",
+      q: undefined,
+    }),
+  );
+});
+
 it("shows the exact final-removal confirmation text before cleaning, then cleans once confirmed", async () => {
   asOperator();
   vi.spyOn(librariesApi, "fetchRefinerLibraries").mockResolvedValue([

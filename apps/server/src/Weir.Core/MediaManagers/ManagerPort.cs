@@ -70,8 +70,15 @@ public sealed record ManagerLibraryTruth(ManagerConnection Connection, string St
     public bool IsReported => Status == SignalStatus.Reported;
 }
 
-/// <summary>One file a manager's library holds, matched to the title that owns it (<c>list_library_files</c>, #507).</summary>
-public sealed record ManagerLibraryFile(string TitleId, string TitleName, string FilePath);
+/// <summary>
+/// One file a manager's library holds, matched to the title that owns it (<c>list_library_files</c>, #507).
+/// <see cref="FileId"/> and <see cref="QualityProfileId"/> (#551) are read from the same movie/series payload
+/// this file was already found in — a movie's own <c>movieFile.id</c>, an episode file row's own <c>id</c>,
+/// and either resource's own <c>qualityProfileId</c> — so resolving them costs no extra round trip. Null for
+/// a manager kind or shape that does not carry them (there is none among Sonarr/Radarr today, but the fields
+/// stay optional rather than assumed always present).
+/// </summary>
+public sealed record ManagerLibraryFile(string TitleId, string TitleName, string FilePath, long? FileId = null, long? QualityProfileId = null);
 
 /// <summary>Every library file one manager reports for a scope, matched to titles, or why it could not (#507).</summary>
 public sealed record ManagerLibraryFilesSignal(ManagerConnection Connection, string Status, IReadOnlyList<ManagerLibraryFile> Files, string? Detail = null)
