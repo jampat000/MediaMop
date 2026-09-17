@@ -62,9 +62,11 @@ internal sealed record ScriptedRun
     public Exception? Throw { get; init; }
 }
 
-internal sealed class FixedResolver(string ffprobe = "ffprobe", string ffmpeg = "ffmpeg") : IMediaToolResolver
+internal sealed class FixedResolver(string ffprobe = "ffprobe", string ffmpeg = "ffmpeg", string? mkvmerge = null) : IMediaToolResolver
 {
     public (string Ffprobe, string Ffmpeg) Resolve() => (ffprobe, ffmpeg);
+
+    public string? ResolveMkvmerge() => mkvmerge;
 }
 
 /// <summary>Hands out the given clock readings (seconds) in order, repeating the last.</summary>
