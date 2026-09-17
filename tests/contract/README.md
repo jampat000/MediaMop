@@ -31,6 +31,10 @@ Useful options and variables:
 | Real ffmpeg for `real_ffmpeg` tests | on `PATH`, or `WEIR_CONTRACT_REAL_FFMPEG_DIR` |
 | Separate leftover-server ledger (parallel runs) | `WEIR_CONTRACT_LEDGER=/tmp/ledger.json` |
 
+Without `WEIR_CONTRACT_LEDGER`, the default ledger path already includes a short hash of the checkout's
+own root (`weir-contract-servers-<hash>.json` in the OS temp dir), so two worktrees of this repo on one
+machine (parallel agents, say) get separate ledgers and never reap each other's contract servers.
+
 The end of every run prints a pass/fail line per area.
 
 ### Against .NET

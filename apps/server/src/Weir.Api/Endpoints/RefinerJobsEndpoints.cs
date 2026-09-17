@@ -83,6 +83,7 @@ public static class RefinerJobsEndpoints
         model.Finish(ExtraFields.Forbid);
         issues.ThrowIfAny();
 
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
         request.RequireConfirmationToken(csrfToken);
         var jobStore = request.Service<RefinerJobStore>();
         var outcome = await jobStore.CancelPendingAsync(id).ConfigureAwait(false);

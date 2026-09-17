@@ -19,6 +19,7 @@ servers.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import os
 import shutil
@@ -51,8 +52,17 @@ def _load_runtime() -> ModuleType:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     ledger = (os.environ.get("WEIR_CONTRACT_LEDGER") or "").strip()
-    module.LEDGER = Path(ledger) if ledger else Path(tempfile.gettempdir()) / "weir-contract-servers.json"
+    module.LEDGER = Path(ledger) if ledger else Path(tempfile.gettempdir()) / _default_ledger_name()
     return module
+
+
+def _default_ledger_name() -> str:
+    """Per-checkout ledger filename: several worktrees on one machine (parallel agents, each with its
+    own clone of this repo) must not reap each other's contract servers through one shared ledger file,
+    so the default path is salted with a short hash of this checkout's root."""
+
+    checksum = hashlib.sha1(str(REPO_ROOT.resolve()).encode("utf-8"), usedforsecurity=False).hexdigest()[:10]
+    return f"weir-contract-servers-{checksum}.json"
 
 
 runtime = _load_runtime()
