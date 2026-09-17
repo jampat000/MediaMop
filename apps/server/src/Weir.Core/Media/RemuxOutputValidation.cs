@@ -35,7 +35,19 @@ public static partial class RemuxOutputValidation
         ("mov/mp4", ["mov", "mp4", "m4a", "3gp", "3g2", "mj2"]),
     ];
 
-    [GeneratedRegex("0x[0-9a-fA-F]+", RegexOptions.CultureInvariant)]
+    /// <summary>
+    /// Pointer addresses, in both forms these lines carry them.
+    /// <para>
+    /// The <c>0x</c> form is the obvious one. The second alternative is the one that matters in practice:
+    /// ffmpeg and ffprobe prefix almost every diagnostic with their own context, and print that pointer
+    /// <b>bare</b> — <c>[matroska,webm @ 000002a22ac49500] Could not find codec parameters…</c>. Without this,
+    /// only the digit runs inside such an address were replaced and the letters survived
+    /// (<c>000002a22ac49500</c> → <c>#a#ac#</c>), so the same warning from two different process runs never
+    /// normalised alike and <see cref="WarningsNewInOutput"/> called every one of them new. A file that made
+    /// ffprobe say anything at all therefore failed its own output validation, every time.
+    /// </para>
+    /// </summary>
+    [GeneratedRegex(@"0x[0-9a-fA-F]+|(?<=@\s)[0-9a-fA-F]{8,}", RegexOptions.CultureInvariant)]
     private static partial Regex HexAddressRegex();
 
     [GeneratedRegex(@"\d+(?:\.\d+)?", RegexOptions.CultureInvariant)]
