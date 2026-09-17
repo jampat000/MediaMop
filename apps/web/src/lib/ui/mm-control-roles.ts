@@ -95,7 +95,7 @@ export function mmActionButtonClass(opts: {
     if (disabled) {
       return [
         actionBase,
-        "cursor-not-allowed border-[var(--mm-border)] bg-[rgba(31,35,42,0.35)] text-[var(--mm-text3)] opacity-80",
+        "cursor-not-allowed border-[var(--mm-border)] bg-[var(--mm-button-quiet-bg)] text-[var(--mm-text3)] opacity-80",
       ].join(" ");
     }
     return [
@@ -115,7 +115,7 @@ export function mmActionButtonClass(opts: {
   }
   return [
     actionBase,
-    "cursor-pointer border-[var(--mm-border)] bg-[rgba(31,35,42,0.45)] text-[var(--mm-text)]",
+    "cursor-pointer border-[var(--mm-border)] bg-[var(--mm-button-secondary-bg)] text-[var(--mm-text)]",
     "hover:border-[rgba(212,175,55,0.55)] hover:bg-[var(--mm-accent-soft)] hover:shadow-sm",
     "active:brightness-[0.97]",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mm-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mm-card-bg)]",
