@@ -8,6 +8,7 @@ This **Weir** repository contains **`apps/backend`** (FastAPI, **SQLite**, cooki
 
 - **Python 3.11+**
 - **Node.js LTS** (npm on `PATH`)
+- **.NET 10 SDK** for `apps/server` (the .NET server that is replacing `apps/backend`)
 
 ## One-time setup (after cloning)
 
@@ -64,6 +65,18 @@ uvicorn weir.api.main:app --host 127.0.0.1 --port 8788 --reload
 ```
 
 Prefer **`.\scripts\dev-backend.ps1`** from the repo root (uses **`scripts/dev-ports.json`**).
+
+## .NET server (`apps/server`)
+
+The C# / .NET 10 server that is replacing `apps/backend` ([ADR-0017](adr/ADR-0017-backend-on-dotnet.md)). It needs the **.NET 10 SDK** (pinned in **`apps/server/global.json`**). From the repo root:
+
+```powershell
+dotnet build apps/server/Weir.slnx -warnaserror
+dotnet test apps/server/Weir.slnx
+dotnet run --project apps/server/src/Weir.Host -- --host 127.0.0.1 --port 8788
+```
+
+It reads the same **`WEIR_*`** variables as the Python backend (not **`apps/backend/.env`**) and serves **`WEIR_WEB_DIST`** the same way. Point it at its own **`WEIR_HOME`** while both backends are in use. CI runs the **`weir-server`** job on Windows and Linux. More in **[`apps/server/README.md`](../apps/server/README.md)**.
 
 ## Web app
 

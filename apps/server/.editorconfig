@@ -1,0 +1,41 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,props,targets,csproj,slnx,pubxml,xml,yml,yaml}]
+indent_size = 2
+
+[*.sql]
+trim_trailing_whitespace = false
+
+[*.cs]
+# Style that the build enforces (EnforceCodeStyleInBuild + TreatWarningsAsErrors).
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_style_readonly_field = true:warning
+csharp_prefer_braces = true:warning
+dotnet_diagnostic.IDE0005.severity = warning  # unnecessary usings
+dotnet_diagnostic.IDE0161.severity = warning  # file-scoped namespaces
+dotnet_diagnostic.IDE0011.severity = warning  # braces
+dotnet_diagnostic.IDE0044.severity = warning  # readonly fields
+dotnet_sort_system_directives_first = true
+
+# Weir writes explicit SQL through Microsoft.Data.Sqlite; table and column names come from
+# constants or sqlite_master, never from requests.
+dotnet_diagnostic.CA2100.severity = none
+
+# Logging through ILogger extension methods is fine at this service's log volume.
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+
+[tests/**.cs]
+# Test names read as sentences.
+dotnet_diagnostic.CA1707.severity = none
+# xUnit test classes are instantiated by the runner.
+dotnet_diagnostic.CA1515.severity = none
+dotnet_diagnostic.CA2007.severity = none

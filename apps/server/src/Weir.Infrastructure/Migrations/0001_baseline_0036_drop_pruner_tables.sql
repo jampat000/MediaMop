@@ -1,0 +1,438 @@
+-- Weir schema 0001: the baseline. Creates exactly what the Python backend's Alembic head
+-- (revision 0036_drop_pruner_tables) creates, including the rows that revision seeds, so a
+-- database created here can be opened by either backend.
+--
+-- The statements are sqlite_master's own text for an Alembic-created database, which keeps
+-- column order, defaults, constraint names and CHECK clauses identical. Do not edit: the parity
+-- test in Weir.Infrastructure.Tests compares this against schema/alembic-head.sql.
+--
+-- The migration runner records the revision in alembic_version after this script succeeds.
+
+CREATE TABLE activity_events (
+	id INTEGER NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	event_type VARCHAR(64) NOT NULL,
+	module VARCHAR(32) NOT NULL,
+	title VARCHAR(255) NOT NULL,
+	detail TEXT,
+	"trigger" VARCHAR(32),
+	result VARCHAR(16),
+	library_id INTEGER,
+	relative_path TEXT,
+	run_key VARCHAR(128),
+	CONSTRAINT pk_activity_events PRIMARY KEY (id)
+);
+
+CREATE TABLE alembic_version (
+	version_num VARCHAR(32) NOT NULL,
+	CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)
+);
+
+CREATE TABLE arr_library_operator_settings (
+	id INTEGER NOT NULL,
+	sonarr_missing_search_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	sonarr_missing_search_max_items_per_run INTEGER DEFAULT '50' NOT NULL,
+	sonarr_missing_search_retry_delay_minutes INTEGER DEFAULT '1440' NOT NULL,
+	sonarr_missing_search_schedule_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	sonarr_missing_search_schedule_days TEXT DEFAULT '' NOT NULL,
+	sonarr_missing_search_schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	sonarr_missing_search_schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	sonarr_missing_search_schedule_interval_seconds INTEGER DEFAULT '3600' NOT NULL,
+	sonarr_upgrade_search_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	sonarr_upgrade_search_max_items_per_run INTEGER DEFAULT '50' NOT NULL,
+	sonarr_upgrade_search_retry_delay_minutes INTEGER DEFAULT '1440' NOT NULL,
+	sonarr_upgrade_search_schedule_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	sonarr_upgrade_search_schedule_days TEXT DEFAULT '' NOT NULL,
+	sonarr_upgrade_search_schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	sonarr_upgrade_search_schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	sonarr_upgrade_search_schedule_interval_seconds INTEGER DEFAULT '3600' NOT NULL,
+	radarr_missing_search_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	radarr_missing_search_max_items_per_run INTEGER DEFAULT '50' NOT NULL,
+	radarr_missing_search_retry_delay_minutes INTEGER DEFAULT '1440' NOT NULL,
+	radarr_missing_search_schedule_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	radarr_missing_search_schedule_days TEXT DEFAULT '' NOT NULL,
+	radarr_missing_search_schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	radarr_missing_search_schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	radarr_missing_search_schedule_interval_seconds INTEGER DEFAULT '3600' NOT NULL,
+	radarr_upgrade_search_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	radarr_upgrade_search_max_items_per_run INTEGER DEFAULT '50' NOT NULL,
+	radarr_upgrade_search_retry_delay_minutes INTEGER DEFAULT '1440' NOT NULL,
+	radarr_upgrade_search_schedule_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	radarr_upgrade_search_schedule_days TEXT DEFAULT '' NOT NULL,
+	radarr_upgrade_search_schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	radarr_upgrade_search_schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	radarr_upgrade_search_schedule_interval_seconds INTEGER DEFAULT '3600' NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	sonarr_connection_enabled BOOLEAN DEFAULT '1' NOT NULL,
+	sonarr_connection_base_url TEXT DEFAULT '' NOT NULL,
+	sonarr_connection_api_key_ciphertext TEXT,
+	sonarr_last_connection_test_ok BOOLEAN,
+	sonarr_last_connection_test_at DATETIME,
+	sonarr_last_connection_test_detail TEXT,
+	radarr_connection_enabled BOOLEAN DEFAULT '1' NOT NULL,
+	radarr_connection_base_url TEXT DEFAULT '' NOT NULL,
+	radarr_connection_api_key_ciphertext TEXT,
+	radarr_last_connection_test_ok BOOLEAN,
+	radarr_last_connection_test_at DATETIME,
+	radarr_last_connection_test_detail TEXT,
+	CONSTRAINT pk_arr_library_operator_settings PRIMARY KEY (id),
+	CONSTRAINT ck_arr_library_operator_settings_ck_arr_library_operator_settings_singleton CHECK (id = 1)
+);
+
+CREATE TABLE media_manager_connections (
+	id INTEGER NOT NULL,
+	kind TEXT NOT NULL,
+	name TEXT NOT NULL,
+	enabled BOOLEAN DEFAULT '1' NOT NULL,
+	base_url TEXT DEFAULT '' NOT NULL,
+	api_key_ciphertext TEXT,
+	webhook_secret_ciphertext TEXT,
+	last_connection_test_ok BOOLEAN,
+	last_connection_test_at DATETIME,
+	last_connection_test_detail TEXT,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_media_manager_connections PRIMARY KEY (id),
+	CONSTRAINT uq_media_manager_connections_name UNIQUE (name)
+);
+
+CREATE TABLE media_manager_handoffs (
+	id INTEGER NOT NULL,
+	source_key TEXT NOT NULL,
+	handoff_id TEXT NOT NULL,
+	library_id INTEGER,
+	relative_path TEXT NOT NULL,
+	state TEXT DEFAULT 'queued' NOT NULL,
+	output_path TEXT,
+	message TEXT,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	last_changed_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_media_manager_handoffs PRIMARY KEY (id),
+	CONSTRAINT uq_media_manager_handoffs_source_id UNIQUE (source_key, handoff_id),
+	CONSTRAINT fk_media_manager_handoffs_refiner_libraries_library_id FOREIGN KEY(library_id) REFERENCES refiner_libraries (id) ON DELETE SET NULL
+);
+
+CREATE TABLE media_manager_search_lanes (
+	id INTEGER NOT NULL,
+	connection_id INTEGER NOT NULL,
+	lane TEXT NOT NULL,
+	enabled BOOLEAN DEFAULT '0' NOT NULL,
+	max_items_per_run INTEGER DEFAULT '50' NOT NULL,
+	retry_delay_minutes INTEGER DEFAULT '1440' NOT NULL,
+	schedule_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	schedule_days TEXT DEFAULT '' NOT NULL,
+	schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	schedule_interval_seconds INTEGER DEFAULT '3600' NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_media_manager_search_lanes PRIMARY KEY (id),
+	CONSTRAINT uq_media_manager_search_lanes_connection_lane UNIQUE (connection_id, lane),
+	CONSTRAINT fk_media_manager_search_lanes_media_manager_connections_connection_id FOREIGN KEY(connection_id) REFERENCES media_manager_connections (id) ON DELETE CASCADE
+);
+
+CREATE TABLE notification_channels (
+	id INTEGER NOT NULL,
+	label TEXT NOT NULL,
+	provider TEXT NOT NULL,
+	url TEXT NOT NULL,
+	events_json TEXT DEFAULT '["job_failed"]' NOT NULL,
+	enabled BOOLEAN DEFAULT '1' NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_notification_channels PRIMARY KEY (id)
+);
+
+CREATE TABLE refiner_file_logs (
+	id INTEGER NOT NULL,
+	file_id INTEGER,
+	library_id INTEGER,
+	relative_path TEXT NOT NULL,
+	library_name TEXT DEFAULT '' NOT NULL,
+	outcome TEXT DEFAULT '' NOT NULL,
+	title TEXT DEFAULT '' NOT NULL,
+	detail_json TEXT DEFAULT '{}' NOT NULL,
+	recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_refiner_file_logs PRIMARY KEY (id),
+	CONSTRAINT fk_refiner_file_logs_refiner_files_file_id FOREIGN KEY(file_id) REFERENCES refiner_files (id) ON DELETE SET NULL,
+	CONSTRAINT fk_refiner_file_logs_refiner_libraries_library_id FOREIGN KEY(library_id) REFERENCES refiner_libraries (id) ON DELETE SET NULL
+);
+
+CREATE TABLE refiner_files (
+	id INTEGER NOT NULL,
+	library_id INTEGER NOT NULL,
+	relative_path TEXT NOT NULL,
+	status TEXT DEFAULT 'unprocessed' NOT NULL,
+	status_reason TEXT DEFAULT '' NOT NULL,
+	blocked_by_connection TEXT,
+	size_bytes BIGINT DEFAULT '0' NOT NULL,
+	video_width INTEGER,
+	video_height INTEGER,
+	video_codec TEXT,
+	audio_track_count INTEGER,
+	subtitle_track_count INTEGER,
+	duration_seconds FLOAT,
+	audio_codecs TEXT,
+	video_bit_depth INTEGER,
+	size_changed_at DATETIME,
+	hold_until DATETIME,
+	failure_class TEXT,
+	failure_attempts INTEGER DEFAULT '0' NOT NULL,
+	next_retry_at DATETIME,
+	output_collision_policy TEXT,
+	output_collision_action TEXT,
+	output_collision_reason TEXT,
+	hardware_method TEXT,
+	hardware_fell_back_to_software BOOLEAN DEFAULT '0' NOT NULL,
+	hardware_reason TEXT,
+	last_seen_at DATETIME,
+	last_attempt_at DATETIME,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_refiner_files PRIMARY KEY (id),
+	CONSTRAINT uq_refiner_files_library_path UNIQUE (library_id, relative_path),
+	CONSTRAINT fk_refiner_files_refiner_libraries_library_id FOREIGN KEY(library_id) REFERENCES refiner_libraries (id) ON DELETE CASCADE
+);
+
+CREATE TABLE refiner_jobs (
+	id INTEGER NOT NULL,
+	dedupe_key VARCHAR(512) NOT NULL,
+	job_kind VARCHAR(64) NOT NULL,
+	payload_json TEXT,
+	status VARCHAR(32) DEFAULT 'pending' NOT NULL,
+	lease_owner VARCHAR(200),
+	lease_expires_at DATETIME,
+	attempt_count INTEGER DEFAULT 0 NOT NULL,
+	max_attempts INTEGER DEFAULT 3 NOT NULL,
+	last_error TEXT,
+	not_before DATETIME,
+	runner_cost INTEGER DEFAULT '0' NOT NULL,
+	priority INTEGER DEFAULT '0' NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_refiner_jobs PRIMARY KEY (id),
+	CONSTRAINT uq_refiner_jobs_dedupe_key UNIQUE (dedupe_key)
+);
+
+CREATE TABLE refiner_libraries (
+	id INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	enabled BOOLEAN DEFAULT '1' NOT NULL,
+	media_type TEXT DEFAULT 'movie' NOT NULL,
+	display_order INTEGER DEFAULT '0' NOT NULL,
+	watched_folder TEXT DEFAULT '' NOT NULL,
+	work_folder TEXT DEFAULT '' NOT NULL,
+	output_folder TEXT DEFAULT '' NOT NULL,
+	media_extensions_csv TEXT DEFAULT '' NOT NULL,
+	exclude_markers_csv TEXT DEFAULT '' NOT NULL,
+	include_patterns_csv TEXT DEFAULT '' NOT NULL,
+	exclude_patterns_csv TEXT DEFAULT '' NOT NULL,
+	min_file_size_mb INTEGER DEFAULT '0' NOT NULL,
+	max_file_size_mb INTEGER DEFAULT '0' NOT NULL,
+	rejected_file_action TEXT DEFAULT 'leave' NOT NULL,
+	min_file_age_seconds INTEGER DEFAULT '60' NOT NULL,
+	created_after DATETIME,
+	created_before DATETIME,
+	modified_after DATETIME,
+	modified_before DATETIME,
+	exclude_hidden BOOLEAN DEFAULT '1' NOT NULL,
+	top_level_only BOOLEAN DEFAULT '0' NOT NULL,
+	sidecar_patterns_csv TEXT DEFAULT '.srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png' NOT NULL,
+	preserve_original_timestamps BOOLEAN DEFAULT '0' NOT NULL,
+	output_collision_policy TEXT DEFAULT 'replace' NOT NULL,
+	hardware_decode_mode TEXT DEFAULT 'off' NOT NULL,
+	hardware_device TEXT DEFAULT '' NOT NULL,
+	hardware_disabled_vendors_csv TEXT DEFAULT '' NOT NULL,
+	ffmpeg_strictness TEXT DEFAULT 'normal' NOT NULL,
+	scan_interval_seconds INTEGER DEFAULT '300' NOT NULL,
+	hold_minutes INTEGER DEFAULT '0' NOT NULL,
+	file_detection_interval_seconds INTEGER DEFAULT '30' NOT NULL,
+	ignore_size_changes BOOLEAN DEFAULT '0' NOT NULL,
+	file_system_events_enabled BOOLEAN DEFAULT '1' NOT NULL,
+	skip_access_tests BOOLEAN DEFAULT '0' NOT NULL,
+	schedule_enabled BOOLEAN DEFAULT '1' NOT NULL,
+	schedule_hours_limited BOOLEAN DEFAULT '0' NOT NULL,
+	schedule_days TEXT DEFAULT '' NOT NULL,
+	schedule_grid TEXT DEFAULT '' NOT NULL,
+	schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	max_attempts INTEGER DEFAULT '3' NOT NULL,
+	retry_backoff_seconds INTEGER DEFAULT '300' NOT NULL,
+	retry_execution_failures BOOLEAN DEFAULT '1' NOT NULL,
+	retry_preflight_failures BOOLEAN DEFAULT '0' NOT NULL,
+	failure_policy TEXT DEFAULT 'pass_through' NOT NULL,
+	max_concurrent_files INTEGER DEFAULT '1' NOT NULL,
+	priority INTEGER DEFAULT '0' NOT NULL,
+	rule_set_id INTEGER,
+	discovered_from_connection_id INTEGER,
+	discovered_library_key TEXT,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_refiner_libraries PRIMARY KEY (id),
+	CONSTRAINT uq_refiner_libraries_name UNIQUE (name),
+	CONSTRAINT fk_refiner_libraries_refiner_rule_sets_rule_set_id FOREIGN KEY(rule_set_id) REFERENCES refiner_rule_sets (id) ON DELETE RESTRICT,
+	CONSTRAINT fk_refiner_libraries_media_manager_connections_discovered_from_connection_id FOREIGN KEY(discovered_from_connection_id) REFERENCES media_manager_connections (id) ON DELETE SET NULL
+);
+
+CREATE TABLE refiner_library_manager_links (
+	id INTEGER NOT NULL,
+	library_id INTEGER NOT NULL,
+	connection_id INTEGER NOT NULL,
+	CONSTRAINT pk_refiner_library_manager_links PRIMARY KEY (id),
+	CONSTRAINT uq_refiner_library_manager_links_pair UNIQUE (library_id, connection_id),
+	CONSTRAINT fk_refiner_library_manager_links_refiner_libraries_library_id FOREIGN KEY(library_id) REFERENCES refiner_libraries (id) ON DELETE CASCADE,
+	CONSTRAINT fk_refiner_library_manager_links_media_manager_connections_connection_id FOREIGN KEY(connection_id) REFERENCES media_manager_connections (id) ON DELETE CASCADE
+);
+
+CREATE TABLE refiner_operator_settings (
+	id INTEGER NOT NULL,
+	max_concurrent_files INTEGER DEFAULT '1' NOT NULL,
+	runner_capacity INTEGER DEFAULT '4' NOT NULL,
+	runner_cost_sd INTEGER DEFAULT '0' NOT NULL,
+	runner_cost_720p INTEGER DEFAULT '0' NOT NULL,
+	runner_cost_1080p INTEGER DEFAULT '1' NOT NULL,
+	runner_cost_4k INTEGER DEFAULT '1' NOT NULL,
+	runner_cost_undetermined INTEGER DEFAULT '0' NOT NULL,
+	work_temp_stale_sweep_enabled BOOLEAN DEFAULT '1' NOT NULL,
+	failure_cleanup_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	keep_failed_work_files BOOLEAN DEFAULT '0' NOT NULL,
+	file_log_retention_days INTEGER DEFAULT '90' NOT NULL,
+	verbose_detection_logging BOOLEAN DEFAULT '0' NOT NULL,
+	min_file_age_seconds INTEGER DEFAULT '60' NOT NULL,
+	refiner_min_input_file_size_mb INTEGER DEFAULT '50' NOT NULL,
+	minimum_free_disk_space_mb INTEGER DEFAULT '5120' NOT NULL,
+	movie_schedule_enabled INTEGER DEFAULT '1' NOT NULL,
+	movie_schedule_hours_limited INTEGER DEFAULT '0' NOT NULL,
+	movie_schedule_days TEXT DEFAULT '' NOT NULL,
+	movie_schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	movie_schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	tv_schedule_enabled INTEGER DEFAULT '1' NOT NULL,
+	tv_schedule_hours_limited INTEGER DEFAULT '0' NOT NULL,
+	tv_schedule_days TEXT DEFAULT '' NOT NULL,
+	tv_schedule_start TEXT DEFAULT '00:00' NOT NULL,
+	tv_schedule_end TEXT DEFAULT '23:59' NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_refiner_operator_settings PRIMARY KEY (id),
+	CONSTRAINT ck_refiner_operator_settings_ck_refiner_operator_settings_singleton CHECK (id = 1)
+);
+
+CREATE TABLE refiner_rule_sets (
+	id INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	primary_audio_lang TEXT DEFAULT '' NOT NULL,
+	secondary_audio_lang TEXT DEFAULT '' NOT NULL,
+	tertiary_audio_lang TEXT DEFAULT '' NOT NULL,
+	default_audio_slot TEXT DEFAULT 'primary' NOT NULL,
+	remove_commentary BOOLEAN DEFAULT '0' NOT NULL,
+	subtitle_mode TEXT DEFAULT 'keep_all' NOT NULL,
+	subtitle_langs_csv TEXT DEFAULT '' NOT NULL,
+	preserve_forced_subs BOOLEAN DEFAULT '1' NOT NULL,
+	preserve_default_subs BOOLEAN DEFAULT '1' NOT NULL,
+	audio_preference_mode TEXT DEFAULT 'preferred_langs_quality' NOT NULL,
+	audio_sorters_json TEXT DEFAULT '' NOT NULL,
+	subtitle_sorters_json TEXT DEFAULT '' NOT NULL,
+	keep_original_language BOOLEAN DEFAULT '0' NOT NULL,
+	original_language_additional_csv TEXT DEFAULT '' NOT NULL,
+	original_language_keep_only_first BOOLEAN DEFAULT '1' NOT NULL,
+	original_language_first_if_none BOOLEAN DEFAULT '1' NOT NULL,
+	original_language_treat_empty_as_original BOOLEAN DEFAULT '0' NOT NULL,
+	remove_images BOOLEAN DEFAULT '0' NOT NULL,
+	remove_attachments BOOLEAN DEFAULT '0' NOT NULL,
+	remove_title BOOLEAN DEFAULT '0' NOT NULL,
+	remove_language_tags BOOLEAN DEFAULT '0' NOT NULL,
+	remove_other_metadata BOOLEAN DEFAULT '0' NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_refiner_rule_sets PRIMARY KEY (id),
+	CONSTRAINT uq_refiner_rule_sets_name UNIQUE (name)
+);
+
+CREATE TABLE suite_configuration_backup (
+	id INTEGER NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	file_name TEXT NOT NULL,
+	size_bytes INTEGER NOT NULL,
+	CONSTRAINT pk_suite_configuration_backup PRIMARY KEY (id),
+	CONSTRAINT uq_suite_configuration_backup_file_name UNIQUE (file_name)
+);
+
+CREATE TABLE suite_settings (
+	id INTEGER NOT NULL,
+	product_display_name TEXT DEFAULT 'Weir' NOT NULL,
+	signed_in_home_notice TEXT,
+	setup_wizard_state TEXT DEFAULT 'pending' NOT NULL,
+	app_timezone TEXT DEFAULT 'UTC' NOT NULL,
+	log_retention_days INTEGER DEFAULT '30' NOT NULL,
+	activity_retention_days INTEGER DEFAULT '90' NOT NULL,
+	direct_play_devices TEXT DEFAULT '' NOT NULL,
+	configuration_backup_enabled BOOLEAN DEFAULT '0' NOT NULL,
+	configuration_backup_interval_hours INTEGER DEFAULT '24' NOT NULL,
+	configuration_backup_preferred_time TEXT DEFAULT '02:00' NOT NULL,
+	configuration_backup_last_run_at DATETIME,
+	processing_paused BOOLEAN DEFAULT '0' NOT NULL,
+	processing_paused_until DATETIME,
+	scan_while_paused BOOLEAN DEFAULT '1' NOT NULL,
+	metadata_provider TEXT DEFAULT '' NOT NULL,
+	metadata_provider_base_url TEXT DEFAULT '' NOT NULL,
+	metadata_provider_key_ciphertext TEXT DEFAULT '' NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_suite_settings PRIMARY KEY (id),
+	CONSTRAINT ck_suite_settings_ck_suite_settings_singleton CHECK (id = 1)
+);
+
+CREATE TABLE user_sessions (
+	id CHAR(32) NOT NULL,
+	user_id INTEGER NOT NULL,
+	token_hash VARCHAR(64) NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	absolute_expires_at DATETIME NOT NULL,
+	is_trusted_device BOOLEAN DEFAULT 0 NOT NULL,
+	last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	revoked_at DATETIME,
+	client_label VARCHAR(80) DEFAULT 'Browser session' NOT NULL,
+	CONSTRAINT pk_user_sessions PRIMARY KEY (id),
+	CONSTRAINT fk_user_sessions_users_user_id FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE,
+	CONSTRAINT uq_user_sessions_token_hash UNIQUE (token_hash)
+);
+
+CREATE TABLE users (
+	id INTEGER NOT NULL,
+	username VARCHAR(64) NOT NULL,
+	password_hash TEXT NOT NULL,
+	role VARCHAR(32) DEFAULT 'viewer' NOT NULL,
+	is_active BOOLEAN DEFAULT 1 NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT pk_users PRIMARY KEY (id),
+	CONSTRAINT uq_users_username UNIQUE (username)
+);
+
+CREATE INDEX ix_activity_events_created_at ON activity_events (created_at);
+
+CREATE INDEX ix_activity_events_module ON activity_events (module);
+
+CREATE INDEX ix_activity_events_relative_path ON activity_events (relative_path);
+
+CREATE INDEX ix_activity_events_run_key ON activity_events (run_key);
+
+CREATE INDEX ix_refiner_file_logs_file ON refiner_file_logs (file_id);
+
+CREATE INDEX ix_refiner_file_logs_path ON refiner_file_logs (relative_path);
+
+CREATE INDEX ix_refiner_file_logs_recorded_at ON refiner_file_logs (recorded_at);
+
+CREATE INDEX ix_refiner_files_library_status ON refiner_files (library_id, status);
+
+CREATE INDEX ix_refiner_files_status ON refiner_files (status);
+
+CREATE INDEX ix_refiner_jobs_status_id ON refiner_jobs (status, id);
+
+CREATE UNIQUE INDEX ux_users_username_lower ON users (lower(username));
+
+-- Seed rows, in foreign-key order.
+INSERT INTO "suite_settings" ("id", "product_display_name", "signed_in_home_notice", "setup_wizard_state", "app_timezone", "log_retention_days", "activity_retention_days", "direct_play_devices", "configuration_backup_enabled", "configuration_backup_interval_hours", "configuration_backup_preferred_time", "configuration_backup_last_run_at", "processing_paused", "processing_paused_until", "scan_while_paused", "metadata_provider", "metadata_provider_base_url", "metadata_provider_key_ciphertext", "updated_at") VALUES (1, 'Weir', NULL, 'pending', 'UTC', 30, 90, '', 0, 24, '02:00', NULL, 0, NULL, 1, '', '', '', CURRENT_TIMESTAMP);
+INSERT INTO "arr_library_operator_settings" ("id", "sonarr_missing_search_enabled", "sonarr_missing_search_max_items_per_run", "sonarr_missing_search_retry_delay_minutes", "sonarr_missing_search_schedule_enabled", "sonarr_missing_search_schedule_days", "sonarr_missing_search_schedule_start", "sonarr_missing_search_schedule_end", "sonarr_missing_search_schedule_interval_seconds", "sonarr_upgrade_search_enabled", "sonarr_upgrade_search_max_items_per_run", "sonarr_upgrade_search_retry_delay_minutes", "sonarr_upgrade_search_schedule_enabled", "sonarr_upgrade_search_schedule_days", "sonarr_upgrade_search_schedule_start", "sonarr_upgrade_search_schedule_end", "sonarr_upgrade_search_schedule_interval_seconds", "radarr_missing_search_enabled", "radarr_missing_search_max_items_per_run", "radarr_missing_search_retry_delay_minutes", "radarr_missing_search_schedule_enabled", "radarr_missing_search_schedule_days", "radarr_missing_search_schedule_start", "radarr_missing_search_schedule_end", "radarr_missing_search_schedule_interval_seconds", "radarr_upgrade_search_enabled", "radarr_upgrade_search_max_items_per_run", "radarr_upgrade_search_retry_delay_minutes", "radarr_upgrade_search_schedule_enabled", "radarr_upgrade_search_schedule_days", "radarr_upgrade_search_schedule_start", "radarr_upgrade_search_schedule_end", "radarr_upgrade_search_schedule_interval_seconds", "updated_at", "sonarr_connection_enabled", "sonarr_connection_base_url", "sonarr_connection_api_key_ciphertext", "sonarr_last_connection_test_ok", "sonarr_last_connection_test_at", "sonarr_last_connection_test_detail", "radarr_connection_enabled", "radarr_connection_base_url", "radarr_connection_api_key_ciphertext", "radarr_last_connection_test_ok", "radarr_last_connection_test_at", "radarr_last_connection_test_detail") VALUES (1, 0, 50, 1440, 0, '', '00:00', '23:59', 3600, 0, 50, 1440, 0, '', '00:00', '23:59', 3600, 0, 50, 1440, 0, '', '00:00', '23:59', 3600, 0, 50, 1440, 0, '', '00:00', '23:59', 3600, CURRENT_TIMESTAMP, 1, '', NULL, NULL, NULL, NULL, 1, '', NULL, NULL, NULL, NULL);
+INSERT INTO "refiner_operator_settings" ("id", "max_concurrent_files", "runner_capacity", "runner_cost_sd", "runner_cost_720p", "runner_cost_1080p", "runner_cost_4k", "runner_cost_undetermined", "work_temp_stale_sweep_enabled", "failure_cleanup_enabled", "keep_failed_work_files", "file_log_retention_days", "verbose_detection_logging", "min_file_age_seconds", "refiner_min_input_file_size_mb", "minimum_free_disk_space_mb", "movie_schedule_enabled", "movie_schedule_hours_limited", "movie_schedule_days", "movie_schedule_start", "movie_schedule_end", "tv_schedule_enabled", "tv_schedule_hours_limited", "tv_schedule_days", "tv_schedule_start", "tv_schedule_end", "updated_at") VALUES (1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 90, 0, 60, 50, 5120, 1, 0, '', '00:00', '23:59', 1, 0, '', '00:00', '23:59', CURRENT_TIMESTAMP);
+INSERT INTO "refiner_rule_sets" ("id", "name", "primary_audio_lang", "secondary_audio_lang", "tertiary_audio_lang", "default_audio_slot", "remove_commentary", "subtitle_mode", "subtitle_langs_csv", "preserve_forced_subs", "preserve_default_subs", "audio_preference_mode", "audio_sorters_json", "subtitle_sorters_json", "keep_original_language", "original_language_additional_csv", "original_language_keep_only_first", "original_language_first_if_none", "original_language_treat_empty_as_original", "remove_images", "remove_attachments", "remove_title", "remove_language_tags", "remove_other_metadata", "created_at", "updated_at") VALUES (1, 'Movies rules', 'eng', 'jpn', '', 'primary', 1, 'remove_all', '', 1, 1, 'preferred_langs_quality', '', '', 0, '', 1, 1, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO "refiner_rule_sets" ("id", "name", "primary_audio_lang", "secondary_audio_lang", "tertiary_audio_lang", "default_audio_slot", "remove_commentary", "subtitle_mode", "subtitle_langs_csv", "preserve_forced_subs", "preserve_default_subs", "audio_preference_mode", "audio_sorters_json", "subtitle_sorters_json", "keep_original_language", "original_language_additional_csv", "original_language_keep_only_first", "original_language_first_if_none", "original_language_treat_empty_as_original", "remove_images", "remove_attachments", "remove_title", "remove_language_tags", "remove_other_metadata", "created_at", "updated_at") VALUES (2, 'TV rules', 'eng', 'jpn', '', 'primary', 1, 'remove_all', '', 1, 1, 'preferred_langs_quality', '', '', 0, '', 1, 1, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO "refiner_libraries" ("id", "name", "enabled", "media_type", "display_order", "watched_folder", "work_folder", "output_folder", "media_extensions_csv", "exclude_markers_csv", "include_patterns_csv", "exclude_patterns_csv", "min_file_size_mb", "max_file_size_mb", "rejected_file_action", "min_file_age_seconds", "created_after", "created_before", "modified_after", "modified_before", "exclude_hidden", "top_level_only", "sidecar_patterns_csv", "preserve_original_timestamps", "output_collision_policy", "hardware_decode_mode", "hardware_device", "hardware_disabled_vendors_csv", "ffmpeg_strictness", "scan_interval_seconds", "hold_minutes", "file_detection_interval_seconds", "ignore_size_changes", "file_system_events_enabled", "skip_access_tests", "schedule_enabled", "schedule_hours_limited", "schedule_days", "schedule_grid", "schedule_start", "schedule_end", "max_attempts", "retry_backoff_seconds", "retry_execution_failures", "retry_preflight_failures", "failure_policy", "max_concurrent_files", "priority", "rule_set_id", "discovered_from_connection_id", "discovered_library_key", "created_at", "updated_at") VALUES (1, 'Movies', 1, 'movie', 0, '', '', '', '.avchd,.avi,.flv,.m4v,.mkv,.mov,.mp4,.mpe,.mpeg,.mpg,.webm,.wmv', '.sabnzbd,__admin__,_failed_,_repair_,_unpack_,incomplete', '', '', 50, 0, 'leave', 60, NULL, NULL, NULL, NULL, 1, 0, '.srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png', 0, 'replace', 'off', '', '', 'normal', 300, 0, 30, 0, 1, 0, 1, 0, '', '', '00:00', '23:59', 3, 300, 1, 0, 'pass_through', 1, 0, 1, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO "refiner_libraries" ("id", "name", "enabled", "media_type", "display_order", "watched_folder", "work_folder", "output_folder", "media_extensions_csv", "exclude_markers_csv", "include_patterns_csv", "exclude_patterns_csv", "min_file_size_mb", "max_file_size_mb", "rejected_file_action", "min_file_age_seconds", "created_after", "created_before", "modified_after", "modified_before", "exclude_hidden", "top_level_only", "sidecar_patterns_csv", "preserve_original_timestamps", "output_collision_policy", "hardware_decode_mode", "hardware_device", "hardware_disabled_vendors_csv", "ffmpeg_strictness", "scan_interval_seconds", "hold_minutes", "file_detection_interval_seconds", "ignore_size_changes", "file_system_events_enabled", "skip_access_tests", "schedule_enabled", "schedule_hours_limited", "schedule_days", "schedule_grid", "schedule_start", "schedule_end", "max_attempts", "retry_backoff_seconds", "retry_execution_failures", "retry_preflight_failures", "failure_policy", "max_concurrent_files", "priority", "rule_set_id", "discovered_from_connection_id", "discovered_library_key", "created_at", "updated_at") VALUES (2, 'TV', 1, 'tv', 1, '', '', '', '.avchd,.avi,.flv,.m4v,.mkv,.mov,.mp4,.mpe,.mpeg,.mpg,.webm,.wmv', '.sabnzbd,__admin__,_failed_,_repair_,_unpack_,incomplete', '', '', 50, 0, 'leave', 60, NULL, NULL, NULL, NULL, 1, 0, '.srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png', 0, 'replace', 'off', '', '', 'normal', 300, 0, 30, 0, 1, 0, 1, 0, '', '', '00:00', '23:59', 3, 300, 1, 0, 'pass_through', 1, 0, 2, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

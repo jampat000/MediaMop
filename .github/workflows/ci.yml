@@ -68,6 +68,10 @@ jobs:
           alembic check
           pytest -q --cov=weir --cov-fail-under=75
 
+      # The .NET server's schema parity test compares against this checked-in dump (#515).
+      - name: .NET server schema reference matches Alembic head
+        run: python scripts/dump-alembic-schema.py --check
+
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
@@ -107,6 +111,32 @@ jobs:
           WEIR_HOME: ${{ runner.temp }}/weir-e2e
           PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/weir -q --tb=short
+
+  # The C# / .NET 10 server that replaces apps/backend (ADR-0017, #514). Not a required
+  # check until the switch-over (#523).
+  weir-server:
+    name: weir-server (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: apps/server/global.json
+
+      - name: Build Weir server (warnings are errors)
+        run: dotnet build apps/server/Weir.slnx -warnaserror
+
+      - name: Test Weir server
+        run: dotnet test apps/server/Weir.slnx --no-build
 
   docker-smoke:
     runs-on: ubuntu-latest

@@ -56,6 +56,9 @@ packaging/windows/vendor/
 # from source, in Release, into its own output directory.
 apps/tray/*/bin/
 apps/tray/*/obj/
+apps/server/**/bin/
+apps/server/**/obj/
+apps/server/**/TestResults/
 
 # Docusaurus
 docs-site/build/
