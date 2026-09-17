@@ -8,7 +8,8 @@
 
 * {
   scrollbar-width: auto;
-  scrollbar-color: rgba(231, 231, 234, 0.38) rgba(255, 255, 255, 0.06);
+  scrollbar-color: color-mix(in srgb, var(--mm-stone) 38%, transparent)
+    rgba(255, 255, 255, 0.06);
 }
 
 *::-webkit-scrollbar {
@@ -20,13 +21,13 @@
   border-radius: 999px;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(231, 231, 234, 0.38);
+  background: color-mix(in srgb, var(--mm-stone) 38%, transparent);
   border-radius: 999px;
   border: 2px solid rgba(0, 0, 0, 0);
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(231, 231, 234, 0.55);
+  background: color-mix(in srgb, var(--mm-stone) 55%, transparent);
 }
 
 html {
@@ -105,7 +106,11 @@ body.mm-body {
   border: 1px solid color-mix(in srgb, var(--mm-border) 82%, var(--mm-gold) 18%);
   border-radius: 14px;
   background:
-    linear-gradient(110deg, rgba(212, 175, 55, 0.045), transparent 34%),
+    linear-gradient(
+      110deg,
+      color-mix(in srgb, var(--mm-gold) 4.5%, transparent),
+      transparent 34%
+    ),
     color-mix(in srgb, var(--mm-surface) 92%, transparent);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -138,10 +143,14 @@ body.mm-body {
 .mm-workspace-tabs__button[aria-selected="true"] {
   color: var(--mm-text1);
   background:
-    linear-gradient(135deg, rgba(212, 175, 55, 0.16), transparent 62%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--mm-gold) 16%, transparent),
+      transparent 62%
+    ),
     color-mix(in srgb, var(--mm-indigo-soft) 48%, var(--mm-card-bg));
   box-shadow:
-    inset 0 0 0 1px rgba(212, 175, 55, 0.32),
+    inset 0 0 0 1px color-mix(in srgb, var(--mm-gold) 32%, transparent),
     0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
@@ -154,7 +163,7 @@ body.mm-body {
   height: 2px;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--mm-gold-bright), var(--mm-indigo));
-  box-shadow: 0 0 8px rgba(212, 175, 55, 0.28);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--mm-gold) 28%, transparent);
 }
 
 .mm-workspace-panel,
@@ -1055,12 +1064,12 @@ html[data-mm-theme="light"] .mm-theme-toggle {
     linear-gradient(
       180deg,
       rgba(255, 255, 255, 0.86),
-      rgba(255, 250, 240, 0.78)
+      rgba(255, 255, 255, 0.78)
     ),
     var(--mm-card-bg);
   box-shadow:
     var(--mm-shadow-card-inner),
-    0 10px 30px rgba(88, 65, 20, 0.1);
+    0 10px 30px color-mix(in srgb, var(--mm-stone) 10%, transparent);
 }
 
 .mm-sidebar {
@@ -1069,8 +1078,8 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   background:
     linear-gradient(
       180deg,
-      rgba(212, 175, 55, 0.1) 0%,
-      rgba(79, 86, 239, 0.045) 34%,
+      color-mix(in srgb, var(--mm-gold) 10%, transparent) 0%,
+      color-mix(in srgb, var(--mm-indigo) 4.5%, transparent) 34%,
       transparent 72%
     ),
     linear-gradient(
@@ -1174,7 +1183,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   margin: 0 calc(12px * var(--mm-density-ui-scale))
     calc(14px * var(--mm-density-ui-scale));
   padding: 0;
-  border-bottom-color: rgba(231, 231, 234, 0.1);
+  border-bottom-color: color-mix(in srgb, var(--mm-stone) 10%, transparent);
 }
 
 .mm-sidebar--collapsed .mm-sidebar-brand-logo {
@@ -1345,7 +1354,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-sidebar-divider {
   height: 1px;
   margin: 12px 14px;
-  background: rgba(231, 231, 234, 0.06);
+  background: color-mix(in srgb, var(--mm-stone) 6%, transparent);
 }
 
 .mm-sidebar-link-icon {
@@ -1378,7 +1387,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
 .mm-sidebar-link:hover {
   color: var(--mm-text);
-  background: rgba(231, 231, 234, 0.05);
+  background: color-mix(in srgb, var(--mm-stone) 5%, transparent);
 }
 
 .mm-sidebar-link:hover .mm-sidebar-link-icon {
@@ -1397,10 +1406,10 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   position: relative;
   background: linear-gradient(
     100deg,
-    rgba(212, 175, 55, 0.16),
-    rgba(79, 86, 239, 0.08)
+    color-mix(in srgb, var(--mm-gold) 16%, transparent),
+    color-mix(in srgb, var(--mm-indigo) 8%, transparent)
   );
-  border-color: rgba(212, 175, 55, 0.18);
+  border-color: color-mix(in srgb, var(--mm-gold) 18%, transparent);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
     0 8px 20px rgba(0, 0, 0, 0.1);
@@ -1415,13 +1424,15 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   width: 3px;
   border-radius: 3px;
   background: linear-gradient(180deg, var(--mm-gold-bright), var(--mm-indigo));
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.38);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--mm-gold) 38%, transparent);
 }
 
 .mm-sidebar-link.active .mm-sidebar-link-icon {
   color: var(--mm-gold-bright);
   opacity: 1;
-  filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.25));
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--mm-gold) 25%, transparent)
+  );
 }
 
 .mm-sidebar-footer {
@@ -1438,9 +1449,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   background: linear-gradient(
     145deg,
     rgba(0, 0, 0, 0.25),
-    rgba(79, 86, 239, 0.07)
+    color-mix(in srgb, var(--mm-indigo) 7%, transparent)
   );
-  border: 1px solid rgba(231, 231, 234, 0.09);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 9%, transparent);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
     0 12px 28px rgba(0, 0, 0, 0.14);
@@ -1511,7 +1522,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   justify-content: center;
   margin: 0;
   padding: 0;
-  border: 1px solid rgba(231, 231, 234, 0.09);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 9%, transparent);
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.16);
 }
@@ -1563,7 +1574,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   background:
     radial-gradient(
       ellipse 78% 88% at 50% -12%,
-      rgba(212, 175, 55, 0.06),
+      color-mix(in srgb, var(--mm-gold) 6%, transparent),
       transparent 60%
     ),
     radial-gradient(
@@ -1591,10 +1602,14 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   justify-content: space-between;
   gap: 1.25rem;
   padding: 1.1rem 1.2rem;
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  border: 1px solid color-mix(in srgb, var(--mm-gold) 20%, transparent);
   border-radius: 16px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(212, 175, 55, 0.11), transparent 34%),
+    radial-gradient(
+      circle at 0% 0%,
+      color-mix(in srgb, var(--mm-gold) 11%, transparent),
+      transparent 34%
+    ),
     linear-gradient(
       135deg,
       color-mix(in srgb, var(--mm-surface-2) 86%, transparent),
@@ -1952,7 +1967,11 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   height: 2px;
   margin-bottom: 0.85rem;
   border-radius: 1px;
-  background: linear-gradient(90deg, var(--mm-gold), rgba(212, 175, 55, 0.12));
+  background: linear-gradient(
+    90deg,
+    var(--mm-gold),
+    color-mix(in srgb, var(--mm-gold) 12%, transparent)
+  );
 }
 
 .mm-page__eyebrow {
@@ -2011,10 +2030,10 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   padding: calc(1.45rem * var(--mm-density-ui-scale))
     calc(1.55rem * var(--mm-density-ui-scale))
     calc(1.5rem * var(--mm-density-ui-scale));
-  border-color: rgba(212, 175, 55, 0.2);
+  border-color: color-mix(in srgb, var(--mm-gold) 20%, transparent);
   background: linear-gradient(
     150deg,
-    rgba(212, 175, 55, 0.06) 0%,
+    color-mix(in srgb, var(--mm-gold) 6%, transparent) 0%,
     var(--mm-card-bg) 50%
   );
   box-shadow: var(--mm-shadow-card), var(--mm-shadow-card-inner);
@@ -2034,8 +2053,8 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   width: 44px;
   height: 44px;
   border-radius: 11px;
-  background: rgba(212, 175, 55, 0.08);
-  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: color-mix(in srgb, var(--mm-gold) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mm-gold) 22%, transparent);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
@@ -2138,7 +2157,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   max-width: 100%;
   padding: 1rem 1.15rem;
   border-radius: var(--mm-radius-sm);
-  border: 1px solid rgba(231, 231, 234, 0.07);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 7%, transparent);
   background: var(--mm-slate);
   box-shadow: var(--mm-shadow-card-inner);
 }
@@ -2159,7 +2178,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid rgba(231, 231, 234, 0.07);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 7%, transparent);
   border-radius: var(--mm-radius-sm);
   background: var(--mm-slate);
   box-shadow: var(--mm-shadow-card-inner);
@@ -2277,11 +2296,11 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-activity-processing--finished .mm-activity-processing__eyebrow {
-  color: #6ee7b7;
+  color: var(--mm-status-healthy-text);
 }
 
 .mm-activity-processing--failed .mm-activity-processing__eyebrow {
-  color: #fca5a5;
+  color: var(--mm-status-failed-text);
 }
 
 .mm-activity-processing__title {
@@ -2324,12 +2343,12 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-activity-processing--finished .mm-activity-processing__bar > span {
-  background: linear-gradient(90deg, #10b981, #6ee7b7);
+  background: linear-gradient(90deg, #10b981, var(--mm-status-healthy-text));
   box-shadow: 0 0 22px rgba(16, 185, 129, 0.34);
 }
 
 .mm-activity-processing--failed .mm-activity-processing__bar > span {
-  background: linear-gradient(90deg, #dc2626, #fca5a5);
+  background: linear-gradient(90deg, #dc2626, var(--mm-status-failed-text));
   box-shadow: 0 0 22px rgba(248, 113, 113, 0.28);
 }
 
@@ -2352,7 +2371,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
 .mm-activity-processing__error {
   margin: 0;
-  color: #fecaca;
+  color: var(--mm-status-failed-text);
   font-size: 0.86rem;
 }
 
@@ -2368,7 +2387,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   gap: 0.25rem;
   padding: 0.7rem 0.8rem;
   border-radius: var(--mm-radius-sm);
-  border: 1px solid rgba(231, 231, 234, 0.08);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 8%, transparent);
   background: color-mix(in srgb, var(--mm-card-bg) 90%, transparent);
   box-shadow: var(--mm-shadow-card-inner);
 }
@@ -2390,7 +2409,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-activity-remux-detail__expand {
   margin-top: 0.75rem;
   border-radius: var(--mm-radius-sm);
-  border: 1px solid rgba(231, 231, 234, 0.08);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 8%, transparent);
   background: color-mix(in srgb, var(--mm-card-bg) 88%, transparent);
   box-shadow: var(--mm-shadow-card-inner);
 }
@@ -2412,7 +2431,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  border-top: 1px solid rgba(231, 231, 234, 0.08);
+  border-top: 1px solid color-mix(in srgb, var(--mm-stone) 8%, transparent);
   padding: 0.85rem;
 }
 
@@ -2429,7 +2448,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   gap: 0.75rem;
   padding: 0.85rem;
   border-radius: var(--mm-radius-sm);
-  border: 1px solid rgba(231, 231, 234, 0.08);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 8%, transparent);
   background: color-mix(in srgb, var(--mm-card-bg) 92%, transparent);
   box-shadow: var(--mm-shadow-card-inner);
 }
@@ -2506,7 +2525,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   align-items: center;
   padding: 0.28rem 0.55rem;
   border-radius: 999px;
-  border: 1px solid rgba(231, 231, 234, 0.08);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 8%, transparent);
   font-size: 0.74rem;
   line-height: 1.2;
   color: var(--mm-text2);
@@ -2521,13 +2540,13 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-activity-remux-detail__chip--kept {
   background: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.26);
-  color: rgb(187, 247, 208);
+  color: var(--mm-status-healthy-text);
 }
 
 .mm-activity-remux-detail__chip--removed {
   background: rgba(245, 158, 11, 0.12);
   border-color: rgba(245, 158, 11, 0.26);
-  color: rgb(253, 230, 138);
+  color: var(--mm-status-warning-text);
 }
 
 .mm-activity-remux-detail__ffmpeg {
@@ -2564,11 +2583,11 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-shell-aside {
   padding: 1.2rem 1.3rem 1.25rem;
   border-radius: var(--mm-radius);
-  border: 1px solid rgba(231, 231, 234, 0.08);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 8%, transparent);
   background: linear-gradient(
     165deg,
     var(--mm-indigo-soft) 0%,
-    rgba(31, 35, 42, 0.95) 55%
+    rgba(19, 33, 42, 0.95) 55%
   );
 }
 
@@ -2594,7 +2613,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-pillars {
   margin-top: calc(var(--mm-space-lg) + 0.25rem);
   padding-top: var(--mm-space-lg);
-  border-top: 1px solid rgba(231, 231, 234, 0.07);
+  border-top: 1px solid color-mix(in srgb, var(--mm-stone) 7%, transparent);
 }
 
 .mm-pillars__heading {
@@ -2633,7 +2652,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   padding: 1rem 1.05rem 1.05rem;
   border-radius: var(--mm-radius-sm);
   background: var(--mm-slate);
-  border: 1px solid rgba(231, 231, 234, 0.06);
+  border: 1px solid color-mix(in srgb, var(--mm-stone) 6%, transparent);
   box-shadow: var(--mm-shadow-card-inner);
 }
 
@@ -2642,7 +2661,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   margin-bottom: 0.65rem;
   color: var(--mm-gold);
   opacity: 0.92;
-  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.15));
+  filter: drop-shadow(
+    0 0 8px color-mix(in srgb, var(--mm-gold) 15%, transparent)
+  );
 }
 
 .mm-pillar__title {
@@ -2740,11 +2761,11 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-auth-title--caution {
-  color: #8b93f5;
+  color: var(--mm-status-warning-text);
 }
 
 .mm-auth-title--alert {
-  color: #d8897c;
+  color: var(--mm-status-failed-text);
 }
 
 .mm-auth-lead {
@@ -3100,7 +3121,7 @@ select.mm-input::-ms-expand {
     inset: 0;
     z-index: 30;
     border: 0;
-    background: rgba(8, 9, 14, 0.52);
+    background: rgba(9, 17, 20, 0.55);
     cursor: pointer;
   }
 
@@ -3261,8 +3282,8 @@ select.mm-input::-ms-expand {
 }
 
 .mm-schedule-cell-on {
-  background: var(--mm-accent, #2563eb);
-  border-color: var(--mm-accent, #2563eb);
+  background: var(--mm-accent, #3ed7c8);
+  border-color: var(--mm-accent, #3ed7c8);
 }
 
 .mm-schedule-grid-actions {
@@ -4222,7 +4243,7 @@ html[data-mm-theme="light"] .mm-sidebar-footer-panel {
 }
 
 html[data-mm-theme="light"] .mm-sidebar-link:hover {
-  background: rgba(33, 31, 26, 0.05);
+  background: rgba(17, 36, 43, 0.05);
 }
 
 /* Status text written with Tailwind's light-on-dark shades (text-red-200, text-amber-300, …)

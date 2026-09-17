@@ -100,8 +100,8 @@ export function mmActionButtonClass(opts: {
     }
     return [
       actionBase,
-      "cursor-pointer border-[var(--mm-gold)] bg-[rgba(212,175,55,0.2)] text-[var(--mm-text)] shadow-[0_2px_14px_rgba(212,175,55,0.14)]",
-      "hover:border-[var(--mm-gold-bright)] hover:bg-[rgba(212,175,55,0.28)] hover:shadow-[0_4px_20px_rgba(212,175,55,0.22)] hover:-translate-y-px",
+      "cursor-pointer border-[var(--mm-gold)] bg-[color-mix(in_srgb,var(--mm-gold)_20%,transparent)] text-[var(--mm-text)] shadow-[0_2px_14px_color-mix(in_srgb,var(--mm-gold)_14%,transparent)]",
+      "hover:border-[var(--mm-gold-bright)] hover:bg-[color-mix(in_srgb,var(--mm-gold)_28%,transparent)] hover:shadow-[0_4px_20px_color-mix(in_srgb,var(--mm-gold)_22%,transparent)] hover:-translate-y-px",
       "active:translate-y-0 active:brightness-[0.97]",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mm-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mm-card-bg)]",
     ].join(" ");
@@ -116,7 +116,7 @@ export function mmActionButtonClass(opts: {
   return [
     actionBase,
     "cursor-pointer border-[var(--mm-border)] bg-[var(--mm-button-secondary-bg)] text-[var(--mm-text)]",
-    "hover:border-[rgba(212,175,55,0.55)] hover:bg-[var(--mm-accent-soft)] hover:shadow-sm",
+    "hover:border-[color-mix(in_srgb,var(--mm-gold)_55%,transparent)] hover:bg-[var(--mm-accent-soft)] hover:shadow-sm",
     "active:brightness-[0.97]",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mm-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mm-card-bg)]",
   ].join(" ");
