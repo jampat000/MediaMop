@@ -23,7 +23,6 @@ from tests.contract.processing import _helpers as h
 from tests.contract.support.fake_ffmpeg import fake_media_bytes, probe
 
 
-@pytest.mark.known_bug(issue=532, backends=("python",))
 def test_a_rejection_with_no_prior_scan_still_creates_a_files_row(
     server_factory, client_factory, fake_ffmpeg, fake_managers, tmp_path: Path
 ) -> None:

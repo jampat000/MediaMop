@@ -1,8 +1,6 @@
 """Correct-behaviour contract tests for issue #544 (media manager defects found while porting).
 
-Each test proves the *fixed* behaviour and is marked ``known_bug(issue=544, backends=("python",))``:
-the .NET server is fixed here, but ``apps/backend`` is retiring (ADR-0017) and is not touched to
-"fix" these the same way the rules-engine golden overrides describe in ``apps/server/README.md``.
+Each test proves the *fixed* behaviour, which the .NET server implements.
 """
 
 from __future__ import annotations
@@ -94,7 +92,6 @@ def not_a_media_manager() -> Iterator[str]:
         httpd.server_close()
 
 
-@pytest.mark.known_bug(issue=544, backends=("python",))
 def test_a_connection_test_classifies_a_2xx_non_json_answer(operator: WeirClient) -> None:
     with not_a_media_manager() as base_url:
         row = _create(operator, kind="radarr", name="Radarr", base_url=base_url, api_key="k")
@@ -105,7 +102,6 @@ def test_a_connection_test_classifies_a_2xx_non_json_answer(operator: WeirClient
         assert "did not get the answer it expected" in body["detail"]
 
 
-@pytest.mark.known_bug(issue=544, backends=("python",))
 def test_capabilities_classifies_a_2xx_non_json_answer(operator: WeirClient) -> None:
     with not_a_media_manager() as base_url:
         _create(operator, kind="radarr", name="Radarr", base_url=base_url, api_key="k")
@@ -118,7 +114,6 @@ def test_capabilities_classifies_a_2xx_non_json_answer(operator: WeirClient) -> 
 # --- item 2: an invalid lane time is a 400 naming the field -----------------------------------
 
 
-@pytest.mark.known_bug(issue=544, backends=("python",))
 def test_an_invalid_lane_time_is_a_400_naming_the_field(operator: WeirClient) -> None:
     row = _create(operator)
 
@@ -157,7 +152,6 @@ def issue_544_movies(tmp_path_factory: pytest.TempPathFactory) -> LibraryFolders
     return LibraryFolders.make(root / "movies")
 
 
-@pytest.mark.known_bug(issue=544, backends=("python",))
 def test_hand_off_ledger_prefix_matching_is_exact_not_a_sql_wildcard(
     server: ServerUnderTest, admin: WeirClient, issue_544_movies: LibraryFolders
 ) -> None:
@@ -215,7 +209,6 @@ def test_hand_off_ledger_prefix_matching_is_exact_not_a_sql_wildcard(
 # --- item 6: several enabled connections of one kind each authenticate with their own secret --
 
 
-@pytest.mark.known_bug(issue=544, backends=("python",))
 def test_two_radarr_connections_each_authenticate_with_their_own_secret(operator: WeirClient) -> None:
     """The webhook only checked the first enabled connection of a kind (by id), so a second Radarr
     (a 4K instance alongside a 1080p one, say) with its own secret could never authenticate. Fixed:

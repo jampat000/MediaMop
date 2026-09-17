@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 import sqlite3
-import subprocess
 from typing import Any
 
 import pytest
 
-from tests.contract.support import launcher, seed
-
-# The first schema revision a released Weir wrote. A database left at it is "known, but behind".
-OLDEST_RELEASED_REVISION = "0001_weir_initial_schema"
+from tests.contract.support import seed
 
 
 def _schema(conn: sqlite3.Connection) -> dict[str, set[str]]:
@@ -100,35 +96,3 @@ def test_api_startup_fails_without_migrations(server_factory) -> None:
         assert seed.rows(conn, "SELECT name FROM sqlite_master WHERE type = 'table'") == []
     finally:
         conn.close()
-
-
-@pytest.mark.backends("python", reason="the .NET server only opens databases at the current schema head (ADR-0017)")
-def test_api_startup_auto_upgrades_known_behind_revision_to_head(server, server_factory, client_factory) -> None:
-    """A database an older release left at its first schema revision is upgraded when the server starts."""
-
-    with seed.stopped(server) as conn:
-        head = _revision(conn)
-
-    sut = server_factory(start=False)
-    sut.home.mkdir(parents=True, exist_ok=True)
-    # Build the older release's database with the released migration tool, not the server under test.
-    result = subprocess.run(
-        [launcher.python_executable(), "-m", "alembic", "upgrade", OLDEST_RELEASED_REVISION],
-        cwd=str(launcher.BACKEND_DIR),
-        env={**sut.environment(), "PYTHONPATH": str(launcher.BACKEND_DIR / "src")},
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
-    conn = seed.connect(sut.db_path)
-    try:
-        assert _revision(conn) == OLDEST_RELEASED_REVISION
-    finally:
-        conn.close()
-
-    sut.start()
-    assert client_factory(sut).get("/health").status_code == 200
-
-    with seed.stopped(sut, restart=False) as conn:
-        assert _revision(conn) == head

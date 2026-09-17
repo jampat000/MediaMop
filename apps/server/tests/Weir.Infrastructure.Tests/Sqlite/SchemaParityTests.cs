@@ -1,14 +1,15 @@
-using System.Text.RegularExpressions;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Tests.Sqlite;
 
 /// <summary>
-/// The .NET migrations create exactly the database the Python backend's Alembic head creates.
-/// The reference, <c>schema/alembic-head.sql</c>, is <c>sqlite_master</c> plus seeded rows dumped
-/// from a real <c>alembic upgrade head</c> by <c>scripts/dump-alembic-schema.py</c>.
+/// The .NET migrations create exactly the database the retired Python backend's Alembic head created.
+/// The reference, <c>schema/alembic-head.sql</c>, is <c>sqlite_master</c> plus seeded rows dumped from a
+/// real <c>alembic upgrade head</c> before the Python backend was deleted (#523). It is frozen: a new .NET
+/// migration changes the schema on purpose, and this test then compares against the baseline migration only
+/// (see apps/server/README.md, "Schema").
 /// </summary>
-public sealed partial class SchemaParityTests
+public sealed class SchemaParityTests
 {
     [Fact]
     public void Migrations_create_the_alembic_head_schema_and_seed_rows()
@@ -38,24 +39,4 @@ public sealed partial class SchemaParityTests
         var header = File.ReadLines(RepositoryPaths.AlembicHeadReference).Take(5).ToList();
         Assert.Contains($"-- alembic_revision: {SchemaMigrator.HeadRevision}", header);
     }
-
-    [Fact]
-    public void Known_older_revisions_are_every_alembic_revision_before_head()
-    {
-        var root = RepositoryPaths.RepositoryRoot;
-        Assert.NotNull(root);
-        var versions = Path.Join(root, "apps", "backend", "alembic", "versions");
-        var revisions = Directory.GetFiles(versions, "*.py")
-            .Select(file => RevisionAssignment().Match(File.ReadAllText(file)))
-            .Where(match => match.Success)
-            .Select(match => match.Groups[1].Value)
-            .Order(StringComparer.Ordinal)
-            .ToList();
-
-        Assert.Equal(SchemaMigrator.HeadRevision, revisions[^1]);
-        Assert.Equal(revisions[..^1], SchemaMigrator.AlembicRevisionsBeforeBaseline);
-    }
-
-    [GeneratedRegex("""^revision(?:\s*:\s*str)?\s*=\s*["']([^"']+)["']""", RegexOptions.Multiline)]
-    private static partial Regex RevisionAssignment();
 }

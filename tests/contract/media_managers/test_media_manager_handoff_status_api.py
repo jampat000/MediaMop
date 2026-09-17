@@ -216,9 +216,6 @@ def test_a_pending_retry_is_scheduled_for_when_it_will_run(server: ServerUnderTe
     assert body["scheduledFor"].startswith(retry_at.strftime("%Y-%m-%dT%H:%M"))
 
 
-@pytest.mark.backends(
-    "dotnet", reason="#531: the Python backend reports failed once the backoff ends, before the retry is queued"
-)
 def test_a_retry_still_owed_after_its_backoff_is_scheduled_not_failed(
     server: ServerUnderTest, movies: LibraryFolders
 ) -> None:
@@ -239,9 +236,7 @@ def test_a_retry_still_owed_after_its_backoff_is_scheduled_not_failed(
     assert body["scheduledFor"].startswith(retry_at.strftime("%Y-%m-%dT%H:%M"))
 
 
-# #531 item 3 is already fixed on .NET (an overdue-but-pending retry reads "scheduled"), so this
-# known_bug only asserts the bug is still present on Python; dotnet is expected to pass outright.
-@pytest.mark.known_bug(issue=531, backends=("python",))
+# #531 item 3: an overdue-but-pending retry reads "scheduled" (fixed in the .NET server).
 def test_an_overdue_retry_still_reads_scheduled_not_failed(server: ServerUnderTest, movies: LibraryFolders) -> None:
     """#531 item 3: once the backoff has elapsed but no scan has picked the file up yet,
 

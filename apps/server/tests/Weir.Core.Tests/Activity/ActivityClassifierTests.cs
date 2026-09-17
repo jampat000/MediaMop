@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Text.RegularExpressions;
 using Weir.Core.Activity;
 
 namespace Weir.Core.Tests.Activity;
@@ -63,50 +61,4 @@ public sealed partial class ActivityClassifierTests
             ActivityClassifier.Classify("refiner.x", "{\"trigger\":\"\\u001cWorker\\u001c\",\"relative_media_path\":\"\\u2028a\\u001f\"}"));
         Assert.Equal(2000, ActivityClassifier.Classify("refiner.x", "{\"relative_media_path\":\"" + new string('p', 2500) + "\"}").RelativePath!.Length);
     }
-
-    [Fact]
-    public void Event_types_match_the_python_constants_exactly()
-    {
-        var constants = FindBackendFile("apps", "backend", "src", "weir", "platform", "activity", "constants.py");
-        var python = PythonConstant().Matches(File.ReadAllText(constants))
-            .ToDictionary(match => match.Groups[1].Value.Replace("_", string.Empty, StringComparison.Ordinal).ToUpperInvariant(), match => match.Groups[2].Value);
-        var dotnet = typeof(ActivityEventTypes).GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(field => !CSharpOnlyEventTypes.Contains(field.Name))
-            .ToDictionary(field => field.Name.ToUpperInvariant(), field => (string)field.GetValue(null)!);
-
-        Assert.NotEmpty(python);
-        Assert.Equal(python.OrderBy(pair => pair.Key, StringComparer.Ordinal), dotnet.OrderBy(pair => pair.Key, StringComparer.Ordinal));
-        foreach (var name in CSharpOnlyEventTypes)
-        {
-            Assert.NotNull(typeof(ActivityEventTypes).GetField(name, BindingFlags.Public | BindingFlags.Static));
-        }
-    }
-
-    /// <summary>
-    /// Event types for features added after ADR-0017 froze the switch-over plan, with no Python equivalent — Python
-    /// is retiring (#523) and is not touched to add a constant for a C#-only feature.
-    /// </summary>
-    private static readonly HashSet<string> CSharpOnlyEventTypes = new(StringComparer.Ordinal)
-    {
-        // Issue #501: choosing tracks by hand for a held file. The manual-plan endpoints and the remux pass's
-        // handling of them exist only in the .NET server.
-        nameof(ActivityEventTypes.RefinerFileManualPlanQueued),
-    };
-
-    private static string FindBackendFile(params string[] parts)
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            var candidate = Path.Join([directory.FullName, .. parts]);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new FileNotFoundException("The Python backend source was not found above the test assembly.", Path.Join(parts));
-    }
-
-    [GeneratedRegex("^([A-Z][A-Z0-9_]*) = \"([^\"]*)\"", RegexOptions.Multiline)]
-    private static partial Regex PythonConstant();
 }

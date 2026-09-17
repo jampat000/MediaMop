@@ -18,7 +18,6 @@ from tests.contract.support.fake_ffmpeg import fake_media_bytes, probe
 from tests.contract.support.polling import wait_until
 
 
-@pytest.mark.known_bug(issue=534, backends=("python",))
 def test_a_crash_mid_remux_leaves_no_temp_output_and_the_job_still_finishes(
     server_factory, client_factory, fake_ffmpeg, fake_managers, tmp_path: Path
 ) -> None:

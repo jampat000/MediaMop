@@ -1,11 +1,9 @@
-using System.Text;
 using System.Text.Json;
 using Weir.Core.Activity;
 using Weir.Core.Json;
 using Weir.Core.Time;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Refiner;
-using Weir.Infrastructure.Settings;
 using Weir.Infrastructure.Sqlite;
 using Weir.Infrastructure.Tests.Jobs;
 using Weir.Infrastructure.Tests.Platform;
@@ -257,137 +255,5 @@ public sealed class ActivityHistoryStoreTests
         var deleted = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.DeleteFileHistoryAsync(uow, libraryId: 7, "Film/movie.mkv"));
         Assert.Equal(1, deleted.ActivityEvents);
         Assert.Equal(1, deleted.ProcessingRecords);
-    }
-
-    /// <summary>
-    /// The same rows and filters answered by the Python router functions and by .NET, compared byte for byte —
-    /// except the cases tagged with a <c>#543</c> issue number, where .NET now gives the *fixed* answer and
-    /// Python still gives the old, buggy one (items 1 and 3; both kept faithfully everywhere else). Those
-    /// cases assert the two bodies differ, so a Python fix (or an accidental regression back to parity) is
-    /// caught rather than silently ignored; <see cref="Count_activity_events_counts_every_row_even_unfiltered"/>
-    /// and <see cref="List_recent_pages_by_before_id_without_skipping_or_repeating_a_tied_row"/> assert what the
-    /// fixed .NET answer actually is.
-    /// </summary>
-    [PythonFact]
-    public async Task Recent_and_export_bytes_match_the_python_router_on_the_same_database()
-    {
-        using var fixture = new StoreFixture();
-        await fixture.Execute(
-            "INSERT INTO activity_events (created_at, event_type, module, title, detail, \"trigger\", result, library_id, relative_path, run_key) VALUES " +
-            "('2026-01-02 03:04:05', 'refiner.file_remux_pass_completed', 'refiner', 'plain', NULL, NULL, 'success', NULL, NULL, NULL), " +
-            "('2026-01-02 03:04:05', 'refiner.file_remux_pass_completed', 'refiner', 'comma, \"Quote\"', 'line1\nline2\r\nline3', 'manual', 'success', 3, 'Film/ä ö.mkv', 'run:1'), " +
-            "('2026-01-02 03:04:05.123456', 'auth.login_succeeded', 'auth', 'unicode ☃ 😀', 'alice', 'manual', 'success', NULL, NULL, NULL), " +
-            "('2026-01-03 00:00:00+00:00', 'refiner.worker_failure', 'refiner', 'aware', '{\"x\": \"tab\there\"}', 'retry', 'failed', 1, '', 'run:9'), " +
-            "('2025-12-31 23:59:59.5', 'system.reconciliation.repair', 'system', 'oldest', ';', 'manual', NULL, NULL, 'Show/S01E01.mkv', NULL), " +
-            "('2026-01-02 03:04:05', 'auth.logout', 'auth', 'tie a', 'alice', 'manual', NULL, NULL, NULL, NULL), " +
-            "('2026-01-02 03:04:05', 'refiner.file_passed_through', 'refiner', 'tie b', NULL, 'manual', 'success', 3, 'Film/ä ö.mkv', NULL), " +
-            "('2026-01-02 03:04:05', 'refiner.file_passed_through', 'refiner', 'tie c', NULL, 'webhook', 'success', 1, 'x.mkv', NULL)");
-
-        // DivergesForIssue: null keeps byte-for-byte parity; #543 marks a case whose .NET answer is now the
-        // fixed one (item 1: total/has_more with no filter; item 3: created_at ties and before_id paging).
-        (string Kind, string Query, int? DivergesForIssue)[] cases =
-        [
-            ("recent", "limit=50", null),
-            ("recent", "limit=2", 543), // item 1: 8 rows exist; python's total is still the dropped-FROM 1
-            ("recent", "limit=2&before_id=3", 543), // item 3: python pages id<3 alone; .NET anchors on id 3's created_at too
-            ("recent", "limit=1&before_id=8", 543), // item 3: python repeats id 4 here, already returned before id 8
-            ("recent", "limit=3&before_id=8", 543), // item 3: same repeat, over a longer page
-            ("recent", "limit=2&before_id=8&module=refiner", 543), // item 3: paging order, with a filter applied too
-            ("recent", "limit=2&before_id=8&module=system", 543), // item 3: paging order, with a filter applied too
-            ("recent", "limit=1&before_id=8&trigger=manual", 543), // item 3: paging order, with a filter applied too
-            ("recent", "limit=2&before_id=9&file=mkv", null), // before_id 9 has no row either side of the fix: same fallback
-            ("recent", "limit=2&before_id=9&relative_path=x&library_id=3", null), // same: id 9 never existed
-            ("recent", "limit=3", 543), // item 1 total (8 rows, page of 3) and item 3's created_at-tie order both move
-            ("recent", "limit=3&module=refiner", 543), // item 3: the tied refiner rows now cut off in id-DESC order
-            ("recent", "module=system", null),
-            ("recent", "module=refiner&search=QUOTE", null),
-            ("recent", "file=%C3%A4", null),
-            ("recent", "trigger=MANUAL&result=success", null),
-            ("recent", "date_from=2026-01-02T03:04:05", 543), // item 2: python excludes the exact-second rows; .NET keeps them
-            ("recent", "date_from=2026-01-02&date_to=2026-01-03T00:00:00Z", null), // no row sits on a text-format boundary here
-            ("recent", "library_id=3&event_type=refiner.file_remux_pass_completed", null),
-            ("export", "format=csv", null),
-            ("export", "format=json", null),
-            ("export", "format=csv&module=refiner&date_to=2026-01-02 03:04:05.5", null),
-            ("export", "format=json&search=%E2%98%83", null),
-        ];
-
-        var casesPath = fixture.Home.Join("cases.json");
-        var outputPath = fixture.Home.Join("python-output.json");
-        await File.WriteAllTextAsync(casesPath, JsonSerializer.Serialize(cases.Select(c => new[] { c.Kind, c.Query })));
-        PythonBackend.Run(
-            "import base64, json, os\n" +
-            "from urllib.parse import parse_qsl\n" +
-            "import weir.api.factory  # registers every ORM model\n" +
-            "from weir.core.config import WeirSettings\n" +
-            "from weir.core.db import create_db_engine, create_session_factory\n" +
-            "from weir.platform.activity.router import get_activity_export, get_activity_recent\n" +
-            "s = WeirSettings.load()\n" +
-            "fac = create_session_factory(create_db_engine(s))\n" +
-            "out = []\n" +
-            "for kind, query in json.load(open(os.environ['CASES'], encoding='utf-8')):\n" +
-            "    q = dict(parse_qsl(query))\n" +
-            "    kw = {k: q.get(k) for k in ('module', 'event_type', 'search', 'date_from', 'date_to', 'trigger', 'result', 'file')}\n" +
-            "    kw['library_id'] = int(q['library_id']) if 'library_id' in q else None\n" +
-            "    with fac() as db:\n" +
-            "        if kind == 'recent':\n" +
-            "            r = get_activity_recent(None, db, limit=int(q.get('limit', 50)), before_id=int(q['before_id']) if 'before_id' in q else None, **kw)\n" +
-            "            body = json.dumps(r.model_dump(mode='json'), ensure_ascii=False, separators=(',', ':')).encode('utf-8')\n" +
-            "        else:\n" +
-            "            body = get_activity_export(None, db, export_format=q['format'], **kw).body\n" +
-            "    out.append(base64.b64encode(body).decode('ascii'))\n" +
-            "json.dump(out, open(os.environ['OUT'], 'w', encoding='utf-8'))\n",
-            new Dictionary<string, string> { ["WEIR_HOME"] = fixture.Home.Path, ["CASES"] = casesPath, ["OUT"] = outputPath });
-
-        var python = JsonSerializer.Deserialize<string[]>(await File.ReadAllTextAsync(outputPath))!.Select(Convert.FromBase64String).ToArray();
-        var failures = new List<string>();
-        for (var index = 0; index < cases.Length; index++)
-        {
-            var (kind, query, divergesForIssue) = cases[index];
-            var dotnet = await fixture.WithUnitOfWork(uow => DotnetBodyAsync(uow, kind, query));
-            var matches = python[index].AsSpan().SequenceEqual(dotnet);
-            if (divergesForIssue is { } issue)
-            {
-                // The fix must actually change the answer: an accidental match here means either Python's bug
-                // was fixed too (drop the marker) or .NET's fix silently stopped applying (a regression).
-                if (matches)
-                {
-                    failures.Add(
-                        $"{kind}?{query}\nmarked as diverging for #{issue}, but matched Python byte for byte:\n{Encoding.UTF8.GetString(dotnet)}");
-                }
-            }
-            else if (!matches)
-            {
-                failures.Add($"{kind}?{query}\npython: {Encoding.UTF8.GetString(python[index])}\ndotnet: {Encoding.UTF8.GetString(dotnet)}");
-            }
-        }
-        Assert.True(failures.Count == 0, string.Join("\n---\n", failures));
-    }
-
-    private static async Task<byte[]> DotnetBodyAsync(UnitOfWork uow, string kind, string query)
-    {
-        var q = query.Split('&').Select(part => part.Split('=', 2)).ToDictionary(pair => pair[0], pair => Uri.UnescapeDataString(pair[1]), StringComparer.Ordinal);
-        string? Get(string name) => q.TryGetValue(name, out var value) ? value : null;
-        PyDateTime? When(string name) => Get(name) is { } raw && PyDateTime.TryFromIsoFormat(raw, out var value) ? value : null;
-        var filter = new ActivityFilter(
-            Get("module"), Get("event_type"), Get("search"), When("date_from"), When("date_to"), Get("trigger"), Get("result"),
-            Get("library_id") is { } library ? long.Parse(library, System.Globalization.CultureInfo.InvariantCulture) : null,
-            Get("file"));
-        if (kind == "recent")
-        {
-            var limit = Get("limit") is { } rawLimit ? long.Parse(rawLimit, System.Globalization.CultureInfo.InvariantCulture) : 50;
-            long? beforeId = Get("before_id") is { } before ? long.Parse(before, System.Globalization.CultureInfo.InvariantCulture) : null;
-            var rows = await ActivityHistoryStore.ListRecentAsync(uow, filter, limit, beforeId);
-            var body = ActivityHistory.RecentOut(
-                rows,
-                await ActivityHistoryStore.CountAsync(uow, filter),
-                await ActivityHistoryStore.CountSystemAsync(uow, filter),
-                (await SuiteSettingsStore.EnsureAsync(uow)).ActivityRetentionDays,
-                await ActivityHistoryStore.OldestCreatedAtAsync(uow));
-            return PyJsonWriter.DumpsUtf8(body, PyJsonFormat.Response);
-        }
-
-        var exported = await ActivityHistoryStore.ListForExportAsync(uow, filter);
-        return Encoding.UTF8.GetBytes(Get("format") == "json" ? ActivityHistory.ExportJson(exported) : ActivityHistory.ExportCsv(exported));
     }
 }

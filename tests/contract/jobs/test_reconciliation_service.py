@@ -71,7 +71,6 @@ XRW = {"X-Requested-With": "XMLHttpRequest"}
 REPAIR_BODY = {"action": "remove_refiner_temp_artifact", "path": "/nowhere/.x.partial", "confirm": False}
 
 
-@pytest.mark.backends("dotnet", reason="#527: the Python backend accepts a repair without CSRF or Origin checks")
 def test_reconciliation_repair_requires_a_csrf_token(admin: WeirClient) -> None:
     missing = admin.post(f"{REPORT}/repair", json=REPAIR_BODY)
     assert missing.status_code == 400, missing.text
@@ -86,7 +85,6 @@ def test_reconciliation_repair_requires_a_csrf_token(admin: WeirClient) -> None:
     assert "confirm=true" in valid.json()["detail"]
 
 
-@pytest.mark.backends("dotnet", reason="#527: the Python backend accepts a repair without CSRF or Origin checks")
 def test_reconciliation_repair_checks_the_browser_origin(server_factory, client_factory) -> None:
     sut = server_factory({"WEIR_TRUSTED_BROWSER_ORIGINS": TRUSTED})
     trusted = client_factory(sut, headers={"Origin": TRUSTED, **XRW})
