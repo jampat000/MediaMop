@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Weir.Infrastructure.Scheduling;
 
 namespace Weir.Infrastructure.Tests.Scheduling;
@@ -28,12 +29,18 @@ public sealed class PeriodicTaskTests
     public async Task A_task_that_does_not_run_at_start_waits_one_interval_first()
     {
         // auth-session-cleanup: the first cleanup is an interval after start; startup has just cleaned up.
-        var task = new CountingTask(runAtStart: false, interval: TimeSpan.FromMilliseconds(600));
+        // A fake clock makes this deterministic (it used to race real wall-clock timing under load, #557):
+        // PeriodicTaskRunner's very first statement awaits Task.Delay(task.Interval, time, ...), whose timer
+        // is registered on `time` synchronously before that await yields, so by the time RunAsync returns
+        // the task to us the timer already exists and advancing the fake clock is race-free.
+        var time = new FakeTimeProvider();
+        var task = new CountingTask(runAtStart: false, interval: TimeSpan.FromMinutes(10));
         using var stop = new CancellationTokenSource();
-        var loop = PeriodicTaskRunner.RunAsync(task, TimeProvider.System, NullLogger.Instance, stop.Token);
+        var loop = PeriodicTaskRunner.RunAsync(task, time, NullLogger.Instance, stop.Token);
 
-        await Task.Delay(150);
         Assert.Equal(0, task.Calls);
+
+        time.Advance(task.Interval);
         await WaitUntilAsync(() => task.Calls >= 1);
 
         await stop.CancelAsync();
