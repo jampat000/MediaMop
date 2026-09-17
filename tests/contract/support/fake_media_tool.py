@@ -166,7 +166,7 @@ def _apply_disposition_flags(streams: list[dict], argv: list[str]) -> None:
         if position >= len(candidates):
             continue
         raw = argv[i + 1]
-        disposition = {flag: 0 for flag in candidates[position].get("disposition", {})}
+        disposition = dict.fromkeys(candidates[position].get("disposition", {}), 0)
         if raw != "0":
             for flag in raw.split("+"):
                 if flag:
