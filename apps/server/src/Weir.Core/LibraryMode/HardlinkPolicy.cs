@@ -11,9 +11,8 @@ public sealed record HardlinkDecision(bool Skip, string? Reason)
 /// entry — almost always a download client's still-seeding copy — points at the same data on disk. An in-place
 /// swap there does not free anything: the original bytes stay allocated under the other name, so cleaning doubles
 /// disk use instead of reducing it. Pure decision logic; the link count itself comes from the filesystem
-/// (<c>Weir.Infrastructure.LibraryMode.IHardlinkInspector</c>, and the crash-safe swap's own
-/// <c>ISwapFileSystem.LinkCount</c> on whichever branch lands first — see that type's remarks for the two
-/// platform reads this mirrors).
+/// (<c>Weir.Infrastructure.LibraryMode.IHardlinkInspector</c>, which forwards to the crash-safe swap's own
+/// <c>ISwapFileSystem.LinkCount</c> — see that type's remarks for the two platform reads this uses).
 /// </summary>
 public static class HardlinkPolicy
 {
