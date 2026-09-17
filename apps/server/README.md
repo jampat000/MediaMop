@@ -67,7 +67,7 @@ Issue #537 fixed defects in the rules engine that the golden corpus had pinned a
 
 ### Known rules-engine gaps
 
-- **Issue #537 item 4 (prefer the original language) is not wired up.** `RefinerRulesConfig.PreferredAudioIndices` and `OriginalLanguageNote` already flow straight into `RemuxRules.PlanRemux` unchanged, and `RefinerRulesConfig.WithOriginalLanguage(OriginalLanguageOutcome)` lets a caller copy an `OriginalLanguage.SelectTracks` decision into a config in one call. What is missing is the remux pass itself calling that lookup — it needs the manager/TMDb metadata lookup from #520, which is not ported yet. The item stays open until a contract scenario proves a manager's original language actually decides the kept audio track end to end.
+- **Issue #537 item 4 (prefer the original language) is wired into the remux pass** (see "Remux pass" below): when a rule set keeps the original language, the pass asks the configured metadata provider (TMDb) about the film, runs `OriginalLanguage.SelectTracks` and plans with `WithOriginalLanguage`. It is proven by `RemuxPassRunnerTests.Issue_537_item_4_the_original_language_decides_the_kept_audio`. No contract scenario proves it end to end yet: `ExternalUrlPolicy` refuses a metadata provider on a loopback or private address, so the suite cannot point Weir at a fake TMDb, and no media manager port reports an original language.
 - **Issue #495 (track flags from names) is engine-only so far.** `Weir.Core.Rules.TrackFlagsReader.Detect` and the new `RefinerRulesConfig.RemoveHearingImpairedSubs` field are wired into `RemuxRules.PlanRemux` (subtitle forced/hearing-impaired handling, audio commentary/dub/audio-description). Persisting the new setting, exposing it over the API, and the web checkbox are not in scope here — they wait on the settings/refiner-config API port that is already in flight.
 
 ## ffmpeg parity
@@ -111,6 +111,24 @@ The durable queue is the Python backend's `refiner_jobs` table, used the same wa
 **Unported job kinds are not claimed.** Python's worker claims every eligible row and fails any kind it has no handler for. While handlers are still being ported, a .NET worker doing that would fail real work, so it claims only kinds with a registered handler, plus retired or unprefixed kinds, which it claims only to refuse with Python's wording. Everything else stays `pending` for a backend that can run it. Periodic families are timed only when their kind has a handler, for the same reason.
 
 Startup recovery also fixes #534: besides requeuing leased rows and removing `.partial` outputs, it removes the remux temp output of interrupted jobs, and any other remux temp output at the top of a library work folder. Only Weir's exact temp names (`{stem}.refiner.XXXXXXXX{suffix}` and the dry-run placeholder) are ever deleted.
+
+## Remux pass
+
+`Weir.Infrastructure/Refiner/RemuxPass` ports `file_remux_pass/` (`run.py`, `handlers.py`, `visibility.py`, `paths.py`) and what the pass calls: file settling and the source read guard, output collisions, sidecar migration, the guarded copy/link/finalize writes, the Movies release-folder cleanup, the Movies and TV output-folder cleanups with the manager library-truth gate, `record_failure` and the retry policy, the processing record and the live progress row. The pure parts are in `Weir.Core/Refiner/RemuxPass`. `AddWeirRemuxPass` registers `RemuxPassHandler`, so .NET workers now claim `refiner.file.remux_pass.v1`, and replaces the jobs port's `NoUnhandledJobFailureRecorder` with `RemuxPassFailureRecorder`, so a handler crash is recorded against the file with the failure policy applied.
+
+Behaviour matches Python except these deliberate changes:
+
+- **#539 items 2, 3 and 5.** The acceleration flags decided for a pass reach the executed ffmpeg, the integrity read runs on every platform (not only off Windows) and is given the probed duration, so a truncated Matroska file waits instead of being published.
+- **#537 item 4.** The original-language option now decides the preferred audio (see "Known rules-engine gaps").
+- **#531 item 2.** A retry or requeue whose payload has lost its hand-off origin gets it back: `HandoffOriginCarry` finds the origin on the most recent job for the same file, and only while that hand-off has not already been answered (completed, passed through, rejected or cancelled in the ledger). `RemuxPassHandler` uses it when a payload has no origin, and `RequeueStore` copies it into a manual requeue, so the final completion, hold or hand-back is reported with its output path. The watched-folder scan port should call it too when it builds a retry payload. Item 1 (the fingerprint recorded at intake) and item 3 (`scheduled` while a retry is owed) were already fixed by the media managers port.
+- **#534** is already handled by startup recovery; `test_crash_temp_output.py` now proves it end to end against a pass killed mid-remux.
+- The source fingerprint's device and inode come from `GetFileInformationByHandle` on Windows; elsewhere .NET has no portable inode, so they are 0 and a replaced file is caught by size and modification time.
+
+### Seams for work ported separately
+
+- **`IFailurePolicy`** (`apply_failure_policy`, `reject_bad_release`). The default, `QueueingFailurePolicy`, is Python's decision: `hold` does nothing, a content rejection under `reject` queues `refiner.file.reject.v1`, anything else queues `refiner.file.pass_through.v1`, each carrying the origin. The handlers for those two kinds are #522 part 4; until they land, their rows wait `pending` like any unported kind, and a hand-off that ends in one of them is not reported to the manager yet (the reporter defers to the follow-up job, as in Python). `HoldingFailurePolicy` queues nothing.
+- **`ITvSeasonFolderCleanup`** (`refiner_tv_season_folder_cleanup.py`). It needs the manager queue-row mapping (`queue_adapter.py`) the watched-folder scan port brings. The default, `SkippedTvSeasonFolderCleanup`, records the season-cleanup fields as a skip with a plain reason and removes nothing, so a successful TV pass leaves its season folder in the watched folder until then.
+- **`IOriginalLanguageLookup`**: `MetadataProviderOriginalLanguageLookup` asks the configured provider about films; TV episodes and unreadable names decline, leaving the language preferences in charge.
 
 ## Activity
 

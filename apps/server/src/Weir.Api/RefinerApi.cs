@@ -5,8 +5,6 @@ using Weir.Api.Endpoints;
 using Weir.Core.Configuration;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Processes;
-using Weir.Infrastructure.Refiner;
-using Weir.Infrastructure.Scheduling;
 
 namespace Weir.Api;
 
@@ -25,8 +23,8 @@ public static class RefinerApi
         services.TryAddSingleton<IMediaToolResolver>(sp => new MediaToolResolver(sp.GetRequiredService<WeirOptions>().WeirHome));
         services.TryAddSingleton<IProcessRunner, ProcessRunner>();
         services.TryAddSingleton<MediaTools>();
-        services.AddSingleton<FileLogRetentionTask>();
-        services.AddSingleton<IPeriodicTask>(sp => sp.GetRequiredService<FileLogRetentionTask>());
+        // Processing-record retention is hosted once, by AddWeirJobs (RefinerFileLogRetentionTask); registering
+        // FileLogRetentionTask here as well ran the same hourly prune twice.
         return services;
     }
 
@@ -38,6 +36,7 @@ public static class RefinerApi
         endpoints.MapRefinerFilesEndpoints();
         endpoints.MapRefinerDirectPlayEndpoints();
         endpoints.MapRefinerJobsEndpoints();
+        endpoints.MapRefinerRemuxPassEndpoints();
         endpoints.MapRefinerOverviewMaintenanceEndpoints();
         endpoints.MapRefinerSettingsEndpoints();
         return endpoints;

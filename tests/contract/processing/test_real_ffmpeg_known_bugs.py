@@ -86,7 +86,7 @@ def test_unreadable_zero_filled_media_is_classified_unreadable_and_rejected(
     assert row["status"] == "rejected"
 
 
-@pytest.mark.known_bug(issue=539, backends=("python", "dotnet"))
+@pytest.mark.known_bug(issue=539, backends=("python",))
 def test_a_truncated_mkv_never_completes_as_if_it_were_whole(
     server_factory, client_factory, fake_managers, real_ffmpeg_env, tmp_path: Path
 ) -> None:

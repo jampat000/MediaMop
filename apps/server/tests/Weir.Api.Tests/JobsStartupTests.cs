@@ -45,11 +45,23 @@ public sealed class JobsStartupTests
         Assert.False(File.Exists(tempFile));
         Assert.True(File.Exists(operatorFile));
 
-        // The remux handler is not ported yet (#522), so a running .NET worker must leave the row for a backend that can run it.
-        await Task.Delay(500);
-        var job = Assert.Single(await server.Services.GetRequiredService<RefinerJobStore>().ListAsync());
-        Assert.Equal(RefinerJobStatus.Pending, job.Status);
-        Assert.Equal(1, job.AttemptCount);
+        // The remux pass is ported (#522 part 3), so a running .NET worker claims the recovered row and runs it to the end.
+        var store = server.Services.GetRequiredService<RefinerJobStore>();
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        RefinerJob job;
+        while (true)
+        {
+            job = (await store.ListAsync()).Single(row => row.JobKind == "refiner.file.remux_pass.v1");
+            if (job.Status == RefinerJobStatus.Completed || DateTime.UtcNow > deadline)
+            {
+                break;
+            }
+
+            await Task.Delay(100);
+        }
+
+        Assert.Equal(RefinerJobStatus.Completed, job.Status);
+        Assert.Equal(2, job.AttemptCount);
         Assert.Null(job.LeaseOwner);
     }
 }
