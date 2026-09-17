@@ -40,7 +40,7 @@ public static class WeirApi
         services.AddSingleton<NotificationDispatcher>();
         services.AddWeirMediaManagers(options);
         services.AddWeirRefinerApis();
-        services.AddWeirRemuxPass(options);
+        services.AddWeirRefinerFailureFollowUps(options);
 
         // Scheduled work, hosted with the jobs (AddWeirJobs) by PeriodicTaskService.
         services.AddSingleton<SessionCleanupTask>();

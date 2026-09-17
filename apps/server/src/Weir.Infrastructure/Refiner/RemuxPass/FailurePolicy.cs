@@ -30,8 +30,8 @@ public interface IFailurePolicy
 /// <summary>
 /// The reference's policy (the default): <c>hold</c> does nothing, a content rejection under <c>reject</c> queues
 /// <c>refiner.file.reject.v1</c>, and anything else queues <c>refiner.file.pass_through.v1</c>, each carrying the hand-off
-/// origin. The handlers for those two kinds are ported separately (#522 part 4); until then their rows wait pending for a
-/// backend that can run them, exactly as any unported kind does.
+/// origin. The handlers for those two kinds (<see cref="RefinerRejectHandler"/>, <see cref="RefinerPassThroughHandler"/>)
+/// are registered by <c>AddWeirRefinerFailureFollowUps</c> (#522 part 4).
 /// </summary>
 public sealed class QueueingFailurePolicy : IFailurePolicy
 {

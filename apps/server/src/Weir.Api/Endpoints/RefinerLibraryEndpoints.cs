@@ -14,14 +14,15 @@ namespace Weir.Api.Endpoints;
 
 /// <summary>Refiner libraries and rule sets — <c>/api/v1/refiner/libraries</c>, <c>/refiner/rule-sets</c>
 /// (port of <c>refiner_libraries_api.py</c>). Manager coverage now reads the linked connections' saved
-/// test results (#520). Discovery/import/drift/unlink and the reject-support gate are still not ported:
-/// they need manager-manifest capability negotiation, ported separately.</summary>
+/// test results (#520). The opt-in Reject failure policy's support gate (<c>GET /refiner/reject-support</c>,
+/// and the same check on save) is ported (#522 part 4). Discovery/import/drift/unlink are still not ported.</summary>
 public static class RefinerLibraryEndpoints
 {
     public static IEndpointRouteBuilder MapRefinerLibraryEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapV1("GET", "/refiner/libraries", GetLibrariesAsync);
         endpoints.MapV1("POST", "/refiner/libraries", PostLibraryAsync);
+        endpoints.MapV1("GET", "/refiner/reject-support", GetRejectSupportAsync);
         endpoints.MapV1("GET", "/refiner/libraries/{library_id}", GetLibraryAsync);
         endpoints.MapV1("PUT", "/refiner/libraries/{library_id}", PutLibraryAsync);
         endpoints.MapV1("DELETE", "/refiner/libraries/{library_id}", DeleteLibraryAsync);
@@ -192,6 +193,51 @@ public static class RefinerLibraryEndpoints
         return ApiRoutes.Ok(await LibraryOutAsync(uow, await RequireLibraryAsync(uow, id).ConfigureAwait(false)).ConfigureAwait(false));
     }
 
+    /// <summary>
+    /// <c>GET /api/v1/refiner/reject-support</c>: whether the opt-in Reject failure policy can be chosen for a library
+    /// linked to the given connections. Asks each manager's manifest (or its static capabilities, for one whose port
+    /// removes queue items), so it is called when the option is shown, not on every list.
+    /// </summary>
+    private static async Task<ApiResult> GetRejectSupportAsync(ApiRequest request)
+    {
+        await request.RequireUserAsync().ConfigureAwait(false);
+        var connectionIds = new List<long>();
+        foreach (var raw in request.Context.Request.Query["connection_ids"])
+        {
+            if (raw is not null && long.TryParse(raw, out var id))
+            {
+                connectionIds.Add(id);
+            }
+        }
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var connections = await request.Service<MediaManagerConnectionService>().ConnectionsByIdAsync(uow, connectionIds).ConfigureAwait(false);
+        var support = await request.Service<RejectSupportEvaluator>().EvaluateAsync(connections).ConfigureAwait(false);
+        return ApiRoutes.Ok(new PyDict().Set("available", support.Available).Set("reason", support.Reason));
+    }
+
+    /// <summary>
+    /// <c>_refuse_unsupported_reject</c>: <c>reject</c> deletes downloads, so it cannot be saved for a library no manager
+    /// can take one for. Called after the row is written (so the manager links it was just given are the ones checked)
+    /// but before the transaction commits.
+    /// </summary>
+    private static async Task RefuseUnsupportedRejectAsync(ApiRequest request, UnitOfWork uow, RefinerLibraryRecord row)
+    {
+        if (RefinerFailurePolicies.Normalize(row.FailurePolicy) != RefinerFailurePolicies.Reject)
+        {
+            return;
+        }
+
+        var connectionIds = await LibraryStore.ManagerConnectionIdsAsync(uow, row.Id).ConfigureAwait(false);
+        var connections = await request.Service<MediaManagerConnectionService>().ConnectionsByIdAsync(uow, connectionIds).ConfigureAwait(false);
+        var support = await request.Service<RejectSupportEvaluator>().EvaluateAsync(connections).ConfigureAwait(false);
+        if (!support.Available)
+        {
+            await uow.RollbackAsync().ConfigureAwait(false);
+            throw new ApiException(StatusCodes.Status400BadRequest, $"This library cannot use Reject yet. {support.Reason}");
+        }
+    }
+
     private static RefinerLibraryInput ReadLibraryBody(BodyModel model)
     {
         var name = model.Str("name", minLength: 1, maxLength: 120);
@@ -360,6 +406,7 @@ public static class RefinerLibraryEndpoints
             throw new ApiException(StatusCodes.Status400BadRequest, exception.Message);
         }
 
+        await RefuseUnsupportedRejectAsync(request, uow, row).ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
         return new JsonApiResult(StatusCodes.Status201Created, await LibraryOutAsync(uow, row).ConfigureAwait(false));
     }
@@ -397,6 +444,7 @@ public static class RefinerLibraryEndpoints
             throw new ApiException(StatusCodes.Status400BadRequest, exception.Message);
         }
 
+        await RefuseUnsupportedRejectAsync(request, uow, updated).ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
         return ApiRoutes.Ok(await LibraryOutAsync(uow, updated).ConfigureAwait(false));
     }

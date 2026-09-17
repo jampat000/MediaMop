@@ -58,6 +58,35 @@ public static class RemuxPassFileState
         return true;
     }
 
+    /// <summary>
+    /// Fix #532: a rejection always upserts a Files row, whether or not a scan had already seen the file. Python's
+    /// <c>mark_file_status</c> is a no-op with no existing row, so a hand-off rejected before any watched-folder scan never
+    /// appeared on the Files screen. Sets status <c>rejected</c>, the reason and the failure class; clears
+    /// <c>blocked_by_connection</c> and <c>hold_until</c> the same way <see cref="MarkFileStatusAsync"/> does for any status
+    /// that is neither <c>blocked_upstream</c> nor <c>on_hold</c>.
+    /// </summary>
+    public static async Task UpsertRejectedAsync(UnitOfWork uow, long libraryId, string relativePath, string reason, string? failureClass)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        if (await FindAsync(uow, libraryId, relativePath).ConfigureAwait(false) is null)
+        {
+            await uow.ExecuteAsync(
+                "INSERT INTO refiner_files (library_id, relative_path) VALUES ($library, $path)",
+                ("$library", libraryId),
+                ("$path", relativePath)).ConfigureAwait(false);
+        }
+
+        await uow.ExecuteAsync(
+            "UPDATE refiner_files SET status = $status, status_reason = $reason, failure_class = $class, " +
+            "blocked_by_connection = NULL, hold_until = NULL, updated_at = CURRENT_TIMESTAMP " +
+            "WHERE library_id = $library AND relative_path = $path",
+            ("$status", RefinerFileStatuses.Rejected),
+            ("$reason", PyStrings.Slice(reason, 10000)),
+            ("$class", failureClass),
+            ("$library", libraryId),
+            ("$path", relativePath)).ConfigureAwait(false);
+    }
+
     /// <summary>The four failure fields cleared, after a success, a wait or a content rejection.</summary>
     public static Task ClearFailureFieldsAsync(UnitOfWork uow, long libraryId, string relativePath)
     {
