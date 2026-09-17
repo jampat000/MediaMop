@@ -9,7 +9,10 @@ ffprobe's own stderr. Empirically checked against the bundled ffmpeg
   ``.mkv``, real ffprobe exits 1 with **empty stderr** and stdout ``{\\n\\n}`` — the classification
   markers Weir looks for (``EBML header parsing failed``, etc.) never reach it with ``-v quiet``;
   they are present with ``-v error``. So ``MediaUnreadableError`` can never fire on a real unreadable
-  file, and neither can the reject-policy path that depends on it (#539 item 1, #494).
+  file, and neither can the reject-policy path that depends on it (#539 item 1, #494). Fixed on dotnet:
+  ffprobe runs with ``-v error`` (``FfmpegCommands.BuildFfprobeArgv``, #522 part 2) and the reject job
+  handler (``RefinerRejectHandler``, #522 part 4) reports the hand-off ``failed`` with
+  ``disposition: rejected`` end to end. The Python backend is being retired (ADR-0017) and keeps the bug.
 - ``validate_media_integrity`` runs the primary video through ``ffmpeg ... -f null -`` and only
   fails on a non-zero exit code. On a real MKV truncated after encoding, ffmpeg prints
   ``File ended prematurely`` to stderr but still **exits 0**, and the container's own header still
@@ -40,8 +43,8 @@ def _tool(env: dict[str, str], name: str) -> str:
     raise AssertionError(f"{name} not found in {folder}")
 
 
-@pytest.mark.known_bug(issue=539, backends=("python", "dotnet"))
-@pytest.mark.known_bug(issue=494, backends=("python", "dotnet"))
+@pytest.mark.known_bug(issue=539, backends=("python",))
+@pytest.mark.known_bug(issue=494, backends=("python",))
 def test_unreadable_zero_filled_media_is_classified_unreadable_and_rejected(
     server_factory, client_factory, fake_managers, real_ffmpeg_env, tmp_path: Path
 ) -> None:
@@ -86,7 +89,7 @@ def test_unreadable_zero_filled_media_is_classified_unreadable_and_rejected(
     assert row["status"] == "rejected"
 
 
-@pytest.mark.known_bug(issue=539, backends=("python", "dotnet"))
+@pytest.mark.known_bug(issue=539, backends=("python",))
 def test_a_truncated_mkv_never_completes_as_if_it_were_whole(
     server_factory, client_factory, fake_managers, real_ffmpeg_env, tmp_path: Path
 ) -> None:

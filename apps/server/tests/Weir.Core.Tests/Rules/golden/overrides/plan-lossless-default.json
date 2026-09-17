@@ -45,7 +45,7 @@
       "removed_subtitles": [],
       "default_audio_output_index": 0,
       "audio_selection_notes": [
-        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Track ranking: content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first.",
         "Selected eng flac 2 ch (stream 1) over eng eac3 2 ch (stream 2); eng pcm_s24le 2 ch (stream 3); eng alac 2 ch (stream 4) within the same language tier (ranked by quality).",
         "Removed non-selected eng eac3 2 ch (stream 2) after selecting eng flac 2 ch (stream 1).",
         "Removed non-selected eng pcm_s24le 2 ch (stream 3) after selecting eng flac 2 ch (stream 1).",
@@ -71,5 +71,11 @@
       "metadata_removed": "—"
     },
     "metadata_argv": []
+  },
+  "issue_497": {
+    "items": [
+      3
+    ],
+    "reason": "Default audio sorters now rank content tier (main > dub/audio description > commentary) first, replacing the plain commentary key; wording-only for this case (no track-selection change)."
   }
 }

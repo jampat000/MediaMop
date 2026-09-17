@@ -192,6 +192,18 @@ public sealed class PyDict : PyJson
 
     public bool ContainsKey(string key) => _values.ContainsKey(key);
 
+    /// <summary>Python's <c>d.pop(key, None)</c>: remove the key when present.</summary>
+    public bool Remove(string key)
+    {
+        if (!_values.Remove(key))
+        {
+            return false;
+        }
+
+        _keys.Remove(key);
+        return true;
+    }
+
     public bool TryGetValue(string key, out PyJson value)
     {
         if (_values.TryGetValue(key, out var found))

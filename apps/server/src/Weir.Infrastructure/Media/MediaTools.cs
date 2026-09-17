@@ -272,8 +272,16 @@ public sealed partial class MediaTools
     /// <param name="src">The source file to remux.</param>
     /// <param name="workDir">Where the temp output is written.</param>
     /// <param name="plan">Which streams to keep and how to tag them.</param>
+    /// <param name="sourceProbe">
+    /// The source's own ffprobe JSON (already read by the caller before planning), for #500's staged-output
+    /// validation: the container family to compare against and the kept streams' own durations.
+    /// </param>
+    /// <param name="sourceWarnings">
+    /// The source's ffprobe <c>-v warning</c> lines (<see cref="RemuxOutputValidation.WarningLines"/>), read once by
+    /// the caller, so #500's new-warnings check has a baseline to compare the output against.
+    /// </param>
     /// <param name="progressCallback">Reported to as ffmpeg runs, when given.</param>
-    /// <param name="durationSeconds">The expected output duration, for progress percentage and output validation.</param>
+    /// <param name="durationSeconds">The expected output duration, for progress percentage only (validation now derives its own expected duration from the kept streams; see <see cref="ValidateStagedOutputAsync"/>).</param>
     /// <param name="acceleration">
     /// The hardware acceleration decision, when one was made. Fixes #539 item 2: the reference builds an argv
     /// with the hwaccel flags only to show them (in <c>run.py</c>, for logging), and <c>remux_to_temp_file</c>
@@ -287,6 +295,8 @@ public sealed partial class MediaTools
         string src,
         string workDir,
         RemuxPlan plan,
+        JsonElement sourceProbe,
+        IReadOnlyList<string> sourceWarnings,
         Action<FfmpegProgressUpdate>? progressCallback = null,
         double? durationSeconds = null,
         AccelerationDecision? acceleration = null,
@@ -295,6 +305,7 @@ public sealed partial class MediaTools
         ArgumentNullException.ThrowIfNull(src);
         ArgumentNullException.ThrowIfNull(workDir);
         ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(sourceWarnings);
         var (_, ffmpeg) = _resolver.Resolve();
         Directory.CreateDirectory(workDir);
         var suffix = MediaPathNames.Suffix(src, _windows);
@@ -304,7 +315,7 @@ public sealed partial class MediaTools
             var argv = FfmpegCommands.BuildRemuxArgv(ffmpeg, src, tmpPath, plan, acceleration?.ArgvFlags);
             LogFfmpegDebug(FfmpegCommands.DebugSummary(argv));
             await RunFfmpegAsync(argv, progressCallback: progressCallback, durationSeconds: durationSeconds, cancellationToken: cancellationToken).ConfigureAwait(false);
-            await ValidateRemuxOutputAsync(tmpPath, plan.Audio.Count, durationSeconds, cancellationToken).ConfigureAwait(false);
+            await ValidateStagedOutputAsync(tmpPath, src, sourceProbe, plan, sourceWarnings, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -324,6 +335,102 @@ public sealed partial class MediaTools
         }
 
         return tmpPath;
+    }
+
+    /// <summary>
+    /// #500: validates a staged remux output against the whole plan instead of just an audio count and a duration
+    /// floor — container family, per-position track type, counts per type, disposition and language per kept
+    /// track, new ffprobe warnings, and cleared metadata (<see cref="RemuxOutputValidation.ValidateAgainstPlan"/>).
+    /// This is now the staged-output check the remux pass calls; <see cref="ValidateRemuxOutputAsync"/> is kept
+    /// only so the golden-parity tests can still prove the older Python check byte for byte.
+    /// </summary>
+    /// <param name="outputPath">The staged output to validate.</param>
+    /// <param name="sourcePath">
+    /// The source file, used only when none of the kept streams' own probed duration is usable and a direct
+    /// stream-copy measurement is needed (<see cref="MeasureKeptStreamsDurationAsync"/>).
+    /// </param>
+    /// <param name="sourceProbe">The source's own ffprobe JSON, read once by the caller before planning.</param>
+    /// <param name="plan">The plan the output is checked against.</param>
+    /// <param name="sourceWarnings">The source's ffprobe <c>-v warning</c> lines, read once by the caller.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task ValidateStagedOutputAsync(
+        string outputPath,
+        string sourcePath,
+        JsonElement sourceProbe,
+        RemuxPlan plan,
+        IReadOnlyList<string> sourceWarnings,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(outputPath);
+        ArgumentNullException.ThrowIfNull(sourcePath);
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(sourceWarnings);
+
+        var expectedDuration = RemuxOutputValidation.ExpectedDurationFromKeptStreams(sourceProbe, plan)
+            ?? await MeasureKeptStreamsDurationAsync(sourcePath, plan, cancellationToken).ConfigureAwait(false);
+        if (expectedDuration is null)
+        {
+            throw new MediaCompletenessException(
+                "Validation failed: Refiner could not establish how long the kept streams should run — none of them reported a " +
+                "duration and measuring the source directly did not produce one — so the staged output was not published.");
+        }
+
+        var outputProbe = await FfprobeJsonAsync(outputPath, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var outputWarnings = await ProbeWarningLinesAsync(outputPath, cancellationToken).ConfigureAwait(false);
+        RemuxOutputValidation.ValidateAgainstPlan(
+            outputProbe,
+            plan,
+            RemuxOutputValidation.FormatName(sourceProbe),
+            expectedDuration.Value,
+            sourceWarnings,
+            outputWarnings);
+    }
+
+    /// <summary>
+    /// #500: ffprobe's <c>-v warning</c> stderr for a file, as non-blank stripped lines. Best-effort: a timeout
+    /// reads as no warnings rather than failing the whole validation over a diagnostic that could not be gathered.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> ProbeWarningLinesAsync(string path, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        var (ffprobe, _) = _resolver.Resolve();
+        var argv = FfmpegCommands.BuildFfprobeWarningsArgv(ffprobe, path);
+        var result = await _runner.RunAsync(
+            new ProcessRequest
+            {
+                Argv = argv,
+                Timeout = TimeSpan.FromSeconds(FfmpegCommands.FfprobeTimeoutSeconds),
+                Stdin = ProcessInput.Inherit,
+                Stdout = ProcessOutput.Discard,
+                Stderr = ProcessOutput.Capture,
+            },
+            cancellationToken).ConfigureAwait(false);
+        return result.TimedOut ? [] : RemuxOutputValidation.WarningLines(ProbeOutput.CapturedText(result.Stderr));
+    }
+
+    /// <summary>
+    /// #500: when no kept source stream reports its own duration, demux exactly the streams the plan keeps
+    /// (<see cref="FfmpegCommands.BuildKeptStreamsDemuxArgv"/>) and read the last timestamp reached, the same way
+    /// <see cref="ValidateMediaIntegrityAsync"/> reads its progress. Null when the run timed out or reported no
+    /// timestamp at all.
+    /// </summary>
+    public async Task<double?> MeasureKeptStreamsDurationAsync(string sourcePath, RemuxPlan plan, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sourcePath);
+        ArgumentNullException.ThrowIfNull(plan);
+        var (_, ffmpeg) = _resolver.Resolve();
+        var argv = FfmpegCommands.WithProgress(FfmpegCommands.BuildKeptStreamsDemuxArgv(ffmpeg, sourcePath, plan));
+        var result = await _runner.RunAsync(
+            new ProcessRequest
+            {
+                Argv = argv,
+                Timeout = TimeSpan.FromSeconds(FfmpegCommands.FfmpegTimeoutSeconds),
+                Stdin = ProcessInput.Null,
+                Stdout = ProcessOutput.Capture,
+                Stderr = ProcessOutput.Discard,
+            },
+            cancellationToken).ConfigureAwait(false);
+        return result.TimedOut ? null : ProbeOutput.LastProgressOutTimeSeconds(ProbeOutput.CapturedText(result.Stdout));
     }
 
     /// <summary>

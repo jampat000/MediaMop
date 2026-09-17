@@ -7,10 +7,10 @@
     {
       "index": 0,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
-          "ok": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+          "ok": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
         },
         "keys": [
           [
@@ -34,7 +34,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -87,10 +87,10 @@
     {
       "index": 1,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
-          "ok": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+          "ok": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
         },
         "keys": [
           [
@@ -114,7 +114,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -167,10 +167,10 @@
     {
       "index": 2,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
-          "ok": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+          "ok": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
         },
         "keys": [
           [
@@ -194,7 +194,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -247,8 +247,8 @@
     {
       "index": 3,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
           "error": "The track sorter list is not valid JSON."
         },
@@ -274,7 +274,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -327,8 +327,8 @@
     {
       "index": 4,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
           "error": "The track sorter list must be a list."
         },
@@ -354,7 +354,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -407,8 +407,8 @@
     {
       "index": 5,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
           "ok": "[]"
         },
@@ -434,7 +434,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -487,8 +487,8 @@
     {
       "index": 6,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
           "error": "Sorter 1 is not an object."
         },
@@ -514,7 +514,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -567,8 +567,8 @@
     {
       "index": 7,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
           "error": "The track sorter list is not valid JSON."
         },
@@ -594,7 +594,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -647,8 +647,8 @@
     {
       "index": 8,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
           "error": "The track sorter list must be a list."
         },
@@ -674,7 +674,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -727,10 +727,10 @@
     {
       "index": 9,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
-          "error": "Sorter 1 uses an unknown field 'loudness'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+          "error": "Sorter 1 uses an unknown field 'loudness'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary, content_tier."
         },
         "keys": [
           [
@@ -754,7 +754,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -810,7 +810,7 @@
         "parsed": "[{\"field\":\"channels\",\"value\":null,\"reversed\":false}]",
         "described": "channels highest first",
         "validated": {
-          "error": "Sorter 1 uses an unknown field 'loudness'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+          "error": "Sorter 1 uses an unknown field 'loudness'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary, content_tier."
         },
         "keys": [
           [
@@ -919,10 +919,10 @@
     {
       "index": 12,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
-          "error": "Sorter 1 uses an unknown field '5'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+          "error": "Sorter 1 uses an unknown field '5'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary, content_tier."
         },
         "keys": [
           [
@@ -946,7 +946,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -1451,10 +1451,10 @@
     {
       "index": 40,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
-          "error": "Sorter 1 uses an unknown field 'codecé'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+          "error": "Sorter 1 uses an unknown field 'codecé'. Known fields: bitrate, channels, codec, language, title, default, forced, commentary, content_tier."
         },
         "keys": [
           [
@@ -1478,7 +1478,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -1531,10 +1531,10 @@
     {
       "index": 41,
       "expected": {
-        "parsed": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
-        "described": "commentary last, then channels highest first, then codec order, then bitrate highest first, then default first",
+        "parsed": "[{\"field\":\"content_tier\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]",
+        "described": "content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first",
         "validated": {
-          "error": "Sorter 1 uses an unknown field \"o'k\". Known fields: bitrate, channels, codec, language, title, default, forced, commentary."
+          "error": "Sorter 1 uses an unknown field \"o'k\". Known fields: bitrate, channels, codec, language, title, default, forced, commentary, content_tier."
         },
         "keys": [
           [
@@ -1558,7 +1558,7 @@
             1
           ],
           [
-            1,
+            2,
             0,
             -2,
             16,
@@ -1608,5 +1608,11 @@
         ]
       }
     }
-  ]
+  ],
+  "issue_497": {
+    "items": [
+      3
+    ],
+    "note": "Content_tier sorter is now DefaultAudioSorters leading key; also appends to every Known fields error message."
+  }
 }

@@ -44,10 +44,23 @@ def probe(
 ) -> dict[str, Any]:
     """An ffprobe answer with the given tracks, indexed in order: video, audio, subtitles."""
 
+    # Every stream carries its own "duration" (a string, as real ffprobe reports it), not just
+    # format.duration: #500's staged-output validation (Weir.Core.Media.RemuxOutputValidation) expects the
+    # kept streams' own duration and only falls back to a real demux measurement — which a fake, non-playable
+    # file can never produce — so a stream with none looks like a file whose length could not be established
+    # and the pass refuses to publish it.
+    duration_text = f"{duration_seconds:.6f}"
     streams: list[dict[str, Any]] = []
     for _ in range(video):
         streams.append(
-            {"index": len(streams), "codec_type": "video", "codec_name": "h264", "width": 1920, "height": 1080}
+            {
+                "index": len(streams),
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 1920,
+                "height": 1080,
+                "duration": duration_text,
+            }
         )
     for lang in audio_languages:
         streams.append(
@@ -56,12 +69,19 @@ def probe(
                 "codec_type": "audio",
                 "codec_name": "aac",
                 "channels": 2,
+                "duration": duration_text,
                 "tags": {"language": lang},
             }
         )
     for lang in subtitle_languages:
         streams.append(
-            {"index": len(streams), "codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": lang}}
+            {
+                "index": len(streams),
+                "codec_type": "subtitle",
+                "codec_name": "subrip",
+                "duration": duration_text,
+                "tags": {"language": lang},
+            }
         )
     return {"streams": streams, "format": {"duration": f"{duration_seconds:.1f}"}}
 

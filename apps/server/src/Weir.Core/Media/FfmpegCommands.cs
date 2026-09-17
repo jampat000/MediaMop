@@ -44,6 +44,16 @@ public static class FfmpegCommands
     /// puts ffmpeg's own error lines on stderr, which is what the classification in
     /// <see cref="ProbeOutput.FailureFor"/> needs. See apps/server/README.md "ffmpeg parity" for how the golden
     /// fixtures captured against Python's <c>-v quiet</c> behaviour are patched to prove this on purpose.
+    /// <para>
+    /// Deliberate divergence (#498): the reference never asks ffprobe for chapters, so a caller wanting to know
+    /// whether a file has any (<see cref="Weir.Core.Rules.RemuxRules.IsRemuxRequired"/>'s <c>chaptersPresent</c>,
+    /// for the "remove chapters" option) would need a second probe just for that. <c>-show_chapters</c> is added
+    /// here instead, so every probe's JSON already carries a <c>chapters</c> array (see
+    /// <see cref="ProbeResult.Chapters"/>) — empty when the file has none. This only adds a <c>chapters</c> key to
+    /// the parsed result; every other field is unchanged, and the golden fixtures (captured before this option
+    /// existed) are patched at the one changed argv token — see README "ffmpeg parity" and each patch site's
+    /// <c>GoldenDivergences</c> helper.
+    /// </para>
     /// </remarks>
     public static IReadOnlyList<string> BuildFfprobeArgv(string ffprobeBin, string src, long probeSizeMb = 10, long analyzeDurationSeconds = 10)
     {
@@ -64,8 +74,54 @@ public static class FfmpegCommands
             "json",
             "-show_streams",
             "-show_format",
+            "-show_chapters",
             src,
         ];
+    }
+
+    /// <summary>
+    /// #500: the same probe as <see cref="BuildFfprobeArgv"/> but at <c>-v warning</c>, so ffprobe's warning-level
+    /// diagnostics (not just errors) land on stderr for the source-vs-output comparison in
+    /// <see cref="RemuxOutputValidation"/>. Verbosity does not affect <c>-print_format json</c> or the JSON on
+    /// stdout, which callers of this argv discard — only stderr is read.
+    /// </summary>
+    public static IReadOnlyList<string> BuildFfprobeWarningsArgv(string ffprobeBin, string src, long probeSizeMb = 10, long analyzeDurationSeconds = 10)
+    {
+        var argv = BuildFfprobeArgv(ffprobeBin, src, probeSizeMb, analyzeDurationSeconds).ToList();
+        var index = argv.IndexOf("-v");
+        argv[index + 1] = "warning";
+        return argv;
+    }
+
+    /// <summary>
+    /// #500: demuxes exactly the streams <paramref name="plan"/> keeps (video, then audio, then subtitles, matching
+    /// <see cref="BuildRemuxArgv"/>'s map order) without writing them anywhere, so the last <c>-progress pipe:1</c>
+    /// timestamp reached is the source's playable duration restricted to those streams. Used only when none of the
+    /// kept streams' own probed duration is usable (<see cref="RemuxOutputValidation.ExpectedDurationFromKeptStreams"/>).
+    /// </summary>
+    public static IReadOnlyList<string> BuildKeptStreamsDemuxArgv(string ffmpegBin, string src, RemuxPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(ffmpegBin);
+        ArgumentNullException.ThrowIfNull(src);
+        ArgumentNullException.ThrowIfNull(plan);
+        var args = new List<string> { ffmpegBin, "-hide_banner", "-v", "error", "-i", src };
+        foreach (var vi in plan.VideoIndices)
+        {
+            args.AddRange(["-map", Map(vi)]);
+        }
+
+        foreach (var track in plan.Audio)
+        {
+            args.AddRange(["-map", Map(track.InputIndex)]);
+        }
+
+        foreach (var track in plan.Subtitles)
+        {
+            args.AddRange(["-map", Map(track.InputIndex)]);
+        }
+
+        args.AddRange(["-c", "copy", "-f", "null", "-"]);
+        return args;
     }
 
     /// <summary>The full demux of the primary video that <c>validate_media_integrity</c> runs.</summary>
@@ -163,6 +219,29 @@ public static class FfmpegCommands
             }
 
             args.AddRange([$"-disposition:s:{i.ToString(CultureInfo.InvariantCulture)}", flags.Count > 0 ? string.Join('+', flags) : "0"]);
+        }
+
+        // #498: standard track names and cleared video names, after the dispositions, indexed by output position
+        // (same as the dispositions above) rather than the original input index.
+        if (plan.Metadata.StandardizeTrackNames)
+        {
+            for (var i = 0; i < plan.Audio.Count; i++)
+            {
+                args.AddRange([$"-metadata:s:a:{i.ToString(CultureInfo.InvariantCulture)}", $"title={TrackNaming.RenderTrackName(plan.Metadata, plan.Audio[i])}"]);
+            }
+
+            for (var i = 0; i < plan.Subtitles.Count; i++)
+            {
+                args.AddRange([$"-metadata:s:s:{i.ToString(CultureInfo.InvariantCulture)}", $"title={TrackNaming.RenderTrackName(plan.Metadata, plan.Subtitles[i])}"]);
+            }
+        }
+
+        if (plan.Metadata.ClearVideoTrackNames)
+        {
+            for (var i = 0; i < plan.VideoIndices.Count; i++)
+            {
+                args.AddRange([$"-metadata:s:v:{i.ToString(CultureInfo.InvariantCulture)}", "title="]);
+            }
         }
 
         args.Add(dst);

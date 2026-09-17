@@ -15,7 +15,16 @@ public sealed class SqliteDatabase
     /// </summary>
     public const int BusyTimeoutMilliseconds = 30_000;
 
-    public SqliteDatabase(string databasePath)
+    /// <param name="databasePath">The SQLite file.</param>
+    /// <param name="pooling">
+    /// Off only for a caller deliberately simulating several independent processes sharing one file in a
+    /// single test process (e.g. a claim-concurrency stress test): every <see cref="SqliteDatabase"/>
+    /// instance made from the same path otherwise shares one process-wide pool keyed by connection
+    /// string, which is exactly right for production (repeated opens reuse a warm native handle) but
+    /// means "separate workers" in such a test are not actually isolated the way separate real processes
+    /// would be — each gets a genuinely fresh, unshared connection instead.
+    /// </param>
+    public SqliteDatabase(string databasePath, bool pooling = true)
     {
         ArgumentException.ThrowIfNullOrEmpty(databasePath);
         DatabasePath = databasePath;
@@ -24,7 +33,7 @@ public sealed class SqliteDatabase
             DataSource = databasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
             Cache = SqliteCacheMode.Private,
-            Pooling = true,
+            Pooling = pooling,
             // Seconds a command waits on a locked database (complements PRAGMA busy_timeout).
             DefaultTimeout = BusyTimeoutMilliseconds / 1000,
         }.ToString();
@@ -33,6 +42,19 @@ public sealed class SqliteDatabase
     public string DatabasePath { get; }
 
     public string ConnectionString { get; }
+
+    /// <summary>
+    /// Releases this database's own pooled connections, e.g. so its file can be deleted once every
+    /// caller is done with it. Scoped to <see cref="ConnectionString"/> alone: unlike
+    /// <see cref="SqliteConnection.ClearAllPools"/>, it never touches another database's pool, so it is
+    /// safe to call while other connections (elsewhere in the process, such as a concurrently running
+    /// test) are still open.
+    /// </summary>
+    public void ClearPool()
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        SqliteConnection.ClearPool(connection);
+    }
 
     public async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken = default)
     {

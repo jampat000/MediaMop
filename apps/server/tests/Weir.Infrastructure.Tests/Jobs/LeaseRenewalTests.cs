@@ -36,7 +36,7 @@ public sealed class LeaseRenewalTests : IDisposable
         var intruderHandler = new DelegateHandler(Kind, _ => Interlocked.Increment(ref intruderRuns));
 
         var runningProcessor = new RefinerJobProcessor(
-            new RefinerJobStore(new SqliteDatabase(_db.DbPath), TimeProvider.System),
+            new RefinerJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System),
             new JobHandlerRegistry([runningHandler]),
             new RecordingActivityWriter(),
             new NoUnhandledJobFailureRecorder(),
@@ -44,7 +44,7 @@ public sealed class LeaseRenewalTests : IDisposable
             TimeProvider.System,
             NullLogger<RefinerJobProcessor>.Instance);
         var intruderProcessor = new RefinerJobProcessor(
-            new RefinerJobStore(new SqliteDatabase(_db.DbPath), TimeProvider.System),
+            new RefinerJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System),
             new JobHandlerRegistry([intruderHandler]),
             new RecordingActivityWriter(),
             new NoUnhandledJobFailureRecorder(),
@@ -84,7 +84,7 @@ public sealed class LeaseRenewalTests : IDisposable
             started.TrySetResult();
             await release.Task;
         });
-        var store = new RefinerJobStore(new SqliteDatabase(_db.DbPath), TimeProvider.System);
+        var store = new RefinerJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System);
         var processor = new RefinerJobProcessor(
             store,
             new JobHandlerRegistry([handler]),

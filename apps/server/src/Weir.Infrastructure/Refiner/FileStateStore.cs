@@ -1,10 +1,12 @@
 using Microsoft.Data.Sqlite;
 using Weir.Core.Refiner;
+using Weir.Core.Time;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Refiner;
 
-/// <summary>SQLite access for <c>refiner_files</c> (port of the read/list/forget parts of <c>refiner_file_state_service.py</c>).</summary>
+/// <summary>SQLite access for <c>refiner_files</c> (port of <c>refiner_file_state_service.py</c>: the
+/// read/list/forget parts, plus the upsert/mark-status writes the watched-folder scan performs).</summary>
 public static class FileStateStore
 {
     private const string Columns =
@@ -79,6 +81,121 @@ public static class FileStateStore
 
     /// <summary><c>forget_file</c>: removes Weir's record; never touches the file on disk.</summary>
     public static Task ForgetAsync(UnitOfWork uow, long id) => uow.ExecuteAsync("DELETE FROM refiner_files WHERE id = @id", ("@id", id));
+
+    /// <summary><c>existing_file_row</c>: the row a previous scan left, or <see langword="null"/>. Settling
+    /// compares against this. An alias for <see cref="FindAsync"/> under the Python name callers expect.</summary>
+    public static Task<RefinerFileRecord?> ExistingFileRowAsync(UnitOfWork uow, long libraryId, string relativePath) =>
+        FindAsync(uow, libraryId, relativePath);
+
+    /// <summary>
+    /// <c>record_file_state</c>: upsert one file's state. Safe to call on every scan. <paramref name="sizeBytes"/>
+    /// and <paramref name="sizeChangedAt"/> of <see langword="null"/> mean "not supplied" (leave the
+    /// stored value alone), distinct from a genuine zero.
+    /// </summary>
+    public static async Task<long> RecordFileStateAsync(
+        UnitOfWork uow,
+        long libraryId,
+        string relativePath,
+        FileStateVerdict verdict,
+        long? sizeBytes,
+        DateTimeOffset? sizeChangedAt,
+        DateTimeOffset seenAt,
+        bool isAttempt = false)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        ArgumentNullException.ThrowIfNull(verdict);
+        var existingId = await uow.ScalarAsync(
+            "SELECT id FROM refiner_files WHERE library_id = @lib AND relative_path = @path",
+            ("@lib", libraryId), ("@path", relativePath)).ConfigureAwait(false);
+
+        var seen = PyDateTime.FromDateTimeOffset(seenAt);
+        var holdUntil = verdict.HoldUntil is { } hold ? PyDateTime.FromDateTimeOffset(hold) : (PyDateTime?)null;
+        var changedAt = sizeChangedAt is { } changed ? PyDateTime.FromDateTimeOffset(changed) : (PyDateTime?)null;
+
+        if (existingId is null or DBNull)
+        {
+            await uow.ExecuteAsync(
+                "INSERT INTO refiner_files (library_id, relative_path, status, status_reason, blocked_by_connection, hold_until, " +
+                "size_bytes, size_changed_at, last_seen_at, last_attempt_at) VALUES (@lib, @path, @status, @reason, @blocked, @hold, " +
+                "@size, @size_changed, @seen, @attempt)",
+                ("@lib", libraryId),
+                ("@path", relativePath),
+                ("@status", verdict.Status),
+                ("@reason", verdict.Reason),
+                ("@blocked", verdict.BlockedByConnection),
+                ("@hold", SqliteValues.ToSqlite(holdUntil)),
+                ("@size", sizeBytes ?? 0),
+                ("@size_changed", SqliteValues.ToSqlite(changedAt)),
+                ("@seen", SqliteValues.ToSqlite(seen)),
+                ("@attempt", isAttempt ? SqliteValues.ToSqlite(seen) : null)).ConfigureAwait(false);
+            return Convert.ToInt64(await uow.ScalarAsync(
+                "SELECT id FROM refiner_files WHERE library_id = @lib AND relative_path = @path",
+                ("@lib", libraryId), ("@path", relativePath)).ConfigureAwait(false), System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        var id = Convert.ToInt64(existingId, System.Globalization.CultureInfo.InvariantCulture);
+        var sets = new List<string>
+        {
+            "status = @status", "status_reason = @reason", "blocked_by_connection = @blocked", "hold_until = @hold",
+            "last_seen_at = @seen", "updated_at = CURRENT_TIMESTAMP",
+        };
+        var parameters = new List<(string, object?)>
+        {
+            ("@status", verdict.Status),
+            ("@reason", verdict.Reason),
+            ("@blocked", verdict.BlockedByConnection),
+            ("@hold", SqliteValues.ToSqlite(holdUntil)),
+            ("@seen", SqliteValues.ToSqlite(seen)),
+            ("@id", id),
+        };
+        if (sizeBytes is { } size)
+        {
+            sets.Add("size_bytes = @size");
+            parameters.Add(("@size", size));
+        }
+
+        if (changedAt is { } changed2)
+        {
+            sets.Add("size_changed_at = @size_changed");
+            parameters.Add(("@size_changed", SqliteValues.ToSqlite(changed2)));
+        }
+
+        if (isAttempt)
+        {
+            sets.Add("last_attempt_at = @attempt");
+            parameters.Add(("@attempt", SqliteValues.ToSqlite(seen)));
+        }
+
+        await uow.ExecuteAsync($"UPDATE refiner_files SET {string.Join(", ", sets)} WHERE id = @id", [.. parameters]).ConfigureAwait(false);
+        return id;
+    }
+
+    /// <summary><c>mark_file_status</c>: move a file Weir has already seen into a new state. No-op when the
+    /// row does not exist (matches Python returning <see langword="null"/> silently).</summary>
+    public static async Task MarkFileStatusAsync(UnitOfWork uow, long libraryId, string relativePath, string status, string reason)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        var sets = new List<string> { "status = @status", "status_reason = @reason", "updated_at = CURRENT_TIMESTAMP" };
+        var parameters = new List<(string, object?)> { ("@status", status), ("@reason", reason), ("@lib", libraryId), ("@path", relativePath) };
+        if (status is RefinerFileStatuses.Processing or RefinerFileStatuses.Processed or RefinerFileStatuses.ProcessingFailed)
+        {
+            sets.Add("last_attempt_at = CURRENT_TIMESTAMP");
+        }
+
+        if (status != RefinerFileStatuses.BlockedUpstream)
+        {
+            sets.Add("blocked_by_connection = NULL");
+        }
+
+        if (status != RefinerFileStatuses.OnHold)
+        {
+            sets.Add("hold_until = NULL");
+        }
+
+        await uow.ExecuteAsync(
+            $"UPDATE refiner_files SET {string.Join(", ", sets)} WHERE library_id = @lib AND relative_path = @path",
+            [.. parameters]).ConfigureAwait(false);
+    }
 
     /// <summary>Every library's name, keyed by id (for the Files list's <c>library_name</c> field).</summary>
     public static Task<Dictionary<long, string>> LibraryNamesAsync(UnitOfWork uow) =>

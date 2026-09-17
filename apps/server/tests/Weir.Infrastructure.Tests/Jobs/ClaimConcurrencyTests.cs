@@ -189,7 +189,10 @@ public sealed class ClaimConcurrencyTests : IDisposable
         Assert.Equal(producers * perProducer, claims.Distinct().Count());
     }
 
-    private RefinerJobStore SeparateStore() => new(new SqliteDatabase(_db.DbPath), _db.Clock);
+    // pooling: false - each simulated worker gets its own real connection, not a share of one process-wide
+    // pool keyed by this path, matching "as separate processes would be" and ruling out any pool-reuse
+    // interaction between workers as a source of the flakiness this stress test is designed to catch.
+    private RefinerJobStore SeparateStore() => new(new SqliteDatabase(_db.DbPath, pooling: false), _db.Clock);
 
     private async Task EnqueueManyAsync(int count)
     {

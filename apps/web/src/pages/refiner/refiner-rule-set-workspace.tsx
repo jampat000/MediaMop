@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 
 import { PageLoading } from "../../components/shared/page-loading";
+import { RefinerRulesPreviewPanel } from "./refiner-rules-preview-panel";
 import { MmMultiListboxPicker } from "../../components/ui/mm-multi-listbox-picker";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
@@ -894,6 +895,8 @@ export function RefinerRuleSetWorkspace() {
                 </div>
               ) : null}
             </section>
+
+            <RefinerRulesPreviewPanel rules={draft} disabled={!editable} />
 
             {notice ? (
               <p

@@ -7,8 +7,10 @@ an existing ``refiner_files`` row — ``if row is None: return None`` — rather
 hand-off Weir has never scanned has no row, so the rejection is silently dropped everywhere except
 Activity.
 
-This also needs the 500 fix from #530 (``RefinerFileOut.status`` does not list ``rejected``), exactly
-as the issue notes; until both land this stays xfail either way.
+This also needed the 500 fix from #530 (``RefinerFileOut.status`` does not list ``rejected``), exactly
+as the issue notes. Fixed on dotnet (#522 part 4): ``RefinerRejectHandler`` upserts the Files row
+(``RemuxPassFileState.UpsertRejectedAsync``) instead of the update-only ``mark_file_status``. The
+Python backend is being retired (ADR-0017) and keeps the bug.
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from tests.contract.processing import _helpers as h
 from tests.contract.support.fake_ffmpeg import fake_media_bytes, probe
 
 
-@pytest.mark.known_bug(issue=532, backends=("python", "dotnet"))
+@pytest.mark.known_bug(issue=532, backends=("python",))
 def test_a_rejection_with_no_prior_scan_still_creates_a_files_row(
     server_factory, client_factory, fake_ffmpeg, fake_managers, tmp_path: Path
 ) -> None:

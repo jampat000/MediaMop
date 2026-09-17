@@ -144,8 +144,14 @@ public static partial class RefinerDomain
         rows.Any(r => RowAppliesToCandidate(r, candidate) && r.IsUpstreamActive && !r.BlockingSuppressedForImportWait);
 }
 
-/// <summary>Which managers were asked, and which could not answer (<c>QueueSignalReport</c>).</summary>
-public sealed record QueueSignalReport(int Consulted, int Reported, IReadOnlyList<string> SilentLabels)
+/// <summary>
+/// Which managers were asked, and which could not answer (<c>QueueSignalReport</c>). <see cref="SilentLabels"/>
+/// is the point of this type: a manager that is unreachable, or that cannot report a queue at all, must never
+/// be counted as "nothing is importing", so it is counted here instead. <see cref="SilentDetails"/> carries the
+/// per-manager detail sentence (e.g. "Weir could not reach Sonarr (Main)...") for callers that need to quote it,
+/// such as TV season-folder cleanup's refusal to guess when any manager could not answer.
+/// </summary>
+public sealed record QueueSignalReport(int Consulted, int Reported, IReadOnlyList<string> SilentLabels, IReadOnlyList<string> SilentDetails)
 {
     public bool AllReported => SilentLabels.Count == 0;
 
@@ -194,21 +200,24 @@ public static class CandidateGate
     }
 
     /// <summary>
-    /// <c>evaluate_refiner_candidate_gate_from_manager_signals</c>, given the attributed rows and the
-    /// consulted/reported/silent report directly (the row-mapping step needs the media-manager dialect
-    /// adapters, ported separately in #520; see <c>HoldDiagnosticStore</c> for how this is called today).
+    /// <c>evaluate_refiner_candidate_gate_from_manager_signals</c>: map every reported row with the same
+    /// candidate anchors Refiner uses elsewhere (<see cref="ManagerQueueSignals.AttributedQueueRows"/>), then
+    /// apply domain. <paramref name="attributedRows"/> keeps each row's reporting connection so a
+    /// <c>wait_upstream</c> verdict can name it (<c>HoldDiagnosticStore</c> and the watched-folder scan both
+    /// build these from the already-ported manager queue signals).
     /// </summary>
     public static CandidateGateOutcome Evaluate(
         string mediaScope,
         QueueSignalReport report,
-        IReadOnlyList<RefinerQueueRowView> attributedRows,
+        IReadOnlyList<AttributedQueueRow> attributedRows,
         FileAnchorCandidate candidate)
     {
-        var owned = RefinerDomain.FileIsOwnedByQueue(attributedRows, candidate);
-        var blockedBy = attributedRows.FirstOrDefault(row => RefinerDomain.ShouldBlockForUpstream([row], candidate));
+        ArgumentNullException.ThrowIfNull(attributedRows);
+        var owned = ManagerQueueSignals.FileIsOwnedByAnyManager(attributedRows, candidate);
+        var blockedByConnection = ManagerQueueSignals.BlockingConnectionLabel(attributedRows, candidate);
         var rowCount = attributedRows.Count;
 
-        CandidateGateOutcome Outcome(CandidateGateVerdict verdict, params string[] reasons)
+        CandidateGateOutcome Outcome(CandidateGateVerdict verdict, string? blockedBy, params string[] reasons)
         {
             var collected = new List<string>(reasons);
             var note = report.Note();
@@ -219,39 +228,41 @@ public static class CandidateGate
 
             return new CandidateGateOutcome(
                 verdict, owned, blockedBy is not null, rowCount, mediaScope, report.Consulted, report.Reported,
-                report.SilentLabels, null, collected);
+                report.SilentLabels, blockedBy, collected);
         }
 
         if (report.Consulted == 0)
         {
-            return Outcome(CandidateGateVerdict.NoUpstreamSignal, NoManagerConfiguredNote(mediaScope));
+            return Outcome(CandidateGateVerdict.NoUpstreamSignal, null, NoManagerConfiguredNote(mediaScope));
         }
 
         if (!report.HasAnySignal)
         {
             return Outcome(
                 CandidateGateVerdict.NoUpstreamSignal,
+                null,
                 "No connected media manager could say what it is importing, so Weir has no upstream check for this candidate. " +
                 "That is not the same as an empty queue.");
         }
 
         if (rowCount == 0)
         {
-            return Outcome(CandidateGateVerdict.NotHeld, "Every media manager that answered reported an empty queue, so nothing upstream holds this candidate.");
+            return Outcome(CandidateGateVerdict.NotHeld, null, "Every media manager that answered reported an empty queue, so nothing upstream holds this candidate.");
         }
 
         if (!owned)
         {
-            return Outcome(CandidateGateVerdict.NotHeld, "No queue row applies to this candidate by path, id, or title/year anchor rules.");
+            return Outcome(CandidateGateVerdict.NotHeld, null, "No queue row applies to this candidate by path, id, or title/year anchor rules.");
         }
 
-        if (blockedBy is not null)
+        if (blockedByConnection is not null)
         {
-            return Outcome(CandidateGateVerdict.WaitUpstream, "Weir treats this candidate as held upstream.");
+            return Outcome(CandidateGateVerdict.WaitUpstream, blockedByConnection, $"{blockedByConnection} is still importing this file, so Weir treats this candidate as held upstream.");
         }
 
         return Outcome(
             CandidateGateVerdict.Proceed,
+            null,
             "A media manager holds this candidate, but no manager reports it in an active upstream or download state, so it is not waiting on an import.");
     }
 }

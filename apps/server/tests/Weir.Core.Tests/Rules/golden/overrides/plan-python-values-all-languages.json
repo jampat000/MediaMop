@@ -55,7 +55,7 @@
       ],
       "default_audio_output_index": 0,
       "audio_selection_notes": [
-        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Track ranking: content tier (main, then dub/audio description, then commentary), then channels highest first, then codec order, then bitrate highest first, then default first.",
         "Selected unknown flac 1000 ch (stream 5) using quality across all languages (policy: quality across all languages).",
         "Removed non-selected unknown TrueHD  8 ch (stream 4) after selecting unknown flac 1000 ch (stream 5).",
         "Removed non-selected ñed ac3 6 ch (stream 6) after selecting unknown flac 1000 ch (stream 5)."
@@ -86,5 +86,11 @@
       "metadata_removed": "Removed embedded image (PNG, 600.0x1e+20). · Removed embedded image (gif, 1.5e-07x-0.0001)."
     },
     "metadata_argv": []
+  },
+  "issue_497": {
+    "items": [
+      3
+    ],
+    "reason": "Default audio sorters now rank content tier (main > dub/audio description > commentary) first, replacing the plain commentary key; wording-only for this case (no track-selection change)."
   }
 }

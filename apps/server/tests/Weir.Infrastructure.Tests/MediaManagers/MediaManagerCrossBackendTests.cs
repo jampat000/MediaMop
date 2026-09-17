@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Weir.Core.Json;
 using Weir.Core.MediaManagers;
 using Weir.Infrastructure.MediaManagers;
@@ -42,7 +41,7 @@ public sealed class MediaManagerCrossBackendTests
     public async Task Connections_and_credentials_saved_by_either_server_work_on_the_other()
     {
         using var fixture = new MediaManagerFixture(("WEIR_SESSION_SECRET", Secret), ("WEIR_CREDENTIALS_SECRET", CredentialsSecret));
-        SqliteConnection.ClearAllPools();
+        fixture.Store.Database.ClearPool();
         var output = PythonBackend.Run(
             PythonPrelude +
             "from weir.platform.media_managers.connection_service import create_connection, rotate_webhook_secret\n" +
@@ -65,7 +64,7 @@ public sealed class MediaManagerCrossBackendTests
         var dotnetId = await fixture.AddConnectionAsync("radarr", "From Dotnet", "http://10.1.1.5:7878", "dotnet-key");
         var dotnetRow = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, dotnetId)))!;
         var dotnetSecret = await fixture.Db(uow => fixture.Connections.RotateWebhookSecretAsync(uow, dotnetRow));
-        SqliteConnection.ClearAllPools();
+        fixture.Store.Database.ClearPool();
         var check = PythonBackend.Run(
             PythonPrelude +
             "from weir.platform.media_managers.connection_service import get_connection, webhook_secret_matches, resolve_callback_target\n" +
@@ -132,7 +131,7 @@ public sealed class MediaManagerCrossBackendTests
         using var dotnet = await PrepareAsync();
         var bodiesPath = python.Store.Home.Join("bodies.json");
         await File.WriteAllTextAsync(bodiesPath, PyJsonWriter.Dumps(new PyList(bodies.Select(body => (PyJson)new PyStr(body))), PyJsonFormat.Default));
-        SqliteConnection.ClearAllPools();
+        python.Store.Database.ClearPool();
         var pythonOutput = PythonBackend.Run(
             PythonPrelude +
             "from weir.platform.media_managers.import_events import dialect_for_source\n" +
@@ -177,7 +176,7 @@ public sealed class MediaManagerCrossBackendTests
             "ON CONFLICT (library_id, relative_path) DO UPDATE SET status = excluded.status, status_reason = excluded.status_reason;";
         await python.Store.Execute(Seed);
         await dotnet.Store.Execute(Seed);
-        SqliteConnection.ClearAllPools();
+        python.Store.Database.ClearPool();
         var answers = PythonBackend.Run(
             PythonPrelude +
             "from weir.platform.media_managers.handoff_ledger import current_status, find_handoff\n" +

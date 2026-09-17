@@ -76,6 +76,57 @@ public sealed class RealFfmpegTests : IDisposable
     private static List<JsonElement> Streams(JsonElement probe, string codecType) =>
         probe.GetProperty("streams").EnumerateArray().Where(s => s.GetProperty("codec_type").GetString() == codecType).ToList();
 
+    /// <summary>Three seconds: mpeg4 video, an English AAC track and an English SRT subtitle track.</summary>
+    private async Task<string> GenerateFixtureWithSubtitleAsync(string name = "with-subs.mkv")
+    {
+        var path = Path.Combine(_root, name);
+        var subtitlePath = Path.Combine(_root, Path.GetFileNameWithoutExtension(name) + ".srt");
+        await File.WriteAllTextAsync(subtitlePath, "1\n00:00:00,000 --> 00:00:03,000\nHello\n");
+        string[] argv =
+        [
+            RealFfmpeg.Tools!.Value.Ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-f", "lavfi", "-i", "testsrc=duration=3:size=160x120:rate=10",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+            "-i", subtitlePath,
+            "-map", "0", "-map", "1", "-map", "2",
+            "-c:v", "mpeg4", "-c:a", "aac", "-c:s", "srt",
+            "-metadata:s:a:0", "language=eng", "-metadata:s:s:0", "language=eng",
+            path,
+        ];
+        var result = await new ProcessRunner().RunAsync(new ProcessRequest { Argv = argv, Timeout = TimeSpan.FromMinutes(1) });
+        Assert.True(result.ExitCode == 0, "fixture generation failed: " + ProbeOutput.TailText(result.Stderr));
+        return path;
+    }
+
+    private static string? StreamTitle(JsonElement stream) =>
+        stream.TryGetProperty("tags", out var tags) && tags.TryGetProperty("title", out var title) ? title.GetString() : null;
+
+    /// <summary>Three seconds: mpeg4 video, one mono AAC English track, and two chapters from an ffmetadata input.</summary>
+    private async Task<string> GenerateFixtureWithChaptersAsync()
+    {
+        var chaptersPath = Path.Combine(_root, "chapters.txt");
+        await File.WriteAllTextAsync(
+            chaptersPath,
+            ";FFMETADATA1\n"
+            + "[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=1500\ntitle=Chapter 1\n"
+            + "[CHAPTER]\nTIMEBASE=1/1000\nSTART=1500\nEND=3000\ntitle=Chapter 2\n");
+        var path = Path.Combine(_root, "fixture-chapters.mkv");
+        string[] argv =
+        [
+            RealFfmpeg.Tools!.Value.Ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-f", "lavfi", "-i", "testsrc=duration=3:size=160x120:rate=10",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+            "-i", chaptersPath,
+            "-map", "0", "-map", "1", "-map_metadata", "2",
+            "-c:v", "mpeg4", "-c:a", "aac",
+            "-metadata:s:a:0", "language=eng",
+            path,
+        ];
+        var result = await new ProcessRunner().RunAsync(new ProcessRequest { Argv = argv, Timeout = TimeSpan.FromMinutes(1) });
+        Assert.True(result.ExitCode == 0, "fixture generation failed: " + ProbeOutput.TailText(result.Stderr));
+        return path;
+    }
+
     [RequiresFfmpegFact]
     public async Task Probe_reads_streams_and_duration()
     {
@@ -105,7 +156,7 @@ public sealed class RealFfmpegTests : IDisposable
         var updates = new List<FfmpegProgressUpdate>();
         var workDir = Path.Combine(_root, "work");
 
-        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, updates.Add, ProbeOutput.DurationSeconds(probe));
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, [], updates.Add, ProbeOutput.DurationSeconds(probe));
 
         Assert.StartsWith(Path.Combine(Path.GetFullPath(workDir), "fixture.refiner."), output, StringComparison.Ordinal);
         var outputProbe = await tools.FfprobeJsonAsync(output);
@@ -115,6 +166,105 @@ public sealed class RealFfmpegTests : IDisposable
         Assert.NotEmpty(updates);
         Assert.Equal("end", updates[^1].Progress);
         Assert.Equal(100.0, updates[^1].Percent);
+    }
+
+    [RequiresFfmpegFact]
+    public async Task Issue_500_a_correct_remux_that_keeps_the_planned_subtitle_passes_staged_validation()
+    {
+        var fixture = await GenerateFixtureWithSubtitleAsync();
+        var tools = Tools();
+        var probe = await tools.FfprobeJsonAsync(fixture);
+        var config = RemuxRules.DefaultConfig() with
+        {
+            PrimaryAudioLang = "eng",
+            SecondaryAudioLang = string.Empty,
+            TertiaryAudioLang = string.Empty,
+            SubtitleMode = RemuxRuleValues.SubtitleModeKeepSelected,
+            SubtitleLangs = ["eng"],
+        };
+        var split = RemuxRules.SplitStreams(new ProbeResult(probe));
+        var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
+        Assert.NotNull(plan);
+        Assert.Single(plan.Subtitles);
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var workDir = Path.Combine(_root, "work");
+
+        // RemuxToTempFileAsync's internal call to ValidateStagedOutputAsync (#500) not throwing is the assertion:
+        // a correctly-remuxed output that keeps the planned subtitle, disposition and language passes.
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings, durationSeconds: ProbeOutput.DurationSeconds(probe));
+
+        var outputProbe = await tools.FfprobeJsonAsync(output);
+        Assert.Single(Streams(outputProbe, "subtitle"));
+    }
+
+    [RequiresFfmpegFact]
+    public async Task Issue_500_an_output_that_drops_a_subtitle_the_plan_kept_fails_staged_validation()
+    {
+        var fixture = await GenerateFixtureWithSubtitleAsync("with-subs-wrong.mkv");
+        var tools = Tools();
+        var probe = await tools.FfprobeJsonAsync(fixture);
+        var config = RemuxRules.DefaultConfig() with
+        {
+            PrimaryAudioLang = "eng",
+            SecondaryAudioLang = string.Empty,
+            TertiaryAudioLang = string.Empty,
+            SubtitleMode = RemuxRuleValues.SubtitleModeKeepSelected,
+            SubtitleLangs = ["eng"],
+        };
+        var split = RemuxRules.SplitStreams(new ProbeResult(probe));
+        var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
+        Assert.NotNull(plan);
+        Assert.Single(plan.Subtitles);
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+
+        // A deliberately wrong remux: video and audio only, dropping the subtitle the plan says to keep.
+        var wrongOutput = Path.Combine(_root, "wrong-output.mkv");
+        var wrongArgv = new[]
+        {
+            RealFfmpeg.Tools!.Value.Ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-i", fixture, "-map", "0:0", "-map", "0:1", "-c", "copy", wrongOutput,
+        };
+        var wrongResult = await new ProcessRunner().RunAsync(new ProcessRequest { Argv = wrongArgv, Timeout = TimeSpan.FromMinutes(1) });
+        Assert.True(wrongResult.ExitCode == 0, "wrong-output generation failed: " + ProbeOutput.TailText(wrongResult.Stderr));
+
+        var error = await Assert.ThrowsAsync<MediaToolException>(
+            () => tools.ValidateStagedOutputAsync(wrongOutput, fixture, probe, plan, sourceWarnings));
+
+        Assert.Contains("subtitle", error.Message, StringComparison.Ordinal);
+    }
+
+    [RequiresFfmpegFact]
+    public async Task A_remux_standardizes_names_clears_video_titles_and_removes_chapters()
+    {
+        // #498: real ffmpeg and ffprobe, not the golden fixtures (this option has no Python equivalent yet).
+        var fixture = await GenerateFixtureWithChaptersAsync();
+        var tools = Tools();
+        var probe = await tools.FfprobeJsonAsync(fixture);
+        var probeResult = new ProbeResult(probe);
+        Assert.Equal(2, probeResult.Chapters.Count);
+
+        var config = RemuxRules.DefaultConfig() with
+        {
+            PrimaryAudioLang = "eng",
+            SecondaryAudioLang = string.Empty,
+            TertiaryAudioLang = string.Empty,
+            Metadata = new MetadataRules { StandardizeTrackNames = true, ClearVideoTrackNames = true, RemoveChapters = true },
+        };
+        var split = RemuxRules.SplitStreams(probeResult);
+        var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
+        Assert.NotNull(plan);
+        Assert.True(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles, split.Video, chaptersPresent: true));
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var workDir = Path.Combine(_root, "work");
+
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings, durationSeconds: ProbeOutput.DurationSeconds(probe));
+
+        var outputProbeJson = await tools.FfprobeJsonAsync(output);
+        var audio = Assert.Single(Streams(outputProbeJson, "audio"));
+        Assert.Equal("English 1.0 AAC", StreamTitle(audio));
+        var video = Assert.Single(Streams(outputProbeJson, "video"));
+        Assert.True(string.IsNullOrEmpty(StreamTitle(video)));
+        Assert.Empty(new ProbeResult(outputProbeJson).Chapters);
     }
 
     [RequiresFfmpegFact]

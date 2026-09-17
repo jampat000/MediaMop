@@ -3,9 +3,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Weir.Api.Endpoints;
 using Weir.Core.Configuration;
+using Weir.Core.Jobs;
+using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Processes;
 using Weir.Infrastructure.Refiner;
+using Weir.Infrastructure.Refiner.RemuxPass;
 using Weir.Infrastructure.Scheduling;
 
 namespace Weir.Api;
@@ -25,8 +28,22 @@ public static class RefinerApi
         services.TryAddSingleton<IMediaToolResolver>(sp => new MediaToolResolver(sp.GetRequiredService<WeirOptions>().WeirHome));
         services.TryAddSingleton<IProcessRunner, ProcessRunner>();
         services.TryAddSingleton<MediaTools>();
+        // Caps the #502 "Try on a file" preview at one run at a time (see RulesPreviewGate's own docs).
+        services.TryAddSingleton<RulesPreviewGate>();
+
+        // The activity port (#519) and this Refiner-apis port (#522) each independently ported
+        // refiner_file_log_retention_periodic; #546 kept this one (it uses the same UnitOfWork/
+        // OperatorSettingsStore/FileLogStore plumbing as the rest of Refiner) and deleted the activity
+        // port's duplicate file and registration, so this is the only "refiner-file-log-retention" task.
         services.AddSingleton<FileLogRetentionTask>();
         services.AddSingleton<IPeriodicTask>(sp => sp.GetRequiredService<FileLogRetentionTask>());
+
+        // Watched-folder scan dispatch (#522 part 5): the job handler that runs a scan, and the periodic
+        // scheduler that enqueues one per library. Additive: the job handler registry (AddWeirJobs) simply
+        // gains one more kind it can claim, and the periodic task joins the others already registered.
+        services.AddSingleton<RefinerWatchedFolderScanDispatchJobHandler>();
+        services.AddSingleton<IJobHandler>(sp => sp.GetRequiredService<RefinerWatchedFolderScanDispatchJobHandler>());
+        services.AddSingleton<IPeriodicTask, RefinerWatchedFolderScanDispatchScheduleTask>();
         return services;
     }
 
@@ -38,8 +55,11 @@ public static class RefinerApi
         endpoints.MapRefinerFilesEndpoints();
         endpoints.MapRefinerDirectPlayEndpoints();
         endpoints.MapRefinerJobsEndpoints();
+        endpoints.MapRefinerRemuxPassEndpoints();
+        endpoints.MapRefinerRulesPreviewEndpoints();
         endpoints.MapRefinerOverviewMaintenanceEndpoints();
         endpoints.MapRefinerSettingsEndpoints();
+        endpoints.MapRefinerWatchedFolderScanDispatchEndpoints();
         return endpoints;
     }
 }

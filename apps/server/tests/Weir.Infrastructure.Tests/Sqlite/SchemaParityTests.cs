@@ -18,7 +18,9 @@ public sealed partial class SchemaParityTests
         var dotnet = temp.Join("dotnet.sqlite3");
         SchemaSnapshot.Execute(alembic, File.ReadAllText(RepositoryPaths.AlembicHeadReference));
 
-        var outcome = new SchemaMigrator(new SqliteDatabase(dotnet)).EnsureAtHead();
+        var database = new SqliteDatabase(dotnet);
+        var outcome = new SchemaMigrator(database).EnsureAtHead();
+        database.ClearPool();
 
         Assert.Equal(SchemaStartupOutcome.Created, outcome);
         var expected = SchemaSnapshot.Describe(alembic);

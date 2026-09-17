@@ -15,8 +15,8 @@ public sealed record RequeueResult(int Requeued, int Skipped, string Detail);
 /// </summary>
 public sealed class RequeueStore(RefinerJobStore jobStore)
 {
-    /// <summary>Job kind of a manual remux requeue (<c>REFINER_FILE_REMUX_PASS_JOB_KIND</c>). No handler for
-    /// it is registered in this build (the remux pass is ported separately), so the row waits pending.</summary>
+    /// <summary>Job kind of a manual remux requeue (<c>REFINER_FILE_REMUX_PASS_JOB_KIND</c>), run by
+    /// <see cref="RemuxPass.RemuxPassHandler"/>.</summary>
     public const string RemuxPassJobKind = "refiner.file.remux_pass.v1";
 
     /// <summary><c>requeue_file</c>: manual reset — attempt count cleared, backoff ignored.</summary>
@@ -33,6 +33,12 @@ public sealed class RequeueStore(RefinerJobStore jobStore)
             .Set("media_scope", library.MediaType == "tv" ? "tv" : "movie")
             .Set("library_id", library.Id)
             .Set("trigger", "manual");
+        // Deliberate fix (#531 item 2): a requeued hand-off keeps its origin, so its outcome still reaches the manager.
+        if (await RemuxPass.HandoffOriginCarry.FindAsync(uow, library.Id, row.RelativePath).ConfigureAwait(false) is { } origin)
+        {
+            payload.Set("origin", origin);
+        }
+
         await jobStore.EnqueueOrGetAsync(
             $"{RemuxPassJobKind}:requeue:{Guid.NewGuid():N}",
             RemuxPassJobKind,

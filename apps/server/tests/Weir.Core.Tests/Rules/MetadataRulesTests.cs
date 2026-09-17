@@ -24,6 +24,15 @@ public sealed class MetadataRulesTests
     private static string Attachment(int index = 3, string name = "Arial.ttf") =>
         $$$"""{"index": {{{index}}}, "codec_type": "attachment", "codec_name": "ttf", "tags": {"filename": "{{{name}}}"}}""";
 
+    private static string Subtitle(int index, string lang, bool forced = false) =>
+        $$$"""{"index": {{{index}}}, "codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "{{{lang}}}"}, "disposition": {"forced": {{{(forced ? 1 : 0)}}}}}""";
+
+    private static string AudioWithTitle(int index, string title) =>
+        $$$"""{"index": {{{index}}}, "codec_type": "audio", "codec_name": "eac3", "channels": 6, "bit_rate": "640000", "tags": {"language": "eng", "title": "{{{title}}}"}, "disposition": {"default": 1}}""";
+
+    private static string VideoWithTitle(int index, string title) =>
+        $$$"""{"index": {{{index}}}, "codec_type": "video", "codec_name": "h264", "width": 1920, "height": 1080, "avg_frame_rate": "24000/1001", "nb_frames": "150000", "tags": {"title": "{{{title}}}"}}""";
+
     private static ProbeResult Probe(params string[] streams) => ProbeResult.Parse($$$"""{"streams": [{{{string.Join(", ", streams)}}}]}""");
 
     private static ProbeStreamInfo Stream(string json) => ProbeStreamInfo.Parse(json);
@@ -253,4 +262,129 @@ public sealed class MetadataRulesTests
         Assert.Contains("embedded image", RemuxDisplay.MetadataRemovedLineFromPlan(plan), StringComparison.Ordinal);
     }
 
+    // --- track names and chapters (#498) -----------------------------------------------
+
+    [Fact]
+    public void By_default_no_track_naming_or_chapter_flags_reach_ffmpeg()
+    {
+        var (plan, _) = Plan(Probe(Video0, Audio(1)), Config());
+
+        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan);
+
+        Assert.DoesNotContain(argv, a => a.StartsWith("-metadata:s:a", StringComparison.Ordinal)
+            || a.StartsWith("-metadata:s:s", StringComparison.Ordinal)
+            || a.StartsWith("-metadata:s:v", StringComparison.Ordinal));
+        Assert.DoesNotContain("-map_chapters", argv);
+    }
+
+    [Fact]
+    public void Removing_chapters_adds_map_chapters_minus_one() =>
+        Assert.Equal(["-map_chapters", "-1"], MetadataStreams.ArgvFlags(new MetadataRules { RemoveChapters = true }));
+
+    [Fact]
+    public void Standardizing_names_writes_a_title_for_every_kept_audio_and_subtitle_track_at_its_output_index()
+    {
+        var probe = Probe(Video0, Audio(1), Subtitle(2, "eng"), Subtitle(3, "fre"));
+        var config = Config(new MetadataRules { StandardizeTrackNames = true }) with
+        {
+            SubtitleMode = RemuxRuleValues.SubtitleModeKeepSelected,
+            SubtitleLangs = ["eng", "fre"],
+        };
+        var (plan, _) = Plan(probe, config);
+
+        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
+
+        Assert.Equal("title=English 5.1 E-AC-3", argv[argv.IndexOf("-metadata:s:a:0") + 1]);
+        Assert.Equal("title=English", argv[argv.IndexOf("-metadata:s:s:0") + 1]);
+        Assert.Equal("title=French", argv[argv.IndexOf("-metadata:s:s:1") + 1]);
+    }
+
+    [Fact]
+    public void A_forced_subtitle_uses_the_forced_override_by_default()
+    {
+        var probe = Probe(Video0, Audio(1), Subtitle(2, "eng", forced: true));
+        var config = Config(new MetadataRules { StandardizeTrackNames = true }) with
+        {
+            SubtitleMode = RemuxRuleValues.SubtitleModeKeepSelected,
+            SubtitleLangs = ["eng"],
+            PreserveForcedSubs = true,
+        };
+        var (plan, _) = Plan(probe, config);
+
+        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
+
+        Assert.Equal("title=English Forced", argv[argv.IndexOf("-metadata:s:s:0") + 1]);
+    }
+
+    [Fact]
+    public void Clearing_video_track_names_writes_an_empty_title_for_every_kept_video_stream()
+    {
+        var (plan, _) = Plan(Probe(Video0, Audio(1)), Config(new MetadataRules { ClearVideoTrackNames = true }));
+
+        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
+
+        Assert.Equal("title=", argv[argv.IndexOf("-metadata:s:v:0") + 1]);
+    }
+
+    [Fact]
+    public void Removing_chapters_requires_a_pass_only_when_chapters_are_present()
+    {
+        var (plan, split) = Plan(Probe(Video0, Audio(1)), Config(new MetadataRules { RemoveChapters = true }));
+
+        Assert.True(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles, chaptersPresent: true));
+        Assert.False(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles, chaptersPresent: false));
+    }
+
+    [Fact]
+    public void Standardizing_names_requires_a_pass_when_the_current_title_does_not_match_the_template()
+    {
+        var (plan, split) = Plan(Probe(Video0, Audio(1)), Config(new MetadataRules { StandardizeTrackNames = true }));
+
+        Assert.True(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles));
+    }
+
+    [Fact]
+    public void Standardizing_names_does_not_require_a_pass_when_already_named_per_the_template()
+    {
+        var (plan, split) = Plan(Probe(Video0, AudioWithTitle(1, "English 5.1 E-AC-3")), Config(new MetadataRules { StandardizeTrackNames = true }));
+
+        Assert.False(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles));
+    }
+
+    [Fact]
+    public void Clearing_video_names_requires_a_pass_when_the_video_stream_already_has_a_title()
+    {
+        var (plan, split) = Plan(Probe(VideoWithTitle(0, "x265-GROUP"), Audio(1)), Config(new MetadataRules { ClearVideoTrackNames = true }));
+
+        Assert.True(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles, split.Video));
+    }
+
+    [Fact]
+    public void Clearing_video_names_does_not_require_a_pass_when_the_video_stream_has_no_title()
+    {
+        var (plan, split) = Plan(Probe(Video0, Audio(1)), Config(new MetadataRules { ClearVideoTrackNames = true }));
+
+        Assert.False(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles, split.Video));
+    }
+
+    [Fact]
+    public void Clearing_video_names_assumes_a_title_is_present_when_no_video_probe_is_given()
+    {
+        var (plan, split) = Plan(Probe(Video0, Audio(1)), Config(new MetadataRules { ClearVideoTrackNames = true }));
+
+        Assert.True(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles));
+    }
+
+    [Fact]
+    public void The_notes_mention_track_names_and_chapters_when_enabled()
+    {
+        var notes = MetadataStreams.RemovalNotes(
+            new MetadataRules { StandardizeTrackNames = true, ClearVideoTrackNames = true, RemoveChapters = true },
+            [],
+            []);
+
+        Assert.Contains(notes, n => n.Contains("track names", StringComparison.Ordinal));
+        Assert.Contains(notes, n => n.Contains("video track name", StringComparison.Ordinal));
+        Assert.Contains(notes, n => n.Contains("chapters", StringComparison.Ordinal));
+    }
 }

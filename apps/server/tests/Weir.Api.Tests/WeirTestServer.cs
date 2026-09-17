@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Weir.Api.Http;
 using Weir.Core.Configuration;
 using Weir.Host;
+using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Api.Tests;
 
@@ -83,9 +83,10 @@ internal sealed class WeirTestServer : IAsyncDisposable
     public async Task BreakDatabaseAsync()
     {
         var dbPath = Path.Join(Home, "data", "weir.sqlite3");
+        var database = Services.GetRequiredService<SqliteDatabase>();
         for (var attempt = 0; ; attempt++)
         {
-            SqliteConnection.ClearAllPools();
+            database.ClearPool();
             try
             {
                 File.Delete(dbPath);
@@ -108,9 +109,10 @@ internal sealed class WeirTestServer : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         Client.Dispose();
+        var database = Services.GetRequiredService<SqliteDatabase>();
         await _app.StopAsync();
         await _app.DisposeAsync();
-        SqliteConnection.ClearAllPools();
+        database.ClearPool();
         if (KeepHome)
         {
             return;

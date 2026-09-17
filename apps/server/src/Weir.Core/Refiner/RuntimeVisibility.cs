@@ -54,12 +54,14 @@ public static class RuntimeVisibility
         "another process is not also using the same database file.";
 
     private const string WatchedFolderScanPeriodicNote =
-        "Periodic scanning for refiner.watched_folder.remux_scan_dispatch.v1 is controlled per scope on the Refiner " +
-        "Libraries tab, not by an environment variable: each of Movies and TV has its own on/off switch and its own " +
-        "check interval, saved in the database and applied without a restart. Whether those periodic ticks may also " +
-        "queue file work is the one part still set in apps/backend/.env: " +
+        "Periodic scanning for refiner.watched_folder.remux_scan_dispatch.v1 is controlled per library (its own " +
+        "enabled switch and scan interval, saved in the database and applied without a restart) and per scope on " +
+        "the Refiner operator-settings screen (Movies/TV periodic-scan switch). It can also be turned off " +
+        "altogether, for every scope, with WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED in " +
+        "apps/backend/.env (default on; #533 — a manual scan still works with this off). Whether a periodic scan " +
+        "that does run may also queue file work is the separate " +
         "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS (default on). Restart the API " +
-        "after changing that one — it is read at process start only. " +
+        "after changing either environment variable — both are read at process start only. " +
         "Refiner ffprobe preflight depth: WEIR_REFINER_PROBE_SIZE_MB and WEIR_REFINER_ANALYZE_DURATION_SECONDS in " +
         "apps/backend/.env (read at startup; restart required).";
 

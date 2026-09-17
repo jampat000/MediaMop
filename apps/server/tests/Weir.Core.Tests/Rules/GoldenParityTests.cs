@@ -92,7 +92,7 @@ public sealed class GoldenParityTests
         {
             var name = Path.GetFileName(path);
             Assert.True(
-                name == "sorters.json" || planFiles.Contains(name),
+                name is "sorters.json" or "helpers.json" || planFiles.Contains(name),
                 $"golden/overrides/{name} does not correspond to a golden case; remove it or fix the name.");
         }
     }
@@ -228,11 +228,40 @@ public sealed class GoldenParityTests
         }
     }
 
+    /// <summary>
+    /// An override file's per-case "expected" for <c>helpers.json</c>'s "presets" array, keyed by
+    /// position in that array. Issue #497 put a new leading key in <c>DefaultAudioSorters</c>, so
+    /// every preset that falls back to it (every input but <c>quality_all_languages</c>) dumps
+    /// differently than Python recorded.
+    /// </summary>
+    private static Dictionary<int, string> LoadHelpersPresetOverrides()
+    {
+        var path = Path.Combine(OverridesDirectory, "helpers.json");
+        if (!File.Exists(path))
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
+        var root = document.RootElement;
+        Assert.True(root.TryGetProperty("issue", out _), "golden/overrides/helpers.json must record which issue it diverges for.");
+        Assert.True(root.TryGetProperty("items", out _), "golden/overrides/helpers.json must record which item(s) of the issue it diverges for.");
+
+        var result = new Dictionary<int, string>();
+        foreach (var entry in root.GetProperty("presets").EnumerateArray())
+        {
+            result[entry.GetProperty("index").GetInt32()] = entry.GetProperty("expected").GetString()!;
+        }
+
+        return result;
+    }
+
     [Fact]
     public void Helpers_match_the_python_engine()
     {
         using var document = Load("helpers.json");
         var root = document.RootElement;
+        var presetOverrides = LoadHelpersPresetOverrides();
 
         foreach (var item in root.GetProperty("languages").EnumerateArray())
         {
@@ -269,9 +298,11 @@ public sealed class GoldenParityTests
             Assert.Equal(Strings(item.GetProperty("output")), RemuxRules.ParsePathLines(item.GetProperty("input").GetString()));
         }
 
-        foreach (var item in root.GetProperty("presets").EnumerateArray())
+        var presets = root.GetProperty("presets").EnumerateArray().ToList();
+        for (var i = 0; i < presets.Count; i++)
         {
-            Assert.Equal(item.GetProperty("output").GetString(), TrackSorters.Dump(TrackSorters.Preset(NullableString(item.GetProperty("input")))));
+            var expected = presetOverrides.TryGetValue(i, out var overridden) ? overridden : presets[i].GetProperty("output").GetString();
+            Assert.Equal(expected, TrackSorters.Dump(TrackSorters.Preset(NullableString(presets[i].GetProperty("input")))));
         }
 
         Assert.Equal(Strings(root.GetProperty("media_extensions")), RemuxRules.MediaExtensionsSorted());

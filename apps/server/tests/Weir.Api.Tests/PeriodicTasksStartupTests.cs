@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Weir.Infrastructure.Jobs;
@@ -16,7 +15,7 @@ public sealed class PeriodicTasksStartupTests
         await using var server = await WeirTestServer.StartAsync();
 
         Assert.Equal(
-            ["auth-session-cleanup", "platform-job-rows-retention", "refiner-file-log-retention", "suite-configuration-backup", "suite-log-retention"],
+            ["auth-session-cleanup", "platform-job-rows-retention", "refiner-file-log-retention", "refiner-watched-folder-remux-scan-dispatch-enqueue", "suite-configuration-backup", "suite-log-retention"],
             server.Services.GetServices<IPeriodicTask>().Select(task => task.Name).Order(StringComparer.Ordinal));
         var hosted = server.Services.GetServices<IHostedService>().ToList();
         Assert.Single(hosted.OfType<PeriodicTaskService>());
@@ -43,7 +42,7 @@ public sealed class PeriodicTasksStartupTests
                     command.ExecuteNonQuery();
                 }
 
-                SqliteConnection.ClearAllPools();
+                database.ClearPool();
             });
 
         var database = server.Services.GetRequiredService<SqliteDatabase>();

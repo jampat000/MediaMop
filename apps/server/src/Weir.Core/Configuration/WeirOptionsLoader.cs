@@ -130,6 +130,8 @@ public static class WeirOptionsLoader
             RefinerJobLeaseSeconds = refinerJobLeaseSeconds,
             RefinerWatcherEnabled = watcherEnabled,
             RefinerWatcherDebounceSeconds = watcherDebounce,
+            RefinerWatchedFolderRemuxScanDispatchScheduleEnabled = EnvBool(
+                runtime, "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", true),
             RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs = EnvBool(
                 runtime, "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS", true),
             RefinerProbeSizeMb = Clamp(EnvInt(runtime, "WEIR_REFINER_PROBE_SIZE_MB", 10), 1, 1024),

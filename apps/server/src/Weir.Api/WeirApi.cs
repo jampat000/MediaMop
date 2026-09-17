@@ -11,6 +11,7 @@ using Weir.Infrastructure;
 using Weir.Infrastructure.Auth;
 using Weir.Infrastructure.Http;
 using Weir.Infrastructure.MediaManagers;
+using Weir.Infrastructure.Refiner.RemuxPass;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Settings;
@@ -39,6 +40,7 @@ public static class WeirApi
         services.AddSingleton<NotificationDispatcher>();
         services.AddWeirMediaManagers(options);
         services.AddWeirRefinerApis();
+        services.AddWeirRefinerFailureFollowUps(options);
 
         // Scheduled work, hosted with the jobs (AddWeirJobs) by PeriodicTaskService.
         services.AddSingleton<SessionCleanupTask>();
