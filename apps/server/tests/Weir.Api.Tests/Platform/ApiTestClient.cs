@@ -118,6 +118,21 @@ internal static class TestDatabase
         return Convert.ToInt64(await command.ExecuteScalarAsync(), CultureInfo.InvariantCulture);
     }
 
+    public static async Task<string?> ScalarStringAsync(WeirTestServer server, string sql, params (string Name, object Value)[] parameters)
+    {
+        await using var connection = new SqliteConnection($"Data Source={PathFor(server)};Pooling=False");
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        foreach (var (name, value) in parameters)
+        {
+            command.Parameters.AddWithValue(name, value);
+        }
+
+        var result = await command.ExecuteScalarAsync();
+        return result is null or DBNull ? null : Convert.ToString(result, CultureInfo.InvariantCulture);
+    }
+
     public static async Task ExecuteAsync(WeirTestServer server, string sql, params (string Name, object Value)[] parameters)
     {
         await using var connection = new SqliteConnection($"Data Source={PathFor(server)};Pooling=False");

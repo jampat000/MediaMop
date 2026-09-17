@@ -7,6 +7,7 @@ using Weir.Core.Jobs;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Processes;
+using Weir.Infrastructure.Refiner.RemuxPass;
 using Weir.Infrastructure.Scheduling;
 
 namespace Weir.Api;
@@ -26,6 +27,8 @@ public static class RefinerApi
         services.TryAddSingleton<IMediaToolResolver>(sp => new MediaToolResolver(sp.GetRequiredService<WeirOptions>().WeirHome));
         services.TryAddSingleton<IProcessRunner, ProcessRunner>();
         services.TryAddSingleton<MediaTools>();
+        // Caps the #502 "Try on a file" preview at one run at a time (see RulesPreviewGate's own docs).
+        services.TryAddSingleton<RulesPreviewGate>();
 
         // Not registered here: Weir.Infrastructure.Refiner.FileLogRetentionTask duplicates
         // Weir.Infrastructure.Jobs.RefinerFileLogRetentionTask (registered by AddWeirJobs) — both port the
@@ -53,6 +56,7 @@ public static class RefinerApi
         endpoints.MapRefinerDirectPlayEndpoints();
         endpoints.MapRefinerJobsEndpoints();
         endpoints.MapRefinerRemuxPassEndpoints();
+        endpoints.MapRefinerRulesPreviewEndpoints();
         endpoints.MapRefinerOverviewMaintenanceEndpoints();
         endpoints.MapRefinerSettingsEndpoints();
         endpoints.MapRefinerWatchedFolderScanDispatchEndpoints();

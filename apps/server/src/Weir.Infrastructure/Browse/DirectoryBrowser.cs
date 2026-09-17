@@ -110,6 +110,48 @@ public static partial class DirectoryBrowser
         return Out(normalized, parentPath, sorted);
     }
 
+    /// <summary>
+    /// Validates an absolute file path against the same allow-list <see cref="Browse"/> applies to
+    /// directories (an existing drive root on Windows, the filesystem root elsewhere). Used where a
+    /// caller lets the operator pick any file the local file picker could reach, rather than one
+    /// scoped to a single saved folder (issue #502's "Try on a file" preview). Returns the resolved
+    /// realpath; throws <see cref="DirectoryBrowseException"/> with a plain detail otherwise.
+    /// </summary>
+    public static string ValidateFilePath(string? path)
+    {
+        if (path is null || path.Trim().Length == 0)
+        {
+            throw new DirectoryBrowseException(400, "A file path is required.");
+        }
+
+        var sanitized = path.Replace("\0", string.Empty, StringComparison.Ordinal);
+        if (!IsAbsolute(sanitized))
+        {
+            throw new DirectoryBrowseException(400, "Path must be absolute.");
+        }
+
+        var normalized = RealPath(sanitized);
+        if (OperatingSystem.IsWindows())
+        {
+            var withSlash = normalized.TrimEnd('\\', '/') + "\\";
+            if (!ValidWindowsRoots().Any(root => withSlash == root || withSlash.StartsWith(root, StringComparison.Ordinal)))
+            {
+                throw new DirectoryBrowseException(400, "Path is not within a valid drive root.");
+            }
+        }
+        else if (!normalized.StartsWith('/'))
+        {
+            throw new DirectoryBrowseException(400, "Path must begin at the filesystem root.");
+        }
+
+        if (!File.Exists(normalized))
+        {
+            throw new DirectoryBrowseException(404, "The requested file does not exist.");
+        }
+
+        return normalized;
+    }
+
     private static PyDict Out(string? current, string? parent, IEnumerable<PyDict> entries) => new PyDict()
         .Set("current_path", current)
         .Set("parent_path", parent)

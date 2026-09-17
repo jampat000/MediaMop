@@ -21,6 +21,7 @@ import {
   type RefinerRuleSet,
   type RefinerRuleSetWrite,
 } from "./libraries-api";
+import { previewRefinerRules } from "./rules-preview-api";
 
 export const refinerLibrariesKey = ["refiner", "libraries"];
 export const refinerRuleSetsKey = ["refiner", "rule-sets"];
@@ -151,4 +152,9 @@ export function useDeleteRefinerRuleSet() {
       void qc.invalidateQueries({ queryKey: refinerLibrariesKey });
     },
   });
+}
+
+/** "Try on a file" (#502). No cache: every call is a fresh, read-only probe. */
+export function useRefinerRulesPreview() {
+  return useMutation({ mutationFn: previewRefinerRules });
 }

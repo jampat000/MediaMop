@@ -989,6 +989,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/libraries/{library_id}/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner Library Preview
+     * @description "Try on a file" (#502): probe a real file and run the rules engine against it — the library's saved rule set, or an unsaved one sent in ``rules`` — without queueing, processing or writing anything. ``relative_path`` must resolve under the library's watched or output folder; ``absolute_path`` goes through the same allow-list the local file picker uses. Refused with 409 while another preview is already running.
+     */
+    post: operations["post_refiner_library_preview_api_v1_refiner_libraries__library_id__preview_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/libraries/{library_id}/unlink": {
     parameters: {
       query?: never;
@@ -4266,6 +4286,232 @@ export interface components {
       used_by_library_count: number;
     };
     /**
+     * RefinerRulesPreviewIn
+     * @description "Try on a file" (#502). Exactly one of relative_path/absolute_path is required; the API answers 400 (not a field error) when neither or both are given.
+     */
+    RefinerRulesPreviewIn: {
+      /**
+       * Absolute Path
+       * @description An absolute path anywhere the local file picker (GET /system/directories) could reach. Mutually exclusive with relative_path.
+       */
+      absolute_path?: string | null;
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Relative Path
+       * @description Path relative to the library's watched or output folder. Mutually exclusive with absolute_path.
+       */
+      relative_path?: string | null;
+      /** @description Unsaved rule-set edits to try, in the same shape PUT /refiner/rule-sets/{id} accepts (minus csrf_token). Omit to preview the library's saved rule set instead. */
+      rules?: components["schemas"]["RefinerRulesPreviewRulesIn"] | null;
+    };
+    /** RefinerRulesPreviewOriginalLanguageOut */
+    RefinerRulesPreviewOriginalLanguageOut: {
+      /** Lookup Detail */
+      lookup_detail: string;
+      /**
+       * Lookup Status
+       * @enum {string}
+       */
+      lookup_status: "matched" | "no_match" | "not_configured" | "unreachable";
+      /** Note */
+      note: string;
+      /** Original Language */
+      original_language: string | null;
+    };
+    /** RefinerRulesPreviewOut */
+    RefinerRulesPreviewOut: {
+      /**
+       * Estimated Size Reduction Bytes
+       * @description Dropped streams' own reported bit rate × the file's duration. Null when no dropped stream reported a bit rate.
+       */
+      estimated_size_reduction_bytes: number | null;
+      /**
+       * Estimated Size Reduction Is Estimate
+       * @description Always true: container overhead and real muxing efficiency are not modelled.
+       */
+      estimated_size_reduction_is_estimate: boolean;
+      /** Inspected Path */
+      inspected_path: string;
+      /** Library Id */
+      library_id: number;
+      /**
+       * Media Scope
+       * @enum {string}
+       */
+      media_scope: "movie" | "tv";
+      /** Metadata Notes */
+      metadata_notes: string[];
+      /**
+       * Notes
+       * @description The plan's diagnostic notes, exactly as a live pass would log them.
+       */
+      notes: string[];
+      /** @default null */
+      original_language:
+        components["schemas"]["RefinerRulesPreviewOriginalLanguageOut"] | null;
+      /** Remux Required */
+      remux_required: boolean;
+      /** Tracks */
+      tracks: components["schemas"]["RefinerRulesPreviewTrackOut"][];
+    };
+    /**
+     * RefinerRulesPreviewRulesIn
+     * @description The same fields RefinerRuleSetIn accepts, minus csrf_token — validated exactly like a rule-set save, but never written to the database.
+     */
+    RefinerRulesPreviewRulesIn: {
+      /**
+       * Audio Preference Mode
+       * @default preferred_langs_quality
+       * @enum {string}
+       */
+      audio_preference_mode:
+        | "preferred_langs_quality"
+        | "preferred_langs_strict"
+        | "quality_all_languages";
+      /**
+       * Audio Sorters Json
+       * @default
+       */
+      audio_sorters_json: string;
+      /**
+       * Default Audio Slot
+       * @default primary
+       * @enum {string}
+       */
+      default_audio_slot: "primary" | "secondary" | "tertiary";
+      /**
+       * Keep Original Language
+       * @default false
+       */
+      keep_original_language: boolean;
+      /** Name */
+      name: string;
+      /**
+       * Original Language Additional Csv
+       * @default
+       */
+      original_language_additional_csv: string;
+      /**
+       * Original Language First If None
+       * @default true
+       */
+      original_language_first_if_none: boolean;
+      /**
+       * Original Language Keep Only First
+       * @default true
+       */
+      original_language_keep_only_first: boolean;
+      /**
+       * Original Language Treat Empty As Original
+       * @default false
+       */
+      original_language_treat_empty_as_original: boolean;
+      /**
+       * Preserve Default Subs
+       * @default true
+       */
+      preserve_default_subs: boolean;
+      /**
+       * Preserve Forced Subs
+       * @default true
+       */
+      preserve_forced_subs: boolean;
+      /**
+       * Primary Audio Lang
+       * @default
+       */
+      primary_audio_lang: string;
+      /**
+       * Remove Attachments
+       * @default false
+       */
+      remove_attachments: boolean;
+      /**
+       * Remove Commentary
+       * @default false
+       */
+      remove_commentary: boolean;
+      /**
+       * Remove Images
+       * @default false
+       */
+      remove_images: boolean;
+      /**
+       * Remove Language Tags
+       * @default false
+       */
+      remove_language_tags: boolean;
+      /**
+       * Remove Other Metadata
+       * @default false
+       */
+      remove_other_metadata: boolean;
+      /**
+       * Remove Title
+       * @default false
+       */
+      remove_title: boolean;
+      /**
+       * Secondary Audio Lang
+       * @default
+       */
+      secondary_audio_lang: string;
+      /**
+       * Subtitle Langs Csv
+       * @default
+       */
+      subtitle_langs_csv: string;
+      /**
+       * Subtitle Mode
+       * @default keep_all
+       * @enum {string}
+       */
+      subtitle_mode: "keep_all" | "keep_listed" | "remove_all";
+      /**
+       * Subtitle Sorters Json
+       * @default
+       */
+      subtitle_sorters_json: string;
+      /**
+       * Tertiary Audio Lang
+       * @default
+       */
+      tertiary_audio_lang: string;
+    };
+    /** RefinerRulesPreviewTrackOut */
+    RefinerRulesPreviewTrackOut: {
+      /**
+       * Action
+       * @enum {string}
+       */
+      action: "keep" | "drop";
+      /** Channels */
+      channels: number;
+      /** Codec */
+      codec: string;
+      /** Default */
+      default: boolean;
+      /** Forced */
+      forced: boolean;
+      /** Index */
+      index: number;
+      /** Language */
+      language: string;
+      /**
+       * Reasons
+       * @description The exact plan-note sentences that mention this track's stream index, or one plain fallback sentence when none do.
+       */
+      reasons: string[];
+      /** Title */
+      title: string;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "video" | "audio" | "subtitle";
+    };
+    /**
      * RefinerRuntimeSettingsOut
      * @description What this API process was configured to run for ``refiner_jobs`` in-process workers only.
      */
@@ -6778,6 +7024,41 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_refiner_library_preview_api_v1_refiner_libraries__library_id__preview_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerRulesPreviewIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerRulesPreviewOut"];
+        };
       };
       /** @description Validation Error */
       422: {

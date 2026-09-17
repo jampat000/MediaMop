@@ -5213,6 +5213,405 @@
         "title": "RefinerRuleSetOut",
         "type": "object"
       },
+      "RefinerRulesPreviewIn": {
+        "additionalProperties": false,
+        "description": "\"Try on a file\" (#502). Exactly one of relative_path/absolute_path is required; the API answers 400 (not a field error) when neither or both are given.",
+        "properties": {
+          "absolute_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "An absolute path anywhere the local file picker (GET /system/directories) could reach. Mutually exclusive with relative_path.",
+            "maxLength": 4000,
+            "title": "Absolute Path"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "relative_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Path relative to the library's watched or output folder. Mutually exclusive with absolute_path.",
+            "maxLength": 4000,
+            "title": "Relative Path"
+          },
+          "rules": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefinerRulesPreviewRulesIn"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Unsaved rule-set edits to try, in the same shape PUT /refiner/rule-sets/{id} accepts (minus csrf_token). Omit to preview the library's saved rule set instead."
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "RefinerRulesPreviewIn",
+        "type": "object"
+      },
+      "RefinerRulesPreviewOriginalLanguageOut": {
+        "properties": {
+          "lookup_detail": {
+            "title": "Lookup Detail",
+            "type": "string"
+          },
+          "lookup_status": {
+            "enum": [
+              "matched",
+              "no_match",
+              "not_configured",
+              "unreachable"
+            ],
+            "title": "Lookup Status",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "original_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Language"
+          }
+        },
+        "required": [
+          "lookup_status",
+          "lookup_detail",
+          "original_language",
+          "note"
+        ],
+        "title": "RefinerRulesPreviewOriginalLanguageOut",
+        "type": "object"
+      },
+      "RefinerRulesPreviewOut": {
+        "properties": {
+          "estimated_size_reduction_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Dropped streams' own reported bit rate × the file's duration. Null when no dropped stream reported a bit rate.",
+            "title": "Estimated Size Reduction Bytes"
+          },
+          "estimated_size_reduction_is_estimate": {
+            "description": "Always true: container overhead and real muxing efficiency are not modelled.",
+            "title": "Estimated Size Reduction Is Estimate",
+            "type": "boolean"
+          },
+          "inspected_path": {
+            "title": "Inspected Path",
+            "type": "string"
+          },
+          "library_id": {
+            "title": "Library Id",
+            "type": "integer"
+          },
+          "media_scope": {
+            "enum": [
+              "movie",
+              "tv"
+            ],
+            "title": "Media Scope",
+            "type": "string"
+          },
+          "metadata_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Metadata Notes",
+            "type": "array"
+          },
+          "notes": {
+            "description": "The plan's diagnostic notes, exactly as a live pass would log them.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "original_language": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefinerRulesPreviewOriginalLanguageOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "remux_required": {
+            "title": "Remux Required",
+            "type": "boolean"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/RefinerRulesPreviewTrackOut"
+            },
+            "title": "Tracks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "library_id",
+          "media_scope",
+          "inspected_path",
+          "tracks",
+          "notes",
+          "metadata_notes",
+          "remux_required",
+          "estimated_size_reduction_bytes",
+          "estimated_size_reduction_is_estimate"
+        ],
+        "title": "RefinerRulesPreviewOut",
+        "type": "object"
+      },
+      "RefinerRulesPreviewRulesIn": {
+        "additionalProperties": false,
+        "description": "The same fields RefinerRuleSetIn accepts, minus csrf_token — validated exactly like a rule-set save, but never written to the database.",
+        "properties": {
+          "audio_preference_mode": {
+            "default": "preferred_langs_quality",
+            "enum": [
+              "preferred_langs_quality",
+              "preferred_langs_strict",
+              "quality_all_languages"
+            ],
+            "title": "Audio Preference Mode",
+            "type": "string"
+          },
+          "audio_sorters_json": {
+            "default": "",
+            "title": "Audio Sorters Json",
+            "type": "string"
+          },
+          "default_audio_slot": {
+            "default": "primary",
+            "enum": [
+              "primary",
+              "secondary",
+              "tertiary"
+            ],
+            "title": "Default Audio Slot",
+            "type": "string"
+          },
+          "keep_original_language": {
+            "default": false,
+            "title": "Keep Original Language",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "original_language_additional_csv": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Original Language Additional Csv",
+            "type": "string"
+          },
+          "original_language_first_if_none": {
+            "default": true,
+            "title": "Original Language First If None",
+            "type": "boolean"
+          },
+          "original_language_keep_only_first": {
+            "default": true,
+            "title": "Original Language Keep Only First",
+            "type": "boolean"
+          },
+          "original_language_treat_empty_as_original": {
+            "default": false,
+            "title": "Original Language Treat Empty As Original",
+            "type": "boolean"
+          },
+          "preserve_default_subs": {
+            "default": true,
+            "title": "Preserve Default Subs",
+            "type": "boolean"
+          },
+          "preserve_forced_subs": {
+            "default": true,
+            "title": "Preserve Forced Subs",
+            "type": "boolean"
+          },
+          "primary_audio_lang": {
+            "default": "",
+            "maxLength": 24,
+            "title": "Primary Audio Lang",
+            "type": "string"
+          },
+          "remove_attachments": {
+            "default": false,
+            "title": "Remove Attachments",
+            "type": "boolean"
+          },
+          "remove_commentary": {
+            "default": false,
+            "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "remove_images": {
+            "default": false,
+            "title": "Remove Images",
+            "type": "boolean"
+          },
+          "remove_language_tags": {
+            "default": false,
+            "title": "Remove Language Tags",
+            "type": "boolean"
+          },
+          "remove_other_metadata": {
+            "default": false,
+            "title": "Remove Other Metadata",
+            "type": "boolean"
+          },
+          "remove_title": {
+            "default": false,
+            "title": "Remove Title",
+            "type": "boolean"
+          },
+          "secondary_audio_lang": {
+            "default": "",
+            "maxLength": 24,
+            "title": "Secondary Audio Lang",
+            "type": "string"
+          },
+          "subtitle_langs_csv": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Subtitle Langs Csv",
+            "type": "string"
+          },
+          "subtitle_mode": {
+            "default": "keep_all",
+            "enum": [
+              "keep_all",
+              "keep_listed",
+              "remove_all"
+            ],
+            "title": "Subtitle Mode",
+            "type": "string"
+          },
+          "subtitle_sorters_json": {
+            "default": "",
+            "title": "Subtitle Sorters Json",
+            "type": "string"
+          },
+          "tertiary_audio_lang": {
+            "default": "",
+            "maxLength": 24,
+            "title": "Tertiary Audio Lang",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RefinerRulesPreviewRulesIn",
+        "type": "object"
+      },
+      "RefinerRulesPreviewTrackOut": {
+        "properties": {
+          "action": {
+            "enum": [
+              "keep",
+              "drop"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "channels": {
+            "title": "Channels",
+            "type": "integer"
+          },
+          "codec": {
+            "title": "Codec",
+            "type": "string"
+          },
+          "default": {
+            "title": "Default",
+            "type": "boolean"
+          },
+          "forced": {
+            "title": "Forced",
+            "type": "boolean"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "reasons": {
+            "description": "The exact plan-note sentences that mention this track's stream index, or one plain fallback sentence when none do.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "video",
+              "audio",
+              "subtitle"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "type",
+          "codec",
+          "language",
+          "title",
+          "channels",
+          "action",
+          "default",
+          "forced",
+          "reasons"
+        ],
+        "title": "RefinerRulesPreviewTrackOut",
+        "type": "object"
+      },
       "RefinerRuntimeSettingsOut": {
         "description": "What this API process was configured to run for ``refiner_jobs`` in-process workers only.",
         "properties": {
@@ -9619,6 +10018,61 @@
           }
         },
         "summary": "Put Refiner Library",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/preview": {
+      "post": {
+        "description": "\"Try on a file\" (#502): probe a real file and run the rules engine against it — the library's saved rule set, or an unsaved one sent in ``rules`` — without queueing, processing or writing anything. ``relative_path`` must resolve under the library's watched or output folder; ``absolute_path`` goes through the same allow-list the local file picker uses. Refused with 409 while another preview is already running.",
+        "operationId": "post_refiner_library_preview_api_v1_refiner_libraries__library_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerRulesPreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerRulesPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Library Preview",
         "tags": [
           "refiner",
           "refiner"

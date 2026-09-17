@@ -536,7 +536,9 @@ public static class RefinerLibraryEndpoints
         return ApiRoutes.Ok(new PyList(items));
     }
 
-    private static LibraryRules.RuleSetInput ReadRuleSetBody(BodyModel model) => new()
+    /// <summary>Shared with <see cref="RefinerRulesPreviewEndpoints"/>, which validates an unsaved rules
+    /// payload the same way a save does, without touching the database.</summary>
+    internal static LibraryRules.RuleSetInput ReadRuleSetBody(BodyModel model) => new()
     {
         Name = model.Str("name", minLength: 1, maxLength: 120),
         PrimaryAudioLang = model.OptionalStr("primary_audio_lang", defaultValue: "", maxLength: 24) ?? string.Empty,
