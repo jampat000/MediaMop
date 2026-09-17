@@ -135,6 +135,9 @@ class ServerUnderTest:
             # watcher, and periodic scans that do not queue files. Scenarios turn workers on.
             # Periodic scan *jobs* are still queued for every enabled library with a watched folder
             # (nothing switches the scan timer off any more), so count only the jobs a test caused.
+            # That is #533: WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED is
+            # documented but nothing reads it. The correct behaviour is asserted in
+            # tests/contract/jobs/test_watched_folder_scan_schedule_toggle.py.
             "WEIR_REFINER_WORKER_COUNT": "0",
             "WEIR_REFINER_WATCHER_ENABLED": "0",
             "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS": "0",

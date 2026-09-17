@@ -59,6 +59,12 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "backends(*kinds, reason): runs only against these servers (python, dotnet); skipped with the reason on others",
     )
+    config.addinivalue_line(
+        "markers",
+        "known_bug(issue, backends=(...)): the test asserts CORRECT behaviour for a filed GitHub issue "
+        "that a listed backend still gets wrong; xfail(strict=True) there so a fix flips it to a failing "
+        "XPASS, which is the prompt to delete the marker. Omit backends to mean every server kind.",
+    )
 
 
 def _area_of(item: pytest.Item) -> str | None:
@@ -117,6 +123,29 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(
                 pytest.mark.skip(reason="ffmpeg and ffprobe are not on PATH (or WEIR_CONTRACT_REAL_FFMPEG_DIR)")
             )
+        for known_bug in item.iter_markers(name="known_bug"):
+            issue = known_bug.kwargs.get("issue")
+            if issue is None and known_bug.args:
+                issue = known_bug.args[0]
+            if issue is None:
+                raise pytest.UsageError(f"{item.nodeid}: @pytest.mark.known_bug needs issue=<GitHub issue number>")
+            bug_backends = known_bug.kwargs.get("backends") or tuple(launcher.SERVER_KINDS)
+            unknown_bug_kinds = set(bug_backends).difference(launcher.SERVER_KINDS)
+            if unknown_bug_kinds:
+                raise pytest.UsageError(
+                    f"{item.nodeid}: @pytest.mark.known_bug backends needs server kinds from "
+                    f"{', '.join(launcher.SERVER_KINDS)}; got {bug_backends!r}"
+                )
+            if kind in bug_backends:
+                item.add_marker(
+                    pytest.mark.xfail(
+                        reason=(
+                            f"known bug: https://github.com/jampat000/Weir/issues/{issue} — this test asserts "
+                            f"the correct behaviour, which {kind} does not implement yet"
+                        ),
+                        strict=True,
+                    )
+                )
         selected.append(item)
     if deselected:
         config.hook.pytest_deselected(items=deselected)

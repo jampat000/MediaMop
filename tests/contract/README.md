@@ -52,6 +52,27 @@ def test_api_startup_auto_upgrades_known_behind_revision_to_head(...): ...
 
 Use it only for a decision recorded in an ADR or issue, never to hide a port that is not finished.
 
+### Known bugs: proving a fix, not just describing today
+
+Some contract tests currently assert today's *buggy* behaviour so the suite stays green (the README
+entry for the bug says so, and points at the correct-behaviour test). For a filed issue whose fix is
+still pending, add a **separate** test that asserts the *correct* behaviour and mark it
+`known_bug`, which applies `pytest.xfail(strict=True)` on the listed backends:
+
+```python
+@pytest.mark.known_bug(issue=530, backends=("python", "dotnet"))
+def test_refiner_files_lists_passed_through_and_rejected_rows(...): ...
+```
+
+- `issue` is the GitHub issue number; `backends` (default: every server kind) lists which servers still
+  get it wrong. A server kind left out of `backends` runs the test normally — use that once one backend
+  is fixed and the other is not.
+- `strict=True` is automatic: once a backend's fix lands, the test unexpectedly **passes** (XPASS),
+  which `strict` turns into a failure. That failure is the signal to delete the `known_bug` marker —
+  the test then just asserts correct behaviour like any other.
+- Leave the old test that asserts today's behaviour in place with a comment pointing at the issue and
+  the new test, so both the workaround and the fix are visible until the marker comes off.
+
 Areas are listed in [`areas.json`](areas.json). Each has a `required` list: when an area's port issue
 is done, add `"dotnet"` to it, and the CI `contract` job's .NET run (`--contract-required-only`) starts
 failing on that area instead of only reporting it.

@@ -38,6 +38,8 @@ def test_failure_is_retried_then_the_original_is_passed_through_unchanged(
     original = fake_media_bytes(probe(audio_languages=("eng", "fre")))
     source.write_bytes(original)
     rel = "Broken.Remux.2021/film.mkv"
+    # Works around #531 item 1 (see the docstring on detect_without_queueing): without a scan
+    # recording the file's size first, the retry count this test drives would keep resetting.
     h.detect_without_queueing(admin, library, rel)
 
     h.post_handoff(admin, handoff_id="handoff-pt-1", source_path=source)
@@ -109,6 +111,10 @@ def test_three_failures_hold_the_file_and_the_handoff_reads_failed(
 def test_content_rejection_under_reject_policy_reports_rejected_to_deluno_and_removes_the_download(
     server_factory, client_factory, fake_ffmpeg, fake_managers, tmp_path: Path
 ) -> None:
+    # This scenario never runs a scan before the hand-off, so today's #532 bug (a rejection with no
+    # prior scan writes no Files row) applies here too — this test just never looks at
+    # GET /refiner/files to notice. The correct behaviour is asserted in
+    # tests/contract/processing/test_reject_without_prior_scan.py.
     _server, admin = _signed_in_working_server(server_factory, client_factory, fake_ffmpeg)
     folders = h.Folders.make(tmp_path)
     fake, library = h.deluno_setup(
@@ -122,7 +128,11 @@ def test_content_rejection_under_reject_policy_reports_rejected_to_deluno_and_re
     release = folders.watched / "No.Audio.2023"
     release.mkdir()
     source = release / "film.mkv"
-    # A video with no audio at all: the release itself is bad.
+    # A video with no audio at all: the release itself is bad. This is a *preflight* content
+    # rejection the fake ffmpeg can simulate directly. It is not the same bug as #494/#539 item 1
+    # (an unreadable file on *real* ffmpeg never gets classified because ffprobe_json runs with
+    # ``-v quiet``, so the classification markers never reach stderr) — that needs real ffmpeg and
+    # is asserted separately in tests/contract/processing/test_real_ffmpeg_known_bugs.py.
     source.write_bytes(fake_media_bytes(probe(audio_languages=())))
 
     h.post_handoff(admin, handoff_id="handoff-reject-1", source_path=source)
