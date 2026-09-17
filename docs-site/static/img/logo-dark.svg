@@ -2,7 +2,7 @@
   <!-- Weir mark, for dark backgrounds. A low wall (stone) with water (gold) running up to it and
        spilling over its curved crest. Source of truth for every raster icon: see README.md. -->
   <g transform="translate(0 -3)">
-    <path d="M5 19H13C16.3 19 17.4 20.7 18 23.4L18.6 26.2C18.8 27.1 18.2 28 17.2 28H5C3.9 28 3 27.1 3 26V21C3 19.9 3.9 19 5 19Z" fill="#e7e7ea"/>
-    <path d="M3 13.2C5.4 11.2 7.8 11.2 10.2 13.2C12 14.7 13.4 14.4 15 14C19.6 13 21.3 15.6 22.2 19.6C23 23.2 24.4 25.6 29 25.6" fill="none" stroke="#d4af37" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5 19H13C16.3 19 17.4 20.7 18 23.4L18.6 26.2C18.8 27.1 18.2 28 17.2 28H5C3.9 28 3 27.1 3 26V21C3 19.9 3.9 19 5 19Z" fill="#e8f1f4"/>
+    <path d="M3 13.2C5.4 11.2 7.8 11.2 10.2 13.2C12 14.7 13.4 14.4 15 14C19.6 13 21.3 15.6 22.2 19.6C23 23.2 24.4 25.6 29 25.6" fill="none" stroke="#3ed7c8" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

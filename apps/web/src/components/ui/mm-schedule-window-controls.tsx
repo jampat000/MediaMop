@@ -104,7 +104,7 @@ export function MmScheduleDayChips({
               className={[
                 "min-w-[2.75rem] rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                 on
-                  ? "border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] text-[var(--mm-text1)]"
+                  ? "border-[color-mix(in_srgb,var(--mm-gold)_45%,transparent)] bg-[var(--mm-accent-soft)] text-[var(--mm-text1)]"
                   : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]/60",
                 disabled ? "cursor-not-allowed opacity-50" : "",
               ].join(" ")}
