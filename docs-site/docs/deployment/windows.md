@@ -18,13 +18,17 @@ Weir ships a Velopack-based Windows package. It installs as a desktop app with a
 | Component | Location |
 |-----------|----------|
 | Application binaries | `%LocalAppData%\Weir` |
+| Tray app (the main program) | `Weir.exe` |
+| Weir server | `server\WeirServer.exe` |
+| Web UI | `server\web-dist` |
+| Bundled ffmpeg | `server\bin\ffmpeg` |
 | Runtime data (SQLite, logs, backups) | `C:\ProgramData\Weir` |
 
 ## How it runs
 
 Weir runs in the user session, not as a Windows service. This avoids common NAS or external-drive access issues that affect Windows services.
 
-The .NET tray app launches the Python backend server as a child process and manages the application lifecycle.
+The tray app (`Weir.exe`) starts the Weir server (`server\WeirServer.exe`, a self-contained .NET program) as a child process with `--port <port>`. It watches the server and restarts it if it stops unexpectedly. The server creates or updates its SQLite database itself when it starts.
 
 The tray icon provides:
 - **Open Weir** — opens the web UI in your browser
@@ -49,4 +53,4 @@ Updates are managed automatically by the .NET tray app via Velopack:
 
 ## Migrating from legacy installs
 
-If you have a previous Weir install that used the Inno Setup installer (installed under `C:\Program Files\Weir`), the new tray app automatically detects and cleans up the legacy updater service on first launch. Runtime data under `C:\ProgramData\Weir` is preserved.
+If you have a previous Weir install that used the older setup program (installed under `C:\Program Files\Weir`), the new tray app automatically detects and cleans up the legacy updater service on first launch. Runtime data under `C:\ProgramData\Weir` is preserved.

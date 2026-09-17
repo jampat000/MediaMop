@@ -71,3 +71,14 @@ The frontend stays because React + TypeScript is already the modern standard cho
 - For a while the repo holds two backends. The Python one only receives fixes needed to keep the contract suite honest.
 - Contributors need .NET 10 instead of Python.
 - Amends: ADR-0007 (worker lanes, already collapsed) and the packaging notes in ADR-0016. Their decisions carry over; the implementation language changes.
+
+## Update (2026-09-17): the switch is done (#523)
+
+The .NET server passed the full contract suite, E2E and the packaged Windows smoke, and #523 switched over:
+
+- The Docker image (`Dockerfile`, now `linux/amd64` and `linux/arm64`) and the Windows Velopack package (`packaging/windows/build-velopack.ps1`) run the .NET server. CI's required checks (`weir`, `docker-smoke`, `windows-package-smoke`) build, test and package .NET; the contract suite runs against .NET only, with every area required.
+- `apps/backend` and every Python-only script, lock file and tool configuration are deleted. Python remains only as the interpreter for the outside test runners (`tests/contract`, `tests/e2e`, `scripts/live-packaged-e2e.py`), pinned in `tests/requirements.txt`; they judge the server over HTTP and never import it.
+- **The schema freeze is lifted.** The .NET migrations in `apps/server/src/Weir.Infrastructure/Migrations` are now the only source of the SQLite schema, and the next migration may diverge from the old Alembic head `0036_drop_pruner_tables`. The checked-in `alembic-head.sql` stays as a frozen reference for the baseline; nothing regenerates it. The golden rules and ffmpeg fixtures are likewise maintained by hand as .NET test fixtures now.
+- The product version moved from `apps/backend/pyproject.toml` to `WeirVersion` in `apps/server/Directory.Build.props`.
+- Not ported yet, and tracked separately: the filesystem watcher (new files are found by the periodic scan only) and Refiner library discovery/unlink (`OpenApiDocumentParityTests.KnownGaps`).
+- Features that waited on the switch (library mode #505–#509, track rules #495–#498, #500–#503) are built in C# from here.

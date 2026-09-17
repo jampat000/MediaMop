@@ -10,16 +10,18 @@ Weir ships three deliverables from each tagged release:
 | Deliverable | Description |
 |-------------|-------------|
 | GitHub Release | Canonical source snapshot for the tag |
-| `WeirSetup.exe` | Windows desktop installer with tray host and bundled runtime |
-| Docker image | `ghcr.io/jampat000/weir:vX.Y.Z` and `:latest` |
+| `Weir-win-Setup.exe` | Windows desktop installer with tray host and the bundled .NET server |
+| Docker image | `ghcr.io/jampat000/weir:X.Y.Z` and `:latest`, for linux/amd64 and linux/arm64 |
 
-Additional artifact: `weir-web-dist.zip` — static production build of the frontend (backend still required).
+Additional artifact: `weir-web-dist.zip` — static production build of the frontend (the server is still required).
 
 ## Release process
 
 1. Update version in both files via a normal PR:
-   - `apps/backend/pyproject.toml`
-   - `apps/web/package.json`
+   - `<WeirVersion>` in `apps/server/Directory.Build.props`
+   - `version` in `apps/web/package.json`
+
+   The release workflow checks that the tag `vX.Y.Z` matches both.
 2. Merge to `main` after CI passes
 3. Create release notes at `docs/release-notes/vX.Y.Z.md`
 4. Create and push an annotated tag:
@@ -36,8 +38,8 @@ Pushing a `v*` tag triggers the release workflow.
 
 ## What the release workflow does
 
-- Reruns backend tests, web build, and E2E auth smoke on Linux
-- Builds `WeirSetup.exe` on Windows
+- Reruns server tests, web build, and E2E auth smoke on Linux
+- Builds `Weir-win-Setup.exe` on Windows
 - Publishes `weir-web-dist.zip`
 - Builds and pushes Docker tags (versioned + `latest`)
 - Verifies Docker manifest and runs container health check

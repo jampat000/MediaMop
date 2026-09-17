@@ -30,30 +30,35 @@ Weir is a self-hosted media operations app:
 
 ## Runtime Shape
 
-- Backend: FastAPI, SQLite, Alembic, Python package under `apps/backend/src/weir`.
-- Frontend: React + Vite under `apps/web/src`.
-- Packaging: Docker and Windows installer workflows.
+- Server: C# / .NET 10 under `apps/server` (ASP.NET Core minimal APIs, SQLite through
+  `Microsoft.Data.Sqlite` with explicit SQL and numbered SQL migrations). See
+  [ADR-0017](docs/adr/ADR-0017-backend-on-dotnet.md).
+- Frontend: React + Vite under `apps/web/src`, served by the server from `WEIR_WEB_DIST`.
+- Packaging: a Docker image (linux/amd64 and linux/arm64) and a Windows Velopack installer whose
+  .NET tray app (`apps/tray`) starts and watches the server.
 - Runtime data: `WEIR_HOME`.
 
 ```mermaid
 flowchart LR
-  UI["Frontend (React/Vite)"] --> API["FastAPI API Layer"]
+  UI["Frontend (React/Vite)"] --> API["Weir.Api (ASP.NET Core endpoints)"]
   API --> Core["Core + Platform Services"]
   Core --> Refiner["Refiner (the application)"]
   Core --> Activity["Activity"]
   Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
-  Core --> DB["SQLite (Alembic managed)"]
+  Core --> DB["SQLite (numbered SQL migrations)"]
   Refiner --> Jobs["Durable jobs (refiner_jobs) + workers"]
 ```
 
-## Backend Map
+## Server Map
 
-- `weir.api`: FastAPI app factory, router composition, request dependencies.
-- `weir.core`: config, runtime paths, database setup, lifespan, logging, schema revision checks.
-- `weir.platform`: shared product services such as auth, activity, jobs, local browse, settings, observability, and suite settings.
-- `weir.refiner`: the application — libraries, files, durable jobs and workers, remux passes.
-- `weir.integrations`: external service integration code.
-- `weir.windows`: Windows tray and package-specific helpers.
+Solution `apps/server/Weir.slnx`; details in [`apps/server/README.md`](apps/server/README.md).
+
+- `src/Weir.Host`: the process — configuration, logging, database startup, Kestrel, Windows Service and systemd support. Builds `Weir` / `Weir.exe`.
+- `src/Weir.Api`: endpoints and HTTP behaviour — auth and CSRF, security headers, request ids, the OpenAPI document, serving the web app.
+- `src/Weir.Infrastructure`: SQLite (connections, stores, numbered migrations in `Migrations/`), the durable job queue and workers, the remux pass, ffmpeg/ffprobe processes, media manager clients, the filesystem and log files.
+- `src/Weir.Core`: records and rules with no IO — the Refiner rules engine, job rules, media manager rules, settings and security primitives.
+- `tests/*`: xUnit tests per project. The language-neutral contract suite (`tests/contract`) and the E2E smoke (`tests/e2e/weir`) judge a running server from outside.
+- `apps/tray/Weir.Tray`: the Windows tray app shipped in the installer.
 
 ## Frontend Map
 
@@ -70,7 +75,8 @@ flowchart LR
 - Refiner code should keep destructive or irreversible behavior behind explicit services and tests.
 - Backend APIs should expose typed schemas at boundaries instead of inferred shapes.
 - Frontend pages should use typed API/query helpers from `src/lib` rather than ad hoc fetch calls.
-- Cross-cutting runtime concerns belong in `weir.platform` or `weir.core`, not inside Refiner implementation details.
+- Cross-cutting runtime concerns belong in shared services (`Weir.Core` rules, `Weir.Infrastructure` platform services), not inside Refiner implementation details.
+- `Weir.Core` stays free of IO; filesystem, database, process and HTTP work lives in `Weir.Infrastructure` behind seams tests can replace.
 - File lifecycle changes must preserve the safety contract in [`docs/file-lifecycle-contract.md`](docs/file-lifecycle-contract.md).
 
 ## Job Lifecycle

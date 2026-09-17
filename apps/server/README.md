@@ -1,6 +1,8 @@
 # Weir server (.NET)
 
-The C# / .NET 10 backend that replaces the Python backend in `apps/backend`, area by area, without changing the HTTP API, the web app or the SQLite schema. Why and how: [ADR-0017](../../docs/adr/ADR-0017-backend-on-dotnet.md). Until the switch (#523), `apps/backend` is the reference and the shipped server.
+Weir's server: C# on .NET 10. It was ported from the Python backend area by area without changing the HTTP API, the web app or the SQLite schema, proven by the contract suite (`tests/contract`), and replaced it in #523, which deleted the Python backend. It is what the Docker image and the Windows package run. Why and how: [ADR-0017](../../docs/adr/ADR-0017-backend-on-dotnet.md).
+
+Many comments and tests below still name the Python module or function a piece of code was ported from (`refiner_remux_rules.py`, `get_activity_recent`, ...). Those names are provenance: the Python code is in git history before #523, not in the tree.
 
 | Project | Holds |
 | --- | --- |
@@ -21,7 +23,7 @@ dotnet test apps/server/Weir.slnx
 
 ## Run
 
-It reads the same `WEIR_*` environment variables as the Python backend, with the same defaults (see `apps/backend/.env.example`). It does not read `apps/backend/.env`.
+It reads `WEIR_*` environment variables (documented in the repository's `.env.example`) and nothing else; it does not read a `.env` file itself (`scripts/dev-backend.ps1` loads one for it).
 
 ```powershell
 $env:WEIR_HOME = "$env:TEMP\weir-dotnet"          # optional; defaults to %PROGRAMDATA%\Weir
@@ -31,29 +33,23 @@ dotnet run --project apps/server/src/Weir.Host -- --host 127.0.0.1 --port 8788
 
 `--port` (what the Windows tray passes) wins over `PORT` (what the Docker entrypoint sets); both default to 8788 on every interface.
 
-On startup the server creates an empty database at the current schema, opens a database already at Alembic head `0036_drop_pruner_tables` without changing it, and refuses anything else with a message. It records its version in Alembic's own `alembic_version` table, so either backend can open a database the other created.
+On startup the server creates an empty database at the current schema, opens a database already at the schema head `0036_drop_pruner_tables` without changing it, and refuses anything else with a message. It records its revision in the `alembic_version` table, the table the retired Python backend's Alembic migrations used, so every database a released Weir created still opens.
 
-## Schema parity
+## Schema
 
-`tests/Weir.Infrastructure.Tests/schema/alembic-head.sql` is the schema and seed rows that `alembic upgrade head` creates. The parity test builds a database from it and one from the .NET migrations and compares tables, columns, types, defaults, keys, indexes, foreign keys, SQL text and rows. After an Alembic change, regenerate it with the backend's virtualenv:
+**The .NET migrations in `src/Weir.Infrastructure/Migrations/` are the only source of the schema.** ADR-0017 froze the SQLite schema while both backends existed; that freeze ended with #523. The next schema change is a new numbered migration here (with its revision recorded in `alembic_version`, and `SchemaMigrator` taught to upgrade a database at the previous head), and it may diverge from the old Alembic head. There is no Alembic, and nothing regenerates a schema from Python.
 
-```powershell
-apps/backend/.venv/Scripts/python.exe scripts/dump-alembic-schema.py          # write
-apps/backend/.venv/Scripts/python.exe scripts/dump-alembic-schema.py --check  # CI runs this
-```
+`tests/Weir.Infrastructure.Tests/schema/alembic-head.sql` is the schema and seed rows the Python backend's last `alembic upgrade head` created, dumped before it was deleted. It is a frozen reference: `SchemaParityTests` builds a database from it and one from the .NET baseline migration and compares tables, columns, types, defaults, keys, indexes, foreign keys, SQL text and rows, which proves a database created by a released Python Weir is exactly what the baseline expects. When a later migration changes the schema, keep that comparison pointed at the baseline (it stays true) and test the new migration on its own; do not edit the reference file.
 
 ## Rules parity
 
-`Weir.Core.Rules` is a port of Refiner's rules engine (`refiner_remux_rules.py`, `refiner_track_sorters.py`, `refiner_metadata_rules.py`, the pure parts of `refiner_original_language.py` and the display helpers). `tests/Weir.Core.Tests/Rules/golden/*.json` hold ffprobe-style inputs with the plan, notes and display lines the Python engine produced for them; `GoldenParityTests` requires the same answers. After a change to those Python modules, regenerate them with the backend's virtualenv:
+`Weir.Core.Rules` is a port of Refiner's rules engine (`refiner_remux_rules.py`, `refiner_track_sorters.py`, `refiner_metadata_rules.py`, the pure parts of `refiner_original_language.py` and the display helpers). `tests/Weir.Core.Tests/Rules/golden/*.json` hold ffprobe-style inputs with the plan, notes and display lines the Python engine produced for them; `GoldenParityTests` requires the same answers.
 
-```powershell
-apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py          # write
-apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py --check  # compare only
-```
+**The golden files are .NET test fixtures now.** The Python generators (`scripts/generate-rules-golden.py`, `scripts/generate-ffmpeg-golden.py`) were deleted with the Python backend in #523, so nothing regenerates these files. A deliberate behaviour change updates the expected output by hand in the same change: an override file (below) for an existing case, or a new case file for new behaviour, with the issue number that justifies it.
 
 ### Golden overrides (deliberate divergence from Python)
 
-Issue #537 fixed defects in the rules engine that the golden corpus had pinned as "today's behaviour" (its items 1, 2, 3, 5 and 6 — see the issue for each one). `apps/backend` is being retired (ADR-0017) and is not touched to "fix" these in Python, so regenerating the golden files from Python would just re-record the same bugs. Instead, a case whose correct answer now differs from Python's recorded one gets a same-named file in `tests/Weir.Core.Tests/Rules/golden/overrides/`, holding the issue number, which item(s) of it, and the new expected output, e.g.:
+Issue #537 fixed defects in the rules engine that the golden corpus had pinned as "today's behaviour" (its items 1, 2, 3, 5 and 6 — see the issue for each one). Rather than rewrite the recorded Python answers, a case whose correct answer now differs from Python's recorded one gets a same-named file in `tests/Weir.Core.Tests/Rules/golden/overrides/`, holding the issue number, which item(s) of it, and the new expected output, e.g.:
 
 ```json
 {
@@ -76,14 +72,9 @@ Issue #497 put a new `content_tier` key first in `TrackSorters.DefaultAudioSorte
 
 ## ffmpeg parity
 
-`Weir.Core.Media` ports the decisions in `refiner_remux_mux.py` and `refiner_hardware_acceleration.py`: ffprobe and ffmpeg command lines (token for token), unreadable-media classification, output and duration validation, progress parsing and hardware choice. `Weir.Infrastructure.Media.MediaTools` runs the tools through `IProcessRunner` (`ProcessRunner` kills the whole process tree on timeout or cancellation). `tests/Weir.Core.Tests/Media/golden/*.json` record what the Python functions did with their processes replaced by recorded inputs, including log payloads and exception messages; `MediaGoldenParityTests` and `MediaToolsGoldenTests` require the same. Regenerate after a change to those Python modules:
+`Weir.Core.Media` ports the decisions in `refiner_remux_mux.py` and `refiner_hardware_acceleration.py`: ffprobe and ffmpeg command lines (token for token), unreadable-media classification, output and duration validation, progress parsing and hardware choice. `Weir.Infrastructure.Media.MediaTools` runs the tools through `IProcessRunner` (`ProcessRunner` kills the whole process tree on timeout or cancellation). `tests/Weir.Core.Tests/Media/golden/*.json` record what the Python functions did with their processes replaced by recorded inputs, including log payloads and exception messages; `MediaGoldenParityTests` and `MediaToolsGoldenTests` require the same. Like the rules corpus, these are maintained as .NET fixtures now (see "Rules parity").
 
-```powershell
-apps/backend/.venv/Scripts/python.exe scripts/generate-ffmpeg-golden.py          # write
-apps/backend/.venv/Scripts/python.exe scripts/generate-ffmpeg-golden.py --check  # compare only
-```
-
-`RealFfmpegTests` run real ffprobe and ffmpeg on files generated with `-f lavfi`. They skip unless the tools are found through `WEIR_FFMPEG_DIR` or `PATH`; on Windows, point `WEIR_FFMPEG_DIR` at a packaged build's `_internal/bin/ffmpeg`.
+`RealFfmpegTests` run real ffprobe and ffmpeg on files generated with `-f lavfi`. They skip unless the tools are found through `WEIR_FFMPEG_DIR` or `PATH`; on Windows, point `WEIR_FFMPEG_DIR` at a packaged build's `server/bin/ffmpeg` or at `packaging/windows/vendor/ffmpeg` after a package build.
 
 ### Deliberate divergences from the golden fixtures
 
@@ -114,7 +105,7 @@ Fixed in #547 (found by the #503 trial, `docs/trials/503-mkvmerge-vs-ffmpeg.md`)
 
 ## Jobs and workers
 
-The durable queue is the Python backend's `refiner_jobs` table, used the same way: the same statuses, dedupe keys, claim statement, lease checks, retry backoff and failure wording, and the same timestamp text, so either backend can claim, finish or recover a row the other wrote (`tests/Weir.Infrastructure.Tests/Jobs/CrossBackendTests.cs` proves it against the Python code when `apps/backend/.venv` exists, or `WEIR_TEST_PYTHON` names an interpreter with the backend's dependencies; the cross-checks always import this checkout's `apps/backend/src`).
+The durable queue is the `refiner_jobs` table the Python backend used, used the same way: the same statuses, dedupe keys, claim statement, lease checks, retry backoff and failure wording, and the same timestamp text, so a row a released Python Weir left behind is claimed, finished or recovered correctly. (Cross-backend tests that ran the Python queue against the same database proved this until #523 deleted the Python backend.)
 
 - `Weir.Core/Jobs`: the rules (job kind guard, admission, schedule grid, backoff, failure wording, recovery wording, Weir's temp file names).
 - `Weir.Infrastructure/Jobs`: `RefinerJobStore` (SQLite), `RefinerJobProcessor` (one worker pass), startup recovery, history retention, periodic enqueue and the hosted services. `AddWeirJobs` registers all of it.
@@ -168,7 +159,7 @@ Fixes included:
 - **Commit:** re-fingerprint (changed → discard, "The file changed while Weir was working; nothing was replaced"); copy permissions (Windows DACL; POSIX mode bits, and owner when root; never the mtime); rename original → `<name>.weir-bak<ext>` and check the backup is still the fingerprinted file; rename temp → original name (the commit); record it; delete the backup (a failure is logged and left for the sweep).
 - **Renames** are same-folder and never replace an existing file: `MoveFileExW` with only `MOVEFILE_WRITE_THROUGH` on Windows (no replace, no copy fallback), `File.Move(overwrite: false)` elsewhere.
 - **Rollback and sweep** judge from the files alone: backup present and original missing → rename it back; backup and original present → delete the backup; temp → delete. A locked file (sharing violation, `EBUSY`) is the `InUse` outcome, requeued after 5, 15 and 60 minutes (`SafeSwapRules.InUseRetryDelay`).
-- **Persistence:** progress is recorded on the job row, not in a new table, because ADR-0017 keeps the SQLite schema fixed until the switch (#523). `RefinerJobSwapJournal` adds `library_swap` (`state`: `writing`, `committing`, `committed`, `finished`, `rolled_back`, `recovered`, plus the three paths) and `swap_committed: true` to `refiner_jobs.payload_json`, keeping every other key. The sweep visits the paths of unfinished swaps first; walking library folders is a fallback. No migration and no schema-parity change.
+- **Persistence:** progress is recorded on the job row, not in a new table, because ADR-0017 kept the SQLite schema fixed until the switch (#523). `RefinerJobSwapJournal` adds `library_swap` (`state`: `writing`, `committing`, `committed`, `finished`, `rolled_back`, `recovered`, plus the three paths) and `swap_committed: true` to `refiner_jobs.payload_json`, keeping every other key. The sweep visits the paths of unfinished swaps first; walking library folders is a fallback. No migration and no schema-parity change.
 - **Tests:** `SafeSwapTests` injects a failure, a failure after the effect, a crash and a crash after the effect at every one of the swap's 23 filesystem and journal operations and proves exactly one intact file remains (original content before the commit rename, cleaned content after), with the journal alone enough to recover every crash. `PhysicalSwapTests` run the swap and sweep on real files and a real job row, including a file held open by another handle.
 
 ### Fixed in #545
@@ -283,11 +274,20 @@ A real table was **not** chosen: `SchemaParityTests.Migrations_create_the_alembi
 
 Writers never notify listeners directly. `SqliteActivityWriter` records the ids it wrote on the unit of work or raw transaction, and `ActivityNotifications` tells the database's `ActivityLatestNotifier` after the commit (a rollback tells nobody). Code that commits its own raw transaction after `SqliteActivityWriter.Record` calls `ActivityNotifications.TransactionCommitted`, as `RefinerJobStore.InTransactionAsync` does. `RefinerFileLogRetentionTask` prunes processing records hourly by `file_log_retention_days`.
 
-## Publish
+## Publish and packaging
 
-Self-contained single-file builds for `win-x64`, `linux-x64` and `linux-arm64`:
+Self-contained single-file builds for `win-x64`, `linux-x64` and `linux-arm64`, through the checked-in profiles in `src/Weir.Host/Properties/PublishProfiles`:
 
 ```powershell
-dotnet publish apps/server/src/Weir.Host -r win-x64 -o apps/server/artifacts/publish/win-x64
+dotnet publish apps/server/src/Weir.Host -p:PublishProfile=win-x64       # apps/server/artifacts/publish/win-x64/Weir.exe
 dotnet publish apps/server/src/Weir.Host -p:PublishProfile=linux-arm64
 ```
+
+Always publish through a profile, never with `-r`/`--self-contained`/`-p:PublishSingleFile=true` on the command line: a command-line `PublishSingleFile` is a global property that reaches every project, and the single-file analyzer then fails `Weir.Infrastructure` with IL3000 on the `Assembly.Location` check that detects single-file mode on purpose (`SystemServices.DetectInstallType`, `MediaToolResolver.ForCurrentProcess`). The profiles scope those properties to `Weir.Host`.
+
+A single-file publish is .NET's equivalent of a frozen build: `MediaToolResolver` then also looks for ffmpeg and ffprobe in `<app>/bin/ffmpeg`, after `WEIR_FFMPEG_DIR` and `<WEIR_HOME>/bin/ffmpeg` and before `PATH`.
+
+The product version is `WeirVersion` in `Directory.Build.props`; the assembly version, `--version`, `/openapi.json` and the packages all take it from there.
+
+- **Docker** (`Dockerfile`, `docker/entrypoint.sh`, `compose.yaml`, [`docker/README.md`](../../docker/README.md)): the SDK stage runs on the build machine's architecture and cross-publishes `linux-x64` or `linux-arm64` (no emulation needed for the .NET build); the final stage is `mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim` with ffmpeg, curl and gosu, user `weir` (UID/GID 1000), `/opt/weir/Weir`, `/opt/weir/web-dist`, the `/data/weir` volume, port 8788 and a `/health` healthcheck. The entrypoint has no migration step (the server migrates its own database) and generates the persisted session secret with coreutils. Releases publish `linux/amd64` and `linux/arm64`.
+- **Windows** (`packaging/windows/build-velopack.ps1`): builds the web app, publishes the server with the `win-x64` profile, smoke-tests the raw publish, publishes the tray app, and packs `dist/windows/pack` with Velopack (`--packId Weir --mainExe Weir.exe`): the tray at the root, the server renamed to `server/WeirServer.exe` (its assembly name `Weir` would collide with the tray's `Weir.exe`), `server/web-dist` and `server/bin/ffmpeg`. `scripts/smoke-windows-package.ps1` then starts `server/WeirServer.exe` the way the tray does, with ffmpeg removed from `PATH`, checks it finds its bundled ffmpeg and runs a real pass-through job.

@@ -39,13 +39,12 @@ Weir's security posture and hardening baseline.
 
 | Tool | What it checks |
 |------|---------------|
-| CodeQL | Static analysis for security vulnerabilities |
-| Bandit | Python security linting |
-| pip-audit | Python dependency vulnerabilities |
+| CodeQL | Static analysis of the C# server and the JavaScript/TypeScript web app |
+| NuGet vulnerability scan | .NET package vulnerabilities (`node scripts/check-dotnet-vulnerabilities.mjs apps/server/Weir.slnx`; fails on High or Critical) |
 | npm audit | JavaScript dependency vulnerabilities |
+| Dependabot | Automated dependency update PRs for NuGet, npm, GitHub Actions, and the Python test-runner packages in `tests/requirements.txt` |
 
 The docs build runs an image-format preflight and rejects ICNS, JXL, HEIC, and HEIF before Docusaurus parses repository assets. The current `image-size` advisories are tracked in `dependency-audit-exceptions.json` because the registry does not yet publish a fixed version; the exception has an expiry date and a documented mitigation. When a fixed release is available, update the `image-size` override, remove the exception entries, and keep the preflight as defense in depth.
-| Dependabot | Automated dependency update PRs |
 
 ## Repository controls
 
@@ -71,17 +70,9 @@ signing key and the database both live under `WEIR_HOME`.
 
 ### If you forgot your password
 
-Run the recovery command where Weir is installed. It sets a new password, re-activates the
-account, and signs out every existing session.
-
-```bash
-docker compose exec weir weir-recover
-```
-
-On a Windows install, run `weir-recover` from the installation directory.
-
-You will be prompted for the new password, which keeps it out of your shell history. For
-scripted use, pass `--password`. To see the accounts without changing anything, use `--list`.
+The current Weir server does not include a password recovery command. To get back in, clear the
+account and use first-run setup again, as described in
+[Clearing the account](#clearing-the-account) below.
 
 ### If you signed in but are sent straight back to the login page
 
@@ -93,15 +84,32 @@ over HTTPS, so this should not occur unless the setting has been forced. Check f
 `WEIR_SESSION_COOKIE_SECURE=true` in your environment and remove it, or set it to `auto`,
 then restart.
 
-### If the server will not start at all
+### Clearing the account
 
-As a last resort you can clear the accounts directly and use first-run setup again. Everything
-else — libraries, connections and settings — lives in other tables and survives.
+You can clear the accounts directly and use first-run setup again. Everything else — libraries,
+connections and settings — lives in other tables and survives.
 
-```bash
-docker compose exec weir /opt/weir/.venv/bin/python -c "import sqlite3; c=sqlite3.connect('/data/weir/data/weir.sqlite3'); c.execute('DELETE FROM user_sessions'); c.execute('DELETE FROM users'); c.commit(); print('cleared')"
-```
+The database is at `$WEIR_HOME/data/weir.sqlite3` — `/data/weir/data/weir.sqlite3` inside
+Docker, and `C:\ProgramData\Weir\data\weir.sqlite3` on a default Windows install.
 
-The database is at `$WEIR_HOME/data/weir.sqlite3` — `/data/weir/data/weir.sqlite3`
-in Docker, and `C:\ProgramData\Weir\data\weir.sqlite3` on a default Windows install. Stop
-the server first. Then open `/setup` to create the account again.
+1. **Stop Weir.** For Docker, stop the container (`docker compose stop weir`). On Windows,
+   choose **Quit** from the tray icon.
+2. **Clear the accounts from the host.** The Docker image contains only the Weir server — there
+   is no Python or `sqlite3` inside it — so do this on the host, against the data folder you
+   mounted at `/data/weir`. (For a named volume, `docker volume inspect weir-data` shows where
+   it lives on the host.) Use either:
+   - `sqlite3`, if it is installed on the host:
+
+     ```bash
+     sqlite3 <data folder>/data/weir.sqlite3 "DELETE FROM user_sessions; DELETE FROM users;"
+     ```
+
+   - or, from a clone of the Weir repository with Node.js 24 installed, the reset script with
+     `WEIR_HOME` pointed at the data folder:
+
+     ```bash
+     WEIR_HOME=<data folder> node scripts/dev-reset-auth.mjs --yes --force
+     ```
+
+     On Windows (PowerShell): `$env:WEIR_HOME = "C:\ProgramData\Weir"; node scripts/dev-reset-auth.mjs --yes --force`
+3. **Start Weir again** and open `/setup` to create the account again.

@@ -4,6 +4,8 @@
 
 **Accepted.** This repository’s backend (`apps/backend`) is the source of truth for persistence described here.
 
+> **Update (2026-09-17): Alembic is gone ([ADR-0017](ADR-0017-backend-on-dotnet.md), #523).** SQLite-first stands. The Python backend, SQLAlchemy and Alembic were replaced by the .NET server in `apps/server`, whose numbered SQL migrations are now the only schema source. Databases keep the `alembic_version` table for their revision, so a database a Python release created still opens. Read the SQLAlchemy/Alembic mechanics below as history.
+
 > **Update (2026-08-28): Subber moved to Deluno.** This ADR is left as it was written — an ADR records the decision, not the current file list — but wherever it names Subber, read it as an example rather than as a lane that still exists. The ``subber_jobs`` table is dropped by migration ``0010_drop_subber_tables``, and ``subber.`` is now an abandoned prefix refused on every remaining lane, alongside ``trimmer.``.
 
 ## Context

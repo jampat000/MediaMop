@@ -22,7 +22,7 @@ It brings a few focused tools together in one place:
 - **Refiner** cleans up media files by remuxing them into a cleaner, more consistent result.
 - **In hand, Activity, and Settings** give you a live view of what Weir is holding, recent work, logs, and core app configuration.
 
-The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
+The app ships as a C# / .NET 10 server with SQLite and a React + Vite web UI.
 
 ## Screenshots
 
@@ -46,35 +46,18 @@ The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
 
 Prerequisites:
 
-- Python 3.11+
-- Node.js LTS with `npm` on `PATH`
+- .NET 10 SDK (the version is pinned in `apps/server/global.json`)
+- Node.js 24 with `npm` on `PATH`
 
 From the repository root:
 
-1. Create the backend virtual environment:
-
-   ```powershell
-   cd apps\backend
-   py -3 -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   python -m pip install --require-hashes -r requirements-runtime.lock
-   python -m pip install --no-deps --no-build-isolation -e .
-   ```
-
-2. Copy `apps/backend/.env.example` to `apps/backend/.env` and set `WEIR_SESSION_SECRET`. Set
+1. Copy `.env.example` to `.env` and set `WEIR_SESSION_SECRET`. Set
    `WEIR_CREDENTIALS_SECRET` as a separate long random value before saving Sonarr or Radarr
    credentials. To rotate `WEIR_CREDENTIALS_SECRET`, put the old value in `WEIR_PREVIOUS_CREDENTIALS_SECRETS`,
    restart Weir, then re-save provider credentials so they are written with the new secret. Changing
    `WEIR_SESSION_SECRET` later can require re-entering credentials that were still encrypted with the old session
    secret.
-3. Run migrations:
-
-   ```powershell
-   cd ..\..
-   .\scripts\dev-migrate.ps1
-   ```
-
-4. Start the repo-local dev stack:
+2. Start the repo-local dev stack (the server creates its SQLite database on first start):
 
    ```powershell
    cd apps\web
@@ -86,7 +69,7 @@ The default dev URL is `http://localhost:8782/`.
 
 ## Runtime notes
 
-- SQLite runtime files live under `WEIR_HOME`
+- SQLite runtime files live under `WEIR_HOME`; the server creates and migrates its database itself
 - production deployments should expose one canonical HTTPS origin
 - local development uses the Vite `/api` proxy; keep `VITE_API_BASE_URL` unset unless you know you need it
 
@@ -154,8 +137,8 @@ docker compose up -d
 No env file is required for the default Docker path. The container will generate and persist
 its own session secret if you do not provide one.
 
-If you need the container to write as a specific NAS or host user, set `WEIR_PUID` /
-`WEIR_PGID` and the relevant `WEIR_CHOWN_*` flags for Refiner watched/work/output
-folders. Full examples and migration notes live in [`docker/README.md`](docker/README.md).
+Images are published for `linux/amd64` and `linux/arm64`. If you need the container to write as a
+specific NAS or host user, set `WEIR_PUID` / `WEIR_PGID`. Full examples live in
+[`docker/README.md`](docker/README.md).
 
 Full Docker instructions: [`docker/README.md`](docker/README.md)

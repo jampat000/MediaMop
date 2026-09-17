@@ -4,6 +4,8 @@
 
 Accepted — Weir standalone repository (extracted from shared-history monorepo, 2026).
 
+> **Update (2026-09-17):** the backend is `apps/server` (C# / .NET 10) since [ADR-0017](ADR-0017-backend-on-dotnet.md) and #523, which deleted `apps/backend`. The layout below is otherwise unchanged; read `apps/backend` as history.
+
 ## Context
 
 Weir is its **own product** and **own Git repository**. The backend and web shell are developed together here. Earlier prototype stacks are **not** carried forward as the primary architecture.
