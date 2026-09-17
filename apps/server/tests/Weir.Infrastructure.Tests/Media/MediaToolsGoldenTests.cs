@@ -81,7 +81,7 @@ public sealed class MediaToolsGoldenTests
             }
 
             var expectedLogs = expected.GetProperty("logs").EnumerateArray()
-                .Select(e => (e.GetProperty("level").GetString()!, e.GetProperty("message").GetString()!))
+                .Select(e => (e.GetProperty("level").GetString()!, GoldenDivergences.FfprobeCallLog(e.GetProperty("message").GetString()!)))
                 .ToList();
             var actualLogs = logger.Entries.Select(e => (e.Level == LogLevel.Warning ? "warning" : "debug", e.Message)).ToList();
             Assert.Equal(expectedLogs, actualLogs);
@@ -291,7 +291,9 @@ public sealed class MediaToolsGoldenTests
         Assert.True(expected.GetProperty("type").GetString() == type, $"{label}: expected {expected.GetRawText()}, got {type}: {actual.Message}");
         if (actual is not RulesInputException)
         {
-            Assert.Equal(expected.GetProperty("message").GetString(), actual.Message);
+            // #539 item 1: a timeout message embeds the argv (Command '[...]' timed out ...), so a probe timeout's
+            // expected text needs the same "-v quiet" -> "-v error" patch as the call log; a no-op everywhere else.
+            Assert.Equal(GoldenDivergences.FfprobeCallLog(expected.GetProperty("message").GetString()!), actual.Message);
         }
     }
 
@@ -331,4 +333,25 @@ public sealed class MediaToolsGoldenTests
     }
 
     private static JsonDocument Load(string fileName) => JsonDocument.Parse(File.ReadAllText(Path.Combine(GoldenDirectory, fileName)));
+}
+
+/// <summary>
+/// Deliberate divergences from the golden fixtures in <c>tests/Weir.Core.Tests/Media/golden</c> (shared with
+/// <c>Weir.Core.Tests</c>, which has its own copy of this patch for the argv-level fixtures): fixing a bug on
+/// purpose makes the .NET port log differently from the Python code the fixtures were captured from. See
+/// apps/server/README.md, "ffmpeg parity", for the mechanism.
+/// </summary>
+internal static class GoldenDivergences
+{
+    /// <summary>
+    /// #539 item 1: two places embed the ffprobe argv literally and so carry "-v error" where the golden fixture
+    /// has Python's "-v quiet" — the REFERENCE_FFPROBE_CALL debug log (JSON, double-quoted) and a timeout's
+    /// <c>Command '[...]' timed out after N seconds</c> message (Python <c>repr()</c>, single-quoted). Every other
+    /// field of either is unaffected by this fix, so a plain substring patch on the one changed token is enough
+    /// to reuse the rest of the fixture unmodified.
+    /// </summary>
+    public static string FfprobeCallLog(string message) =>
+        message
+            .Replace("\"-v\", \"quiet\"", "\"-v\", \"error\"", StringComparison.Ordinal)
+            .Replace("'-v', 'quiet'", "'-v', 'error'", StringComparison.Ordinal);
 }

@@ -33,7 +33,18 @@ public static class FfmpegCommands
     /// <summary><c>_HWACCEL_TIMEOUT_SECONDS</c> (a float in the reference, so it prints as <c>10.0</c>).</summary>
     public const double HwaccelTimeoutSeconds = 10.0;
 
-    /// <summary><c>build_ffprobe_argv</c>: probe size and analyze duration are clamped to 1..1024 MB and 1..300 s.</summary>
+    /// <summary>
+    /// <c>build_ffprobe_argv</c>: probe size and analyze duration are clamped to 1..1024 MB and 1..300 s.
+    /// </summary>
+    /// <remarks>
+    /// Deliberate divergence (#539 item 1): the reference passes <c>-v quiet</c>, which discards ffprobe's
+    /// diagnostics entirely, so the words <see cref="ProbeOutput.UnreadableMediaMarkers"/> looks for never
+    /// reach stderr and unreadable media is reported as a plain failure instead of <c>MediaUnreadableException</c>.
+    /// <c>-v error</c> keeps JSON on stdout unchanged (verbosity does not affect <c>-print_format json</c>) and
+    /// puts ffmpeg's own error lines on stderr, which is what the classification in
+    /// <see cref="ProbeOutput.FailureFor"/> needs. See apps/server/README.md "ffmpeg parity" for how the golden
+    /// fixtures captured against Python's <c>-v quiet</c> behaviour are patched to prove this on purpose.
+    /// </remarks>
     public static IReadOnlyList<string> BuildFfprobeArgv(string ffprobeBin, string src, long probeSizeMb = 10, long analyzeDurationSeconds = 10)
     {
         ArgumentNullException.ThrowIfNull(ffprobeBin);
@@ -44,7 +55,7 @@ public static class FfmpegCommands
         [
             ffprobeBin,
             "-v",
-            "quiet",
+            "error",
             "-probesize",
             (psMb * 1024 * 1024).ToString(CultureInfo.InvariantCulture),
             "-analyzeduration",

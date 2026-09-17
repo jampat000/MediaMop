@@ -24,6 +24,17 @@ public static class ProbeOutput
     ];
 
     /// <summary>
+    /// Wording that means "this file is truncated or still arriving", not "this content is garbage" (#539 item 5).
+    /// ffmpeg's own <c>av_strerror</c> text for a plain <c>AVERROR_EOF</c> is the bare phrase "End of file", which
+    /// <see cref="UnreadableMediaMarkers"/> also matches on; but demuxers reading past a legitimately short or
+    /// in-progress file report the same underlying error qualified as "premature" or "unexpected". Excluding those
+    /// two phrasings keeps the marker for a genuinely bad file (nothing there to read at all) without also
+    /// catching an ordinary partial download, which is <see cref="MediaCompletenessException"/>'s job via
+    /// <see cref="IntegrityIncompleteMarkers"/>, not this one's.
+    /// </summary>
+    private static readonly string[] TruncationEndOfFilePhrases = ["premature end of file", "unexpected end of file"];
+
+    /// <summary>
     /// The error <c>ffprobe_json</c> raises for a non-zero exit: <see cref="MediaUnreadableException"/>
     /// when the message carries an unreadable-media marker, otherwise <see cref="MediaToolException"/>.
     /// </summary>
@@ -37,10 +48,38 @@ public static class ProbeOutput
         }
 
         var lowered = Py.Lower(message);
-        return UnreadableMediaMarkers.Any(marker => lowered.Contains(marker, StringComparison.Ordinal))
+        return UnreadableMediaMarkers.Any(marker => MatchesUnreadableMarker(lowered, marker))
             ? new MediaUnreadableException(message)
             : new MediaToolException(message);
     }
+
+    /// <summary>Whether <paramref name="lowered"/> carries <paramref name="marker"/>, narrowed for "end of file" (#539 item 5).</summary>
+    private static bool MatchesUnreadableMarker(string lowered, string marker)
+    {
+        if (!lowered.Contains(marker, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return marker != "end of file" || !TruncationEndOfFilePhrases.Any(phrase => lowered.Contains(phrase, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Stderr wording from the integrity read that means the file is incomplete even though ffmpeg exited 0
+    /// (#539 item 3): the reference's <c>validate_media_integrity</c> only looks at the exit code, so a Matroska
+    /// file cut off mid-cluster keeps its full header duration and a truncated demux that only warns still
+    /// reports success.
+    /// </summary>
+    public static IReadOnlyList<string> IntegrityIncompleteMarkers { get; } =
+    [
+        "file ended prematurely",
+        "truncating packet",
+        "partial file",
+    ];
+
+    /// <summary>Whether the integrity read's stderr carries one of <see cref="IntegrityIncompleteMarkers"/>.</summary>
+    public static bool HasIntegrityIncompleteMarker(string? stderr) =>
+        IntegrityIncompleteMarkers.Any(marker => Py.Lower(stderr ?? string.Empty).Contains(marker, StringComparison.Ordinal));
 
     /// <summary>
     /// Everything <c>ffprobe_json</c> does after ffprobe exits: raise for a failure, otherwise parse stdout
@@ -186,7 +225,10 @@ public static class ProbeOutput
         }
     }
 
-    /// <summary>The error <c>validate_media_integrity</c> raises when the full demux exits non-zero.</summary>
+    /// <summary>
+    /// The error <c>validate_media_integrity</c> raises when the full demux exits non-zero, and (#539 item 3,
+    /// a deliberate divergence) when it exits 0 but warned of a marker in <see cref="IntegrityIncompleteMarkers"/>.
+    /// </summary>
     public static MediaCompletenessException IntegrityFailure(string? stderr)
     {
         var detail = PyStrings.Strip(stderr ?? string.Empty);
@@ -194,6 +236,44 @@ public static class ProbeOutput
         return new MediaCompletenessException(
             "Weir could not read this media file from start to finish. It may still be downloading or may be "
             + $"incomplete, so Refiner will wait. The media check reported: {(detail.Length > 0 ? detail : "incomplete media data")}.");
+    }
+
+    /// <summary>
+    /// The error <c>validate_media_integrity</c> raises when it decoded far less than the probed duration
+    /// (#539 item 3): comparing the last decoded timestamp against the duration where practical, alongside the
+    /// stderr markers, since a container can keep a header duration that the actual stream data never reaches.
+    /// </summary>
+    public static MediaCompletenessException IntegrityShortfall(double decodedSeconds, double expectedSeconds) =>
+        new(
+            "Weir could not read this media file from start to finish. It may still be downloading or may be "
+            + "incomplete, so Refiner will wait. The media check decoded "
+            + $"{PyText.FormatFixed(decodedSeconds, 1)}s of {PyText.FormatFixed(expectedSeconds, 1)}s expected.");
+
+    /// <summary>
+    /// The last <c>out_time_ms</c> reported on a <c>-progress pipe:1</c> stream, in seconds, or null when none
+    /// arrived. Used by the integrity read (#539 item 3) to compare how far the demux actually got against the
+    /// probed duration; unlike <see cref="FfmpegProgressTracker"/> this does not need elapsed time or a timeout,
+    /// so it is a plain scan rather than a stateful feed.
+    /// </summary>
+    public static double? LastProgressOutTimeSeconds(string stdout)
+    {
+        double? last = null;
+        foreach (var raw in PyText.SplitLines(stdout))
+        {
+            var line = PyStrings.Strip(raw);
+            var equals = line.IndexOf('=', StringComparison.Ordinal);
+            if (equals < 0)
+            {
+                continue;
+            }
+
+            if (line[..equals] == "out_time_ms" && Py.TryFloatFromText(line[(equals + 1)..]) is { } micros)
+            {
+                last = Math.Max(0.0, micros / 1_000_000.0);
+            }
+        }
+
+        return last;
     }
 
     /// <summary>The error <c>run_ffmpeg</c> raises for a non-zero exit, from the tail of stderr.</summary>

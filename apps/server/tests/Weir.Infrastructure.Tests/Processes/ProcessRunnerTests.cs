@@ -85,6 +85,29 @@ public sealed class ProcessRunnerTests
     }
 
     [Fact]
+    public async Task A_progress_run_that_never_writes_a_line_is_still_stopped_by_the_timer()
+    {
+        // #539 item 4: Python's progress loop ("for raw in proc.stdout: ...") only checks its timeout as a line
+        // arrives, so a process that never writes one - stuck reading its input, for instance - hangs forever.
+        // Here the child (ping/sleep, redirected to NUL/dev-null) writes nothing until well after "echo done",
+        // which never runs within the timeout; the timeout is still enforced, on the wall-clock timer alone.
+        var lines = new List<string>();
+        var stopwatch = Stopwatch.StartNew();
+
+        var result = await Runner.RunAsync(new ProcessRequest
+        {
+            Argv = ShellWithSleepingChild(),
+            OnStdoutLine = lines.Add,
+            Timeout = TimeSpan.FromMilliseconds(500),
+        });
+
+        stopwatch.Stop();
+        Assert.Equal(ProcessTimeoutKind.Overall, result.Timeout);
+        Assert.Empty(lines);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4), $"took {stopwatch.Elapsed}");
+    }
+
+    [Fact]
     public async Task Cancellation_kills_the_tree_and_throws()
     {
         using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
