@@ -137,6 +137,43 @@ def _arg_after(argv: list[str], flag: str) -> str | None:
     return None
 
 
+_DISPOSITION_CODEC_TYPES = {"v": "video", "a": "audio", "s": "subtitle"}
+
+
+def _apply_disposition_flags(streams: list[dict], argv: list[str]) -> None:
+    """Real ffmpeg's ``-disposition:{v|a|s}:{n} value`` replaces stream n's whole disposition (of that
+    type, 0-indexed among streams of that type alone) with the named, ``+``-joined flags (each set to 1),
+    or clears every flag when ``value`` is ``"0"``. Weir sets this after every remux (e.g. to mark the
+    default audio track, or a subtitle forced/hearing-impaired); #500's staged-output validation checks
+    the output actually carries it, so the fake tool must honour it, not just echo the source's own
+    disposition through unchanged.
+    """
+
+    by_type: dict[str, list[dict]] = {}
+    for stream in streams:
+        by_type.setdefault(stream.get("codec_type"), []).append(stream)
+
+    for i, value in enumerate(argv[:-1]):
+        if not value.startswith("-disposition:"):
+            continue
+        spec = value[len("-disposition:") :]
+        type_letter, _, index_text = spec.partition(":")
+        codec_type = _DISPOSITION_CODEC_TYPES.get(type_letter)
+        if codec_type is None or not index_text.isdigit():
+            continue
+        candidates = by_type.get(codec_type) or []
+        position = int(index_text)
+        if position >= len(candidates):
+            continue
+        raw = argv[i + 1]
+        disposition = {flag: 0 for flag in candidates[position].get("disposition", {})}
+        if raw != "0":
+            for flag in raw.split("+"):
+                if flag:
+                    disposition[flag] = 1
+        candidates[position]["disposition"] = disposition
+
+
 def _ffmpeg(tool_dir: Path, script: dict, argv: list[str]) -> int:
     source = _arg_after(argv, "-i")
     if source is None:
@@ -181,7 +218,8 @@ def _ffmpeg(tool_dir: Path, script: dict, argv: list[str]) -> int:
         stream = dict(by_index.get(old_index) or {})
         if stream:
             stream["index"] = new_index
-            streams.append(stream)
+            streams.append({**stream, "disposition": dict(stream.get("disposition") or {})})
+    _apply_disposition_flags(streams, argv)
     out_probe = rule.get("output_probe") if isinstance(rule.get("output_probe"), dict) else None
     body = out_probe or {"streams": streams, "format": dict(probe.get("format") or {})}
     with open(output, "wb") as handle:
