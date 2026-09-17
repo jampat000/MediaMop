@@ -444,6 +444,26 @@ public static class LibraryStore
             [.. RuleSetParameters(row), ("@id", row.Id)]).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Issues #495/#497/#498: the schema is frozen (ADR-0017), so their new rule-set fields are packed into the
+    /// <c>subtitle_sorters_json</c> column alongside its original payload (see <see cref="RuleSetRuleExtras"/> for the
+    /// exact shape and why that column). This is the only place that packs a <see cref="RefinerRuleSetRecord"/>'s
+    /// flattened fields into the one column actually written to SQLite; <see cref="ReadRuleSet"/> is the reverse.
+    /// </summary>
+    private static string EncodeSubtitleSortersColumn(RefinerRuleSetRecord row) => RuleSetRuleExtras.Encode(new RuleSetRuleExtras.Decoded
+    {
+        SubtitleSortersJson = row.SubtitleSortersJson,
+        RemoveHearingImpairedSubs = row.RemoveHearingImpairedSubs,
+        AudioKeepMode = row.AudioKeepMode,
+        SubtitleMaxPerLanguage = row.SubtitleMaxPerLanguage,
+        SubtitleQualityStrategy = row.SubtitleQualityStrategy,
+        StandardizeTrackNames = row.StandardizeTrackNames,
+        TrackNameTemplate = row.TrackNameTemplate,
+        TrackNameOverrides = row.TrackNameOverrides,
+        ClearVideoTrackNames = row.ClearVideoTrackNames,
+        RemoveChapters = row.RemoveChapters,
+    });
+
     private static (string, object?)[] RuleSetParameters(RefinerRuleSetRecord row) =>
     [
         ("@name", row.Name),
@@ -458,7 +478,7 @@ public static class LibraryStore
         ("@preserve_default_subs", row.PreserveDefaultSubs ? 1 : 0),
         ("@audio_preference_mode", row.AudioPreferenceMode),
         ("@audio_sorters_json", row.AudioSortersJson),
-        ("@subtitle_sorters_json", row.SubtitleSortersJson),
+        ("@subtitle_sorters_json", EncodeSubtitleSortersColumn(row)),
         ("@keep_original_language", row.KeepOriginalLanguage ? 1 : 0),
         ("@original_language_additional_csv", row.OriginalLanguageAdditionalCsv),
         ("@original_language_keep_only_first", row.OriginalLanguageKeepOnlyFirst ? 1 : 0),
@@ -528,33 +548,48 @@ public static class LibraryStore
         UpdatedAt = SqliteValues.GetDateTime(reader, 52),
     };
 
-    private static RefinerRuleSetRecord ReadRuleSet(SqliteDataReader reader) => new()
+    private static RefinerRuleSetRecord ReadRuleSet(SqliteDataReader reader)
     {
-        Id = reader.GetInt64(0),
-        Name = SqliteValues.GetString(reader, 1),
-        PrimaryAudioLang = SqliteValues.GetString(reader, 2),
-        SecondaryAudioLang = SqliteValues.GetString(reader, 3),
-        TertiaryAudioLang = SqliteValues.GetString(reader, 4),
-        DefaultAudioSlot = SqliteValues.GetString(reader, 5),
-        RemoveCommentary = SqliteValues.GetBool(reader, 6),
-        SubtitleMode = SqliteValues.GetString(reader, 7),
-        SubtitleLangsCsv = SqliteValues.GetString(reader, 8),
-        PreserveForcedSubs = SqliteValues.GetBool(reader, 9),
-        PreserveDefaultSubs = SqliteValues.GetBool(reader, 10),
-        AudioPreferenceMode = SqliteValues.GetString(reader, 11),
-        AudioSortersJson = SqliteValues.GetString(reader, 12),
-        SubtitleSortersJson = SqliteValues.GetString(reader, 13),
-        KeepOriginalLanguage = SqliteValues.GetBool(reader, 14),
-        OriginalLanguageAdditionalCsv = SqliteValues.GetString(reader, 15),
-        OriginalLanguageKeepOnlyFirst = SqliteValues.GetBool(reader, 16),
-        OriginalLanguageFirstIfNone = SqliteValues.GetBool(reader, 17),
-        OriginalLanguageTreatEmptyAsOriginal = SqliteValues.GetBool(reader, 18),
-        RemoveImages = SqliteValues.GetBool(reader, 19),
-        RemoveAttachments = SqliteValues.GetBool(reader, 20),
-        RemoveTitle = SqliteValues.GetBool(reader, 21),
-        RemoveLanguageTags = SqliteValues.GetBool(reader, 22),
-        RemoveOtherMetadata = SqliteValues.GetBool(reader, 23),
-        CreatedAt = SqliteValues.GetDateTime(reader, 24),
-        UpdatedAt = SqliteValues.GetDateTime(reader, 25),
-    };
+        // Issues #495/#497/#498: the raw column carries the plain sorter list plus the packed extras envelope
+        // (see EncodeSubtitleSortersColumn/RuleSetRuleExtras); decode both back into the record's plain fields.
+        var extras = RuleSetRuleExtras.Decode(SqliteValues.GetString(reader, 13));
+        return new RefinerRuleSetRecord
+        {
+            Id = reader.GetInt64(0),
+            Name = SqliteValues.GetString(reader, 1),
+            PrimaryAudioLang = SqliteValues.GetString(reader, 2),
+            SecondaryAudioLang = SqliteValues.GetString(reader, 3),
+            TertiaryAudioLang = SqliteValues.GetString(reader, 4),
+            DefaultAudioSlot = SqliteValues.GetString(reader, 5),
+            RemoveCommentary = SqliteValues.GetBool(reader, 6),
+            SubtitleMode = SqliteValues.GetString(reader, 7),
+            SubtitleLangsCsv = SqliteValues.GetString(reader, 8),
+            PreserveForcedSubs = SqliteValues.GetBool(reader, 9),
+            PreserveDefaultSubs = SqliteValues.GetBool(reader, 10),
+            AudioPreferenceMode = SqliteValues.GetString(reader, 11),
+            AudioSortersJson = SqliteValues.GetString(reader, 12),
+            SubtitleSortersJson = extras.SubtitleSortersJson,
+            KeepOriginalLanguage = SqliteValues.GetBool(reader, 14),
+            OriginalLanguageAdditionalCsv = SqliteValues.GetString(reader, 15),
+            OriginalLanguageKeepOnlyFirst = SqliteValues.GetBool(reader, 16),
+            OriginalLanguageFirstIfNone = SqliteValues.GetBool(reader, 17),
+            OriginalLanguageTreatEmptyAsOriginal = SqliteValues.GetBool(reader, 18),
+            RemoveImages = SqliteValues.GetBool(reader, 19),
+            RemoveAttachments = SqliteValues.GetBool(reader, 20),
+            RemoveTitle = SqliteValues.GetBool(reader, 21),
+            RemoveLanguageTags = SqliteValues.GetBool(reader, 22),
+            RemoveOtherMetadata = SqliteValues.GetBool(reader, 23),
+            RemoveHearingImpairedSubs = extras.RemoveHearingImpairedSubs,
+            AudioKeepMode = extras.AudioKeepMode,
+            SubtitleMaxPerLanguage = extras.SubtitleMaxPerLanguage,
+            SubtitleQualityStrategy = extras.SubtitleQualityStrategy,
+            StandardizeTrackNames = extras.StandardizeTrackNames,
+            TrackNameTemplate = extras.TrackNameTemplate,
+            TrackNameOverrides = extras.TrackNameOverrides,
+            ClearVideoTrackNames = extras.ClearVideoTrackNames,
+            RemoveChapters = extras.RemoveChapters,
+            CreatedAt = SqliteValues.GetDateTime(reader, 24),
+            UpdatedAt = SqliteValues.GetDateTime(reader, 25),
+        };
+    }
 }

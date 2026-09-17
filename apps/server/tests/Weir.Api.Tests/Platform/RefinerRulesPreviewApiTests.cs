@@ -221,6 +221,64 @@ public sealed class RefinerRulesPreviewApiTests
         Assert.Equal(filesBefore, await TestDatabase.ScalarAsync(server, "SELECT COUNT(*) FROM refiner_files"));
     }
 
+    /// <summary>
+    /// End to end for #495/#496/#497 together, through the real HTTP surface the web preview panel calls:
+    /// unsaved rules with per_language audio, a variant-specific subtitle language and hearing-impaired
+    /// removal all take effect in one preview response.
+    /// </summary>
+    [Fact]
+    public async Task Preview_reflects_per_language_audio_a_named_variant_and_hearing_impaired_removal_together()
+    {
+        var (server, runner) = await StartAsync();
+        await using var _ = server;
+        runner.ProbeJson =
+            """
+            {"format":{"duration":"120.0"},"streams":[
+              {"index":0,"codec_type":"video","codec_name":"h264"},
+              {"index":1,"codec_type":"audio","codec_name":"dts","channels":6,"bit_rate":"1500000","tags":{"language":"jpn"},"disposition":{"default":1}},
+              {"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"bit_rate":"128000","tags":{"language":"eng"}},
+              {"index":3,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"eng","title":"English (SDH)"}},
+              {"index":4,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"fre","title":"VFQ"}},
+              {"index":5,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"fre","title":"VFF"}}
+            ]}
+            """;
+        await TestDatabase.SeedAdminAsync(server);
+        var client = new ApiTestClient(server);
+        await client.SignInAsync();
+        var (watched, output) = MakeLibraryFolders(server);
+        var (libraryId, _) = await SeedLibraryWithRuleSetAsync(client, watched, output, primaryAudioLang: "jpn");
+        await File.WriteAllBytesAsync(Path.Join(watched, "movie.mkv"), new byte[16]);
+
+        using var response = await client.PostAsync(
+            $"/api/v1/refiner/libraries/{libraryId}/preview",
+            new
+            {
+                csrf_token = await client.CsrfAsync(),
+                relative_path = "movie.mkv",
+                rules = new
+                {
+                    name = "Per-language + variant + SDH",
+                    primary_audio_lang = "jpn",
+                    secondary_audio_lang = "eng",
+                    audio_keep_mode = "per_language",
+                    subtitle_mode = "keep_listed",
+                    subtitle_langs_csv = "eng,fre-CA",
+                    remove_hearing_impaired_subs = true,
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await ApiTestClient.Json(response);
+        var tracks = body!["tracks"]!.AsArray();
+        bool KeptAt(int index) => tracks.Single(t => t!["index"]!.GetValue<int>() == index)!["action"]!.GetValue<string>() == "keep";
+
+        Assert.True(KeptAt(1), "the original Japanese track should be kept");
+        Assert.True(KeptAt(2), "the English dub should also be kept under per_language");
+        Assert.False(KeptAt(3), "the English (SDH) subtitle should be dropped outright");
+        Assert.True(KeptAt(4), "the VFQ (French Canada) subtitle matches the fre-CA rule");
+        Assert.False(KeptAt(5), "the VFF (French France) subtitle does not match the fre-CA rule");
+    }
+
     [Fact]
     public async Task An_absolute_path_outside_the_library_folders_but_within_a_valid_root_is_accepted()
     {

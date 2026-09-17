@@ -54,7 +54,7 @@ public static class RefinerRulesPreviewEndpoints
             else
             {
                 var rulesModel = new BodyModel(rulesDict, issues);
-                ruleSetInput = RefinerLibraryEndpoints.ReadRuleSetBody(rulesModel);
+                ruleSetInput = RefinerLibraryEndpoints.ReadRuleSetBody(rulesModel, issues);
                 rulesModel.Finish(ExtraFields.Forbid);
             }
         }

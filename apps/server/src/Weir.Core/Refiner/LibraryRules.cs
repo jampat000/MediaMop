@@ -306,6 +306,33 @@ public static class LibraryRules
         public bool RemoveLanguageTags { get; init; }
         public bool RemoveOtherMetadata { get; init; }
         public string AudioPreferenceMode { get; init; } = "preferred_langs_quality";
+
+        /// <summary>Issue #495.</summary>
+        public bool RemoveHearingImpairedSubs { get; init; }
+
+        /// <summary>Issue #497.</summary>
+        public string AudioKeepMode { get; init; } = RemuxRuleValues.AudioKeepModeSingle;
+
+        /// <summary>Issue #497.</summary>
+        public int SubtitleMaxPerLanguage { get; init; }
+
+        /// <summary>Issue #497.</summary>
+        public string SubtitleQualityStrategy { get; init; } = RemuxRuleValues.SubtitleStrategyTextFirst;
+
+        /// <summary>Issue #498.</summary>
+        public bool StandardizeTrackNames { get; init; }
+
+        /// <summary>Issue #498.</summary>
+        public string TrackNameTemplate { get; init; } = TrackNaming.DefaultTemplate;
+
+        /// <summary>Issue #498.</summary>
+        public TrackNameOverrides TrackNameOverrides { get; init; } = new();
+
+        /// <summary>Issue #498.</summary>
+        public bool ClearVideoTrackNames { get; init; }
+
+        /// <summary>Issue #498.</summary>
+        public bool RemoveChapters { get; init; }
     }
 
     /// <summary><c>_apply_rule_set_fields</c> + <c>_apply_sorter_fields</c>.</summary>
@@ -327,6 +354,23 @@ public static class LibraryRules
             subtitleSorters = TrackSorters.Validate(body.SubtitleSortersJson);
         }
         catch (TrackSorterException exception)
+        {
+            throw new RefinerLibraryException(exception.Message);
+        }
+
+        // AudioKeepMode and SubtitleQualityStrategy are closed enumerations validated at the HTTP boundary
+        // (BodyModel.Literal, like DefaultAudioSlot/SubtitleMode/AudioPreferenceMode); SubtitleMaxPerLanguage's
+        // "no negative" rule is validated the same way (BodyModel.Number's ge: 0). Nothing further to check here.
+        var metadataForValidation = new MetadataRules
+        {
+            TrackNameTemplate = body.TrackNameTemplate,
+            TrackNameOverrides = body.TrackNameOverrides,
+        };
+        try
+        {
+            TrackNaming.ValidateAll(metadataForValidation);
+        }
+        catch (TrackNameTemplateException exception)
         {
             throw new RefinerLibraryException(exception.Message);
         }
@@ -359,6 +403,15 @@ public static class LibraryRules
             RemoveOtherMetadata = body.RemoveOtherMetadata,
             AudioSortersJson = audioSorters,
             SubtitleSortersJson = subtitleSorters,
+            RemoveHearingImpairedSubs = body.RemoveHearingImpairedSubs,
+            AudioKeepMode = body.AudioKeepMode,
+            SubtitleMaxPerLanguage = body.SubtitleMaxPerLanguage,
+            SubtitleQualityStrategy = body.SubtitleQualityStrategy,
+            StandardizeTrackNames = body.StandardizeTrackNames,
+            TrackNameTemplate = body.TrackNameTemplate,
+            TrackNameOverrides = body.TrackNameOverrides,
+            ClearVideoTrackNames = body.ClearVideoTrackNames,
+            RemoveChapters = body.RemoveChapters,
         };
     }
 }

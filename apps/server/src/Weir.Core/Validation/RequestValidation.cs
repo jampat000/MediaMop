@@ -546,6 +546,10 @@ public sealed class BodyModel
     public PyDict Dict(string name) =>
         Read(name, required: true, input => PydanticRules.TryDict(input, Loc(name), _issues, out var v) ? v : null) ?? new PyDict();
 
+    /// <summary>Like <see cref="Dict"/>, but a missing key is not an error: it returns <see langword="null"/> so the caller can fall back to defaults.</summary>
+    public PyDict? OptionalDict(string name) =>
+        Read<PyDict>(name, required: false, input => PydanticRules.TryDict(input, Loc(name), _issues, out var v) ? v : null);
+
     public List<long> IntList(string name, IReadOnlyList<long>? defaultValue = null) =>
         Read(name, required: false, input => PydanticRules.TryIntList(input, Loc(name), _issues, out var v) ? v : null) ?? [.. defaultValue ?? []];
 

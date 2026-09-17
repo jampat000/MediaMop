@@ -239,6 +239,10 @@ public static class RemuxPassPaths
             PreserveDefaultSubs = ruleSet.PreserveDefaultSubs,
             AudioPreferenceMode = RemuxRules.NormalizeAudioPreferenceMode(ruleSet.AudioPreferenceMode),
             AudioSortersJson = ruleSet.AudioSortersJson ?? string.Empty,
+            RemoveHearingImpairedSubs = ruleSet.RemoveHearingImpairedSubs,
+            AudioKeepMode = RemuxRules.NormalizeAudioKeepMode(ruleSet.AudioKeepMode),
+            SubtitleMaxPerLanguage = ruleSet.SubtitleMaxPerLanguage,
+            SubtitleQualityStrategy = RemuxRules.NormalizeSubtitleQualityStrategy(ruleSet.SubtitleQualityStrategy),
             OriginalLanguage = new OriginalLanguageRules
             {
                 Enabled = ruleSet.KeepOriginalLanguage,
@@ -254,6 +258,11 @@ public static class RemuxPassPaths
                 RemoveTitle = ruleSet.RemoveTitle,
                 RemoveLanguageTags = ruleSet.RemoveLanguageTags,
                 RemoveOtherMetadata = ruleSet.RemoveOtherMetadata,
+                StandardizeTrackNames = ruleSet.StandardizeTrackNames,
+                TrackNameTemplate = ruleSet.TrackNameTemplate,
+                TrackNameOverrides = ruleSet.TrackNameOverrides,
+                ClearVideoTrackNames = ruleSet.ClearVideoTrackNames,
+                RemoveChapters = ruleSet.RemoveChapters,
             },
         };
     }
