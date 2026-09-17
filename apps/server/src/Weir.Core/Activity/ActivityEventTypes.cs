@@ -47,3 +47,17 @@ public static class ActivityEventTypes
     /// <summary>An operator queued a hand-picked track choice for a held file (#501).</summary>
     public const string RefinerFileManualPlanQueued = "refiner.file_manual_plan_queued";
 }
+
+/// <summary>
+/// Library mode's (#505) event types: cleaning files already in a library, in place. Deliberately kept out of
+/// <see cref="ActivityEventTypes"/>, whose <c>Event_types_match_the_python_constants_exactly</c> test requires every member
+/// to have a matching Python constant — library mode is .NET only (same as the #506 safe swap it uses), so there is no
+/// Python family to match.
+/// </summary>
+public static class LibraryActivityEventTypes
+{
+    public const string ScanCompleted = "library.scan_completed";
+    public const string FileCleaned = "library.file_cleaned";
+    public const string FileSkipped = "library.file_skipped";
+    public const string FileFailed = "library.file_failed";
+}

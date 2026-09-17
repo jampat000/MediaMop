@@ -1035,6 +1035,110 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/libraries/{library_id}/library-files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Files
+     * @description Library mode (#505 point 4). The latest scan's file list, filtered by classification, matched manager kind or a path search, plus the removal/size summary the Clean confirmation dialog uses.
+     */
+    get: operations["get_library_files"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-files/clean": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Library Files Clean
+     * @description Library mode (#505 point 5). Cleans the selected files in place. Refused with 400 (LibraryConfirmationRequired) when any selected file would have tracks removed and confirm_final_removal is not true.
+     */
+    post: operations["post_library_files_clean"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-scan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Library Scan
+     * @description Library mode (#505 point 2). Queues a read-only scan of this library's folders: cached ffprobe by path/size/mtime, classified against the library's current rules. Never writes to a file. Returns the already-running scan instead of queuing a duplicate.
+     */
+    post: operations["post_library_scan"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-schedule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Library Schedule
+     * @description Library mode (#505 point 7). Turns the off-by-default scheduled scan-and-clean on or off, reusing the library's existing schedule window. Turning it on for the first time is refused with 400 (LibraryConfirmationRequired) unless confirm_final_removal is true, when the latest scan found tracks that would be removed.
+     */
+    post: operations["post_library_schedule"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Settings
+     * @description Library mode (#505). Weir server (.NET) only; there is no Python backend route to match, since library mode has no Python implementation.
+     */
+    get: operations["get_library_settings"];
+    /**
+     * Put Library Settings
+     * @description Save this library's library folders (#505 point 1). The schedule flag is unchanged; use library-schedule to change it. Refused (400) when a folder overlaps this library's watched, work or output folder.
+     */
+    put: operations["put_library_settings"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/libraries/{library_id}/preview": {
     parameters: {
       query?: never;
@@ -2167,6 +2271,66 @@ export interface components {
       status: string;
     };
     /**
+     * LibraryCleanIn
+     * @description Library mode (#505 point 5). Weir server (.NET) only.
+     */
+    LibraryCleanIn: {
+      /**
+       * Confirm Final Removal
+       * @default false
+       */
+      confirm_final_removal: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Paths */
+      paths: string[];
+    };
+    /**
+     * LibraryCleanOut
+     * @description Library mode (#505 point 5). Weir server (.NET) only.
+     */
+    LibraryCleanOut: {
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Files Count */
+      files_count: number;
+      /** Job Ids */
+      job_ids: number[];
+      /** Queued */
+      queued: number;
+      /** Tracks Count */
+      tracks_count: number;
+    };
+    /**
+     * LibraryConfirmationRequired
+     * @description Library mode (#505 point 5). Weir server (.NET) only. The exact confirmation sentence the web renders, plus the numbers behind it.
+     */
+    LibraryConfirmationRequired: {
+      /** Detail */
+      detail: string;
+      /** Error */
+      error: string;
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Files Count */
+      files_count: number;
+      /** Tracks Count */
+      tracks_count: number;
+      /**
+       * Warnings
+       * @description Seeding/re-download risk notes from #508's LibraryCleanPreflight. Always empty until that lands.
+       */
+      warnings: string[];
+    };
+    /**
+     * LibraryCsrfIn
+     * @description Library mode (#505). Weir server (.NET) only.
+     */
+    LibraryCsrfIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /**
      * LibraryDriftOut
      * @description A difference between the manager and Weir. Reported, never applied.
      */
@@ -2187,6 +2351,115 @@ export interface components {
       manager_value?: string | null;
       /** Weir Value */
       weir_value?: string | null;
+    };
+    /**
+     * LibraryFileOut
+     * @description Library mode (#505 point 2). Weir server (.NET) only.
+     */
+    LibraryFileOut: {
+      /**
+       * Classification
+       * @enum {string}
+       */
+      classification: "matches" | "would_change" | "cannot_process";
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Manager Kind */
+      manager_kind: string | null;
+      /** Manager Title */
+      manager_title: string | null;
+      /** Path */
+      path: string;
+      /** Reason */
+      reason: string | null;
+      /** Removed Audio Tracks */
+      removed_audio_tracks: number;
+      /** Removed Subtitle Tracks */
+      removed_subtitle_tracks: number;
+      /** Size Bytes */
+      size_bytes: number;
+      /** Summary */
+      summary: string | null;
+    };
+    /**
+     * LibraryFilesOut
+     * @description Library mode (#505 point 4). Weir server (.NET) only.
+     */
+    LibraryFilesOut: {
+      /** Files */
+      files: components["schemas"]["LibraryFileOut"][];
+      /** Library Id */
+      library_id: number;
+      /** Scan */
+      scan: Record<string, never> | null;
+      summary: components["schemas"]["LibraryFilesSummaryOut"];
+      /** Total */
+      total: number;
+    };
+    /**
+     * LibraryFilesSummaryOut
+     * @description Library mode (#505 point 5). Weir server (.NET) only.
+     */
+    LibraryFilesSummaryOut: {
+      /** Cannot Process */
+      cannot_process: number;
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Matches */
+      matches: number;
+      /** Total Removed Audio Tracks */
+      total_removed_audio_tracks: number;
+      /** Total Removed Subtitle Tracks */
+      total_removed_subtitle_tracks: number;
+      /** Would Change */
+      would_change: number;
+    };
+    /**
+     * LibraryScanTriggerOut
+     * @description Library mode (#505 point 2). Weir server (.NET) only.
+     */
+    LibraryScanTriggerOut: {
+      /** Already Running */
+      already_running: boolean;
+      /** Job Id */
+      job_id: number;
+      /** Status */
+      status: string;
+    };
+    /**
+     * LibraryScheduleIn
+     * @description Library mode (#505 point 7). Weir server (.NET) only.
+     */
+    LibraryScheduleIn: {
+      /**
+       * Confirm Final Removal
+       * @default false
+       */
+      confirm_final_removal: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Enabled */
+      enabled: boolean;
+    };
+    /**
+     * LibrarySettingsOut
+     * @description Library mode (#505). Weir server (.NET) only.
+     */
+    LibrarySettingsOut: {
+      /** Library Folders */
+      library_folders: string[];
+      /** Library Schedule Enabled */
+      library_schedule_enabled: boolean;
+    };
+    /**
+     * LibrarySettingsUpdateIn
+     * @description Library mode (#505 point 1). Weir server (.NET) only.
+     */
+    LibrarySettingsUpdateIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Library Folders */
+      library_folders: string[];
     };
     /** LoginIn */
     LoginIn: {
@@ -3071,21 +3344,10 @@ export interface components {
      * @description One ffprobe stream on a held file, with what the saved rules would do to it and why (issue #501).
      */
     RefinerFileTrackOut: {
-      /** Index */
-      index: number;
-      /**
-       * Type
-       * @description video, audio, subtitle, image, attachment or other.
-       */
-      type: string;
-      /** Codec */
-      codec: string | null;
-      /** Language */
-      language: string | null;
-      /** Title */
-      title: string | null;
       /** Channels */
       channels: number | null;
+      /** Codec */
+      codec: string | null;
       /**
        * Default
        * @description The stream's own disposition on the held source, not what the rules would choose.
@@ -3096,10 +3358,21 @@ export interface components {
        * @description The stream's own disposition on the held source, not what the rules would choose.
        */
       forced: boolean;
-      /** Rule Would Keep */
-      rule_would_keep: boolean;
+      /** Index */
+      index: number;
+      /** Language */
+      language: string | null;
       /** Rule Reason */
       rule_reason: string;
+      /** Rule Would Keep */
+      rule_would_keep: boolean;
+      /** Title */
+      title: string | null;
+      /**
+       * Type
+       * @description video, audio, subtitle, image, attachment or other.
+       */
+      type: string;
     };
     /**
      * RefinerFileTracksOut
@@ -3108,10 +3381,10 @@ export interface components {
     RefinerFileTracksOut: {
       /** File Id */
       file_id: number;
-      /** Relative Path */
-      relative_path: string;
       /** Media Scope */
       media_scope: string;
+      /** Relative Path */
+      relative_path: string;
       source_fingerprint: components["schemas"]["RefinerSourceFingerprintOut"];
       /** Streams */
       streams: components["schemas"]["RefinerFileTrackOut"][];
@@ -3991,24 +4264,6 @@ export interface components {
       work_folder: string;
     };
     /**
-     * RefinerManualPlanKeepIn
-     * @description One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.
-     */
-    RefinerManualPlanKeepIn: {
-      /** Index */
-      index: number;
-      /**
-       * Default
-       * @default false
-       */
-      default: boolean;
-      /**
-       * Forced
-       * @default false
-       */
-      forced: boolean;
-    };
-    /**
      * RefinerManualPlanIn
      * @description An operator's hand-picked track choice for a held file (issue #501). At least one video and one
      *     audio track must be kept, every index must exist on a fresh probe of the source, and at most one
@@ -4022,16 +4277,34 @@ export interface components {
       /** Order */
       order: number[];
     };
+    /**
+     * RefinerManualPlanKeepIn
+     * @description One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.
+     */
+    RefinerManualPlanKeepIn: {
+      /**
+       * Default
+       * @default false
+       */
+      default: boolean;
+      /**
+       * Forced
+       * @default false
+       */
+      forced: boolean;
+      /** Index */
+      index: number;
+    };
     /** RefinerManualPlanOut */
     RefinerManualPlanOut: {
-      /** Ok */
-      ok: boolean;
-      /** Job Id */
-      job_id: number;
       /** Dedupe Key */
       dedupe_key: string;
+      /** Job Id */
+      job_id: number;
       /** Job Kind */
       job_kind: string;
+      /** Ok */
+      ok: boolean;
     };
     /** RefinerOperatorSettingsOut */
     RefinerOperatorSettingsOut: {
@@ -4815,10 +5088,10 @@ export interface components {
       device: number;
       /** Inode */
       inode: number;
-      /** Size Bytes */
-      size_bytes: number;
       /** Modified Time Ns */
       modified_time_ns: number;
+      /** Size Bytes */
+      size_bytes: number;
     };
     /**
      * RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn
@@ -7239,6 +7512,244 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_files: {
+    parameters: {
+      query?: {
+        classification?: "matches" | "would_change" | "cannot_process";
+        manager?: string;
+        q?: string;
+      };
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryFilesOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_files_clean: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryCleanIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryCleanOut"];
+        };
+      };
+      /** @description Removing tracks was not confirmed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryConfirmationRequired"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_scan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryCsrfIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryScanTriggerOut"];
+        };
+      };
+      /** @description No library folders are configured yet */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_schedule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryScheduleIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibrarySettingsOut"];
+        };
+      };
+      /** @description Removing tracks was not confirmed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryConfirmationRequired"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_settings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibrarySettingsOut"];
+        };
+      };
+      /** @description No Refiner library with that id */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  put_library_settings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibrarySettingsUpdateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibrarySettingsOut"];
+        };
+      };
+      /** @description A library folder overlaps this library's watched, work or output folder */
+      400: {
         headers: {
           [name: string]: unknown;
         };

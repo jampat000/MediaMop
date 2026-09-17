@@ -93,7 +93,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why it happened: manual, scheduled, webhook, retry, \u2026",
+            "description": "Why it happened: manual, scheduled, webhook, retry, …",
             "title": "Trigger"
           }
         },
@@ -823,6 +823,133 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "LibraryCleanIn": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 5). Weir server (.NET) only.",
+        "properties": {
+          "confirm_final_removal": {
+            "default": false,
+            "title": "Confirm Final Removal",
+            "type": "boolean"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "paths"
+        ],
+        "title": "LibraryCleanIn",
+        "type": "object"
+      },
+      "LibraryCleanOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 5). Weir server (.NET) only.",
+        "properties": {
+          "estimated_bytes_saved": {
+            "title": "Estimated Bytes Saved",
+            "type": "integer"
+          },
+          "files_count": {
+            "title": "Files Count",
+            "type": "integer"
+          },
+          "job_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Job Ids",
+            "type": "array"
+          },
+          "queued": {
+            "title": "Queued",
+            "type": "integer"
+          },
+          "tracks_count": {
+            "title": "Tracks Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "queued",
+          "job_ids",
+          "files_count",
+          "tracks_count",
+          "estimated_bytes_saved"
+        ],
+        "title": "LibraryCleanOut",
+        "type": "object"
+      },
+      "LibraryConfirmationRequired": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 5). Weir server (.NET) only. The exact confirmation sentence the web renders, plus the numbers behind it.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "estimated_bytes_saved": {
+            "title": "Estimated Bytes Saved",
+            "type": "integer"
+          },
+          "files_count": {
+            "title": "Files Count",
+            "type": "integer"
+          },
+          "tracks_count": {
+            "title": "Tracks Count",
+            "type": "integer"
+          },
+          "warnings": {
+            "description": "Seeding/re-download risk notes from #508's LibraryCleanPreflight. Always empty until that lands.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "error",
+          "detail",
+          "files_count",
+          "tracks_count",
+          "estimated_bytes_saved",
+          "warnings"
+        ],
+        "title": "LibraryConfirmationRequired",
+        "type": "object"
+      },
+      "LibraryCsrfIn": {
+        "additionalProperties": false,
+        "description": "Library mode (#505). Weir server (.NET) only.",
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "LibraryCsrfIn",
+        "type": "object"
+      },
       "LibraryDriftOut": {
         "description": "A difference between the manager and Weir. Reported, never applied.",
         "properties": {
@@ -884,6 +1011,281 @@
           "detail"
         ],
         "title": "LibraryDriftOut",
+        "type": "object"
+      },
+      "LibraryFileOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 2). Weir server (.NET) only.",
+        "properties": {
+          "classification": {
+            "enum": [
+              "matches",
+              "would_change",
+              "cannot_process"
+            ],
+            "title": "Classification",
+            "type": "string"
+          },
+          "estimated_bytes_saved": {
+            "title": "Estimated Bytes Saved",
+            "type": "integer"
+          },
+          "manager_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Kind"
+          },
+          "manager_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Title"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "removed_audio_tracks": {
+            "title": "Removed Audio Tracks",
+            "type": "integer"
+          },
+          "removed_subtitle_tracks": {
+            "title": "Removed Subtitle Tracks",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "path",
+          "size_bytes",
+          "classification",
+          "summary",
+          "reason",
+          "removed_audio_tracks",
+          "removed_subtitle_tracks",
+          "estimated_bytes_saved",
+          "manager_kind",
+          "manager_title"
+        ],
+        "title": "LibraryFileOut",
+        "type": "object"
+      },
+      "LibraryFilesOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 4). Weir server (.NET) only.",
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryFileOut"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "library_id": {
+            "title": "Library Id",
+            "type": "integer"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/LibraryFilesSummaryOut"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "library_id",
+          "scan",
+          "summary",
+          "files",
+          "total"
+        ],
+        "title": "LibraryFilesOut",
+        "type": "object"
+      },
+      "LibraryFilesSummaryOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 5). Weir server (.NET) only.",
+        "properties": {
+          "cannot_process": {
+            "title": "Cannot Process",
+            "type": "integer"
+          },
+          "estimated_bytes_saved": {
+            "title": "Estimated Bytes Saved",
+            "type": "integer"
+          },
+          "matches": {
+            "title": "Matches",
+            "type": "integer"
+          },
+          "total_removed_audio_tracks": {
+            "title": "Total Removed Audio Tracks",
+            "type": "integer"
+          },
+          "total_removed_subtitle_tracks": {
+            "title": "Total Removed Subtitle Tracks",
+            "type": "integer"
+          },
+          "would_change": {
+            "title": "Would Change",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matches",
+          "would_change",
+          "cannot_process",
+          "total_removed_audio_tracks",
+          "total_removed_subtitle_tracks",
+          "estimated_bytes_saved"
+        ],
+        "title": "LibraryFilesSummaryOut",
+        "type": "object"
+      },
+      "LibraryScanTriggerOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 2). Weir server (.NET) only.",
+        "properties": {
+          "already_running": {
+            "title": "Already Running",
+            "type": "boolean"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "already_running"
+        ],
+        "title": "LibraryScanTriggerOut",
+        "type": "object"
+      },
+      "LibraryScheduleIn": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 7). Weir server (.NET) only.",
+        "properties": {
+          "confirm_final_removal": {
+            "default": false,
+            "title": "Confirm Final Removal",
+            "type": "boolean"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "enabled"
+        ],
+        "title": "LibraryScheduleIn",
+        "type": "object"
+      },
+      "LibrarySettingsOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505). Weir server (.NET) only.",
+        "properties": {
+          "library_folders": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Library Folders",
+            "type": "array"
+          },
+          "library_schedule_enabled": {
+            "title": "Library Schedule Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "library_folders",
+          "library_schedule_enabled"
+        ],
+        "title": "LibrarySettingsOut",
+        "type": "object"
+      },
+      "LibrarySettingsUpdateIn": {
+        "additionalProperties": false,
+        "description": "Library mode (#505 point 1). Weir server (.NET) only.",
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "library_folders": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Library Folders",
+            "type": "array"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "library_folders"
+        ],
+        "title": "LibrarySettingsUpdateIn",
         "type": "object"
       },
       "LoginIn": {
@@ -2636,7 +3038,7 @@
       },
       "RefinerFileRemuxPassManualEnqueueIn": {
         "additionalProperties": false,
-        "description": "Manual ``refiner.file.remux_pass.v1`` enqueue \u2014 requires a saved Refiner watched folder before this POST succeeds.",
+        "description": "Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved Refiner watched folder before this POST succeeds.",
         "properties": {
           "csrf_token": {
             "minLength": 1,
@@ -2742,7 +3144,7 @@
             "type": "string"
           },
           "tone": {
-            "description": "neutral, good, warn or bad \u2014 how the step should read, not a severity.",
+            "description": "neutral, good, warn or bad — how the step should read, not a severity.",
             "title": "Tone",
             "type": "string"
           }
@@ -2758,14 +3160,16 @@
       "RefinerFileTrackOut": {
         "description": "One ffprobe stream on a held file, with what the saved rules would do to it and why (issue #501).",
         "properties": {
-          "index": {
-            "title": "Index",
-            "type": "integer"
-          },
-          "type": {
-            "description": "video, audio, subtitle, image, attachment or other.",
-            "title": "Type",
-            "type": "string"
+          "channels": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels"
           },
           "codec": {
             "anyOf": [
@@ -2778,6 +3182,20 @@
             ],
             "title": "Codec"
           },
+          "default": {
+            "description": "The stream's own disposition on the held source, not what the rules would choose.",
+            "title": "Default",
+            "type": "boolean"
+          },
+          "forced": {
+            "description": "The stream's own disposition on the held source, not what the rules would choose.",
+            "title": "Forced",
+            "type": "boolean"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
           "language": {
             "anyOf": [
               {
@@ -2788,6 +3206,14 @@
               }
             ],
             "title": "Language"
+          },
+          "rule_reason": {
+            "title": "Rule Reason",
+            "type": "string"
+          },
+          "rule_would_keep": {
+            "title": "Rule Would Keep",
+            "type": "boolean"
           },
           "title": {
             "anyOf": [
@@ -2800,33 +3226,9 @@
             ],
             "title": "Title"
           },
-          "channels": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Channels"
-          },
-          "default": {
-            "description": "The stream's own disposition on the held source, not what the rules would choose.",
-            "title": "Default",
-            "type": "boolean"
-          },
-          "forced": {
-            "description": "The stream's own disposition on the held source, not what the rules would choose.",
-            "title": "Forced",
-            "type": "boolean"
-          },
-          "rule_would_keep": {
-            "title": "Rule Would Keep",
-            "type": "boolean"
-          },
-          "rule_reason": {
-            "title": "Rule Reason",
+          "type": {
+            "description": "video, audio, subtitle, image, attachment or other.",
+            "title": "Type",
             "type": "string"
           }
         },
@@ -2852,12 +3254,12 @@
             "title": "File Id",
             "type": "integer"
           },
-          "relative_path": {
-            "title": "Relative Path",
-            "type": "string"
-          },
           "media_scope": {
             "title": "Media Scope",
+            "type": "string"
+          },
+          "relative_path": {
+            "title": "Relative Path",
             "type": "string"
           },
           "source_fingerprint": {
@@ -2989,7 +3391,7 @@
       "RefinerHardwareOut": {
         "properties": {
           "available_methods": {
-            "description": "Acceleration methods this ffmpeg build was compiled with. Being listed does not prove a device is present or working \u2014 those are different facts.",
+            "description": "Acceleration methods this ffmpeg build was compiled with. Being listed does not prove a device is present or working — those are different facts.",
             "items": {
               "type": "string"
             },
@@ -3361,7 +3763,7 @@
           },
           "hardware_decode_mode": {
             "default": "off",
-            "description": "Hardware decoding. 'off' is what Weir has always done. A choice that cannot work falls back to software and records why \u2014 it never fails a file.",
+            "description": "Hardware decoding. 'off' is what Weir has always done. A choice that cannot work falls back to software and records why — it never fails a file.",
             "enum": [
               "off",
               "auto",
@@ -3372,7 +3774,7 @@
           },
           "hardware_device": {
             "default": "",
-            "description": "The ffmpeg method to use when the mode is 'device' \u2014 cuda, qsv, vaapi.",
+            "description": "The ffmpeg method to use when the mode is 'device' — cuda, qsv, vaapi.",
             "maxLength": 32,
             "title": "Hardware Device",
             "type": "string"
@@ -3544,7 +3946,7 @@
           },
           "retry_execution_failures": {
             "default": true,
-            "description": "Retry files that failed while being processed \u2014 a dead ffmpeg, a full disk, a dropped share.",
+            "description": "Retry files that failed while being processed — a dead ffmpeg, a full disk, a dropped share.",
             "title": "Retry Execution Failures",
             "type": "boolean"
           },
@@ -3608,7 +4010,7 @@
           },
           "sidecar_patterns_csv": {
             "default": ".srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png",
-            "description": "Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing \u2014 and the source folder deletion would then remove them.",
+            "description": "Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing — and the source folder deletion would then remove them.",
             "title": "Sidecar Patterns Csv",
             "type": "string"
           },
@@ -4159,7 +4561,7 @@
           },
           "hardware_decode_mode": {
             "default": "off",
-            "description": "Hardware decoding. 'off' is what Weir has always done. A choice that cannot work falls back to software and records why \u2014 it never fails a file.",
+            "description": "Hardware decoding. 'off' is what Weir has always done. A choice that cannot work falls back to software and records why — it never fails a file.",
             "enum": [
               "off",
               "auto",
@@ -4170,7 +4572,7 @@
           },
           "hardware_device": {
             "default": "",
-            "description": "The ffmpeg method to use when the mode is 'device' \u2014 cuda, qsv, vaapi.",
+            "description": "The ffmpeg method to use when the mode is 'device' — cuda, qsv, vaapi.",
             "maxLength": 32,
             "title": "Hardware Device",
             "type": "string"
@@ -4342,7 +4744,7 @@
           },
           "retry_execution_failures": {
             "default": true,
-            "description": "Retry files that failed while being processed \u2014 a dead ffmpeg, a full disk, a dropped share.",
+            "description": "Retry files that failed while being processed — a dead ffmpeg, a full disk, a dropped share.",
             "title": "Retry Execution Failures",
             "type": "boolean"
           },
@@ -4406,7 +4808,7 @@
           },
           "sidecar_patterns_csv": {
             "default": ".srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png",
-            "description": "Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing \u2014 and the source folder deletion would then remove them.",
+            "description": "Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing — and the source folder deletion would then remove them.",
             "title": "Sidecar Patterns Csv",
             "type": "string"
           },
@@ -4440,31 +4842,6 @@
           "media_type"
         ],
         "title": "RefinerLibraryUpdateIn",
-        "type": "object"
-      },
-      "RefinerManualPlanKeepIn": {
-        "description": "One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.",
-        "properties": {
-          "index": {
-            "minimum": 0,
-            "title": "Index",
-            "type": "integer"
-          },
-          "default": {
-            "default": false,
-            "title": "Default",
-            "type": "boolean"
-          },
-          "forced": {
-            "default": false,
-            "title": "Forced",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "index"
-        ],
-        "title": "RefinerManualPlanKeepIn",
         "type": "object"
       },
       "RefinerManualPlanIn": {
@@ -4501,23 +4878,48 @@
         "title": "RefinerManualPlanIn",
         "type": "object"
       },
+      "RefinerManualPlanKeepIn": {
+        "description": "One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.",
+        "properties": {
+          "default": {
+            "default": false,
+            "title": "Default",
+            "type": "boolean"
+          },
+          "forced": {
+            "default": false,
+            "title": "Forced",
+            "type": "boolean"
+          },
+          "index": {
+            "minimum": 0,
+            "title": "Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index"
+        ],
+        "title": "RefinerManualPlanKeepIn",
+        "type": "object"
+      },
       "RefinerManualPlanOut": {
         "properties": {
-          "ok": {
-            "title": "Ok",
-            "type": "boolean"
+          "dedupe_key": {
+            "title": "Dedupe Key",
+            "type": "string"
           },
           "job_id": {
             "title": "Job Id",
             "type": "integer"
           },
-          "dedupe_key": {
-            "title": "Dedupe Key",
-            "type": "string"
-          },
           "job_kind": {
             "title": "Job Kind",
             "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
           }
         },
         "required": [
@@ -4670,7 +5072,7 @@
             "type": "string"
           },
           "verbose_detection_logging": {
-            "description": "Record extra detail from the file-detection stage. Turn this on while working out why a file is or is not being picked up, and turn it off again afterwards \u2014 it is loud.",
+            "description": "Record extra detail from the file-detection stage. Turn this on while working out why a file is or is not being picked up, and turn it off again afterwards — it is loud.",
             "title": "Verbose Detection Logging",
             "type": "boolean"
           },
@@ -5839,7 +6241,7 @@
             "type": "string"
           },
           "in_process_refiner_worker_count": {
-            "description": "Mirrors WEIR_REFINER_WORKER_COUNT after clamping \u2014 Refiner lane only.",
+            "description": "Mirrors WEIR_REFINER_WORKER_COUNT after clamping — Refiner lane only.",
             "maximum": 8.0,
             "minimum": 0.0,
             "title": "In Process Refiner Worker Count",
@@ -5980,7 +6382,7 @@
             "type": "string"
           },
           "visibility_note": {
-            "description": "Caveat: from settings loaded at startup \u2014 not a live probe of worker threads.",
+            "description": "Caveat: from settings loaded at startup — not a live probe of worker threads.",
             "title": "Visibility Note",
             "type": "string"
           },
@@ -6046,12 +6448,12 @@
             "title": "Inode",
             "type": "integer"
           },
-          "size_bytes": {
-            "title": "Size Bytes",
-            "type": "integer"
-          },
           "modified_time_ns": {
             "title": "Modified Time Ns",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
             "type": "integer"
           }
         },
@@ -6674,7 +7076,7 @@
       },
       "SuiteSecurityOverviewOut": {
         "additionalProperties": false,
-        "description": "Read-only snapshot from startup configuration \u2014 not stored in ``suite_settings``.",
+        "description": "Read-only snapshot from startup configuration — not stored in ``suite_settings``.",
         "properties": {
           "allowed_browser_origins_count": {
             "description": "How many website addresses may call this app from a browser.",
@@ -7311,7 +7713,7 @@
   "paths": {
     "/api/v1/activity/export": {
       "get": {
-        "description": "The filtered history as a file, oldest first \u2014 for your records or a bug report.",
+        "description": "The filtered history as a file, oldest first — for your records or a bug report.",
         "operationId": "get_activity_export_api_v1_activity_export_get",
         "parameters": [
           {
@@ -7511,7 +7913,7 @@
     },
     "/api/v1/activity/file-history": {
       "get": {
-        "description": "What removing one file's history would delete \u2014 shown before anyone confirms.",
+        "description": "What removing one file's history would delete — shown before anyone confirms.",
         "operationId": "get_activity_file_history_api_v1_activity_file_history_get",
         "parameters": [
           {
@@ -7615,7 +8017,7 @@
     },
     "/api/v1/activity/recent": {
       "get": {
-        "description": "Recent persisted events, newest first \u2014 snapshot only (pagination-style read; not a control plane).",
+        "description": "Recent persisted events, newest first — snapshot only (pagination-style read; not a control plane).",
         "operationId": "get_activity_recent_api_v1_activity_recent_get",
         "parameters": [
           {
@@ -7961,7 +8363,7 @@
     },
     "/api/v1/auth/change-username": {
       "post": {
-        "description": "Rename the signed-in operator account. The session survives \u2014 only the label changed.",
+        "description": "Rename the signed-in operator account. The session survives — only the label changed.",
         "operationId": "post_change_username_api_v1_auth_change_username_post",
         "requestBody": {
           "content": {
@@ -8564,7 +8966,7 @@
     },
     "/api/v1/media-managers/capabilities": {
       "get": {
-        "description": "What each connected manager manages, and which questions it can answer.\n\nAsks the managers themselves, so a connection that has gone away is reported as\nunreachable rather than silently described from its saved kind. Only enabled\nconnections with an address and a saved key are listed \u2014 nothing else can be asked.",
+        "description": "What each connected manager manages, and which questions it can answer.\n\nAsks the managers themselves, so a connection that has gone away is reported as\nunreachable rather than silently described from its saved kind. Only enabled\nconnections with an address and a saved key are listed — nothing else can be asked.",
         "operationId": "get_media_manager_capabilities_api_v1_media_managers_capabilities_get",
         "responses": {
           "200": {
@@ -9521,7 +9923,7 @@
     },
     "/api/v1/refiner/files/{file_id}/requeue": {
       "post": {
-        "description": "Try this file again now.\n\nA manual requeue resets the attempt count and ignores the backoff: whoever asked has\nusually just fixed the thing that broke, so making them wait it out \u2014 or refusing\nbecause the automatic attempts are spent \u2014 would answer a question they did not ask.",
+        "description": "Try this file again now.\n\nA manual requeue resets the attempt count and ignores the backoff: whoever asked has\nusually just fixed the thing that broke, so making them wait it out — or refusing\nbecause the automatic attempts are spent — would answer a question they did not ask.",
         "operationId": "requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post",
         "parameters": [
           {
@@ -9845,7 +10247,7 @@
     },
     "/api/v1/refiner/jobs/{job_id}/cancel-pending": {
       "post": {
-        "description": "Abandon a **pending** row only \u2014 refuses leased, completed, failed, or cancelled jobs.",
+        "description": "Abandon a **pending** row only — refuses leased, completed, failed, or cancelled jobs.",
         "operationId": "post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post",
         "parameters": [
           {
@@ -10070,7 +10472,7 @@
     },
     "/api/v1/refiner/libraries/discover/{connection_id}/drift": {
       "get": {
-        "description": "Differences between the manager and Weir. Reported only \u2014 nothing is applied.",
+        "description": "Differences between the manager and Weir. Reported only — nothing is applied.",
         "operationId": "get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get",
         "parameters": [
           {
@@ -10363,6 +10765,366 @@
         "tags": [
           "refiner",
           "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-files": {
+      "get": {
+        "description": "Library mode (#505 point 4). The latest scan's file list, filtered by classification, matched manager kind or a path search, plus the removal/size summary the Clean confirmation dialog uses.",
+        "operationId": "get_library_files",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "classification",
+            "required": false,
+            "schema": {
+              "enum": [
+                "matches",
+                "would_change",
+                "cannot_process"
+              ],
+              "title": "Classification",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "manager",
+            "required": false,
+            "schema": {
+              "title": "Manager",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryFilesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Library Files",
+        "tags": [
+          "library-mode"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-files/clean": {
+      "post": {
+        "description": "Library mode (#505 point 5). Cleans the selected files in place. Refused with 400 (LibraryConfirmationRequired) when any selected file would have tracks removed and confirm_final_removal is not true.",
+        "operationId": "post_library_files_clean",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibraryCleanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryCleanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryConfirmationRequired"
+                }
+              }
+            },
+            "description": "Removing tracks was not confirmed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Library Files Clean",
+        "tags": [
+          "library-mode"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-scan": {
+      "post": {
+        "description": "Library mode (#505 point 2). Queues a read-only scan of this library's folders: cached ffprobe by path/size/mtime, classified against the library's current rules. Never writes to a file. Returns the already-running scan instead of queuing a duplicate.",
+        "operationId": "post_library_scan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibraryCsrfIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryScanTriggerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "No library folders are configured yet"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Library Scan",
+        "tags": [
+          "library-mode"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-schedule": {
+      "post": {
+        "description": "Library mode (#505 point 7). Turns the off-by-default scheduled scan-and-clean on or off, reusing the library's existing schedule window. Turning it on for the first time is refused with 400 (LibraryConfirmationRequired) unless confirm_final_removal is true, when the latest scan found tracks that would be removed.",
+        "operationId": "post_library_schedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibraryScheduleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibrarySettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryConfirmationRequired"
+                }
+              }
+            },
+            "description": "Removing tracks was not confirmed"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Library Schedule",
+        "tags": [
+          "library-mode"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-settings": {
+      "get": {
+        "description": "Library mode (#505). Weir server (.NET) only; there is no Python backend route to match, since library mode has no Python implementation.",
+        "operationId": "get_library_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibrarySettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "No Refiner library with that id"
+          }
+        },
+        "summary": "Get Library Settings",
+        "tags": [
+          "library-mode"
+        ]
+      },
+      "put": {
+        "description": "Save this library's library folders (#505 point 1). The schedule flag is unchanged; use library-schedule to change it. Refused (400) when a folder overlaps this library's watched, work or output folder.",
+        "operationId": "put_library_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibrarySettingsUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibrarySettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "A library folder overlaps this library's watched, work or output folder"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Library Settings",
+        "tags": [
+          "library-mode"
         ]
       }
     },
@@ -11098,7 +11860,7 @@
     },
     "/api/v1/suite/configuration-bundle": {
       "get": {
-        "description": "Export suite + module configuration as JSON (operators/admins only \u2014 contains secrets).",
+        "description": "Export suite + module configuration as JSON (operators/admins only — contains secrets).",
         "operationId": "get_configuration_bundle_api_v1_suite_configuration_bundle_get",
         "responses": {
           "200": {
@@ -11595,7 +12357,7 @@
         ]
       },
       "put": {
-        "description": "Update suite display text \u2014 operators and admins only.",
+        "description": "Update suite display text — operators and admins only.",
         "operationId": "put_suite_settings_api_v1_suite_settings_put",
         "requestBody": {
           "content": {
@@ -11637,7 +12399,7 @@
     },
     "/api/v1/suite/settings/configuration-bundle": {
       "get": {
-        "description": "Export suite + module configuration as JSON (operators/admins only \u2014 contains secrets).",
+        "description": "Export suite + module configuration as JSON (operators/admins only — contains secrets).",
         "operationId": "get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get",
         "responses": {
           "200": {

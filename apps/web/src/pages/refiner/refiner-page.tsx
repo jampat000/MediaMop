@@ -15,6 +15,7 @@ import {
   type RefinerOverviewOpenTab,
 } from "./refiner-overview-tab";
 import { RefinerLibrariesSection } from "./refiner-libraries-section";
+import { RefinerLibrarySection } from "./refiner-library-section";
 import { RefinerMaintenanceSection } from "./refiner-maintenance-section";
 import { RefinerSchedulesSection } from "./refiner-schedules-section";
 import { RefinerRemuxSection } from "./refiner-remux-section";
@@ -24,6 +25,7 @@ type RefinerPageTabId =
   | "libraries"
   | "audio-subtitles"
   | "files"
+  | "library"
   | "jobs"
   | "maintenance"
   | "schedules";
@@ -39,6 +41,8 @@ const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
     "Set optional schedule windows and run manual watched-folder scans when needed.",
   files:
     "Every file Refiner has looked at, and why it is or is not being processed.",
+  library:
+    "Clean files already in a library, in place, with the library's own rules. Separate from the download pipeline above.",
   jobs: "View queued, running, and recent Refiner jobs for troubleshooting and progress.",
   maintenance:
     "Housekeeping Weir runs on a schedule, and what this instance is configured with. Start one now if you need to.",
@@ -50,6 +54,7 @@ const REFINER_TABS = [
   { id: "audio-subtitles", label: "Audio & subtitles" },
   { id: "schedules", label: "Schedules" },
   { id: "files", label: "Files" },
+  { id: "library", label: "Library" },
   { id: "jobs", label: "Jobs" },
   { id: "maintenance", label: "Maintenance" },
 ] as const satisfies readonly WorkspaceTabOption<RefinerPageTabId>[];
@@ -64,6 +69,7 @@ function refinerTabFromQuery(value: string | null): RefinerPageTabId {
     "audio-subtitles",
     "schedules",
     "files",
+    "library",
     "jobs",
     "maintenance",
   ];
@@ -156,6 +162,7 @@ export function RefinerPage() {
 
         {tab === "schedules" ? <RefinerSchedulesSection /> : null}
         {tab === "files" ? <RefinerFilesSection /> : null}
+        {tab === "library" ? <RefinerLibrarySection /> : null}
         {tab === "jobs" ? <RefinerJobsInspectionSection /> : null}
         {tab === "maintenance" ? <RefinerMaintenanceSection /> : null}
       </WorkspacePanel>
