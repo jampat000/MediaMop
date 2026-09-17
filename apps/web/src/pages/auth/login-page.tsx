@@ -148,10 +148,7 @@ export function LoginPage() {
         <div className="mm-auth-card">
           <p className="mm-auth-eyebrow">Weir</p>
           <h1 className="mm-auth-title">Sign in</h1>
-          <p className="mm-auth-lead">
-            Server-side session sign-in — Weir keeps your sign-in on the
-            backend, not browser storage.
-          </p>
+          <p className="mm-auth-lead">Sign in to manage Weir on this server.</p>
 
           {fromSetup ? (
             <p className="mm-auth-banner mm-auth-banner--ok" role="status">

@@ -44,7 +44,7 @@ def test_auth_shell_bootstrap_login_logout_guard(weir_shell: str) -> None:
             page.get_by_test_id("login-submit").click()
 
             expect(page).to_have_url(re.compile(r".*/setup-wizard"))
-            expect(page.get_by_text("Setup wizard", exact=False)).to_be_visible()
+            expect(page.get_by_role("heading", name="Set up Weir")).to_be_visible()
             page.get_by_test_id("setup-wizard-skip").click()
 
             expect(page).to_have_url(re.compile(r".*/(?:$|[/?#])"))

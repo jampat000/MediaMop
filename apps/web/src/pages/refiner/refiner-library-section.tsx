@@ -109,7 +109,7 @@ export function RefinerLibrarySection() {
   if (!libraries.data || libraries.data.length === 0) {
     return (
       <p className="text-sm text-[var(--mm-text2)]">
-        Add a Refiner library first, under the Libraries tab.
+        Add a library first, under the Libraries tab.
       </p>
     );
   }

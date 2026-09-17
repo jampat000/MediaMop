@@ -20,8 +20,8 @@ import { SUITE_SETTINGS_DASH_CARD_CLASS } from "./settings-shared";
 const EVENT_LABELS: Record<string, string> = {
   job_completed: "Any job completed",
   job_failed: "Any job permanently failed",
-  refiner_job_completed: "Refiner job completed",
-  refiner_job_failed: "Refiner job permanently failed",
+  refiner_job_completed: "File processing finished",
+  refiner_job_failed: "File processing failed for good",
 };
 
 type NotificationFormData = {

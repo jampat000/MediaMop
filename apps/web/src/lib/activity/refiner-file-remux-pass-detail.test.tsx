@@ -100,7 +100,7 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     expect(card).toHaveClass("mm-activity-processing--finished");
     expect(screen.getAllByText("Finished")).toHaveLength(2);
     expect(
-      screen.getByText("Refiner finished processing this file."),
+      screen.getByText("Weir finished processing this file."),
     ).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
     expect(screen.queryByText(/About 0s left/i)).not.toBeInTheDocument();

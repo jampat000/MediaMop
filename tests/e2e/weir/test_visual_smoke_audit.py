@@ -212,7 +212,7 @@ def test_settings_general_tab_renders(weir_shell: str) -> None:
 def test_module_sections_share_themed_tabs_and_responsive_layout(
     weir_shell: str,
 ) -> None:
-    """Refiner uses the shared horizontal tab bar without page overflow."""
+    """Processing uses the shared horizontal tab bar without page overflow."""
     base = weir_shell.rstrip("/")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -224,7 +224,7 @@ def test_module_sections_share_themed_tabs_and_responsive_layout(
 
             for label, page_test_id, tabs_test_id, screenshot_name in (
                 (
-                    "Refiner",
+                    "Processing",
                     "refiner-scope-page",
                     "refiner-section-tabs",
                     "refiner-workspace",
@@ -264,7 +264,7 @@ def test_module_sections_share_themed_tabs_and_responsive_layout(
 
 
 def test_refiner_audio_subtitles_editor_renders(weir_shell: str) -> None:
-    """The full Refiner profile editor remains readable at desktop width."""
+    """The full audio & subtitle profile editor remains readable at desktop width."""
     base = weir_shell.rstrip("/")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -273,7 +273,7 @@ def test_refiner_audio_subtitles_editor_renders(weir_shell: str) -> None:
             page.set_default_timeout(30_000)
             ensure_signed_in(page, base)
 
-            open_sidebar(page, "Refiner")
+            open_sidebar(page, "Processing")
             page.get_by_role("tab", name="Audio & subtitles", exact=True).click()
             expect(page.get_by_test_id("refiner-rule-set-workspace")).to_be_visible()
             page.get_by_role("button", name="New profile", exact=True).click()

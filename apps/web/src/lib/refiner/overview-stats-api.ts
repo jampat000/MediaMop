@@ -11,6 +11,6 @@ export async function fetchRefinerOverviewStats(
       ? refinerOverviewStatsPath()
       : `${refinerOverviewStatsPath()}?window_days=${windowDays}`;
   const r = await apiFetch(path);
-  await requireOk(path, r, "Could not load Refiner overview stats");
+  await requireOk(path, r, "Could not load processing stats");
   return readJson<RefinerOverviewStatsOut>(r);
 }

@@ -11,7 +11,7 @@ export const refinerOperatorSettingsPath = () =>
 export async function fetchRefinerOperatorSettings(): Promise<RefinerOperatorSettingsOut> {
   const path = refinerOperatorSettingsPath();
   const r = await apiFetch(path);
-  await requireOk(path, r, "Could not load Refiner automation settings");
+  await requireOk(path, r, "Could not load processing settings");
   return readJson<RefinerOperatorSettingsOut>(r);
 }
 
@@ -25,6 +25,6 @@ export async function putRefinerOperatorSettings(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, csrf_token }),
   });
-  await requireOk(path, r, "Could not save Refiner automation settings");
+  await requireOk(path, r, "Could not save processing settings");
   return readJson<RefinerOperatorSettingsOut>(r);
 }

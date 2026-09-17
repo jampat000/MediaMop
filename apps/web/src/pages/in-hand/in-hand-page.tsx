@@ -273,7 +273,7 @@ export function InHandPage(): React.ReactElement {
       key: "setup",
       title: "Nothing to watch yet",
       body: "Weir picks files up from a library's watched folder. Add one, or turn an existing library on.",
-      to: "/refiner?tab=libraries",
+      to: "/processing?tab=libraries",
       action: "Set up a library",
     });
   }
@@ -283,7 +283,7 @@ export function InHandPage(): React.ReactElement {
       key: `worker-${worker.module}`,
       title: "Background work has stopped",
       body: worker.detail,
-      to: "/refiner?tab=jobs",
+      to: "/processing?tab=jobs",
       action: "Open jobs",
     });
   }
@@ -297,7 +297,7 @@ export function InHandPage(): React.ReactElement {
       key: "failed-jobs",
       title: failedJobCount === 1 ? "1 job failed" : `${shown} jobs failed`,
       body: "Each one says what went wrong and what to do next.",
-      to: "/refiner?tab=jobs&status=failed",
+      to: "/processing?tab=jobs&status=failed",
       action: "Review failed jobs",
     });
   }
@@ -386,8 +386,8 @@ export function InHandPage(): React.ReactElement {
               <FileRow key={file.id} file={file} onOpen={openStory} />
             ))}
           </ul>
-          <Link className="mm-inhand-stuck__link" to="/refiner">
-            Open Refiner to deal with them
+          <Link className="mm-inhand-stuck__link" to="/processing?tab=files">
+            Open Files to deal with them
           </Link>
         </section>
       ) : null}

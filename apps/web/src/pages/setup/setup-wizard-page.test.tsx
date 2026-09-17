@@ -159,12 +159,18 @@ describe("SetupWizardPage", () => {
     fireEvent.change(screen.getByDisplayValue("02:00"), {
       target: { value: "03:30" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Movies watched folder"), {
-      target: { value: "D:\\Movies" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Movies output folder"), {
-      target: { value: "E:\\MoviesOut" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Movies watched folder" }),
+      {
+        target: { value: "D:\\Movies" },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Movies output folder" }),
+      {
+        target: { value: "E:\\MoviesOut" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
 
     await waitFor(() => {
@@ -191,18 +197,30 @@ describe("SetupWizardPage", () => {
   it("creates a library for each media type that has folders and none yet", async () => {
     renderWizard();
 
-    fireEvent.change(screen.getByPlaceholderText("TV watched folder"), {
-      target: { value: "D:\\TV" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("TV output folder"), {
-      target: { value: "E:\\TVOut" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Movies watched folder"), {
-      target: { value: "D:\\Movies" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Movies output folder"), {
-      target: { value: "E:\\MoviesOut" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "TV watched folder" }),
+      {
+        target: { value: "D:\\TV" },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "TV output folder" }),
+      {
+        target: { value: "E:\\TVOut" },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Movies watched folder" }),
+      {
+        target: { value: "D:\\Movies" },
+      },
+    );
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Movies output folder" }),
+      {
+        target: { value: "E:\\MoviesOut" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
 
     await waitFor(() => {
@@ -224,7 +242,9 @@ describe("SetupWizardPage", () => {
     ];
     renderWizard();
 
-    const watched = screen.getByPlaceholderText("Movies watched folder");
+    const watched = screen.getByRole("textbox", {
+      name: "Movies watched folder",
+    });
     expect(watched).toHaveValue("C:\\Old\\Movies");
     fireEvent.change(watched, { target: { value: "D:\\Movies" } });
     fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));

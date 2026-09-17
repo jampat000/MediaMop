@@ -18,7 +18,7 @@ pytestmark = [
 ]
 
 
-def test_saved_state_persists_across_settings_and_refiner(
+def test_saved_state_persists_across_settings_and_processing(
     weir_shell: str,
     weir_home: str,
 ) -> None:
@@ -43,7 +43,7 @@ def test_saved_state_persists_across_settings_and_refiner(
             expect(page).to_have_url(re.compile(r".*/(?:$|[/?#])"))
             expect(page.locator("html")).to_have_attribute("data-mm-density", "comfortable")
 
-            open_sidebar(page, "Refiner")
+            open_sidebar(page, "Processing")
             page.get_by_role("tab", name="Libraries", exact=True).click()
             libraries = page.get_by_test_id("refiner-libraries-section")
             expect(libraries).to_be_visible()
@@ -53,7 +53,7 @@ def test_saved_state_persists_across_settings_and_refiner(
             form.get_by_role("textbox", name="Output folder").fill(str(tv_output))
             page.get_by_test_id("refiner-library-save").click()
             open_sidebar(page, "In hand")
-            open_sidebar(page, "Refiner")
+            open_sidebar(page, "Processing")
             page.get_by_role("tab", name="Libraries", exact=True).click()
             expect(page.get_by_test_id("refiner-libraries-section")).to_contain_text(str(tv_watch))
         finally:

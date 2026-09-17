@@ -151,8 +151,8 @@ export function ClearAllHistoryDialog({
         <li>
           {plural(
             preview.refiner_jobs_deleted,
-            "finished Refiner job",
-            "finished Refiner jobs",
+            "finished job",
+            "finished jobs",
           )}
         </li>
       </ul>

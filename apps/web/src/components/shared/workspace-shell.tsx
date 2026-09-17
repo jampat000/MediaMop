@@ -10,7 +10,7 @@ function classes(...values: Array<string | undefined>): string {
 }
 
 type WorkspacePageProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: ReactNode;
   children: ReactNode;
@@ -29,7 +29,7 @@ export function WorkspacePage({
   return (
     <div className="mm-page mm-workspace-page" data-testid={dataTestId}>
       <header className="mm-page__intro mm-workspace-page__intro">
-        <p className="mm-page__eyebrow">{eyebrow}</p>
+        {eyebrow ? <p className="mm-page__eyebrow">{eyebrow}</p> : null}
         <h1 className="mm-page__title">{title}</h1>
         <p className={classes("mm-page__lead", descriptionClassName)}>
           {description}

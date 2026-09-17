@@ -74,9 +74,9 @@ export function SetupPage() {
           <p className="mm-auth-eyebrow">First run</p>
           <h1 className="mm-auth-title">Create admin</h1>
           <p className="mm-auth-lead">
-            This workspace has no administrator yet. Choose credentials for the
-            initial account. After you sign in, Weir will run the first-run
-            setup wizard.
+            Weir has no administrator yet. Choose credentials for the initial
+            account. After you sign in, Weir will run the first-run setup
+            wizard.
           </p>
 
           <form

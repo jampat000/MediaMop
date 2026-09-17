@@ -39,13 +39,12 @@ def test_signed_in_navigation_covers_main_screens_and_tabs(weir_shell: str) -> N
             open_sidebar(page, "Activity")
             expect(page).to_have_url(re.compile(r".*/activity"))
             expect(page.get_by_test_id("activity-feed")).to_be_visible()
-            expect(page.get_by_text("Showing now", exact=False)).to_be_visible()
-            expect(page.get_by_text("Matches in store", exact=False)).to_be_visible()
-            expect(page.locator("select").nth(0)).to_contain_text("All modules")
-            expect(page.locator("select").nth(0)).to_contain_text("System")
+            expect(page.get_by_test_id("activity-summary")).to_contain_text("Showing")
+            # Weir is one app: no Module filter.
+            expect(page.get_by_text("All modules", exact=True)).to_have_count(0)
 
-            open_sidebar(page, "Refiner")
-            expect(page).to_have_url(re.compile(r".*/refiner"))
+            open_sidebar(page, "Processing")
+            expect(page).to_have_url(re.compile(r".*/processing"))
             expect(page.get_by_test_id("refiner-scope-page")).to_be_visible()
             page.get_by_role("tab", name="Libraries", exact=True).click()
             expect(page.get_by_test_id("refiner-libraries-section")).to_be_visible()
@@ -57,13 +56,18 @@ def test_signed_in_navigation_covers_main_screens_and_tabs(weir_shell: str) -> N
             expect(page.get_by_test_id("refiner-jobs-inspection-section")).to_be_visible()
             page.get_by_role("tab", name="Overview", exact=True).click()
             expect(page.get_by_test_id("refiner-overview-panel")).to_be_visible()
+            # Old /refiner links still land on the same tab.
+            page.goto(f"{base}/refiner?tab=jobs", wait_until="domcontentloaded")
+            expect(page).to_have_url(re.compile(r".*/processing\?tab=jobs"))
+            expect(page.get_by_test_id("refiner-jobs-inspection-section")).to_be_visible()
+
 
             open_sidebar(page, "Settings")
             expect(page).to_have_url(re.compile(r".*/settings"))
             expect(page.get_by_test_id("suite-settings-page")).to_be_visible()
             expect(page.get_by_test_id("suite-settings-global")).to_be_visible()
             expect(page.get_by_text("Setup wizard", exact=True)).to_be_visible()
-            expect(page.get_by_text("Timezone", exact=True)).to_be_visible()
+            expect(page.get_by_text("Time zone", exact=True)).to_be_visible()
             expect(page.get_by_text("Display density", exact=False)).to_be_visible()
             expect(page.get_by_text("Upgrade", exact=True)).to_be_visible()
             page.get_by_role("tab", name="Security", exact=True).click()

@@ -539,16 +539,11 @@ class LiveAudit:
         selects = self.page.locator("select")
         self.require(selects.count() >= 2, "Activity filters are incomplete")
         self.require(
-            "All modules" in selects.nth(0).inner_text(),
-            "Activity module filter missing All modules",
+            self.page.get_by_text("All modules", exact=True).count() == 0,
+            "Activity still shows a Module filter",
         )
-        self.require(
-            "System" in selects.nth(0).inner_text(),
-            "Activity module filter missing System",
-        )
-        selects.nth(0).select_option(label="System")
-        if selects.nth(1).locator("option").count() > 1:
-            selects.nth(1).select_option(index=1)
+        if selects.nth(0).locator("option").count() > 1:
+            selects.nth(0).select_option(index=1)
         self.page.get_by_placeholder("Search titles and details").fill("audit")
         self.page.locator('input[type="datetime-local"]').nth(0).fill(
             "2026-01-01T00:00"
@@ -561,23 +556,24 @@ class LiveAudit:
             "apply Activity filters",
         )
         self.visible(
-            self.page.get_by_text("Filters active", exact=True),
+            self.page.get_by_test_id("activity-summary").get_by_text("matching your filters"),
             "Activity active filter state",
         )
         self.click(
             self.page.get_by_role("button", name="Clear", exact=True),
             "clear Activity filters",
         )
+        self.page.wait_for_timeout(500)
         self.require(
-            not self.page.get_by_text("Filters active", exact=True).count(),
+            not self.page.get_by_test_id("activity-summary").get_by_text("matching your filters").count(),
             "Activity filters did not clear",
         )
         self.screenshot("activity")
         self.record("Activity feed, filters, bounded refresh state, and clear action")
 
     def refiner(self) -> None:
-        self.open_sidebar("Refiner")
-        self.visible(self.page.get_by_test_id("refiner-scope-page"), "Refiner page")
+        self.open_sidebar("Processing")
+        self.visible(self.page.get_by_test_id("refiner-scope-page"), "Processing page")
         expected = {
             "Overview": "refiner-overview-panel",
             "Libraries": "refiner-libraries-section",
@@ -649,7 +645,7 @@ class LiveAudit:
             self.page.get_by_test_id("suite-settings-global"), "Settings General tab"
         )
         self.visible(
-            self.page.get_by_text("Timezone", exact=True), "Settings timezone control"
+            self.page.get_by_text("Time zone", exact=True), "Settings time zone control"
         )
         density = self.page.get_by_role("radiogroup", name="Display density")
         self.visible(density, "Settings display density control")

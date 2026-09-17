@@ -111,7 +111,7 @@ export async function fetchRefinerFiles(
   const suffix = params.toString();
   const path = suffix ? `${refinerFilesPath()}?${suffix}` : refinerFilesPath();
   const r = await apiFetch(path);
-  await requireOk(path, r, "Could not load Refiner files");
+  await requireOk(path, r, "Could not load files");
   return readJson<RefinerFilesPage>(r);
 }
 

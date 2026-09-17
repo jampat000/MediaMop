@@ -96,6 +96,15 @@
   --mm-input-focus-ring: rgba(212, 175, 55, 0.18);
   --mm-font-feature: "cv11", "ss01";
   --mm-eyebrow-color: var(--mm-stone-muted);
+  /* Secondary buttons sit on cards: a faint well on dark, a warm raised chip on light. */
+  --mm-button-secondary-bg: rgba(31, 35, 42, 0.45);
+  --mm-button-quiet-bg: rgba(31, 35, 42, 0.35);
+  /* Tailwind `bg-black/10`-style wells are tuned for dark; light remaps them (weir-shell.css). */
+  --mm-well-bg: rgba(0, 0, 0, 0.12);
+  /* Brand mark (components/brand/weir-logo.tsx; packaging/brand/weir-mark.svg). */
+  --mm-brand-water: #d4af37;
+  --mm-brand-wall: #e7e7ea;
+  --mm-brand-wordmark: #d4af37;
 }
 
 html[data-mm-theme="light"] {
@@ -154,6 +163,13 @@ html[data-mm-theme="light"] {
   --mm-input-border-focus: rgba(184, 135, 25, 0.55);
   --mm-input-focus-ring: rgba(184, 135, 25, 0.18);
   --mm-eyebrow-color: rgba(33, 31, 26, 0.6);
+  --mm-button-secondary-bg: #f6efe2;
+  --mm-button-quiet-bg: rgba(33, 31, 26, 0.05);
+  --mm-well-bg: rgba(33, 31, 26, 0.045);
+  /* packaging/brand/weir-mark-light.svg; wordmark #7d5a11 is 5.9:1 on the light page. */
+  --mm-brand-water: #9f7417;
+  --mm-brand-wall: #211f1a;
+  --mm-brand-wordmark: #7d5a11;
 }
 
 html[data-mm-density="comfortable"] {

@@ -48,7 +48,7 @@ function LibraryScanNow({
       </p>
       <p className="mt-1 text-xs text-[var(--mm-text3)]">
         {REFINER_MEDIA_TYPE_LABELS[library.media_type]}. Checks this
-        library&apos;s watched folder now and adds any ready files to Refiner.
+        library&apos;s watched folder now and queues any ready files.
       </p>
       {!watchedSet ? (
         <p className="mt-2 text-xs text-amber-200/90">
@@ -151,7 +151,7 @@ export function RefinerSchedulesSection() {
   }, [q.data, movieDirty, tvDirty]);
 
   if (q.isPending || libraries.isPending || me.isPending) {
-    return <PageLoading label="Loading Refiner schedules" />;
+    return <PageLoading label="Loading schedules" />;
   }
   if (q.isError || libraries.isError) {
     return (
@@ -159,7 +159,7 @@ export function RefinerSchedulesSection() {
         className="mm-module-surface w-full min-w-0 rounded border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200"
         role="alert"
       >
-        <p className="font-semibold">Could not load Refiner schedules</p>
+        <p className="font-semibold">Could not load schedules</p>
         <p className="mt-1">
           {isLikelyNetworkFailure(q.error ?? libraries.error)
             ? "Check that the Weir API is running."

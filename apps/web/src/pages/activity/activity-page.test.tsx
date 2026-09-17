@@ -179,24 +179,20 @@ describe("ActivityPage", () => {
     vi.stubGlobal("EventSource", EventSourceStub);
   });
 
-  it("renders summary cards and filters", () => {
+  it("renders one summary line and the filters", () => {
     mocks.useActivityRecentQuery.mockReturnValue(
       recentResult([event({ id: 1, detail: '{"removed":0}' })]),
     );
 
     renderPage();
 
-    expect(screen.getByText("Showing now")).toBeInTheDocument();
-    expect(screen.getByText("Matches in store")).toBeInTheDocument();
-    expect(screen.getByText("System events")).toBeInTheDocument();
-    expect(screen.getByText("Refresh")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("All modules")).toBeInTheDocument();
+    expect(screen.getByTestId("activity-summary")).toHaveTextContent(
+      "Showing 1 of 1 event · live",
+    );
     expect(screen.getByDisplayValue("All events")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Any reason")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Any result")).toBeInTheDocument();
-    expect(
-      screen.getByDisplayValue("All Refiner libraries"),
-    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("All libraries")).toBeInTheDocument();
     expect(
       screen.getAllByText("Temporary files cleanup finished").length,
     ).toBeGreaterThan(0);
@@ -213,13 +209,37 @@ describe("ActivityPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("includes system in the module filter", () => {
+  it("has no module filter, since Weir is one app", () => {
     mocks.useActivityRecentQuery.mockReturnValue(recentResult([]));
 
     renderPage();
-    const select = screen.getByDisplayValue("All modules");
-    const options = within(select.closest("label")!).getAllByRole("option");
-    expect(options.map((option) => option.textContent)).toContain("System");
+    expect(screen.queryByDisplayValue("All modules")).not.toBeInTheDocument();
+    expect(lastQueryFilters()).not.toHaveProperty("module");
+  });
+
+  it("folds identical consecutive entries into one row with a count", () => {
+    const signIn = (id: number) =>
+      event({
+        id,
+        event_type: "auth.login_succeeded",
+        module: "auth",
+        title: "Sign-in finished",
+        detail: "admin",
+        trigger: "manual",
+      });
+    mocks.useActivityRecentQuery.mockReturnValue(
+      recentResult([signIn(9), signIn(8), signIn(7), event({ id: 6 })]),
+    );
+
+    renderPage();
+
+    const rows = screen.getAllByTestId("activity-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Sign-in finished");
+    expect(
+      within(rows[0]).getByTestId("activity-repeat-count"),
+    ).toHaveTextContent("×3");
+    expect(screen.queryByText("System event")).not.toBeInTheDocument();
   });
 
   it("renders explicit labels for system repair activity", () => {
@@ -284,7 +304,7 @@ describe("ActivityPage", () => {
     fireEvent.change(screen.getByDisplayValue("Any result"), {
       target: { value: "failed" },
     });
-    fireEvent.change(screen.getByDisplayValue("All Refiner libraries"), {
+    fireEvent.change(screen.getByDisplayValue("All libraries"), {
       target: { value: "3" },
     });
     fireEvent.change(screen.getByPlaceholderText("Part of a file path"), {
@@ -528,7 +548,7 @@ describe("ActivityPage", () => {
       "activity-clear-all-history-dialog",
     );
     expect(dialog).toHaveTextContent("12 Activity events");
-    expect(dialog).toHaveTextContent("4 finished Refiner jobs");
+    expect(dialog).toHaveTextContent("4 finished jobs");
     expect(dialog).toHaveTextContent(
       "Queued and running work is kept, and so are all settings. No media file is touched.",
     );
@@ -551,7 +571,7 @@ describe("ActivityPage", () => {
     );
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(
-        "History cleared. Removed 12 Activity events and 4 finished Refiner jobs.",
+        "History cleared. Removed 12 Activity events and 4 finished jobs.",
       ),
     );
   });

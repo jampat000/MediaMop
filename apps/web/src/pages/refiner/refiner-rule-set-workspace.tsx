@@ -559,7 +559,7 @@ export function RefinerRuleSetWorkspace() {
   );
 
   if (ruleSets.isLoading || provider.isLoading || me.isPending) {
-    return <PageLoading label="Loading Refiner rule sets" />;
+    return <PageLoading label="Loading rule sets" />;
   }
 
   const disabled =
@@ -1020,7 +1020,7 @@ export function RefinerRuleSetWorkspace() {
               <ProfileSettingsSection
                 step={4}
                 title="Remove from container"
-                detail="Select optional streams and tags Refiner should strip after track selection."
+                detail="Select optional streams and tags Weir should strip after track selection."
               >
                 <div className="grid gap-3 sm:grid-cols-2">
                   {toggle(
@@ -1251,7 +1251,7 @@ export function RefinerRuleSetWorkspace() {
             </h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--mm-text2)]">
               Only needed by profiles that keep a title&apos;s original
-              language. Refiner falls back safely when metadata is unavailable.
+              language. Weir falls back safely when metadata is unavailable.
             </p>
           </div>
           <div className="flex items-center gap-3">

@@ -20,6 +20,17 @@ import {
 } from "../../lib/ui/display-density";
 import { SUITE_SETTINGS_DASH_CARD_CLASS } from "./settings-shared";
 
+const DENSITY_OPTIONS: ReadonlyArray<{
+  id: DisplayDensity;
+  label: string;
+  hint: string;
+}> = [
+  { id: "compact", label: "Compact", hint: "Tighter, fits more" },
+  { id: "default", label: "Balanced", hint: "The default" },
+  { id: "comfortable", label: "Comfortable", hint: "Larger text" },
+  { id: "expanded", label: "Expanded", hint: "For big screens" },
+];
+
 type SettingsGeneralTabProps = {
   editable: boolean;
   settingsData: SuiteSettingsOut;
@@ -73,6 +84,9 @@ export function SettingsGeneralTab({
 }: SettingsGeneralTabProps) {
   const navigate = useNavigate();
   const timezoneOptions = curatedTimezoneOptionsSorted();
+  const wizardState = (settingsData.setup_wizard_state || "pending")
+    .trim()
+    .toLowerCase();
 
   return (
     <div data-testid="suite-settings-global" className="mm-bubble-stack">
@@ -83,381 +97,327 @@ export function SettingsGeneralTab({
         </p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5">
-        <div className={mmModuleTabBlurbBandClass}>
-          <p className={mmModuleTabBlurbTextClass}>
-            App-wide choices saved in the app database. Library and processing
-            details stay on the Refiner page.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <section
-            className={SUITE_SETTINGS_DASH_CARD_CLASS}
-            aria-labelledby="suite-settings-wizard-heading"
-          >
-            <div className="mm-card-action-body">
-              <div>
-                <h3
-                  id="suite-settings-wizard-heading"
-                  className="text-base font-semibold text-[var(--mm-text1)]"
-                >
-                  Setup wizard
-                </h3>
-                <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Reopen the first-run wizard to adjust the basic suite setup
-                  flow at any time.
-                </p>
-              </div>
-              <div className="space-y-2 text-sm text-[var(--mm-text2)]">
-                <p>
-                  Current state:{" "}
-                  <span className="font-medium capitalize text-[var(--mm-text1)]">
-                    {settingsData.setup_wizard_state || "pending"}
-                  </span>
-                </p>
-                <p>
-                  Use this when you want the guided setup again without exposing
-                  it in the sidebar.
-                </p>
-              </div>
-            </div>
-            <div className="mm-card-action-footer">
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "secondary",
-                  disabled: false,
-                })}
-                data-testid="suite-settings-open-setup-wizard"
-                onClick={() => navigate("/setup-wizard")}
-              >
-                Open setup wizard
-              </button>
-            </div>
-          </section>
-          <section
-            className={SUITE_SETTINGS_DASH_CARD_CLASS}
-            aria-labelledby="suite-settings-timezone-heading"
-          >
-            <div className="mm-card-action-body">
-              <div>
-                <h3
-                  id="suite-settings-timezone-heading"
-                  className="text-base font-semibold text-[var(--mm-text1)]"
-                >
-                  Timezone
-                </h3>
-                <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Main-country timezones for suite-level time displays. Use Save
-                  timezone when you change the selection.
-                </p>
-              </div>
-              <MmListboxPicker
-                ariaLabelledBy="suite-settings-timezone-heading"
-                ariaDescribedBy="suite-timezone-hint"
-                placeholder="Select timezone"
-                disabled={!editable || save.isPending}
-                options={timezoneOptions.map((tz) => ({
-                  value: tz.id,
-                  label: tz.label,
-                }))}
-                value={appTimezone ?? ""}
-                onChange={(v) => setAppTimezone(v)}
-              />
-              <p
-                id="suite-timezone-hint"
-                className="text-xs text-[var(--mm-text3)]"
-              >
-                If you do not see your zone, pick the closest match - this only
-                affects how times are labeled in the suite.
-              </p>
-              {save.isError && lastSuiteSaveTarget === "timezone" ? (
-                <p
-                  className="text-sm text-red-300"
-                  role="alert"
-                  data-testid="suite-settings-timezone-save-error"
-                >
-                  {save.error instanceof Error
-                    ? save.error.message
-                    : "Could not save."}
-                </p>
-              ) : null}
-            </div>
-            <div className="mm-card-action-footer">
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "primary",
-                  disabled: !editable || !timezoneDirty || save.isPending,
-                })}
-                disabled={!editable || !timezoneDirty || save.isPending}
-                data-testid="suite-settings-save-timezone"
-                onClick={() => onSaveTimezone()}
-              >
-                {save.isPending ? "Saving..." : "Save timezone"}
-              </button>
-            </div>
-          </section>
-        </div>
+      <div className={mmModuleTabBlurbBandClass}>
+        <p className={mmModuleTabBlurbTextClass}>
+          Time zone, how long history is kept, and how this browser displays
+          Weir.
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-          <section
-            className={SUITE_SETTINGS_DASH_CARD_CLASS}
-            aria-labelledby="suite-settings-log-retention-heading"
-          >
-            <div className="mm-card-action-body">
-              <div>
-                <h3
-                  id="suite-settings-log-retention-heading"
-                  className="text-base font-semibold text-[var(--mm-text1)]"
+      <div className="mm-settings-grid">
+        <section
+          className={`${SUITE_SETTINGS_DASH_CARD_CLASS} mm-settings-card`}
+          aria-labelledby="suite-settings-timezone-heading"
+        >
+          <div>
+            <h3
+              id="suite-settings-timezone-heading"
+              className="mm-settings-card__title"
+            >
+              Time zone
+            </h3>
+            <p className="mm-settings-card__lead">
+              Times across Weir, and schedule windows, use this zone.
+            </p>
+          </div>
+          <MmListboxPicker
+            ariaLabelledBy="suite-settings-timezone-heading"
+            ariaDescribedBy="suite-timezone-hint"
+            placeholder="Select time zone"
+            disabled={!editable || save.isPending}
+            options={timezoneOptions.map((tz) => ({
+              value: tz.id,
+              label: tz.label,
+            }))}
+            value={appTimezone ?? ""}
+            onChange={(v) => setAppTimezone(v)}
+          />
+          <p id="suite-timezone-hint" className="mm-settings-card__hint">
+            Not listed? Pick a city in the same zone; it only changes how times
+            are shown.
+          </p>
+          {save.isError && lastSuiteSaveTarget === "timezone" ? (
+            <p
+              className="text-sm text-[var(--mm-status-failed-text)]"
+              role="alert"
+              data-testid="suite-settings-timezone-save-error"
+            >
+              {save.error instanceof Error
+                ? save.error.message
+                : "Could not save."}
+            </p>
+          ) : null}
+          <div className="mm-settings-card__actions">
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "primary",
+                disabled: !editable || !timezoneDirty || save.isPending,
+              })}
+              disabled={!editable || !timezoneDirty || save.isPending}
+              data-testid="suite-settings-save-timezone"
+              onClick={() => onSaveTimezone()}
+            >
+              {save.isPending ? "Saving..." : "Save time zone"}
+            </button>
+          </div>
+        </section>
+
+        <section
+          className={`${SUITE_SETTINGS_DASH_CARD_CLASS} mm-settings-card`}
+          aria-labelledby="suite-settings-density-heading"
+        >
+          <fieldset className="min-w-0 border-0 p-0">
+            <legend
+              id="suite-settings-density-heading"
+              className="mm-settings-card__title"
+            >
+              Display density
+            </legend>
+            <p className="mm-settings-card__lead">
+              Text size and spacing for this browser only. Applies straight
+              away.
+            </p>
+            <div
+              className="mm-density-options"
+              data-testid="suite-settings-display-density"
+              role="radiogroup"
+              aria-label="Display density"
+            >
+              {DENSITY_OPTIONS.map(({ id, label, hint }) => (
+                <label
+                  key={id}
+                  className={`mm-density-option${displayDensity === id ? " mm-density-option--selected" : ""}`}
                 >
-                  Log and history retention
-                </h3>
-                <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Decide how long Weir keeps system log entries on disk and how
-                  far back Activity history goes.
-                </p>
-              </div>
-              <label className="block max-w-md">
-                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                  System log retention (days)
+                  <input
+                    type="radio"
+                    name="mm-display-density"
+                    className="mm-density-option__input"
+                    checked={displayDensity === id}
+                    onChange={() => {
+                      setDisplayDensity(id);
+                      persistDisplayDensity(id);
+                    }}
+                  />
+                  <span className="min-w-0">
+                    <span className="mm-density-option__label">{label}</span>
+                    <span className="mm-density-option__hint">{hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </section>
+
+        <section
+          className={`${SUITE_SETTINGS_DASH_CARD_CLASS} mm-settings-card`}
+          aria-labelledby="suite-settings-log-retention-heading"
+        >
+          <div>
+            <h3
+              id="suite-settings-log-retention-heading"
+              className="mm-settings-card__title"
+            >
+              Log and history retention
+            </h3>
+            <p className="mm-settings-card__lead">
+              How long Weir keeps its system log and how far back Activity goes.
+            </p>
+          </div>
+          <div className="mm-settings-fields">
+            <label className="block">
+              <span className="mm-settings-field-label">
+                System log retention (days)
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={3650}
+                className={`${mmEditableTextFieldClass} mt-1`}
+                value={normalizedLogRetentionDraft}
+                disabled={!editable || save.isPending}
+                onFocus={() =>
+                  setLogRetentionDaysDraft(
+                    String(settingsData.log_retention_days),
+                  )
+                }
+                onChange={(e) => setLogRetentionDaysDraft(e.target.value)}
+                onBlur={() =>
+                  setLogRetentionDaysDraft(String(finalizeLogRetentionDays()))
+                }
+                aria-describedby="suite-general-log-retention-hint"
+              />
+              <span
+                id="suite-general-log-retention-hint"
+                className="mm-settings-card__hint mt-1 block"
+              >
+                1 to 3650 days. Older entries are removed while Weir runs.
+              </span>
+            </label>
+            {settingsData.activity_retention_days !== undefined ? (
+              <label className="block" id="activity-retention">
+                <span className="mm-settings-field-label">
+                  Keep Activity history for (days)
                 </span>
                 <input
                   type="number"
-                  min={1}
+                  min={0}
                   max={3650}
                   className={`${mmEditableTextFieldClass} mt-1`}
-                  value={normalizedLogRetentionDraft}
+                  value={normalizedActivityRetentionDraft}
                   disabled={!editable || save.isPending}
-                  onFocus={() =>
-                    setLogRetentionDaysDraft(
-                      String(settingsData.log_retention_days),
+                  data-testid="suite-settings-activity-retention"
+                  onChange={(e) =>
+                    setActivityRetentionDaysDraft(e.target.value)
+                  }
+                  onBlur={() =>
+                    setActivityRetentionDaysDraft(
+                      String(finalizeActivityRetentionDays() ?? ""),
                     )
                   }
-                  onChange={(e) => setLogRetentionDaysDraft(e.target.value)}
-                  onBlur={() =>
-                    setLogRetentionDaysDraft(String(finalizeLogRetentionDays()))
-                  }
-                  aria-describedby="suite-general-log-retention-hint"
+                  aria-describedby="suite-general-activity-retention-hint"
                 />
-                <p
-                  id="suite-general-log-retention-hint"
-                  className="mt-1 text-xs text-[var(--mm-text3)]"
+                <span
+                  id="suite-general-activity-retention-hint"
+                  className="mm-settings-card__hint mt-1 block"
                 >
-                  Between 1 and 3650 days. Older system log entries are removed
-                  automatically while Weir is running.
-                </p>
+                  0 keeps it until you clear it. Media files are never touched.
+                </span>
               </label>
-              {settingsData.activity_retention_days !== undefined ? (
-                <label className="block max-w-md" id="activity-retention">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    Keep Activity history for (days)
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={3650}
-                    className={`${mmEditableTextFieldClass} mt-1`}
-                    value={normalizedActivityRetentionDraft}
-                    disabled={!editable || save.isPending}
-                    data-testid="suite-settings-activity-retention"
-                    onChange={(e) =>
-                      setActivityRetentionDaysDraft(e.target.value)
-                    }
-                    onBlur={() =>
-                      setActivityRetentionDaysDraft(
-                        String(finalizeActivityRetentionDays() ?? ""),
-                      )
-                    }
-                    aria-describedby="suite-general-activity-retention-hint"
-                  />
-                  <p
-                    id="suite-general-activity-retention-hint"
-                    className="mt-1 text-xs text-[var(--mm-text3)]"
-                  >
-                    Keep Activity history for N days; 0 keeps it until you clear
-                    it. Older entries are removed once a day. Media files are
-                    never touched.
-                  </p>
-                </label>
-              ) : null}
-              {save.isError && lastSuiteSaveTarget === "logs" ? (
-                <p
-                  className="text-sm text-red-300"
-                  role="alert"
-                  data-testid="suite-settings-logs-save-error"
-                >
-                  {save.error instanceof Error
-                    ? save.error.message
-                    : "Could not save."}
-                </p>
-              ) : null}
+            ) : null}
+          </div>
+          {save.isError && lastSuiteSaveTarget === "logs" ? (
+            <p
+              className="text-sm text-[var(--mm-status-failed-text)]"
+              role="alert"
+              data-testid="suite-settings-logs-save-error"
+            >
+              {save.error instanceof Error
+                ? save.error.message
+                : "Could not save."}
+            </p>
+          ) : null}
+          <div className="mm-settings-card__actions">
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "primary",
+                disabled: !editable || !logsDirty || save.isPending,
+              })}
+              disabled={!editable || !logsDirty || save.isPending}
+              data-testid="suite-settings-save-logs"
+              onClick={() => onSaveLogs()}
+            >
+              {save.isPending ? "Saving..." : "Save retention"}
+            </button>
+          </div>
+        </section>
+
+        {editable ? (
+          <section
+            className={`${SUITE_SETTINGS_DASH_CARD_CLASS} mm-settings-card`}
+            data-testid="suite-settings-history-reset"
+            id="history-reset"
+            aria-labelledby="suite-settings-history-reset-heading"
+          >
+            <div>
+              <h3
+                id="suite-settings-history-reset-heading"
+                className="mm-settings-card__title"
+              >
+                Clear Activity history
+              </h3>
+              <p className="mm-settings-card__lead">
+                Removes every Activity entry and finished job record now. Media
+                files are not touched. Signing out does not clear history.
+              </p>
             </div>
-            <div className="mm-card-action-footer">
+            <label className="block">
+              <span className="mm-settings-field-label">
+                Type RESET to confirm
+              </span>
+              <input
+                type="text"
+                className="mm-input mt-1 w-full"
+                value={resetHistoryConfirm}
+                disabled={resetHistory.isPending}
+                autoComplete="off"
+                onChange={(e) => setResetHistoryConfirm(e.target.value)}
+              />
+            </label>
+            {resetHistoryMsg ? (
+              <p
+                className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-status-healthy-bg)] px-3 py-2 text-sm text-[var(--mm-status-healthy-text)]"
+                role="status"
+              >
+                {resetHistoryMsg}
+              </p>
+            ) : null}
+            {resetHistory.isError ? (
+              <p
+                className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-status-failed-bg)] px-3 py-2 text-sm text-[var(--mm-status-failed-text)]"
+                role="alert"
+              >
+                {resetHistory.error instanceof Error
+                  ? resetHistory.error.message
+                  : "Could not reset activity history."}
+              </p>
+            ) : null}
+            <div className="mm-settings-card__actions">
               <button
                 type="button"
                 className={mmActionButtonClass({
-                  variant: "primary",
-                  disabled: !editable || !logsDirty || save.isPending,
+                  variant: "tertiary",
+                  disabled:
+                    resetHistory.isPending ||
+                    resetHistoryConfirm.trim().toUpperCase() !== "RESET",
                 })}
-                disabled={!editable || !logsDirty || save.isPending}
-                data-testid="suite-settings-save-logs"
-                onClick={() => onSaveLogs()}
+                disabled={
+                  resetHistory.isPending ||
+                  resetHistoryConfirm.trim().toUpperCase() !== "RESET"
+                }
+                onClick={() => onResetOperationalHistory()}
               >
-                {save.isPending ? "Saving..." : "Save retention"}
+                {resetHistory.isPending ? "Resetting..." : "Reset history"}
               </button>
             </div>
           </section>
-          {editable ? (
-            <section
-              className={SUITE_SETTINGS_DASH_CARD_CLASS}
-              data-testid="suite-settings-history-reset"
-              id="history-reset"
-              aria-labelledby="suite-settings-history-reset-heading"
+        ) : null}
+
+        <section
+          className={`${SUITE_SETTINGS_DASH_CARD_CLASS} mm-settings-card`}
+          aria-labelledby="suite-settings-wizard-heading"
+        >
+          <div>
+            <h3
+              id="suite-settings-wizard-heading"
+              className="mm-settings-card__title"
             >
-              <div className="mm-card-action-body">
-                <div>
-                  <h3
-                    id="suite-settings-history-reset-heading"
-                    className="text-base font-semibold text-[var(--mm-text1)]"
-                  >
-                    Activity history
-                  </h3>
-                  <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
-                    History is kept for as long as the Activity history setting
-                    says, or until you reset it. Sign-outs and expired sessions
-                    do not clear it.
-                  </p>
-                </div>
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    Type RESET to confirm
-                  </span>
-                  <input
-                    type="text"
-                    className="mm-input w-full"
-                    value={resetHistoryConfirm}
-                    disabled={resetHistory.isPending}
-                    onChange={(e) => setResetHistoryConfirm(e.target.value)}
-                  />
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                    Clears Activity entries and finished job history only.
-                  </p>
-                </label>
-                {resetHistoryMsg ? (
-                  <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
-                    {resetHistoryMsg}
-                  </p>
-                ) : null}
-                {resetHistory.isError ? (
-                  <p
-                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                    role="alert"
-                  >
-                    {resetHistory.error instanceof Error
-                      ? resetHistory.error.message
-                      : "Could not reset activity history."}
-                  </p>
-                ) : null}
-              </div>
-              <div className="mm-card-action-footer">
-                <button
-                  type="button"
-                  className={mmActionButtonClass({
-                    variant: "tertiary",
-                    disabled:
-                      resetHistory.isPending ||
-                      resetHistoryConfirm.trim().toUpperCase() !== "RESET",
-                  })}
-                  disabled={
-                    resetHistory.isPending ||
-                    resetHistoryConfirm.trim().toUpperCase() !== "RESET"
-                  }
-                  onClick={() => onResetOperationalHistory()}
-                >
-                  {resetHistory.isPending ? "Resetting..." : "Reset history"}
-                </button>
-              </div>
-            </section>
-          ) : null}
-          <section
-            className={SUITE_SETTINGS_DASH_CARD_CLASS}
-            aria-labelledby="suite-settings-density-heading"
-          >
-            <fieldset className="min-w-0 border-0 p-0">
-              <legend
-                id="suite-settings-density-heading"
-                className="text-base font-semibold text-[var(--mm-text1)]"
-              >
-                Display density (this browser)
-              </legend>
-              <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                Adjust text, spacing, sidebar width, and card density for this
-                browser. The change applies immediately.
-              </p>
-              <div
-                className="mt-3 flex flex-col gap-2"
-                data-testid="suite-settings-display-density"
-                role="radiogroup"
-                aria-label="Display density"
-              >
-                {(
-                  [
-                    {
-                      id: "compact" as const,
-                      label: "Compact",
-                      hint: "Smaller, tighter app layout",
-                    },
-                    {
-                      id: "default" as const,
-                      label: "Balanced",
-                      hint: "Readable default",
-                    },
-                    {
-                      id: "comfortable" as const,
-                      label: "Comfortable",
-                      hint: "Larger text and controls",
-                    },
-                    {
-                      id: "expanded" as const,
-                      label: "Expanded",
-                      hint: "Big-screen reading mode",
-                    },
-                  ] as const
-                ).map(({ id, label, hint }) => (
-                  <label
-                    key={id}
-                    className={[
-                      "flex min-w-0 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
-                      displayDensity === id
-                        ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
-                        : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
-                    ].join(" ")}
-                  >
-                    <input
-                      type="radio"
-                      name="mm-display-density"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                      checked={displayDensity === id}
-                      onChange={() => {
-                        setDisplayDensity(id);
-                        persistDisplayDensity(id);
-                      }}
-                    />
-                    <span className="min-w-0">
-                      <span className="block font-medium text-[var(--mm-text)]">
-                        {label}
-                      </span>
-                      <span className="block text-xs leading-snug text-[var(--mm-text3)]">
-                        {hint}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          </section>
-        </div>
+              Setup wizard
+            </h3>
+            <p className="mm-settings-card__lead">
+              Go through the first-run steps again: time zone, display, backups
+              and library folders. You can leave at any point.
+            </p>
+          </div>
+          <p className="mm-settings-card__hint">
+            {wizardState === "completed"
+              ? "You finished the wizard."
+              : wizardState === "skipped"
+                ? "You skipped the wizard."
+                : "The wizard has not been finished yet."}
+          </p>
+          <div className="mm-settings-card__actions">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary" })}
+              data-testid="suite-settings-open-setup-wizard"
+              onClick={() => navigate("/setup-wizard")}
+            >
+              Open setup wizard
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );
