@@ -18,5 +18,7 @@
   <ItemGroup>
     <!-- Answers recorded from the Python rules engine by scripts/generate-rules-golden.py. -->
     <None Include="Rules/golden/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Rules/golden" />
+    <!-- Answers recorded from the Python ffmpeg layer by scripts/generate-ffmpeg-golden.py. -->
+    <None Include="Media/golden/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Media/golden" />
   </ItemGroup>
 </Project>

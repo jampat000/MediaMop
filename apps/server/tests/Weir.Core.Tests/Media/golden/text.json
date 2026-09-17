@@ -1,0 +1,374 @@
+{
+  "decode": [
+    {
+      "input": "",
+      "expected": {
+        "captured": "",
+        "tail": "",
+        "tail_4": "",
+        "tail_1": "",
+        "lines": []
+      }
+    },
+    {
+      "input": "706c61696e",
+      "expected": {
+        "captured": "plain",
+        "tail": "plain",
+        "tail_4": "lain",
+        "tail_1": "n",
+        "lines": [
+          "plain"
+        ]
+      }
+    },
+    {
+      "input": "2020706164646564200d0a",
+      "expected": {
+        "captured": "  padded \n",
+        "tail": "padded",
+        "tail_4": "d",
+        "tail_1": "",
+        "lines": [
+          "  padded "
+        ]
+      }
+    },
+    {
+      "input": "610d0a620d630a640d0a0d0a",
+      "expected": {
+        "captured": "a\nb\nc\nd\n\n",
+        "tail": "a\r\nb\rc\nd",
+        "tail_4": "",
+        "tail_1": "",
+        "lines": [
+          "a",
+          "b",
+          "c",
+          "d",
+          ""
+        ]
+      }
+    },
+    {
+      "input": "0d",
+      "expected": {
+        "captured": "\n",
+        "tail": "",
+        "tail_4": "",
+        "tail_1": "",
+        "lines": [
+          ""
+        ]
+      }
+    },
+    {
+      "input": "ff",
+      "expected": {
+        "captured": "�",
+        "tail": "�",
+        "tail_4": "�",
+        "tail_1": "�",
+        "lines": [
+          "�"
+        ]
+      }
+    },
+    {
+      "input": "c328",
+      "expected": {
+        "captured": "�(",
+        "tail": "�(",
+        "tail_4": "�(",
+        "tail_1": "(",
+        "lines": [
+          "�("
+        ]
+      }
+    },
+    {
+      "input": "e282",
+      "expected": {
+        "captured": "�",
+        "tail": "�",
+        "tail_4": "�",
+        "tail_1": "�",
+        "lines": [
+          "�"
+        ]
+      }
+    },
+    {
+      "input": "e282acf09f9880",
+      "expected": {
+        "captured": "€😀",
+        "tail": "€😀",
+        "tail_4": "😀",
+        "tail_1": "�",
+        "lines": [
+          "€😀"
+        ]
+      }
+    },
+    {
+      "input": "eda08020737572726f67617465",
+      "expected": {
+        "captured": "��� surrogate",
+        "tail": "��� surrogate",
+        "tail_4": "gate",
+        "tail_1": "e",
+        "lines": [
+          "��� surrogate"
+        ]
+      }
+    },
+    {
+      "input": "f4908080206265796f6e64",
+      "expected": {
+        "captured": "���� beyond",
+        "tail": "���� beyond",
+        "tail_4": "yond",
+        "tail_1": "d",
+        "lines": [
+          "���� beyond"
+        ]
+      }
+    },
+    {
+      "input": "efbbbf626f6d",
+      "expected": {
+        "captured": "﻿bom",
+        "tail": "﻿bom",
+        "tail_4": "�bom",
+        "tail_1": "m",
+        "lines": [
+          "﻿bom"
+        ]
+      }
+    },
+    {
+      "input": "006e756c0b76740c66661c667385",
+      "expected": {
+        "captured": "\u0000nul\u000bvt\fff\u001cfs�",
+        "tail": "\u0000nul\u000bvt\fff\u001cfs�",
+        "tail_4": "fs�",
+        "tail_1": "�",
+        "lines": [
+          "\u0000nul\u000bvt\fff\u001cfs�"
+        ]
+      }
+    },
+    {
+      "input": "416dc3a96c696520e2988320e280a820736570",
+      "expected": {
+        "captured": "Amélie ☃   sep",
+        "tail": "Amélie ☃   sep",
+        "tail_4": "sep",
+        "tail_1": "p",
+        "lines": [
+          "Amélie ☃   sep"
+        ]
+      }
+    }
+  ],
+  "format_1f": [
+    {
+      "input": "0.0",
+      "expected": "0.0"
+    },
+    {
+      "input": "-0.0",
+      "expected": "-0.0"
+    },
+    {
+      "input": "0.05",
+      "expected": "0.1"
+    },
+    {
+      "input": "0.15",
+      "expected": "0.1"
+    },
+    {
+      "input": "0.25",
+      "expected": "0.2"
+    },
+    {
+      "input": "0.35",
+      "expected": "0.3"
+    },
+    {
+      "input": "0.45",
+      "expected": "0.5"
+    },
+    {
+      "input": "2.5",
+      "expected": "2.5"
+    },
+    {
+      "input": "212.546",
+      "expected": "212.5"
+    },
+    {
+      "input": "5384.046",
+      "expected": "5384.0"
+    },
+    {
+      "input": "5379.95",
+      "expected": "5379.9"
+    },
+    {
+      "input": "-0.04",
+      "expected": "-0.0"
+    },
+    {
+      "input": "1e+22",
+      "expected": "10000000000000000000000.0"
+    },
+    {
+      "input": "1e-07",
+      "expected": "0.0"
+    },
+    {
+      "input": "5e-324",
+      "expected": "0.0"
+    },
+    {
+      "input": "inf",
+      "expected": "inf"
+    },
+    {
+      "input": "-inf",
+      "expected": "-inf"
+    },
+    {
+      "input": "nan",
+      "expected": "nan"
+    },
+    {
+      "input": "123456789.05",
+      "expected": "123456789.0"
+    },
+    {
+      "input": "9.95",
+      "expected": "9.9"
+    }
+  ],
+  "splitlines": [
+    {
+      "input": "",
+      "expected": []
+    },
+    {
+      "input": "a",
+      "expected": [
+        "a"
+      ]
+    },
+    {
+      "input": "a\n",
+      "expected": [
+        "a"
+      ]
+    },
+    {
+      "input": "a\r\nb\rc\u000bd\fe\u001cf\u001dg\u001ehi j k",
+      "expected": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k"
+      ]
+    },
+    {
+      "input": "\n\n",
+      "expected": [
+        "",
+        ""
+      ]
+    },
+    {
+      "input": "x\ty z",
+      "expected": [
+        "x\ty z"
+      ]
+    }
+  ],
+  "clip": [
+    {
+      "input": [
+        "",
+        5
+      ],
+      "expected": ""
+    },
+    {
+      "input": [
+        "abcdef",
+        5
+      ],
+      "expected": "abcde…(truncated)"
+    },
+    {
+      "input": [
+        "abcde",
+        5
+      ],
+      "expected": "abcde"
+    },
+    {
+      "input": [
+        "é☃😀xyz",
+        3
+      ],
+      "expected": "é☃😀…(truncated)"
+    },
+    {
+      "input": [
+        "😀😀😀",
+        2
+      ],
+      "expected": "😀😀…(truncated)"
+    }
+  ],
+  "timeout_messages": [
+    {
+      "input": {
+        "argv": [
+          "ffprobe",
+          "-v",
+          "quiet",
+          "x's.mkv"
+        ],
+        "timeout": "120"
+      },
+      "expected": "Command '['ffprobe', '-v', 'quiet', \"x's.mkv\"]' timed out after 120 seconds"
+    },
+    {
+      "input": {
+        "argv": [
+          "ffmpeg",
+          "-hwaccels"
+        ],
+        "timeout": "10.0"
+      },
+      "expected": "Command '['ffmpeg', '-hwaccels']' timed out after 10.0 seconds"
+    },
+    {
+      "input": {
+        "argv": [
+          "a\\b",
+          "say \"hi\""
+        ],
+        "timeout": "5"
+      },
+      "expected": "Command '['a\\\\b', 'say \"hi\"']' timed out after 5 seconds"
+    }
+  ]
+}

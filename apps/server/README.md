@@ -51,6 +51,17 @@ apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py          
 apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py --check  # compare only
 ```
 
+## ffmpeg parity
+
+`Weir.Core.Media` ports the decisions in `refiner_remux_mux.py` and `refiner_hardware_acceleration.py`: ffprobe and ffmpeg command lines (token for token), unreadable-media classification, output and duration validation, progress parsing and hardware choice. `Weir.Infrastructure.Media.MediaTools` runs the tools through `IProcessRunner` (`ProcessRunner` kills the whole process tree on timeout or cancellation). `tests/Weir.Core.Tests/Media/golden/*.json` record what the Python functions did with their processes replaced by recorded inputs, including log payloads and exception messages; `MediaGoldenParityTests` and `MediaToolsGoldenTests` require the same. Regenerate after a change to those Python modules:
+
+```powershell
+apps/backend/.venv/Scripts/python.exe scripts/generate-ffmpeg-golden.py          # write
+apps/backend/.venv/Scripts/python.exe scripts/generate-ffmpeg-golden.py --check  # compare only
+```
+
+`RealFfmpegTests` run real ffprobe and ffmpeg on files generated with `-f lavfi`. They skip unless the tools are found through `WEIR_FFMPEG_DIR` or `PATH`; on Windows, point `WEIR_FFMPEG_DIR` at a packaged build's `_internal/bin/ffmpeg`.
+
 ## Publish
 
 Self-contained single-file builds for `win-x64`, `linux-x64` and `linux-arm64`:

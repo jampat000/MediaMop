@@ -1,11 +1,12 @@
+using Weir.Core.Media;
 using Weir.Core.Rules;
 
 namespace Weir.Core.Tests.Rules;
 
 /// <summary>
 /// Ported from <c>apps/backend/tests/test_refiner_metadata_rules.py</c> and
-/// <c>test_refiner_remux_rules_split_streams.py</c>. The two tests there that build the ffmpeg
-/// argv (<c>build_ffmpeg_argv</c>) belong to the ffmpeg/ffprobe port and are not here.
+/// <c>test_refiner_remux_rules_split_streams.py</c>, including the two that build the ffmpeg argv
+/// (<c>build_ffmpeg_argv</c>, ported as <see cref="Weir.Core.Media.FfmpegCommands.BuildRemuxArgv"/>).
 /// </summary>
 public sealed class MetadataRulesTests
 {
@@ -198,6 +199,31 @@ public sealed class MetadataRulesTests
         var (plan, split) = Plan(Probe(Video0, Audio(1)), Config(new MetadataRules { RemoveOtherMetadata = true }));
 
         Assert.True(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles));
+    }
+
+    // --- ffmpeg argv ------------------------------------------------------------------
+
+    [Fact]
+    public void The_argv_maps_only_the_real_video_when_images_are_removed()
+    {
+        var (plan, _) = Plan(Probe(Video0, CoverArt(1), Audio(2)), Config(new MetadataRules { RemoveImages = true }));
+
+        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan);
+
+        var mapped = argv.Select((token, i) => (token, i)).Where(t => t.token == "-map").Select(t => argv[t.i + 1]).ToList();
+        Assert.Contains("0:0", mapped);
+        Assert.DoesNotContain("0:1", mapped);
+    }
+
+    [Fact]
+    public void The_argv_carries_the_metadata_flags_after_the_codec_copy()
+    {
+        var (plan, _) = Plan(Probe(Video0, Audio(1)), Config(new MetadataRules { RemoveOtherMetadata = true }));
+
+        var argv = FfmpegCommands.BuildRemuxArgv("ffmpeg", "in.mkv", "out.mkv", plan).ToList();
+
+        Assert.Contains("-map_metadata", argv);
+        Assert.True(argv.IndexOf("-map_metadata") > argv.IndexOf("copy"));
     }
 
     // --- what the operator is told ----------------------------------------------------

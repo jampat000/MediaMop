@@ -1,0 +1,667 @@
+{
+  "remux_output": [
+    {
+      "name": "partial-download",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"212.546\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"212.546\"}, {\"codec_type\": \"audio\", \"duration\": \"212.546\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "5384.046"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (212.5s of 5384.0s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "normal-rounding",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"5379.0\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"5379.0\"}, {\"codec_type\": \"audio\", \"duration\": \"5379.0\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "5384.046"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "exactly-at-tolerance",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"5330.20554\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"5330.20554\"}, {\"codec_type\": \"audio\", \"duration\": \"5330.20554\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "5384.046"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "just-below-tolerance",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"5330.2\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"5330.2\"}, {\"codec_type\": \"audio\", \"duration\": \"5330.2\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "5384.046"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (5330.2s of 5384.0s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "short-file-five-second-floor",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"15.1\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"15.1\"}, {\"codec_type\": \"audio\", \"duration\": \"15.1\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "20.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "short-file-too-short",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"14.9\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"14.9\"}, {\"codec_type\": \"audio\", \"duration\": \"14.9\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "20.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (14.9s of 20.0s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "no-audio",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"100\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"100\"}]}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "RuntimeError",
+          "message": "validation failed: output has no audio stream"
+        }
+      }
+    },
+    {
+      "name": "one-audio-no-expectations",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"100\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"100\"}, {\"codec_type\": \"audio\", \"duration\": \"100\"}]}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "no-streams-key",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"10\"}}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "RuntimeError",
+          "message": "validation failed: output has no audio stream"
+        }
+      }
+    },
+    {
+      "name": "streams-null",
+      "input": {
+        "probe": "{\"streams\": null}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "RuntimeError",
+          "message": "validation failed: output has no audio stream"
+        }
+      }
+    },
+    {
+      "name": "streams-empty-dict",
+      "input": {
+        "probe": "{\"streams\": {}}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "RuntimeError",
+          "message": "validation failed: output has no audio stream"
+        }
+      }
+    },
+    {
+      "name": "streams-dict",
+      "input": {
+        "probe": "{\"streams\": {\"0\": {\"codec_type\": \"audio\"}}}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "RuntimeError",
+          "message": "validation failed: invalid ffprobe output"
+        }
+      }
+    },
+    {
+      "name": "streams-string",
+      "input": {
+        "probe": "{\"streams\": \"audio\"}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "RuntimeError",
+          "message": "validation failed: invalid ffprobe output"
+        }
+      }
+    },
+    {
+      "name": "audio-count-matches",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"10\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}]}",
+        "expected_audio": 2,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "audio-count-mismatch",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"10\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}]}",
+        "expected_audio": 2,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "RuntimeError",
+          "message": "validation failed: expected 2 audio stream(s), got 3"
+        }
+      }
+    },
+    {
+      "name": "expected-audio-zero-ignores-count",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"10\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}, {\"codec_type\": \"audio\", \"duration\": \"10\"}]}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "audio-upper-case",
+      "input": {
+        "probe": "{\"streams\": [{\"codec_type\": \"AUDIO\"}, {\"codec_type\": \"Audio\"}]}",
+        "expected_audio": 2,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "audio-non-dict-entries",
+      "input": {
+        "probe": "{\"streams\": [\"audio\", 1, null, {\"codec_type\": \"audio\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "codec-type-null",
+      "input": {
+        "probe": "{\"streams\": [{\"codec_type\": null}, {\"codec_type\": \"audio\"}]}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "codec-type-number",
+      "input": {
+        "probe": "{\"streams\": [{\"codec_type\": 5}, {\"codec_type\": \"audio\"}]}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "error": {
+          "type": "AttributeError",
+          "message": "'int' object has no attribute 'lower'"
+        }
+      }
+    },
+    {
+      "name": "codec-type-zero",
+      "input": {
+        "probe": "{\"streams\": [{\"codec_type\": 0}, {\"codec_type\": \"audio\"}]}",
+        "expected_audio": 0,
+        "expected_duration_seconds": null
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "no-duration-anywhere",
+      "input": {
+        "probe": "{\"streams\": [{\"codec_type\": \"audio\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+        }
+      }
+    },
+    {
+      "name": "duration-zero-expected-skips",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"1\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"1\"}, {\"codec_type\": \"audio\", \"duration\": \"1\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "0.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "duration-negative-expected-skips",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"1\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"1\"}, {\"codec_type\": \"audio\", \"duration\": \"1\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "-5.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "duration-na",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"N/A\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"N/A\"}, {\"codec_type\": \"audio\", \"duration\": \"N/A\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+        }
+      }
+    },
+    {
+      "name": "duration-number",
+      "input": {
+        "probe": "{\"format\": {\"duration\": 99.5}, \"streams\": [{\"codec_type\": \"video\", \"duration\": 99.5}, {\"codec_type\": \"audio\", \"duration\": 99.5}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "duration-int",
+      "input": {
+        "probe": "{\"format\": {\"duration\": 96}, \"streams\": [{\"codec_type\": \"video\", \"duration\": 96}, {\"codec_type\": \"audio\", \"duration\": 96}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "duration-true",
+      "input": {
+        "probe": "{\"format\": {\"duration\": true}, \"streams\": [{\"codec_type\": \"video\", \"duration\": true}, {\"codec_type\": \"audio\", \"duration\": true}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (1.0s of 100.0s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "duration-list",
+      "input": {
+        "probe": "{\"format\": {\"duration\": [1]}, \"streams\": [{\"codec_type\": \"video\", \"duration\": [1]}, {\"codec_type\": \"audio\", \"duration\": [1]}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+        }
+      }
+    },
+    {
+      "name": "duration-nan-text",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"nan\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"nan\"}, {\"codec_type\": \"audio\", \"duration\": \"nan\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+        }
+      }
+    },
+    {
+      "name": "duration-inf-text",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"inf\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"inf\"}, {\"codec_type\": \"audio\", \"duration\": \"inf\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "duration-negative",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"-50\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"-50\"}, {\"codec_type\": \"audio\", \"duration\": \"-50\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+        }
+      }
+    },
+    {
+      "name": "duration-with-spaces",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \" 98.0 \"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \" 98.0 \"}, {\"codec_type\": \"audio\", \"duration\": \" 98.0 \"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "duration-underscore",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"9_9.0\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"9_9.0\"}, {\"codec_type\": \"audio\", \"duration\": \"9_9.0\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "stream-longer-than-format",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"10\"}, \"streams\": [{\"codec_type\": \"audio\", \"duration\": \"95.5\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "name": "format-not-dict",
+      "input": {
+        "probe": "{\"format\": \"x\", \"streams\": [{\"codec_type\": \"audio\", \"duration\": \"50\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (50.0s of 100.0s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "huge-expected",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"1e300\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"1e300\"}, {\"codec_type\": \"audio\", \"duration\": \"1e300\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "1e+308"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (1000000000000000052504760255204420248704468581108159154915854115511802457988908195786371375080447864043704443832883878176942523235360430575644792184786706982848387200926575803737830233794788090059368953234970799945081119038967640880074652742780142494579258788820056842838115669472196386865459400540160.0s of 100000000000000001097906362944045541740492309677311846336810682903157585404911491537163328978494688899061249669721172515611590283743140088328307009198146046031271664502933027185697489699588559043338384466165001178426897626212945177628091195786707458122783970171784415105291802893207873272974885715430223118336.0s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "rounding-half-even",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"0.25\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"0.25\"}, {\"codec_type\": \"audio\", \"duration\": \"0.25\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "1000.25"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (0.2s of 1000.2s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "rounding-half-even-2",
+      "input": {
+        "probe": "{\"format\": {\"duration\": \"0.35\"}, \"streams\": [{\"codec_type\": \"video\", \"duration\": \"0.35\"}, {\"codec_type\": \"audio\", \"duration\": \"0.35\"}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "1000.45"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Validation failed: the staged output is incomplete (0.3s of 1000.5s expected), so it was not published."
+        }
+      }
+    },
+    {
+      "name": "big-int-duration",
+      "input": {
+        "probe": "{\"format\": {\"duration\": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}, \"streams\": [{\"codec_type\": \"video\", \"duration\": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}, {\"codec_type\": \"audio\", \"duration\": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}]}",
+        "expected_audio": 1,
+        "expected_duration_seconds": "100.0"
+      },
+      "expected": {
+        "error": {
+          "type": "OverflowError",
+          "message": "int too large to convert to float"
+        }
+      }
+    }
+  ],
+  "durations": [
+    {
+      "input": "{}",
+      "expected": {
+        "result": null
+      }
+    },
+    {
+      "input": "{\"format\": null}",
+      "expected": {
+        "result": null
+      }
+    },
+    {
+      "input": "{\"format\": {\"duration\": \"0\"}, \"streams\": [{\"duration\": \"0.0\"}]}",
+      "expected": {
+        "result": null
+      }
+    },
+    {
+      "input": "{\"format\": {\"duration\": \"12.5\"}}",
+      "expected": {
+        "result": "12.5"
+      }
+    },
+    {
+      "input": "{\"streams\": [{\"duration\": \"3\"}, \"x\", {\"duration\": \"7\"}, {\"duration\": \"bad\"}]}",
+      "expected": {
+        "result": "7.0"
+      }
+    },
+    {
+      "input": "{\"streams\": \"nope\", \"format\": {\"duration\": \"1.5\"}}",
+      "expected": {
+        "result": "1.5"
+      }
+    },
+    {
+      "input": "{\"format\": {\"duration\": 1e-09}}",
+      "expected": {
+        "result": "1e-09"
+      }
+    },
+    {
+      "input": "{\"format\": {\"duration\": \"1e400\"}}",
+      "expected": {
+        "result": "inf"
+      }
+    },
+    {
+      "input": "{\"format\": {\"duration\": false}, \"streams\": [{\"duration\": true}]}",
+      "expected": {
+        "result": "1.0"
+      }
+    },
+    {
+      "input": "{\"format\": {\"duration\": {\"a\": 1}}, \"streams\": [{\"duration\": []}]}",
+      "expected": {
+        "result": null
+      }
+    }
+  ],
+  "integrity": [
+    {
+      "input": {
+        "returncode": 0,
+        "stderr": "ignored warning"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "input": {
+        "returncode": 1,
+        "stderr": "Invalid data found when processing input"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Weir could not read this media file from start to finish. It may still be downloading or may be incomplete, so Refiner will wait. The media check reported: Invalid data found when processing input."
+        }
+      }
+    },
+    {
+      "input": {
+        "returncode": 1,
+        "stderr": ""
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Weir could not read this media file from start to finish. It may still be downloading or may be incomplete, so Refiner will wait. The media check reported: incomplete media data."
+        }
+      }
+    },
+    {
+      "input": {
+        "returncode": 1,
+        "stderr": "   \n"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Weir could not read this media file from start to finish. It may still be downloading or may be incomplete, so Refiner will wait. The media check reported: incomplete media data."
+        }
+      }
+    },
+    {
+      "input": {
+        "returncode": 69,
+        "stderr": "  [matroska] Element at 0x1234 ending at 0x5678 exceeds containing master element\n"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Weir could not read this media file from start to finish. It may still be downloading or may be incomplete, so Refiner will wait. The media check reported: [matroska] Element at 0x1234 ending at 0x5678 exceeds containing master element."
+        }
+      }
+    },
+    {
+      "input": {
+        "returncode": -9,
+        "stderr": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Weir could not read this media file from start to finish. It may still be downloading or may be incomplete, so Refiner will wait. The media check reported: éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé…(truncated)."
+        }
+      }
+    },
+    {
+      "input": {
+        "returncode": 1,
+        "stderr": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Weir could not read this media file from start to finish. It may still be downloading or may be incomplete, so Refiner will wait. The media check reported: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx."
+        }
+      }
+    },
+    {
+      "input": {
+        "returncode": 1,
+        "stderr": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      },
+      "expected": {
+        "error": {
+          "type": "MediaCompletenessError",
+          "message": "Weir could not read this media file from start to finish. It may still be downloading or may be incomplete, so Refiner will wait. The media check reported: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy…(truncated)."
+        }
+      }
+    }
+  ]
+}
