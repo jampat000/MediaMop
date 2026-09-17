@@ -9,6 +9,10 @@
     <ProjectReference Include="..\..\src\Weir.Core\Weir.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Made by the Python backend (argon2-cffi, itsdangerous, cryptography) with Fixtures/make_python_security_fixture.py. -->
+    <None Include="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>

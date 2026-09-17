@@ -83,7 +83,10 @@ public static class WebApp
         var isGet = HttpMethods.IsGet(request.Method);
         var isHead = HttpMethods.IsHead(request.Method);
 
-        if (webDist.MountedAtStartup && !isGet && !isHead)
+        // Deliberate fix (#535): an /api path never falls through to the web app. Known API paths with the
+        // wrong method are answered 405 by routing; anything else under /api is a JSON 404.
+        var isApi = request.Path.StartsWithSegments("/api", StringComparison.Ordinal);
+        if (webDist.MountedAtStartup && !isGet && !isHead && !isApi)
         {
             await ApiJson.WriteDetailAsync(context, StatusCodes.Status405MethodNotAllowed, "Method Not Allowed").ConfigureAwait(false);
             return;

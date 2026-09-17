@@ -39,3 +39,5 @@ dotnet_diagnostic.CA1707.severity = none
 # xUnit test classes are instantiated by the runner.
 dotnet_diagnostic.CA1515.severity = none
 dotnet_diagnostic.CA2007.severity = none
+# Table-driven assertions spell their expected values inline.
+dotnet_diagnostic.CA1861.severity = none

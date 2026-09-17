@@ -14,12 +14,19 @@ public sealed class RequestContextMiddleware
     public const string HeaderName = "X-Request-ID";
 
     private readonly RequestDelegate _next;
-    private readonly ILogger<RequestContextMiddleware> _logger;
+    private readonly ILogger _logger;
+    private readonly Core.Metrics.RuntimeMetricsStore _metrics;
+    private readonly RouteTable _routes;
+    private readonly TimeProvider _time;
 
-    public RequestContextMiddleware(RequestDelegate next, ILogger<RequestContextMiddleware> logger)
+    public RequestContextMiddleware(RequestDelegate next, ILoggerFactory loggerFactory, Core.Metrics.RuntimeMetricsStore metrics, RouteTable routes, TimeProvider time)
     {
+        ArgumentNullException.ThrowIfNull(loggerFactory);
         _next = next;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger("weir.platform.http.request_context");
+        _metrics = metrics;
+        _routes = routes;
+        _time = time;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -30,27 +37,42 @@ public sealed class RequestContextMiddleware
         using var scope = LogContext.BeginRequest(requestId);
         context.Response.OnStarting(() =>
         {
-            context.Response.Headers[HeaderName] = requestId;
+            if (!ResponseMarkers.IsServerError(context))
+            {
+                context.Response.Headers[HeaderName] = requestId;
+            }
+
             return Task.CompletedTask;
         });
+        var started = _time.GetTimestamp();
         try
         {
             await _next(context).ConfigureAwait(false);
         }
-        catch (Exception exception) when (LogUnhandled(exception, requestId, context))
+        catch (Exception exception) when (LogUnhandled(exception, requestId, context, started))
         {
             throw;
         }
+
+        _metrics.RecordRequest(context.Request.Method, RouteLabelFor(context), context.Response.StatusCode, _time.GetElapsedTime(started).TotalMilliseconds);
     }
 
-    private bool LogUnhandled(Exception exception, string requestId, HttpContext context)
+    /// <summary>The route template the request matched in its Python router, else the URL path (<c>_route_label</c>).</summary>
+    private string RouteLabelFor(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<RouteLabel>()?.Label
+        ?? _routes.FirstPathMatch(context.Request.Path)?.Label
+        ?? context.Request.Path.Value
+        ?? string.Empty;
+
+    private bool LogUnhandled(Exception exception, string requestId, HttpContext context, long started)
     {
         _logger.LogError(
             exception,
             "Unhandled request failure request_id={RequestId} method={Method} route={Route}",
             requestId,
             context.Request.Method,
-            context.Request.Path.Value);
+            RouteLabelFor(context));
+        _metrics.RecordRequest(context.Request.Method, RouteLabelFor(context), 500, _time.GetElapsedTime(started).TotalMilliseconds);
         return false;
     }
 }
@@ -92,7 +114,11 @@ public sealed class SecurityHeadersMiddleware
         ArgumentNullException.ThrowIfNull(context);
         context.Response.OnStarting(() =>
         {
-            Apply(context, _options.SecurityEnableHsts);
+            if (!ResponseMarkers.IsServerError(context))
+            {
+                Apply(context, _options.SecurityEnableHsts);
+            }
+
             return Task.CompletedTask;
         });
         return _next(context);

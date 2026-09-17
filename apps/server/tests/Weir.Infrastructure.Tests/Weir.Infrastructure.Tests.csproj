@@ -11,6 +11,8 @@
   <ItemGroup>
     <!-- The Alembic-head reference (scripts/dump-alembic-schema.py regenerates it). -->
     <None Include="schema/alembic-head.sql" CopyToOutputDirectory="PreserveNewest" />
+    <!-- A configuration bundle exported by the Python server (format version 4). -->
+    <None Include="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

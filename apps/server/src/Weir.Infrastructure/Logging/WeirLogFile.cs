@@ -44,6 +44,8 @@ public sealed class WeirLogFile : IDisposable
                 return;
             }
 
+            // O_APPEND semantics: another writer (or a test) may have appended since the last write.
+            _stream.Seek(0, SeekOrigin.End);
             _stream.Write(bytes);
             _stream.Flush();
         }
@@ -112,6 +114,39 @@ public sealed class WeirLogFile : IDisposable
                     _stream = OpenForAppend(Path);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Read every line while holding the write lock (Python's <c>log_file_lock()</c> around
+    /// <c>read_suite_logs</c>). Returns <see langword="false"/> when the file exists but could not be opened.
+    /// </summary>
+    public bool ReadLines(Action<string> onLine)
+    {
+        ArgumentNullException.ThrowIfNull(onLine);
+        lock (_lock)
+        {
+            _stream?.Flush();
+            FileStream stream;
+            try
+            {
+                stream = new FileStream(Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                return false;
+            }
+
+            using (stream)
+            using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
+            {
+                while (reader.ReadLine() is { } line)
+                {
+                    onLine(line);
+                }
+            }
+
+            return true;
         }
     }
 

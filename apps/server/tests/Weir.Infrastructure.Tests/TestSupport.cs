@@ -45,6 +45,80 @@ internal sealed class TempDirectory : IDisposable
     }
 }
 
+/// <summary>A fact that runs only where the Python backend's virtualenv exists (cross-checks against the reference).</summary>
+[AttributeUsage(AttributeTargets.Method)]
+internal sealed class PythonFactAttribute : FactAttribute
+{
+    public PythonFactAttribute()
+    {
+        if (PythonBackend.Interpreter is null)
+        {
+            Skip = "apps/backend/.venv is not present; the Python cross-check needs it.";
+        }
+    }
+}
+
+/// <summary>Runs snippets with the Python backend's interpreter and <c>apps/backend/src</c> on the path.</summary>
+internal static class PythonBackend
+{
+    public static string? Interpreter
+    {
+        get
+        {
+            var root = RepositoryPaths.RepositoryRoot;
+            if (root is null)
+            {
+                return null;
+            }
+
+            var windows = System.IO.Path.Join(root, "apps", "backend", ".venv", "Scripts", "python.exe");
+            var unix = System.IO.Path.Join(root, "apps", "backend", ".venv", "bin", "python");
+            return File.Exists(windows) ? windows : File.Exists(unix) ? unix : null;
+        }
+    }
+
+    /// <summary>Run <paramref name="code"/>; returns stdout. Fails the test with stderr on a non-zero exit.</summary>
+    public static string Run(string code, IReadOnlyDictionary<string, string> environment)
+    {
+        var root = RepositoryPaths.RepositoryRoot!;
+        var start = new System.Diagnostics.ProcessStartInfo(Interpreter!)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            UseShellExecute = false,
+            WorkingDirectory = System.IO.Path.Join(root, "apps", "backend"),
+        };
+        start.ArgumentList.Add("-");
+        foreach (var key in start.Environment.Keys.Where(k => k.StartsWith("WEIR_", StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            start.Environment.Remove(key);
+        }
+
+        start.Environment["PYTHONPATH"] = System.IO.Path.Join(root, "apps", "backend", "src");
+        start.Environment["PYTHONIOENCODING"] = "utf-8";
+        foreach (var (key, value) in environment)
+        {
+            start.Environment[key] = value;
+        }
+
+        using var process = System.Diagnostics.Process.Start(start)!;
+        process.StandardInput.Write(
+            "import weir.core.config as _config\n_config._load_backend_dotenv_if_present = lambda: None\n" + code);
+        process.StandardInput.Close();
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(180_000))
+        {
+            process.Kill(entireProcessTree: true);
+            Assert.Fail("The Python cross-check timed out.");
+        }
+
+        Assert.True(process.ExitCode == 0, "Python failed:\n" + stderr.Result + stdout.Result);
+        return stdout.Result.Trim();
+    }
+}
+
 internal static class RepositoryPaths
 {
     /// <summary>The checked-in Alembic-head reference, copied next to the test assembly.</summary>

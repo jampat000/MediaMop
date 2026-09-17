@@ -1,8 +1,11 @@
 using System.Collections;
 using Microsoft.Extensions.Logging.Console;
 using Weir.Api;
+using Weir.Api.Http;
 using Weir.Core;
 using Weir.Core.Configuration;
+using Weir.Core.Metrics;
+using Weir.Infrastructure.Auth;
 using Weir.Infrastructure.Logging;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Sqlite;
@@ -88,6 +91,9 @@ public static class WeirServer
         builder.Logging.AddConsole(console => console.FormatterName = WeirConsoleFormatter.FormatterName)
             .AddConsoleFormatter<WeirConsoleFormatter, ConsoleFormatterOptions>();
         builder.Logging.AddProvider(new WeirLogFileLoggerProvider(logFile, TimeProvider.System, minimumLevel));
+        var metrics = new RuntimeMetricsStore(TimeProvider.System);
+        builder.Services.AddSingleton(metrics);
+        builder.Logging.AddProvider(new MetricsLoggerProvider(metrics, minimumLevel));
 
         builder.Services.AddWeirApi(options);
         configureBuilder?.Invoke(builder);
@@ -194,6 +200,25 @@ public static class WeirServer
         catch (Microsoft.Data.Sqlite.SqliteException exception)
         {
             logger.LogError(exception, "Weir startup step failed but startup will continue step={Step}", "log_retention_prune");
+        }
+
+        try
+        {
+            var auth = app.Services.GetRequiredService<AuthService>();
+            var uow = UnitOfWork.OpenAsync(database).GetAwaiter().GetResult();
+            try
+            {
+                auth.CleanupInactiveSessionsAsync(uow).GetAwaiter().GetResult();
+                uow.CommitAsync().GetAwaiter().GetResult();
+            }
+            finally
+            {
+                uow.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+        }
+        catch (Exception exception) when (exception is Microsoft.Data.Sqlite.SqliteException or FormatException or InvalidOperationException)
+        {
+            logger.LogError(exception, "Weir startup step failed but startup will continue step={Step}", "inactive_session_cleanup");
         }
     }
 }

@@ -11,6 +11,10 @@
     <ProjectReference Include="..\..\src\Weir.Host\Weir.Host.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- A configuration bundle exported by the Python server, shared with the infrastructure tests. -->
+    <None Include="..\Weir.Infrastructure.Tests\Fixtures\python-bundle-v4.json" Link="Fixtures\python-bundle-v4.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>

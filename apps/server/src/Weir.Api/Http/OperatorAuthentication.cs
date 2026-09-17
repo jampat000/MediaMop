@@ -23,13 +23,34 @@ public interface IOperatorAuthentication
 }
 
 /// <summary>
-/// Until sessions are ported (#517) no request is signed in, so guarded endpoints answer exactly
-/// as Python answers a request without a valid session cookie.
+/// <c>UserPublicDep</c> for endpoints outside <see cref="ApiRoutes"/>: the request's session cookie, with
+/// the <c>last_seen_at</c> touch committed when the request is signed in.
 /// </summary>
-public sealed class SessionsNotPortedAuthentication : IOperatorAuthentication
+public sealed class SessionOperatorAuthentication : IOperatorAuthentication
 {
-    public ValueTask<OperatorAuthenticationResult> AuthenticateAsync(HttpContext context) =>
-        ValueTask.FromResult(OperatorAuthenticationResult.NotAuthenticated);
+    public async ValueTask<OperatorAuthenticationResult> AuthenticateAsync(HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var request = new ApiRequest(context);
+        await using (request.ConfigureAwait(false))
+        {
+            try
+            {
+                await request.RequireUserAsync().ConfigureAwait(false);
+            }
+            catch (ApiException exception) when (exception.StatusCode == StatusCodes.Status403Forbidden)
+            {
+                return OperatorAuthenticationResult.InvalidRole;
+            }
+            catch (ApiException)
+            {
+                return OperatorAuthenticationResult.NotAuthenticated;
+            }
+
+            await request.CommitAsync().ConfigureAwait(false);
+            return OperatorAuthenticationResult.SignedIn;
+        }
+    }
 }
 
 internal static class OperatorAuthenticationExtensions

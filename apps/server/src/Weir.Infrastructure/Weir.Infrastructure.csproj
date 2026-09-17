@@ -2,6 +2,8 @@
   <!-- SQLite, filesystem, logging sinks, processes and HTTP clients. -->
   <PropertyGroup>
     <RootNamespace>Weir.Infrastructure</RootNamespace>
+    <!-- LibraryImport marshalling for GetFinalPathNameByHandle (folder browsing on Windows). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Weir.Core\Weir.Core.csproj" />
@@ -9,6 +11,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="TimeZoneConverter" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Migrations\*.sql" LogicalName="Weir.Infrastructure.Migrations.%(Filename)%(Extension)" />

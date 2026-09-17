@@ -163,6 +163,7 @@ public static class WeirOptionsLoader
             ArrSonarrApiKey = NullIfEmpty(runtime.Get("WEIR_ARR_SONARR_API_KEY")?.Trim()),
             WebDist = webDist.Length == 0 ? null : PythonCompat.Resolve(PythonCompat.ExpandUser(webDist, runtime), runtime),
             VersionOverride = NullIfEmpty(runtime.Get("WEIR_VERSION")?.Trim()),
+            RuntimeKind = runtime.Get("WEIR_RUNTIME"),
         };
     }
 
