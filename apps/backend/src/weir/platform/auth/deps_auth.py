@@ -20,7 +20,7 @@ _VALID_SESSION_ROLES = frozenset(
 
 def get_current_user_public(
     request: Request,
-    db: Session = Depends(get_db_session),
+    db: Session = Depends(get_db_session, scope="function"),
     settings: WeirSettings = Depends(get_settings),
 ) -> UserPublic:
     raw = (request.cookies.get(settings.session_cookie_name) or "").strip() or None

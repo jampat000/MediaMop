@@ -1,0 +1,6 @@
+# The contract suite follows the backend's lint and format rules, so `ruff check tests/contract`
+# from the repo root means the same thing it does for apps/backend.
+extend = "../../apps/backend/pyproject.toml"
+
+# Resolve first-party imports (`tests.contract...`) from the repo root.
+src = ["../.."]
