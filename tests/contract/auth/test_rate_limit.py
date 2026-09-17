@@ -12,7 +12,8 @@ from tests.contract.auth import _helpers as h
 from tests.contract.support.client import WeirClient
 from tests.contract.support.polling import wait_until
 
-WINDOW_SECONDS = 2
+# Long enough that three Argon2-hashed sign-ins fit inside it on a slow CI runner.
+WINDOW_SECONDS = 10
 
 
 @pytest.fixture(scope="module")

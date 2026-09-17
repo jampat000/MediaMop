@@ -49,7 +49,8 @@ RUN case "$TARGETARCH" in \
 # A self-contained single-file publish needs only the native dependencies .NET itself uses (libc,
 # OpenSSL; not ICU, because Directory.Build.props sets InvariantGlobalization), which is exactly what
 # runtime-deps ships. No second copy of the managed runtime.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim
+# .NET 10 images are Ubuntu 24.04 (noble); there is no Debian bookworm runtime-deps tag.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -59,7 +60,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/weir
-RUN groupadd --system --gid 1000 weir \
+# Ubuntu base images ship an `ubuntu` user and group on uid/gid 1000; free them for `weir`.
+RUN if id -u ubuntu >/dev/null 2>&1; then userdel --remove ubuntu; fi   && if getent group ubuntu >/dev/null 2>&1; then groupdel ubuntu; fi   && groupadd --system --gid 1000 weir \
   && useradd --system --uid 1000 --gid 1000 --create-home --home-dir /home/weir --shell /usr/sbin/nologin weir \
   && mkdir -p /data/weir /opt/weir/web-dist \
   && chown -R weir:weir /data/weir /opt/weir /home/weir
