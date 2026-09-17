@@ -1,7 +1,7 @@
 """Keeping the original-language audio instead of whatever the preference list says.
 
 For a French film with English and French audio, an ``eng``-first preference keeps **the
-dub**. Most people who care about audio quality want the original, and nothing in MediaMop
+dub**. Most people who care about audio quality want the original, and nothing in Weir
 knew what the original was (#343).
 
 The rule that matters most: this module only ever *reorders*. ``plan_remux`` already
@@ -15,13 +15,13 @@ import json
 import urllib.error
 from unittest.mock import patch
 
-from mediamop.integrations.metadata.provider_port import LookupResult, TitleMetadata
-from mediamop.integrations.metadata.tmdb_provider import (
+from weir.integrations.metadata.provider_port import LookupResult, TitleMetadata
+from weir.integrations.metadata.tmdb_provider import (
     DEFAULT_TMDB_BASE_URL,
     TmdbMetadataProvider,
     clear_metadata_cache,
 )
-from mediamop.refiner.refiner_original_language import (
+from weir.refiner.refiner_original_language import (
     OriginalLanguageRules,
     parse_additional_languages,
     select_original_language_tracks,
@@ -162,7 +162,7 @@ def test_an_unreachable_provider_declines_and_says_so() -> None:
 
     outcome = select_original_language_tracks(
         rules=OriginalLanguageRules(enabled=True),
-        lookup=LookupResult(status="unreachable", detail="MediaMop could not reach the metadata provider."),
+        lookup=LookupResult(status="unreachable", detail="Weir could not reach the metadata provider."),
         tracks=[_track(0, "eng")],
     )
 
@@ -381,7 +381,7 @@ def test_provider_and_file_language_codes_are_matched_across_standards() -> None
     (fre/fra, ger/deu) have to agree too.
     """
 
-    from mediamop.refiner.refiner_original_language import canonical_language
+    from weir.refiner.refiner_original_language import canonical_language
 
     for provider_code, file_code in (
         ("fr", "fre"),
@@ -395,8 +395,8 @@ def test_provider_and_file_language_codes_are_matched_across_standards() -> None
         assert canonical_language(provider_code) == canonical_language(file_code), provider_code
 
 
-def test_a_language_mediamop_does_not_know_still_matches_itself() -> None:
-    from mediamop.refiner.refiner_original_language import canonical_language
+def test_a_language_weir_does_not_know_still_matches_itself() -> None:
+    from weir.refiner.refiner_original_language import canonical_language
 
     assert canonical_language("qaa") == canonical_language("qaa")
     assert canonical_language("qaa") == "qaa"
@@ -418,7 +418,7 @@ def test_the_canonical_form_is_stable_across_processes() -> None:
     """A set would pick between two equal-length codes by hash order, which varies by
     process — the same file could be described differently on different runs."""
 
-    from mediamop.refiner.refiner_original_language import canonical_language
+    from weir.refiner.refiner_original_language import canonical_language
 
     # The bibliographic form, which is what media files are tagged with.
     assert canonical_language("fr") == "fre"

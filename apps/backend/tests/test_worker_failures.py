@@ -9,19 +9,19 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.db import Base
-from mediamop.platform.activity import constants as C
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.jobs.worker_failures import AlreadyRecordedFailure, refused_job_error
-from mediamop.refiner.jobs_model import RefinerJob
-from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.refiner.refiner_file_remux_pass_activity import (
+import weir.platform.activity.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+from weir.core.db import Base
+from weir.platform.activity import constants as C
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.jobs.worker_failures import AlreadyRecordedFailure, refused_job_error
+from weir.refiner.jobs_model import RefinerJob
+from weir.refiner.jobs_ops import refiner_enqueue_or_get_job
+from weir.refiner.refiner_file_remux_pass_activity import (
     record_refiner_file_processing_started,
     update_refiner_file_processing_progress,
 )
-from mediamop.refiner.worker_loop import process_one_refiner_job
+from weir.refiner.worker_loop import process_one_refiner_job
 
 T0 = datetime(2026, 9, 17, 12, 0, 0, tzinfo=UTC)
 

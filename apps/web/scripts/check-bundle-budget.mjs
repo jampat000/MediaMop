@@ -24,8 +24,8 @@ const maxBytes = (name) => Math.round(name * 1024);
 for (const file of files) {
   const relative = path.relative(distRoot, file).replaceAll("\\", "/");
   const size = statSync(file).size;
-  if (relative.endsWith(".map") && process.env.MEDIAMOP_BUILD_SOURCEMAPS !== "true") {
-    failures.push(`${relative} is a source map; set MEDIAMOP_BUILD_SOURCEMAPS=true only for a diagnostics build`);
+  if (relative.endsWith(".map") && process.env.WEIR_BUILD_SOURCEMAPS !== "true") {
+    failures.push(`${relative} is a source map; set WEIR_BUILD_SOURCEMAPS=true only for a diagnostics build`);
   }
   if (/logo-sidebar/i.test(relative) && size > maxBytes(20)) {
     failures.push(`${relative} is ${size} bytes; the sidebar logo budget is 20 KiB`);

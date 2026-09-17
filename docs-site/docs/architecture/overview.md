@@ -5,9 +5,9 @@ title: Overview
 
 # Architecture Overview
 
-MediaMop is a self-hosted media processing stage. Refiner is the application: it remuxes
+Weir is a self-hosted media processing stage. Refiner is the application: it remuxes
 watched media into cleaner outputs. Around it, the platform provides activity history, logs,
-backups, upgrades, and security posture. The main screen, **In hand**, shows what MediaMop is
+backups, upgrades, and security posture. The main screen, **In hand**, shows what Weir is
 holding right now and anything that needs a person.
 
 ## Runtime shape
@@ -37,12 +37,12 @@ flowchart LR
 
 | Package | Responsibility |
 |---------|---------------|
-| `mediamop.api` | FastAPI app factory, router composition, request dependencies |
-| `mediamop.core` | Config, runtime paths, database setup, lifespan, logging |
-| `mediamop.platform` | Shared services: auth, activity, jobs, settings, observability |
-| `mediamop.refiner` | The application: libraries, files, durable jobs and workers, remux passes |
-| `mediamop.integrations` | External service integration code |
-| `mediamop.windows` | Windows tray and package-specific helpers |
+| `weir.api` | FastAPI app factory, router composition, request dependencies |
+| `weir.core` | Config, runtime paths, database setup, lifespan, logging |
+| `weir.platform` | Shared services: auth, activity, jobs, settings, observability |
+| `weir.refiner` | The application: libraries, files, durable jobs and workers, remux passes |
+| `weir.integrations` | External service integration code |
+| `weir.windows` | Windows tray and package-specific helpers |
 
 ## Frontend map
 
@@ -66,7 +66,7 @@ flowchart LR
 
 ## Deployment model
 
-MediaMop 1.x supports a single-instance deployment:
+Weir 1.x supports a single-instance deployment:
 
 - One application process
 - One host or container
@@ -80,5 +80,5 @@ Horizontal scaling is not supported. Worker counts control in-process job slots 
 - Refiner code keeps destructive behavior behind explicit services and tests
 - Backend APIs expose typed schemas at boundaries
 - Frontend pages use typed API/query helpers from `src/lib`
-- Cross-cutting concerns belong in `mediamop.platform` or `mediamop.core`
+- Cross-cutting concerns belong in `weir.platform` or `weir.core`
 - File lifecycle changes must preserve the [safety contract](../guides/file-lifecycle)

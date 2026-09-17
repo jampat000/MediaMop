@@ -3,7 +3,7 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'MediaMop',
+  title: 'Weir',
   tagline: 'Self-hosted media operations for people who want more control',
   favicon: 'img/favicon.ico',
 
@@ -12,10 +12,10 @@ const config: Config = {
   },
 
   url: 'https://jampat000.github.io',
-  baseUrl: '/MediaMop/',
+  baseUrl: '/weir/',
 
   organizationName: 'jampat000',
-  projectName: 'MediaMop',
+  projectName: 'weir',
 
   onBrokenLinks: 'throw',
 
@@ -40,7 +40,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/jampat000/MediaMop/tree/main/docs-site/',
+            'https://github.com/jampat000/weir/tree/main/docs-site/',
         },
         blog: false,
         theme: {
@@ -57,7 +57,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'MediaMop',
+      title: 'Weir',
       items: [
         {
           type: 'docSidebar',
@@ -72,7 +72,7 @@ const config: Config = {
           label: 'API',
         },
         {
-          href: 'https://github.com/jampat000/MediaMop',
+          href: 'https://github.com/jampat000/weir',
           label: 'GitHub',
           position: 'right',
         },
@@ -94,15 +94,15 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/jampat000/MediaMop',
+              href: 'https://github.com/jampat000/weir',
             },
             {
               label: 'Releases',
-              href: 'https://github.com/jampat000/MediaMop/releases',
+              href: 'https://github.com/jampat000/weir/releases',
             },
             {
               label: 'Issues',
-              href: 'https://github.com/jampat000/MediaMop/issues',
+              href: 'https://github.com/jampat000/weir/issues',
             },
           ],
         },
@@ -114,7 +114,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} MediaMop. Licensed under AGPL-3.0-or-later.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Weir. Licensed under AGPL-3.0-or-later.`,
     },
     prism: {
       theme: prismThemes.github,

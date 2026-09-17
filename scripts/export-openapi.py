@@ -1,4 +1,4 @@
-"""Export MediaMop OpenAPI schema to a JSON file.
+"""Export Weir OpenAPI schema to a JSON file.
 
 This script imports the backend app factory directly so type generation and CI
 checks do not depend on a running local server.
@@ -19,18 +19,18 @@ def _load_openapi_schema() -> dict[str, Any]:
     if str(backend_src) not in sys.path:
         sys.path.insert(0, str(backend_src))
 
-    from mediamop.api.factory import create_app
+    from weir.api.factory import create_app
 
     app = create_app()
     return app.openapi()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export MediaMop OpenAPI schema JSON.")
+    parser = argparse.ArgumentParser(description="Export Weir OpenAPI schema JSON.")
     parser.add_argument(
         "--output",
         required=True,
-        help="Output JSON path (for example apps/web/openapi/mediamop-openapi.json).",
+        help="Output JSON path (for example apps/web/openapi/weir-openapi.json).",
     )
     args = parser.parse_args()
 

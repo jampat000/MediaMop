@@ -44,9 +44,9 @@ export function SettingsLogsTab() {
     <div data-testid="suite-settings-logs" className="mm-bubble-stack w-full">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          System event logs from the MediaMop runtime. Use filters to narrow
-          down warnings, failures, and tracebacks. Advanced server diagnostics
-          are available here when troubleshooting.
+          System event logs from the Weir runtime. Use filters to narrow down
+          warnings, failures, and tracebacks. Advanced server diagnostics are
+          available here when troubleshooting.
         </p>
       </div>
 
@@ -281,8 +281,7 @@ export function SettingsLogsTab() {
               System events
             </h3>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Recent runtime events, warnings, and failures captured by
-              MediaMop.
+              Recent runtime events, warnings, and failures captured by Weir.
             </p>
           </div>
 

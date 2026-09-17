@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.platform.docker_runtime import (
+from weir.platform.docker_runtime import (
     collect_refiner_permission_targets,
     load_docker_ownership_plan,
 )
@@ -65,8 +65,8 @@ def test_load_docker_ownership_plan_accepts_alias_env_names() -> None:
         {
             "PUID": "1001",
             "PGID": "1002",
-            "MEDIAMOP_CHOWN_OUTPUT": "true",
-            "MEDIAMOP_DIR_MODE_OUTPUT": "2775",
+            "WEIR_CHOWN_OUTPUT": "true",
+            "WEIR_DIR_MODE_OUTPUT": "2775",
         }
     )
 
@@ -79,10 +79,10 @@ def test_load_docker_ownership_plan_accepts_alias_env_names() -> None:
 @pytest.mark.parametrize(
     ("name", "value"),
     [
-        ("MEDIAMOP_PUID", "-1"),
-        ("MEDIAMOP_PGID", "abc"),
-        ("MEDIAMOP_CHOWN_OUTPUT", "sometimes"),
-        ("MEDIAMOP_DIR_MODE_OUTPUT", "27x5"),
+        ("WEIR_PUID", "-1"),
+        ("WEIR_PGID", "abc"),
+        ("WEIR_CHOWN_OUTPUT", "sometimes"),
+        ("WEIR_DIR_MODE_OUTPUT", "27x5"),
     ],
 )
 def test_load_docker_ownership_plan_rejects_invalid_values(
@@ -96,7 +96,7 @@ def test_load_docker_ownership_plan_rejects_invalid_values(
 def test_collect_refiner_permission_targets_groups_movie_and_tv_paths(
     tmp_path: Path,
 ) -> None:
-    db_path = tmp_path / "data" / "mediamop.sqlite3"
+    db_path = tmp_path / "data" / "weir.sqlite3"
     paths = _seed_refiner_path_settings(db_path, root=tmp_path / "mounted")
 
     targets = collect_refiner_permission_targets(
@@ -123,7 +123,7 @@ def test_collect_refiner_permission_targets_groups_movie_and_tv_paths(
 def test_collect_refiner_permission_targets_is_empty_without_table(
     tmp_path: Path,
 ) -> None:
-    db_path = tmp_path / "data" / "mediamop.sqlite3"
+    db_path = tmp_path / "data" / "weir.sqlite3"
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path):
         pass

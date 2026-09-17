@@ -17,15 +17,16 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner import refiner_pass_through
-from mediamop.refiner.jobs_model import RefinerJob
-from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.refiner.refiner_pass_through import (
+from tests.refiner_library_fixtures import seed_refiner_library
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner import refiner_pass_through
+from weir.refiner.jobs_model import RefinerJob
+from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from weir.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_pass_through import (
     REFINER_FILE_PASS_THROUGH_JOB_KIND,
     DeliverySettings,
     PassThroughIntegrityError,
@@ -35,7 +36,6 @@ from mediamop.refiner.refiner_pass_through import (
     make_refiner_file_pass_through_handler,
     normalize_failure_policy,
 )
-from tests.refiner_library_fixtures import seed_refiner_library
 
 _REL = "Arrival (2016)/Arrival.2016.2160p.mkv"
 _BYTES = b"\x1a\x45\xdf\xa3" + bytes(range(256)) * 40
@@ -183,7 +183,7 @@ def test_an_unreadable_policy_falls_back_to_the_guarantee(raw: str | None, expec
 
 @pytest.fixture
 def db_session() -> Iterator[Session]:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     factory = create_session_factory(create_db_engine(settings))
     with factory() as session:
         session.execute(delete(RefinerJob))
@@ -273,7 +273,7 @@ def test_the_handler_delivers_marks_and_records(
     )
     db_session.commit()
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     handler = make_refiner_file_pass_through_handler(settings, create_session_factory(create_db_engine(settings)))
     handler(_Ctx(id=7, payload_json=json.dumps({"relative_media_path": _REL, "library_id": library.id})))
 
@@ -309,14 +309,14 @@ def test_a_delivered_hand_off_is_reported_to_the_waiting_manager(
     db_session.commit()
     reports: list[dict[str, Any]] = []
 
-    def _capture(session: Session, settings: MediaMopSettings, *, payload_json: str, result: dict[str, Any]) -> str:
+    def _capture(session: Session, settings: WeirSettings, *, payload_json: str, result: dict[str, Any]) -> str:
         reports.append({"payload": json.loads(payload_json), "result": result})
         return "reported completed to Deluno"
 
     monkeypatch.setattr(refiner_pass_through, "report_handoff_completion", _capture)
     origin = {"source_key": "deluno", "handoff_id": "h1", "library_id": "lib-movies", "callback_path": "/cb"}
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     handler = make_refiner_file_pass_through_handler(settings, create_session_factory(create_db_engine(settings)))
     handler(
         _Ctx(id=9, payload_json=json.dumps({"relative_media_path": _REL, "library_id": library.id, "origin": origin}))
@@ -346,7 +346,7 @@ def test_a_delivery_that_did_not_come_from_a_manager_reports_nothing(
     reports: list[Any] = []
     monkeypatch.setattr(refiner_pass_through, "report_handoff_completion", lambda *a, **k: reports.append(k) or "")
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     handler = make_refiner_file_pass_through_handler(settings, create_session_factory(create_db_engine(settings)))
     handler(_Ctx(id=10, payload_json=json.dumps({"relative_media_path": _REL, "library_id": library.id})))
 
@@ -367,7 +367,7 @@ def test_a_failed_delivery_is_recorded_and_the_original_survives(
     )
     db_session.commit()
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     handler = make_refiner_file_pass_through_handler(settings, create_session_factory(create_db_engine(settings)))
     with pytest.raises(RuntimeError):
         handler(_Ctx(id=8, payload_json=json.dumps({"relative_media_path": _REL, "library_id": library.id})))

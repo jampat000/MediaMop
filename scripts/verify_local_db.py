@@ -18,9 +18,9 @@ def main() -> int:
     try:
         from sqlalchemy import create_engine
 
-        from mediamop.core.alembic_revision_check import DatabaseSchemaMismatch
-        from mediamop.core.alembic_revision_check import ensure_database_at_application_head
-        from mediamop.core.config import MediaMopSettings
+        from weir.core.alembic_revision_check import DatabaseSchemaMismatch
+        from weir.core.alembic_revision_check import ensure_database_at_application_head
+        from weir.core.config import WeirSettings
     except ImportError as exc:
         print(f"FAIL: missing dependency ({exc}). Install apps/backend from requirements-runtime.lock, then run pip install --no-deps --no-build-isolation -e .", file=sys.stderr)
         return 2
@@ -31,7 +31,7 @@ def main() -> int:
         return 2
 
     try:
-        url = MediaMopSettings.load().sqlalchemy_database_url
+        url = WeirSettings.load().sqlalchemy_database_url
         eng = create_engine(url)
         ensure_database_at_application_head(eng)
     except DatabaseSchemaMismatch as exc:

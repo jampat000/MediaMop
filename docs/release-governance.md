@@ -1,6 +1,6 @@
 # Release Governance
 
-This is the canonical governance checklist for keeping MediaMop releases controlled and repeatable.
+This is the canonical governance checklist for keeping Weir releases controlled and repeatable.
 
 ## GitHub repository controls
 
@@ -9,7 +9,7 @@ This is the canonical governance checklist for keeping MediaMop releases control
 - Pull requests into `main` require conversation resolution.
 - Code-owner review is required by the ruleset. `.github/CODEOWNERS` owns the full tree.
 - Required status checks for `main` are:
-  - `mediamop`
+  - `weir`
   - `docker-smoke`
   - `windows-package-smoke`
 - The repo Wiki is disabled. Public docs live in the repository.
@@ -29,12 +29,12 @@ This is the canonical governance checklist for keeping MediaMop releases control
 ## After every release
 
 1. Confirm the GitHub Release exists for the pushed tag.
-2. Confirm `MediaMop-win-Setup.exe` is attached to the release.
+2. Confirm `Weir-win-Setup.exe` is attached to the release.
 3. Confirm the published release body is plain-language and matches the approved `docs/release-notes/vX.Y.Z.md` content.
-4. Confirm the release notes/install guidance names the attached `MediaMop-win-Setup.exe` installer and explains any one-time upgrade requirement for older installs.
+4. Confirm the release notes/install guidance names the attached `Weir-win-Setup.exe` installer and explains any one-time upgrade requirement for older installs.
 5. Confirm the GHCR image exists for both `vX.Y.Z` and `latest`.
-6. Confirm the release workflow completed `mediamop`, Docker publish, Docker smoke, and Windows package jobs.
-7. Download `mediamop-docker-release-candidate-audit` and confirm its summary has
+6. Confirm the release workflow completed `weir`, Docker publish, Docker smoke, and Windows package jobs.
+7. Download `weir-docker-release-candidate-audit` and confirm its summary has
    no console warnings, console errors, page errors, failed requests, or bad responses;
    confirm `pass-through-proof.json` reports a completed job, byte-identical output,
    and successful watched-source cleanup.

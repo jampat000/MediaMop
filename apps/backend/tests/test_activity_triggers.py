@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import json
 
-from mediamop.platform.activity.classify import classify_activity
-from mediamop.platform.activity.provenance import SCAN_TRIGGER_TO_TRIGGER, job_provenance, with_provenance
-from mediamop.platform.media_managers.completion_callback import HandoffReportDelivery, HandoffReportTarget
-from mediamop.platform.media_managers.manager_port import ManagerConnection
-from mediamop.refiner.file_remux_pass.visibility import clip_remux_pass_payload_for_activity
-from mediamop.refiner.refiner_failure_cleanup_activity import record_refiner_failure_cleanup_sweep_completed
-from mediamop.refiner.refiner_work_temp_stale_sweep_activity import (
+from weir.platform.activity.classify import classify_activity
+from weir.platform.activity.provenance import SCAN_TRIGGER_TO_TRIGGER, job_provenance, with_provenance
+from weir.platform.media_managers.completion_callback import HandoffReportDelivery, HandoffReportTarget
+from weir.platform.media_managers.manager_port import ManagerConnection
+from weir.refiner.file_remux_pass.visibility import clip_remux_pass_payload_for_activity
+from weir.refiner.refiner_failure_cleanup_activity import record_refiner_failure_cleanup_sweep_completed
+from weir.refiner.refiner_work_temp_stale_sweep_activity import (
     record_refiner_work_temp_stale_sweep_completed,
 )
 
@@ -134,7 +134,7 @@ def test_a_temp_sweep_that_stood_down_is_skipped_not_success() -> None:
 
 
 def test_a_report_the_manager_did_not_accept_is_a_failure_with_something_to_check() -> None:
-    from mediamop.platform.media_managers.completion_callback import record_handoff_report
+    from weir.platform.media_managers.completion_callback import record_handoff_report
 
     target = HandoffReportTarget(
         connection=ManagerConnection(kind="deluno", name="Deluno", base_url="http://x", api_key="k"),

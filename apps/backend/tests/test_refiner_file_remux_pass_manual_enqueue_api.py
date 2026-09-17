@@ -8,19 +8,19 @@ from pathlib import Path
 from sqlalchemy import delete, select
 from starlette.testclient import TestClient
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.refiner.jobs_model import RefinerJob
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
 from tests.integration_helpers import auth_post, trusted_browser_origin_headers
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from weir.refiner.jobs_model import RefinerJob
 
 
 def _fac():
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     return create_session_factory(eng)
 
@@ -51,9 +51,9 @@ def _put_refiner_path_settings(
 ) -> None:
     del client
     # The path-settings route was retired with #460; the Movies library is configured directly.
-    from mediamop.refiner.refiner_library_service import resolve_library
+    from weir.refiner.refiner_library_service import resolve_library
 
-    with create_session_factory(create_db_engine(MediaMopSettings.load()))() as db:
+    with create_session_factory(create_db_engine(WeirSettings.load()))() as db:
         # The library scope-only work resolves to (first by display order), not the lowest id.
         library = resolve_library(db, media_scope="movie")
         assert library is not None

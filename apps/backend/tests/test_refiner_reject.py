@@ -18,37 +18,37 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
-from mediamop.platform.media_managers.connection_service import create_connection
-from mediamop.platform.media_managers.manager_dialects import _manifest_capabilities
-from mediamop.platform.media_managers.manager_http import MediaManagerHttpError
-from mediamop.platform.media_managers.manager_port import (
+from tests.refiner_library_fixtures import seed_refiner_library
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.media_managers.connection_model import MediaManagerConnectionRow
+from weir.platform.media_managers.connection_service import create_connection
+from weir.platform.media_managers.manager_dialects import _manifest_capabilities
+from weir.platform.media_managers.manager_http import MediaManagerHttpError
+from weir.platform.media_managers.manager_port import (
     ManagerCapabilities,
     ManagerConnection,
     ManagerDescription,
     ManagerQueueRow,
     ManagerQueueSignal,
 )
-from mediamop.refiner import refiner_reject
-from mediamop.refiner.jobs_model import RefinerJob
-from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.refiner.refiner_library_model import RefinerLibraryManagerLinkRow
-from mediamop.refiner.refiner_pass_through import (
+from weir.refiner import refiner_reject
+from weir.refiner.jobs_model import RefinerJob
+from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from weir.refiner.refiner_library_model import RefinerLibraryManagerLinkRow
+from weir.refiner.refiner_pass_through import (
     REFINER_FILE_PASS_THROUGH_JOB_KIND,
     REFINER_FILE_REJECT_JOB_KIND,
     apply_failure_policy,
     normalize_failure_policy,
 )
-from mediamop.refiner.refiner_reject import (
+from weir.refiner.refiner_reject import (
     REJECT_CAPABILITY,
     make_refiner_file_reject_handler,
     reject_support,
 )
-from tests.refiner_library_fixtures import seed_refiner_library
 
 _BYTES = b"\x1a\x45\xdf\xa3" + bytes(range(256)) * 8
 _CAPS = ManagerCapabilities(scopes=frozenset({"movie"}), reports_queue=True, reports_library_truth=False, summary="")
@@ -169,7 +169,7 @@ def test_an_unreachable_deluno_is_not_offered_reject(monkeypatch: pytest.MonkeyP
 @pytest.fixture
 def factory(monkeypatch: pytest.MonkeyPatch) -> Iterator[sessionmaker[Session]]:
     monkeypatch.setattr(refiner_reject, "MIN_SECONDS_BETWEEN_REJECTS", 0.0)
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
 
     def _clean() -> None:
@@ -194,7 +194,7 @@ class _Ctx:
 @dataclass
 class _World:
     factory: sessionmaker[Session]
-    settings: MediaMopSettings
+    settings: WeirSettings
     library_id: int
     watched: Path
     source: Path
@@ -202,7 +202,7 @@ class _World:
 
 
 def _world(factory: sessionmaker[Session], tmp_path: Path, *, kinds: tuple[str, ...], relative: str) -> _World:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     watched = tmp_path / "completed"
     output = tmp_path / "refined"
     source = watched / relative
@@ -272,7 +272,7 @@ def _assert_fell_back(world: _World, expected: str) -> None:
 def test_a_final_failure_that_says_nothing_about_the_release_is_handed_back_under_reject(
     factory: sessionmaker[Session], tmp_path: Path
 ) -> None:
-    # A crashed ffmpeg, a full disk or a path MediaMop cannot use is not evidence the release is
+    # A crashed ffmpeg, a full disk or a path Weir cannot use is not evidence the release is
     # bad; rejecting would have the manager blocklist a good release.
     world = _world(factory, tmp_path, kinds=(), relative="Film/film.mkv")
     with factory() as session:
@@ -424,7 +424,7 @@ def test_a_single_file_download_is_removed_and_blocklisted_through_the_queue(
     _run(world)
 
     assert deletes.calls == [("http://10.0.0.5:8989", 17)]
-    # The download client removes the data; MediaMop deletes nothing itself on this route.
+    # The download client removes the data; Weir deletes nothing itself on this route.
     assert world.source.exists()
     assert _file(world).status == RefinerFileStatus.REJECTED.value
     assert _jobs(world, REFINER_FILE_PASS_THROUGH_JOB_KIND) == []

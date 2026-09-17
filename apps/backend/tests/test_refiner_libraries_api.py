@@ -13,10 +13,10 @@ import pytest
 from sqlalchemy import delete
 from starlette.testclient import TestClient
 
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
 from tests.integration_helpers import auth_post, auth_put, trusted_browser_origin_headers
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.jobs_ops import refiner_enqueue_or_get_job
 
 
 def _login_admin(client: TestClient) -> None:
@@ -30,10 +30,10 @@ def _login_admin(client: TestClient) -> None:
 
 
 def _session_factory():
-    from mediamop.core.config import MediaMopSettings
-    from mediamop.core.db import create_db_engine, create_session_factory
+    from weir.core.config import WeirSettings
+    from weir.core.db import create_db_engine, create_session_factory
 
-    return create_session_factory(create_db_engine(MediaMopSettings.load()))
+    return create_session_factory(create_db_engine(WeirSettings.load()))
 
 
 @pytest.fixture
@@ -279,7 +279,7 @@ def test_a_rule_set_in_use_cannot_be_deleted(operator: TestClient) -> None:
 
 
 def test_libraries_and_rule_sets_reach_the_generated_openapi_schema() -> None:
-    from mediamop.api.factory import create_app
+    from weir.api.factory import create_app
 
     schema = create_app().openapi()
     for path in (

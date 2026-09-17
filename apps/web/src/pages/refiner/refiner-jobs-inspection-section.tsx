@@ -180,7 +180,7 @@ export function RefinerJobsInspectionSection() {
             data-testid="refiner-jobs-inspection-error"
           >
             {isLikelyNetworkFailure(q.error)
-              ? "Could not reach the MediaMop API. Check that the backend is running."
+              ? "Could not reach the Weir API. Check that the backend is running."
               : isHttpErrorFromApi(q.error)
                 ? "The server refused this request. Sign in again, then try this page."
                 : q.error instanceof Error
@@ -325,7 +325,7 @@ function RefinerJobRow({
       <td className="min-w-[19rem] max-w-[28rem] break-words px-3 py-2 text-[var(--mm-text2)]">
         <p className="text-sm text-[var(--mm-text1)]">
           {pausedPending
-            ? "This job is safely waiting because MediaMop is paused."
+            ? "This job is safely waiting because Weir is paused."
             : job.operator_message || "This job needs a review."}
         </p>
         <p className="mt-1 text-xs text-[var(--mm-text3)]">

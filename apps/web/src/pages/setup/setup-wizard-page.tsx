@@ -410,7 +410,7 @@ export function SetupWizardPage() {
 
             <WizardSection
               title="Automatic backups"
-              description="Keep a rolling local copy of your MediaMop configuration."
+              description="Keep a rolling local copy of your Weir configuration."
             >
               <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
                 <input
@@ -458,7 +458,7 @@ export function SetupWizardPage() {
 
             <WizardSection
               title="Refiner basics"
-              description="Choose watched and output folders for TV and Movies. These fill in the first Refiner library of each type, and MediaMop adds one if there is none yet. Add more libraries or change their rules on the Refiner page."
+              description="Choose watched and output folders for TV and Movies. These fill in the first Refiner library of each type, and Weir adds one if there is none yet. Add more libraries or change their rules on the Refiner page."
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-3">

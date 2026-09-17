@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from mediamop.refiner.refiner_rejected_file_cleanup import cleanup_rejected_file
+from weir.refiner.refiner_rejected_file_cleanup import cleanup_rejected_file
 
 
 def test_rejected_file_cleanup_leaves_file_by_default(tmp_path: Path) -> None:

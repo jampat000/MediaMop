@@ -17,7 +17,7 @@ export function SettingsSupportTab() {
     <div data-testid="suite-settings-support-tab" className="mm-bubble-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          Optional support details for MediaMop. Core app features remain fully
+          Optional support details for Weir. Core app features remain fully
           usable without any support flow.
         </p>
       </div>
@@ -33,13 +33,13 @@ export function SettingsSupportTab() {
               id="suite-settings-support-heading"
               className="text-base font-semibold text-[var(--mm-text1)]"
             >
-              Support MediaMop
+              Support Weir
             </h3>
             <div className="space-y-2 text-sm text-[var(--mm-text2)]">
-              <p>MediaMop is free to use. Support is optional.</p>
+              <p>Weir is free to use. Support is optional.</p>
               <p>
-                If MediaMop saves you time or helps keep your library cleaner,
-                you can support ongoing development.
+                If Weir saves you time or keeps your downloads clean, you can
+                support ongoing development.
               </p>
             </div>
           </div>
@@ -62,7 +62,7 @@ export function SettingsSupportTab() {
               })}
               data-testid="suite-settings-support-button"
             >
-              Support MediaMop
+              Support Weir
             </a>
           </div>
         ) : null}

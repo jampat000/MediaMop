@@ -34,7 +34,7 @@ export function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<AppTheme>(() => readStoredAppTheme());
   const productTitle =
-    (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
+    (suite.data?.product_display_name ?? "Weir").trim() || "Weir";
   const appVersion = readiness.data?.version;
   const nextTheme: AppTheme = theme === "dark" ? "light" : "dark";
 
@@ -137,7 +137,7 @@ export function AppShell() {
             <div className="mm-sidebar-meta">{productTitle}</div>
             <div
               className="mm-sidebar-version"
-              title="Installed MediaMop version reported by the running server"
+              title="Installed Weir version reported by the running server"
             >
               {appVersion ? `Version ${appVersion}` : "Version checking..."}
             </div>

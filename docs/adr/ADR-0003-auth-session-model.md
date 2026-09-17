@@ -1,4 +1,4 @@
-# ADR-0003: Auth and session model (MediaMop)
+# ADR-0003: Auth and session model (Weir)
 
 ## Status
 
@@ -10,7 +10,7 @@ The product requires **secure-by-default** web authentication: **server-side ses
 
 ## Decision
 
-1. **Primary web authentication** for MediaMop will use **server-side sessions** (session identifiers or records tracked server-side) with cookies that are **HttpOnly**, **Secure** when served over HTTPS, **SameSite=Lax** by default, and tied to **logout invalidation**, **idle timeout**, and **absolute timeout** once implemented.
+1. **Primary web authentication** for Weir will use **server-side sessions** (session identifiers or records tracked server-side) with cookies that are **HttpOnly**, **Secure** when served over HTTPS, **SameSite=Lax** by default, and tied to **logout invalidation**, **idle timeout**, and **absolute timeout** once implemented.
 
 2. **Passwords** use **Argon2id** (not legacy pbkdf2/bcrypt defaults from spikes).
 
@@ -26,8 +26,8 @@ The product requires **secure-by-default** web authentication: **server-side ses
 
 ## Consequences
 
-- Any historical Jinja/SQLite spike (outside this repository) is **not** the reference implementation for the final MediaMop auth stack.
-- New auth code must live under **`apps/backend/src/mediamop/platform/`** (or a dedicated submodule) when implemented, and must satisfy this ADR.
+- Any historical Jinja/SQLite spike (outside this repository) is **not** the reference implementation for the final Weir auth stack.
+- New auth code must live under **`apps/backend/src/weir/platform/`** (or a dedicated submodule) when implemented, and must satisfy this ADR.
 
 ## Current implementation snapshot
 

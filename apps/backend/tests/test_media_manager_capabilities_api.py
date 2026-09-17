@@ -2,7 +2,7 @@
 
 Issue #346 keeps the epic honest: a capability Refiner relies on has to be visible in the
 v1 API and the generated schema, not just in the code. This is where an operator finds
-out that a manager will — or will not — give MediaMop an upstream safety check.
+out that a manager will — or will not — give Weir an upstream safety check.
 """
 
 from __future__ import annotations
@@ -12,14 +12,14 @@ from typing import Any
 import pytest
 from starlette.testclient import TestClient
 
-from mediamop.platform.media_managers.manager_port import (
+from tests.integration_helpers import auth_post, trusted_browser_origin_headers
+from tests.integration_helpers import csrf as fetch_csrf
+from weir.platform.media_managers.manager_port import (
     ManagerConnection,
     ManagerDescription,
     ManagerLibraryTruth,
     ManagerQueueSignal,
 )
-from tests.integration_helpers import auth_post, trusted_browser_origin_headers
-from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login_admin(client: TestClient) -> None:
@@ -65,7 +65,7 @@ class _StubPort:
         self._detail = detail
 
     def capabilities(self):
-        from mediamop.platform.media_managers.manager_dialects import capabilities_for_kind
+        from weir.platform.media_managers.manager_dialects import capabilities_for_kind
 
         caps = capabilities_for_kind("deluno")
         assert caps is not None
@@ -97,7 +97,7 @@ def test_capabilities_reports_what_a_reachable_manager_manages(
 ) -> None:
     created = _create(operator)
     monkeypatch.setattr(
-        "mediamop.platform.media_managers.manager_binding.port_for_kind",
+        "weir.platform.media_managers.manager_binding.port_for_kind",
         lambda _kind: _StubPort(status="reported"),
     )
     rows = operator.get("/api/v1/media-managers/capabilities").json()
@@ -120,12 +120,12 @@ def test_capabilities_says_when_a_manager_did_not_answer(
 ) -> None:
     _create(operator)
     monkeypatch.setattr(
-        "mediamop.platform.media_managers.manager_binding.port_for_kind",
-        lambda _kind: _StubPort(status="unreachable", detail="MediaMop could not reach Deluno (Main)."),
+        "weir.platform.media_managers.manager_binding.port_for_kind",
+        lambda _kind: _StubPort(status="unreachable", detail="Weir could not reach Deluno (Main)."),
     )
     row = operator.get("/api/v1/media-managers/capabilities").json()[0]
     assert row["reachable"] is False
-    assert row["detail"] == "MediaMop could not reach Deluno (Main)."
+    assert row["detail"] == "Weir could not reach Deluno (Main)."
     # The static profile still stands, so the page can say what this manager is for.
     assert row["media_scopes"] == ["movie", "tv"]
 
@@ -138,7 +138,7 @@ def test_a_connection_with_no_saved_key_is_not_listed(operator: TestClient) -> N
 
 
 def test_capabilities_is_in_the_generated_openapi_schema() -> None:
-    from mediamop.api.factory import create_app
+    from weir.api.factory import create_app
 
     schema = create_app().openapi()
     path = schema["paths"]["/api/v1/media-managers/capabilities"]["get"]

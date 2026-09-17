@@ -1,4 +1,4 @@
-from mediamop.platform.observability.diagnostics import (
+from weir.platform.observability.diagnostics import (
     DiagnosticAction,
     DiagnosticEvent,
     DiagnosticModule,

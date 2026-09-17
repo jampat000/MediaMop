@@ -156,7 +156,7 @@ export interface RefinerLibraryDrift {
   library_id: number | null;
   library_name: string;
   manager_value: string | null;
-  mediamop_value: string | null;
+  weir_value: string | null;
   detail: string;
 }
 

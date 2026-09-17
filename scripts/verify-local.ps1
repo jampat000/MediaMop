@@ -3,7 +3,7 @@
 # Phases (fail fast, concrete messages):
 #   1) Static/unit — pytest subset; no running API.
 #   2) Config presence — apps/backend/.env file hint + required env vars after dotenv load (values never printed).
-#   3) Live database — SQLite path + Alembic head via scripts/verify_local_db.py (MEDIAMOP_HOME / MEDIAMOP_DB_PATH).
+#   3) Live database — SQLite path + Alembic head via scripts/verify_local_db.py (WEIR_HOME / WEIR_DB_PATH).
 #   4) Live API — GET /health and GET /api/v1/auth/bootstrap/status (needs dev-backend.ps1 running).
 #   5) Static repo check only — vite.config.ts mentions API port and /api (NOT proof Vite is running or proxying).
 #
@@ -14,7 +14,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-. "$PSScriptRoot\mediamop-env.ps1"
+. "$PSScriptRoot\weir-env.ps1"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $backend = Join-Path $repoRoot "apps\backend"
@@ -63,24 +63,24 @@ $envFile = Join-Path $backend ".env"
 if (Test-Path -LiteralPath $envFile) {
     Write-Host "OK: apps/backend/.env exists (values not shown)." -ForegroundColor Green
 } else {
-    Write-Host "MISSING: apps/backend/.env — copy apps/backend/.env.example or set MEDIAMOP_* in this shell." -ForegroundColor Yellow
+    Write-Host "MISSING: apps/backend/.env — copy apps/backend/.env.example or set WEIR_* in this shell." -ForegroundColor Yellow
 }
 
-Import-MediaMopBackendDotEnv -BackendDir $backend
+Import-WeirBackendDotEnv -BackendDir $backend
 
-$sessionSecret = if ($env:MEDIAMOP_SESSION_SECRET -and $env:MEDIAMOP_SESSION_SECRET.Trim()) {
-    $env:MEDIAMOP_SESSION_SECRET.Trim()
+$sessionSecret = if ($env:WEIR_SESSION_SECRET -and $env:WEIR_SESSION_SECRET.Trim()) {
+    $env:WEIR_SESSION_SECRET.Trim()
 } else { $null }
 
 if (-not $sessionSecret) {
-    Write-Host "FAIL: MEDIAMOP_SESSION_SECRET is not set — auth and CSRF require it." -ForegroundColor Red
+    Write-Host "FAIL: WEIR_SESSION_SECRET is not set — auth and CSRF require it." -ForegroundColor Red
     exit 11
 }
-Write-Host "OK: MEDIAMOP_SESSION_SECRET is set (value not shown)." -ForegroundColor Green
-if ($env:MEDIAMOP_HOME -and $env:MEDIAMOP_HOME.Trim()) {
-    Write-Host "OK: MEDIAMOP_HOME is set (value not shown)." -ForegroundColor Green
+Write-Host "OK: WEIR_SESSION_SECRET is set (value not shown)." -ForegroundColor Green
+if ($env:WEIR_HOME -and $env:WEIR_HOME.Trim()) {
+    Write-Host "OK: WEIR_HOME is set (value not shown)." -ForegroundColor Green
 } else {
-    Write-Host "Note: MEDIAMOP_HOME unset — default OS data directory will be used for SQLite (see apps/backend/.env.example)." -ForegroundColor DarkGray
+    Write-Host "Note: WEIR_HOME unset — default OS data directory will be used for SQLite (see apps/backend/.env.example)." -ForegroundColor DarkGray
 }
 
 $venvPython = Join-Path $backend '.venv\Scripts\python.exe'

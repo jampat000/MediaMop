@@ -11,8 +11,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import mediamop.platform.media_managers as media_managers_pkg
-import mediamop.refiner as refiner_pkg
+import weir.platform.media_managers as media_managers_pkg
+import weir.refiner as refiner_pkg
 
 _VENDOR_NAMES = re.compile(r"radarr|sonarr", re.IGNORECASE)
 

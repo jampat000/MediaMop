@@ -1,0 +1,130 @@
+"""Server-side session helpers — authoritative rows in ``user_sessions`` (ADR-0003).
+
+The browser will eventually receive an **opaque** cookie value; only a **hash** of a
+high-entropy token is stored in ``UserSession.token_hash``. This is **not** a JWT payload
+in the cookie and **not** localStorage.
+
+**Rotation:** On login (when implemented), create a new ``UserSession`` and revoke or delete
+prior rows for that user or device policy.
+
+**Invalidation / logout:** Set ``revoked_at`` (or delete the row).
+
+**Idle timeout:** Enforce ``now > last_seen_at + idle_window``; bump ``last_seen_at`` on
+authenticated requests that pass other checks (throttled to limit SQLite write churn).
+
+**Absolute timeout:** Enforce ``now >= absolute_expires_at`` regardless of idle sliding.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import secrets
+from datetime import UTC, datetime, timedelta, timezone
+
+from weir.core.datetime_util import as_utc
+from weir.platform.auth.models import UserSession
+
+DEFAULT_ABSOLUTE_TTL = timedelta(days=14)
+DEFAULT_IDLE_TIMEOUT = timedelta(hours=12)
+_TOKEN_ENTROPY_BYTES = 32
+
+
+def generate_raw_session_token() -> str:
+    """Return a high-entropy secret shown to the client once (cookie) — never log it raw."""
+    return secrets.token_urlsafe(_TOKEN_ENTROPY_BYTES)
+
+
+def hash_session_token(raw_token: str) -> str:
+    """Store only the SHA-256 hex digest in ``user_sessions.token_hash``."""
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+def compute_absolute_expiry(
+    *,
+    now: datetime | None = None,
+    ttl: timedelta = DEFAULT_ABSOLUTE_TTL,
+) -> datetime:
+    return (now or utcnow()) + ttl
+
+
+def touch_last_seen(session_row: UserSession, *, at: datetime | None = None) -> None:
+    session_row.last_seen_at = at or utcnow()
+
+
+def revoke_session(session_row: UserSession, *, at: datetime | None = None) -> None:
+    session_row.revoked_at = at or utcnow()
+
+
+def is_revoked(session_row: UserSession) -> bool:
+    return session_row.revoked_at is not None
+
+
+def is_past_absolute_expiry(session_row: UserSession, *, now: datetime | None = None) -> bool:
+    return (now or utcnow()) >= as_utc(session_row.absolute_expires_at)
+
+
+def is_idle_expired(
+    session_row: UserSession,
+    *,
+    idle: timedelta = DEFAULT_IDLE_TIMEOUT,
+    now: datetime | None = None,
+) -> bool:
+    return (now or utcnow()) > as_utc(session_row.last_seen_at) + idle
+
+
+def effective_idle_timeout(session_row: UserSession, *, settings) -> timedelta:
+    minutes = settings.session_trusted_idle_minutes if session_row.is_trusted_device else settings.session_idle_minutes
+    return timedelta(minutes=minutes)
+
+
+def session_is_valid(
+    session_row: UserSession,
+    *,
+    idle: timedelta = DEFAULT_IDLE_TIMEOUT,
+    now: datetime | None = None,
+) -> bool:
+    n = now or utcnow()
+    if is_revoked(session_row):
+        return False
+    if is_past_absolute_expiry(session_row, now=n):
+        return False
+    return not is_idle_expired(session_row, idle=idle, now=n)
+
+
+def session_invalid_reason(
+    session_row: UserSession,
+    *,
+    idle: timedelta = DEFAULT_IDLE_TIMEOUT,
+    now: datetime | None = None,
+) -> str | None:
+    n = now or utcnow()
+    if is_revoked(session_row):
+        return "revoked"
+    if is_past_absolute_expiry(session_row, now=n):
+        return "absolute_expired"
+    if is_idle_expired(session_row, idle=idle, now=n):
+        return "idle_expired"
+    return None
+
+
+def resolve_cookie_secure(request_scheme: str, mode: str) -> bool:
+    """Decide the cookie ``Secure`` flag for one request.
+
+    ``Secure`` is a promise the browser enforces: it will refuse to store or send the cookie
+    over plain HTTP. On a LAN install served over HTTP that silently discards the session and
+    locks the operator out, while protecting nothing — there is no TLS for it to protect.
+
+    Under ``auto`` the flag therefore follows the request. The scheme is trustworthy because
+    :class:`~weir.platform.http.trusted_proxy.TrustedProxySchemeMiddleware` only honours
+    ``X-Forwarded-Proto`` from an explicitly configured proxy, so a client cannot claim HTTPS.
+    """
+
+    if mode == "always":
+        return True
+    if mode == "never":
+        return False
+    return (request_scheme or "").strip().lower() == "https"

@@ -8,18 +8,18 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.platform.jobs.worker_health import (
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.platform.jobs.worker_health import (
     build_worker_health_snapshot,
     reset_worker_health_for_tests,
     worker_heartbeat,
     worker_started,
     worker_stopped,
 )
-from mediamop.platform.readiness.service import build_readiness
-from mediamop.refiner import worker_loop as refiner_worker_loop
-from mediamop.refiner.worker_loop import (
+from weir.platform.readiness.service import build_readiness
+from weir.refiner import worker_loop as refiner_worker_loop
+from weir.refiner.worker_loop import (
     start_refiner_worker_background_tasks,
     stop_refiner_worker_background_tasks,
 )
@@ -65,7 +65,7 @@ def test_worker_health_detects_missing_stale_and_stopped_workers() -> None:
 
 def test_refiner_worker_emits_heartbeat(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(refiner_worker_loop, "REFINER_WORKER_IDLE_SLEEP_SECONDS", 0.01)
-    settings = replace(MediaMopSettings.load(), refiner_worker_count=1)
+    settings = replace(WeirSettings.load(), refiner_worker_count=1)
 
     async def _run() -> None:
         stop, tasks = start_refiner_worker_background_tasks(
@@ -88,7 +88,7 @@ def test_readiness_fails_when_expected_worker_has_no_heartbeat(session_factory) 
     class State:
         startup_started_at = 0.0
         startup_ready = True
-        settings = replace(MediaMopSettings.load(), refiner_worker_count=1)
+        settings = replace(WeirSettings.load(), refiner_worker_count=1)
         engine = object()
         session_factory = object()
 

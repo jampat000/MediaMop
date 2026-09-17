@@ -50,7 +50,7 @@ export function resetUnauthorizedHandlingForTests(): void {
 
 function baseUrl(): string {
   // In ``vite dev``, always use same-origin ``/api`` so the dev proxy applies (including
-  // ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET`` when the API moved to a fallback port). A pinned
+  // ``WEIR_DEV_STACK_API_PROXY_TARGET`` when the API moved to a fallback port). A pinned
   // ``VITE_API_BASE_URL=http://127.0.0.1:8788`` in ``.env`` would otherwise bypass the proxy and
   // keep talking to an old uvicorn on 8788 while the new API listens on 8789, and every call 404s.
   if (import.meta.env.DEV) {
@@ -199,7 +199,7 @@ export async function apiResponseErrorMessage(
   const trimmed = text.trimStart();
   if (trimmed.startsWith("<!") || trimmed.toLowerCase().startsWith("<html")) {
     return {
-      message: `${fallback} (${r.status}) - received HTML instead of JSON. Use the same origin as the API and restart MediaMop after upgrading.`,
+      message: `${fallback} (${r.status}) - received HTML instead of JSON. Use the same origin as the API and restart Weir after upgrading.`,
     };
   }
   const oneLine = text.replace(/\s+/g, " ").trim().slice(0, 180);

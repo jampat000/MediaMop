@@ -115,7 +115,7 @@ export interface paths {
     put?: never;
     /**
      * Post Bootstrap
-     * @description Create the first ``admin`` user once per MediaMop installation (guarded + rate limited).
+     * @description Create the first ``admin`` user once per Weir installation (guarded + rate limited).
      *
      *     Requires the same CSRF + Origin/Referer posture as ``POST /login``. After success,
      *     callers use ``POST /login`` normally. Not available once any ``admin`` user exists.
@@ -336,7 +336,7 @@ export interface paths {
     };
     /**
      * Get Intake Capabilities
-     * @description What a media manager may ask MediaMop about its hand-offs.
+     * @description What a media manager may ask Weir about its hand-offs.
      */
     get: operations["get_intake_capabilities_api_v1_intake_capabilities_get"];
     put?: never;
@@ -363,7 +363,7 @@ export interface paths {
     post?: never;
     /**
      * Delete Intake Handoff
-     * @description Drop a hand-off MediaMop has not started. Refuses (409) once work has begun; never touches a file.
+     * @description Drop a hand-off Weir has not started. Refuses (409) once work has begun; never touches a file.
      */
     delete: operations["delete_intake_handoff_api_v1_intake_handoffs__source_key___handoff_id__delete"];
     options?: never;
@@ -618,7 +618,7 @@ export interface paths {
     post?: never;
     /**
      * Delete Refiner File
-     * @description Forget a file. Removes MediaMop's record of it, never the file on disk.
+     * @description Forget a file. Removes Weir's record of it, never the file on disk.
      */
     delete: operations["delete_refiner_file_api_v1_refiner_files__file_id__delete"];
     options?: never;
@@ -635,7 +635,7 @@ export interface paths {
     };
     /**
      * Get Refiner File Log
-     * @description Everything MediaMop retained about what it did to this file, newest first.
+     * @description Everything Weir retained about what it did to this file, newest first.
      */
     get: operations["get_refiner_file_log_api_v1_refiner_files__file_id__log_get"];
     put?: never;
@@ -893,7 +893,7 @@ export interface paths {
     };
     /**
      * Get Refiner Discoverable Libraries
-     * @description What this manager says it looks after, and whether MediaMop already has it.
+     * @description What this manager says it looks after, and whether Weir already has it.
      */
     get: operations["get_refiner_discoverable_libraries_api_v1_refiner_libraries_discover__connection_id__get"];
     put?: never;
@@ -913,7 +913,7 @@ export interface paths {
     };
     /**
      * Get Refiner Library Drift
-     * @description Differences between the manager and MediaMop. Reported only — nothing is applied.
+     * @description Differences between the manager and Weir. Reported only — nothing is applied.
      */
     get: operations["get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get"];
     put?: never;
@@ -1042,7 +1042,7 @@ export interface paths {
      * Post Refiner Maintenance Run
      * @description Run one maintenance family now.
      *
-     *     Ignores the schedule toggle on purpose: the toggle decides whether MediaMop runs this
+     *     Ignores the schedule toggle on purpose: the toggle decides whether Weir runs this
      *     on its own, and somebody asking for it now has already decided.
      */
     post: operations["post_refiner_maintenance_run_api_v1_refiner_maintenance_run_post"];
@@ -2102,7 +2102,7 @@ export interface components {
     };
     /**
      * LibraryDriftOut
-     * @description A difference between the manager and MediaMop. Reported, never applied.
+     * @description A difference between the manager and Weir. Reported, never applied.
      */
     LibraryDriftOut: {
       /** Detail */
@@ -2119,8 +2119,8 @@ export interface components {
       library_name: string;
       /** Manager Value */
       manager_value?: string | null;
-      /** Mediamop Value */
-      mediamop_value?: string | null;
+      /** Weir Value */
+      weir_value?: string | null;
     };
     /** LoginIn */
     LoginIn: {
@@ -2242,7 +2242,7 @@ export interface components {
       connection_id: number;
       /**
        * Detail
-       * @description Why MediaMop could not ask, when it could not.
+       * @description Why Weir could not ask, when it could not.
        */
       detail?: string | null;
       /**
@@ -2269,22 +2269,22 @@ export interface components {
       name: string;
       /**
        * Reachable
-       * @description Whether the manager answered when MediaMop asked what it manages.
+       * @description Whether the manager answered when Weir asked what it manages.
        */
       reachable: boolean;
       /**
        * Reports Import Queue
-       * @description Whether MediaMop can ask this manager what it is currently importing.
+       * @description Whether Weir can ask this manager what it is currently importing.
        */
       reports_import_queue: boolean;
       /**
        * Reports Library Truth
-       * @description Whether MediaMop can ask this manager which files it still keeps, which folder cleanup needs.
+       * @description Whether Weir can ask this manager which files it still keeps, which folder cleanup needs.
        */
       reports_library_truth: boolean;
       /**
        * Summary
-       * @description One plain-language sentence about what MediaMop can do with this manager.
+       * @description One plain-language sentence about what Weir can do with this manager.
        */
       summary: string;
     };
@@ -2330,7 +2330,7 @@ export interface components {
       api_key_is_saved: boolean;
       /**
        * Base Url
-       * @description Address MediaMop uses to reach this manager. Empty means not set.
+       * @description Address Weir uses to reach this manager. Empty means not set.
        */
       base_url: string;
       /** Enabled */
@@ -2454,7 +2454,7 @@ export interface components {
     };
     /**
      * MediaManagerWebhookSecretOut
-     * @description The generated secret, shown once. MediaMop keeps only the encrypted copy.
+     * @description The generated secret, shown once. Weir keeps only the encrypted copy.
      */
     MediaManagerWebhookSecretOut: {
       /** Connection Id */
@@ -2495,7 +2495,7 @@ export interface components {
     MetadataProviderOut: {
       /**
        * Base Url
-       * @description Where MediaMop asks. Configurable so a cache or gateway in front of the provider works.
+       * @description Where Weir asks. Configurable so a cache or gateway in front of the provider works.
        */
       base_url: string;
       /**
@@ -2640,7 +2640,7 @@ export interface components {
       reason: string;
       /**
        * Scan While Paused
-       * @description Whether MediaMop keeps noticing new files while it is not working on them.
+       * @description Whether Weir keeps noticing new files while it is not working on them.
        */
       scan_while_paused: boolean;
     };
@@ -2666,7 +2666,7 @@ export interface components {
       steps: components["schemas"]["ReadinessStep"][];
       /**
        * Version
-       * @description Installed MediaMop version reported by the running server.
+       * @description Installed Weir version reported by the running server.
        */
       version: string;
       /** Worker Health */
@@ -2801,12 +2801,12 @@ export interface components {
       /**
        * Created At
        * Format: date-time
-       * @description When MediaMop first recorded this file.
+       * @description When Weir first recorded this file.
        */
       created_at: string;
       /**
        * Direct Play
-       * @description For each device the operator owns: will it play this file without conversion. Information only; it never changes how MediaMop processes the file. Empty when no devices are chosen.
+       * @description For each device the operator owns: will it play this file without conversion. Information only; it never changes how Weir processes the file. Empty when no devices are chosen.
        */
       direct_play?: components["schemas"]["DirectPlayOut"][];
       /**
@@ -2841,7 +2841,7 @@ export interface components {
       library_name: string;
       /**
        * Next Retry At
-       * @description When MediaMop will try this file again on its own. Null when no automatic retry is coming.
+       * @description When Weir will try this file again on its own. Null when no automatic retry is coming.
        */
       next_retry_at?: string | null;
       /**
@@ -3062,7 +3062,7 @@ export interface components {
       detail: string;
       /**
        * Detected
-       * @description Whether MediaMop was able to ask ffmpeg at all.
+       * @description Whether Weir was able to ask ffmpeg at all.
        */
       detected: boolean;
       /**
@@ -3223,7 +3223,7 @@ export interface components {
       exclude_patterns_csv: string;
       /**
        * Failure Policy
-       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.
+       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file Weir cannot process still reaches your media manager. 'hold' keeps it with Weir until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.
        * @default pass_through
        * @enum {string}
        */
@@ -3238,19 +3238,19 @@ export interface components {
         "very" | "strict" | "normal" | "unofficial" | "experimental";
       /**
        * File Detection Interval Seconds
-       * @description How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.
+       * @description How long this file's size must stay unchanged before Weir treats it as finished being written. 0 turns size settling off.
        * @default 30
        */
       file_detection_interval_seconds: number;
       /**
        * File System Events Enabled
-       * @description Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.
+       * @description Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes Weir slower to notice a file, never blind to it.
        * @default true
        */
       file_system_events_enabled: boolean;
       /**
        * Hardware Decode Mode
-       * @description Hardware decoding. 'off' is what MediaMop has always done. A choice that cannot work falls back to software and records why — it never fails a file.
+       * @description Hardware decoding. 'off' is what Weir has always done. A choice that cannot work falls back to software and records why — it never fails a file.
        * @default off
        * @enum {string}
        */
@@ -3287,7 +3287,7 @@ export interface components {
       manager_connection_ids?: number[];
       /**
        * Max Attempts
-       * @description How many times MediaMop tries a file on its own before stopping.
+       * @description How many times Weir tries a file on its own before stopping.
        * @default 3
        */
       max_attempts: number;
@@ -3335,7 +3335,7 @@ export interface components {
       name: string;
       /**
        * Output Collision Policy
-       * @description What to do when an output already exists at the same path. 'replace' is what MediaMop has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.
+       * @description What to do when an output already exists at the same path. 'replace' is what Weir has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.
        * @default replace
        * @enum {string}
        */
@@ -3410,7 +3410,7 @@ export interface components {
       schedule_end: string;
       /**
        * Schedule Grid
-       * @description 7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops MediaMop starting anything new.
+       * @description 7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops Weir starting anything new.
        * @default
        */
       schedule_grid: string;
@@ -3645,7 +3645,7 @@ export interface components {
       exclude_patterns_csv: string;
       /**
        * Failure Policy
-       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.
+       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file Weir cannot process still reaches your media manager. 'hold' keeps it with Weir until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.
        * @default pass_through
        * @enum {string}
        */
@@ -3660,19 +3660,19 @@ export interface components {
         "very" | "strict" | "normal" | "unofficial" | "experimental";
       /**
        * File Detection Interval Seconds
-       * @description How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.
+       * @description How long this file's size must stay unchanged before Weir treats it as finished being written. 0 turns size settling off.
        * @default 30
        */
       file_detection_interval_seconds: number;
       /**
        * File System Events Enabled
-       * @description Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.
+       * @description Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes Weir slower to notice a file, never blind to it.
        * @default true
        */
       file_system_events_enabled: boolean;
       /**
        * Hardware Decode Mode
-       * @description Hardware decoding. 'off' is what MediaMop has always done. A choice that cannot work falls back to software and records why — it never fails a file.
+       * @description Hardware decoding. 'off' is what Weir has always done. A choice that cannot work falls back to software and records why — it never fails a file.
        * @default off
        * @enum {string}
        */
@@ -3709,7 +3709,7 @@ export interface components {
       manager_connection_ids?: number[];
       /**
        * Max Attempts
-       * @description How many times MediaMop tries a file on its own before stopping.
+       * @description How many times Weir tries a file on its own before stopping.
        * @default 3
        */
       max_attempts: number;
@@ -3757,7 +3757,7 @@ export interface components {
       name: string;
       /**
        * Output Collision Policy
-       * @description What to do when an output already exists at the same path. 'replace' is what MediaMop has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.
+       * @description What to do when an output already exists at the same path. 'replace' is what Weir has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.
        * @default replace
        * @enum {string}
        */
@@ -3832,7 +3832,7 @@ export interface components {
       schedule_end: string;
       /**
        * Schedule Grid
-       * @description 7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops MediaMop starting anything new.
+       * @description 7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops Weir starting anything new.
        * @default
        */
       schedule_grid: string;
@@ -3933,7 +3933,7 @@ export interface components {
       runner_cost_sd: number;
       /**
        * Runner Cost Undetermined
-       * @description What a file MediaMop has not measured yet costs. Zero admits it rather than stalling on the unknown.
+       * @description What a file Weir has not measured yet costs. Zero admits it rather than stalling on the unknown.
        */
       runner_cost_undetermined: number;
       /**
@@ -3960,7 +3960,7 @@ export interface components {
       verbose_detection_logging: boolean;
       /**
        * Work Temp Stale Sweep Enabled
-       * @description Reclaim MediaMop's own stale working files. Safe, and on by default.
+       * @description Reclaim Weir's own stale working files. Safe, and on by default.
        */
       work_temp_stale_sweep_enabled: boolean;
     };
@@ -4282,7 +4282,7 @@ export interface components {
       failure_cleanup_configuration_note: string;
       /**
        * In Process Refiner Worker Count
-       * @description Mirrors MEDIAMOP_REFINER_WORKER_COUNT after clamping — Refiner lane only.
+       * @description Mirrors WEIR_REFINER_WORKER_COUNT after clamping — Refiner lane only.
        */
       in_process_refiner_worker_count: number;
       /**
@@ -4317,7 +4317,7 @@ export interface components {
       refiner_movie_failure_cleanup_grace_period_seconds: number;
       /**
        * Refiner Movie Failure Cleanup Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
+       * @description ``WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
        */
       refiner_movie_failure_cleanup_schedule_enabled: boolean;
       /**
@@ -4342,7 +4342,7 @@ export interface components {
       refiner_tv_failure_cleanup_grace_period_seconds: number;
       /**
        * Refiner Tv Failure Cleanup Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
+       * @description ``WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
        */
       refiner_tv_failure_cleanup_schedule_enabled: boolean;
       /**
@@ -4372,7 +4372,7 @@ export interface components {
       refiner_work_temp_stale_sweep_min_stale_age_seconds: number;
       /**
        * Refiner Work Temp Stale Sweep Movie Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.
+       * @description ``WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.
        */
       refiner_work_temp_stale_sweep_movie_schedule_enabled: boolean;
       /**
@@ -4382,7 +4382,7 @@ export interface components {
       refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: number;
       /**
        * Refiner Work Temp Stale Sweep Tv Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.
+       * @description ``WEIR_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.
        */
       refiner_work_temp_stale_sweep_tv_schedule_enabled: boolean;
       /**
@@ -4430,7 +4430,7 @@ export interface components {
       csrf_token: string;
       /**
        * Enqueue Remux Jobs
-       * @description When true, files found in the watched folder are added to Refiner's processing queue. When false, MediaMop only checks the folder and writes an activity summary.
+       * @description When true, files found in the watched folder are added to Refiner's processing queue. When false, Weir only checks the folder and writes an activity summary.
        * @default true
        */
       enqueue_remux_jobs: boolean;
@@ -4468,7 +4468,7 @@ export interface components {
     RefinerWhyHeldOut: {
       /**
        * Blocked By Connection
-       * @description The connection holding this file, named the way MediaMop names connections.
+       * @description The connection holding this file, named the way Weir names connections.
        */
       blocked_by_connection?: string | null;
       /** Blocked Upstream */
@@ -5549,7 +5549,7 @@ export interface operations {
         "X-Webhook-Secret"?: string | null;
       };
       path: {
-        /** @description The manager that gave MediaMop the hand-off. */
+        /** @description The manager that gave Weir the hand-off. */
         source_key: string;
         /** @description The manager's own hand-off id. */
         handoff_id: string;
@@ -5587,7 +5587,7 @@ export interface operations {
         "X-Webhook-Secret"?: string | null;
       };
       path: {
-        /** @description The manager that gave MediaMop the hand-off. */
+        /** @description The manager that gave Weir the hand-off. */
         source_key: string;
         /** @description The manager's own hand-off id. */
         handoff_id: string;

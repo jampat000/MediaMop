@@ -6,7 +6,7 @@ selection is a hard blocker the moment anything encodes (HDR to SDR, scaling, re
 an oversized file, subtitle burn-in), and none of those can ship without it.
 
 Defaults are ``off`` and ffmpeg's own ``normal`` strictness, which is exactly what
-MediaMop does today by not passing the flags at all.
+Weir does today by not passing the flags at all.
 
 ``hardware_disabled_vendors_csv`` exists because auto-detection picks the wrong device
 often enough that FileFlows ships four explicit disable elements for it. Anything built

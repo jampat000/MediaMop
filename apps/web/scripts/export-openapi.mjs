@@ -6,10 +6,10 @@ import process from "node:process";
 const webRoot = process.cwd();
 const repoRoot = path.resolve(webRoot, "..", "..");
 const exportScript = path.resolve(repoRoot, "scripts", "export-openapi.py");
-const outputPath = path.resolve(webRoot, "openapi", "mediamop-openapi.json");
+const outputPath = path.resolve(webRoot, "openapi", "weir-openapi.json");
 
 const candidates = [
-  process.env.MEDIAMOP_PYTHON,
+  process.env.WEIR_PYTHON,
   path.resolve(webRoot, "..", "backend", ".venv", "Scripts", "python.exe"),
   path.resolve(webRoot, "..", "backend", ".venv", "bin", "python"),
   "python3",
@@ -31,5 +31,5 @@ for (const cmd of candidates) {
 }
 
 console.error("Failed to export OpenAPI schema: no usable Python interpreter found.");
-console.error("Set MEDIAMOP_PYTHON or create apps/backend/.venv first.");
+console.error("Set WEIR_PYTHON or create apps/backend/.venv first.");
 process.exit(1);

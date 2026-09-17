@@ -19,14 +19,14 @@ from sqlalchemy import delete, select
 from starlette.testclient import TestClient
 
 from alembic import command
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity.classify import classify_activity
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.activity.service import prune_activity_events, record_activity_event
-from mediamop.refiner.refiner_file_log_model import RefinerFileLogRow
 from tests.integration_helpers import auth_post, auth_put
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity.classify import classify_activity
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.activity.service import prune_activity_events, record_activity_event
+from weir.refiner.refiner_file_log_model import RefinerFileLogRow
 
 # --- what is lifted out of a detail ----------------------------------------------------------------
 
@@ -72,7 +72,7 @@ def test_nothing_is_invented_from_a_value_outside_the_standard() -> None:
 
 
 def _factory():
-    return create_session_factory(create_db_engine(MediaMopSettings.load()))
+    return create_session_factory(create_db_engine(WeirSettings.load()))
 
 
 @pytest.fixture
@@ -232,24 +232,24 @@ def test_the_activity_horizon_is_a_saved_setting(client_with_admin: TestClient) 
 
 
 def test_job_rows_now_default_to_the_same_ninety_days(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MEDIAMOP_JOB_ROWS_RETENTION_DAYS", raising=False)
-    assert MediaMopSettings.load().job_rows_retention_days == 90
+    monkeypatch.delenv("WEIR_JOB_ROWS_RETENTION_DAYS", raising=False)
+    assert WeirSettings.load().job_rows_retention_days == 90
 
 
 # --- the migration backfills what was already recorded ---------------------------------------------------
 
 
 def test_events_recorded_before_the_upgrade_become_filterable(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
-    home = tmp_path / "mmhome_activity_facts"
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    home = tmp_path / "weirhome_activity_facts"
     home.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(home))
+    monkeypatch.setenv("WEIR_HOME", str(home))
     backend = Path(__file__).resolve().parents[1]
     monkeypatch.chdir(backend)
     cfg = Config(str(backend / "alembic.ini"))
 
     command.upgrade(cfg, "0033_refiner_library_media_type")
-    engine = create_db_engine(MediaMopSettings.load())
+    engine = create_db_engine(WeirSettings.load())
     with engine.begin() as conn:
         # A greenfield 0001 builds today's models, so clear anything it pre-filled to model old rows.
         conn.execute(
@@ -266,7 +266,7 @@ def test_events_recorded_before_the_upgrade_become_filterable(monkeypatch: pytes
 
     command.upgrade(cfg, "head")
 
-    engine = create_db_engine(MediaMopSettings.load())
+    engine = create_db_engine(WeirSettings.load())
     with engine.connect() as conn:
         row = conn.execute(
             sa.text("select trigger, result, library_id, relative_path from activity_events where title = 'old'")

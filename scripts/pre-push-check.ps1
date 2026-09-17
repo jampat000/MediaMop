@@ -79,15 +79,15 @@ if (-not (Test-Path $prettierBin) -or -not (Test-Path $venvPython)) {
     Step "api:types drift check"
     Push-Location "$REPO\apps\web"
 
-    $env:MEDIAMOP_PYTHON = $venvPython
+    $env:WEIR_PYTHON = $venvPython
     $env:PYTHONPATH = "$REPO\apps\backend\src"
     npm run api:types:sync
 
-    $diff = git diff -- openapi/mediamop-openapi.json src/lib/api/generated/openapi-types.ts
+    $diff = git diff -- openapi/weir-openapi.json src/lib/api/generated/openapi-types.ts
     if ($diff) {
         Write-Host "[pre-push] OpenAPI spec or types differ - auto-committing the sync." -ForegroundColor Yellow
         Pop-Location
-        git -C $REPO add apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
+        git -C $REPO add apps/web/openapi/weir-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
         git -C $REPO commit -m "chore: sync OpenAPI spec and generated types"
         if ($LASTEXITCODE -ne 0) { Fail "Failed to auto-commit OpenAPI sync" }
     } else {

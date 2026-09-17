@@ -10,7 +10,7 @@ export function AppHydrateFallback() {
       </aside>
       <main className="mm-main" id="mm-main-content" tabIndex={-1}>
         <div className="mm-main-inner">
-          <PageLoading label="Loading MediaMop" />
+          <PageLoading label="Loading Weir" />
         </div>
       </main>
     </div>

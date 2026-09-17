@@ -93,12 +93,12 @@ jobs:
       - name: Install Velopack CLI
         run: dotnet tool install -g vpk --version 1.2.0
 
-      - name: Install locked MediaMop backend (editable)
+      - name: Install locked Weir backend (editable)
         run: |
           python -m pip install --require-hashes -r apps/backend/requirements.lock
           python -m pip install --no-deps --no-build-isolation -e "./apps/backend"
 
-      - name: MediaMop web - install and build
+      - name: Weir web - install and build
         working-directory: apps/web
         env:
           VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
@@ -120,9 +120,9 @@ jobs:
           restore-keys: |
             ffmpeg-vendor-${{ runner.os }}-
 
-      - name: Build MediaMop Windows package (Velopack)
+      - name: Build Weir Windows package (Velopack)
         env:
-          MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}
+          WEIR_BUILD_VERSION: ${{ steps.version.outputs.plain }}
           VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
         run: powershell -ExecutionPolicy Bypass -File packaging/windows/build-velopack.ps1
 
@@ -149,10 +149,10 @@ jobs:
           WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
           WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
         run: |
-          $pfxPath = Join-Path $env:RUNNER_TEMP "mediamop-codesign.pfx"
+          $pfxPath = Join-Path $env:RUNNER_TEMP "weir-codesign.pfx"
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CODESIGN_PFX_BASE64))
           $signtool = (Get-Command signtool.exe -ErrorAction Stop).Source
-          $setupExe = Get-Item -LiteralPath "dist/windows/releases/MediaMop-win-Setup.exe" -ErrorAction Stop
+          $setupExe = Get-Item -LiteralPath "dist/windows/releases/Weir-win-Setup.exe" -ErrorAction Stop
           & $signtool sign /f $pfxPath /p $env:WINDOWS_CODESIGN_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 $setupExe.FullName
           if ($LASTEXITCODE -ne 0) {
             throw "signtool failed with exit code $LASTEXITCODE"
@@ -162,7 +162,7 @@ jobs:
         if: ${{ steps.codesign.outputs.enabled == 'true' }}
         shell: powershell
         run: |
-          $setupExe = Get-Item -LiteralPath "dist/windows/releases/MediaMop-win-Setup.exe" -ErrorAction Stop
+          $setupExe = Get-Item -LiteralPath "dist/windows/releases/Weir-win-Setup.exe" -ErrorAction Stop
           $signature = Get-AuthenticodeSignature -FilePath $setupExe.FullName
           if ($signature.Status -ne "Valid") {
             throw "Setup signature verification failed: $($signature.Status) $($signature.StatusMessage)"
@@ -182,7 +182,7 @@ jobs:
       - name: Upload Velopack release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: mediamop-windows-velopack
+          name: weir-windows-velopack
           if-no-files-found: error
           path: dist/windows/releases/*
 
@@ -195,7 +195,7 @@ jobs:
     permissions:
       contents: read
     env:
-      MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
+      WEIR_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -205,7 +205,7 @@ jobs:
           cache: pip
           cache-dependency-path: apps/backend/requirements.lock
 
-      - name: Install locked MediaMop backend and Playwright browser
+      - name: Install locked Weir backend and Playwright browser
         run: |
           python -m pip install --require-hashes -r apps/backend/requirements.lock
           python -m pip install --no-deps --no-build-isolation -e "./apps/backend"
@@ -218,14 +218,14 @@ jobs:
           pip-audit --strict -r pip-audit-requirements.txt
           rm pip-audit-requirements.txt
 
-      - name: Run MediaMop backend tests
+      - name: Run Weir backend tests
         working-directory: apps/backend
         env:
-          MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-ci
+          WEIR_HOME: ${{ runner.temp }}/weir-ci
         run: |
           alembic upgrade head
           alembic check
-          pytest -q --cov=mediamop --cov-fail-under=75
+          pytest -q --cov=weir --cov-fail-under=75
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -236,14 +236,14 @@ jobs:
       - name: Release publication gate ordering
         run: node scripts/check-release-workflow-gates.mjs
 
-      - name: MediaMop web - install and unit tests
+      - name: Weir web - install and unit tests
         working-directory: apps/web
         run: |
           npm ci
           npm run api:types:check
           npm run test
 
-      - name: MediaMop web - production build
+      - name: Weir web - production build
         working-directory: apps/web
         env:
           VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
@@ -252,21 +252,21 @@ jobs:
       - name: Pack web dist
         run: |
           cd apps/web
-          zip -r "$GITHUB_WORKSPACE/mediamop-web-dist.zip" dist
+          zip -r "$GITHUB_WORKSPACE/weir-web-dist.zip" dist
 
-      - name: MediaMop E2E smoke (Playwright + real API)
+      - name: Weir E2E smoke (Playwright + real API)
         env:
-          MEDIAMOP_E2E: "1"
-          MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-e2e
+          WEIR_E2E: "1"
+          WEIR_HOME: ${{ runner.temp }}/weir-e2e
           PYTHONPATH: ${{ github.workspace }}/apps/backend/src
-        run: python -m pytest tests/e2e/mediamop -q --tb=short
+        run: python -m pytest tests/e2e/weir -q --tb=short
 
       - name: Upload web dist
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: mediamop-web-dist
+          name: weir-web-dist
           if-no-files-found: error
-          path: mediamop-web-dist.zip
+          path: weir-web-dist.zip
 
   publish:
     runs-on: ubuntu-latest
@@ -279,10 +279,10 @@ jobs:
       contents: write
       packages: write
     env:
-      MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
-      MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ github.workspace }}/artifacts/docker-release-fixture
-      MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture
-      MEDIAMOP_LIVE_E2E_FFMPEG: ffmpeg
+      WEIR_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
+      WEIR_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ github.workspace }}/artifacts/docker-release-fixture
+      WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture
+      WEIR_LIVE_E2E_FFMPEG: ffmpeg
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -301,7 +301,7 @@ jobs:
       - name: Download web dist
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: mediamop-web-dist
+          name: weir-web-dist
           path: ${{ github.workspace }}
 
       - name: Docker image name
@@ -315,7 +315,7 @@ jobs:
       - name: Download Velopack release artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: mediamop-windows-velopack
+          name: weir-windows-velopack
           path: ${{ github.workspace }}/windows-artifact
 
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
@@ -328,46 +328,46 @@ jobs:
           load: true
           platforms: linux/amd64
           push: false
-          tags: mediamop-release-candidate:${{ steps.version.outputs.plain }}
+          tags: weir-release-candidate:${{ steps.version.outputs.plain }}
 
       - name: Start unpushed Docker release candidate
         run: |
-          docker rm -f mediamop-release-candidate >/dev/null 2>&1 || true
-          mkdir -p "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT"
-          chmod 0777 "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT"
-          docker run -d --name mediamop-release-candidate -p 8788:8788 \
-            -v "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT" \
-            -e MEDIAMOP_SESSION_SECRET="$MEDIAMOP_SESSION_SECRET" \
-            -e MEDIAMOP_SESSION_COOKIE_SECURE=false \
-            "mediamop-release-candidate:${{ steps.version.outputs.plain }}"
+          docker rm -f weir-release-candidate >/dev/null 2>&1 || true
+          mkdir -p "$WEIR_LIVE_E2E_FIXTURE_HOST_ROOT"
+          chmod 0777 "$WEIR_LIVE_E2E_FIXTURE_HOST_ROOT"
+          docker run -d --name weir-release-candidate -p 8788:8788 \
+            -v "$WEIR_LIVE_E2E_FIXTURE_HOST_ROOT:$WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT" \
+            -e WEIR_SESSION_SECRET="$WEIR_SESSION_SECRET" \
+            -e WEIR_SESSION_COOKIE_SECURE=false \
+            "weir-release-candidate:${{ steps.version.outputs.plain }}"
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8788/health >/tmp/mediamop-candidate-health.json; then
-              cat /tmp/mediamop-candidate-health.json
+            if curl -fsS http://127.0.0.1:8788/health >/tmp/weir-candidate-health.json; then
+              cat /tmp/weir-candidate-health.json
               exit 0
             fi
             sleep 2
           done
-          docker logs mediamop-release-candidate
+          docker logs weir-release-candidate
           exit 1
 
       - name: Full live E2E against unpushed Docker release candidate
         env:
-          MEDIAMOP_LIVE_BASE_URL: http://127.0.0.1:8788
-          MEDIAMOP_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}
-          MEDIAMOP_LIVE_E2E_ARTIFACTS: artifacts/docker-release-candidate-e2e
+          WEIR_LIVE_BASE_URL: http://127.0.0.1:8788
+          WEIR_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}
+          WEIR_LIVE_E2E_ARTIFACTS: artifacts/docker-release-candidate-e2e
         run: python scripts/live-packaged-e2e.py
 
       - name: Upload Docker release-candidate evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: mediamop-docker-release-candidate-audit
+          name: weir-docker-release-candidate-audit
           if-no-files-found: warn
           path: artifacts/docker-release-candidate-e2e/*
 
       - name: Cleanup unpushed Docker release candidate
         if: always()
-        run: docker rm -f mediamop-release-candidate >/dev/null 2>&1 || true
+        run: docker rm -f weir-release-candidate >/dev/null 2>&1 || true
 
       # Registry credentials and public tags are not created until the local image
       # has passed the complete packaged browser/API audit above.
@@ -399,24 +399,24 @@ jobs:
 
       - name: Smoke test published Docker image
         run: |
-          docker rm -f mediamop-release-smoke >/dev/null 2>&1 || true
-          docker run -d --name mediamop-release-smoke -p 8788:8788 \
-            -e MEDIAMOP_SESSION_SECRET="$MEDIAMOP_SESSION_SECRET" \
-            -e MEDIAMOP_SESSION_COOKIE_SECURE=false \
+          docker rm -f weir-release-smoke >/dev/null 2>&1 || true
+          docker run -d --name weir-release-smoke -p 8788:8788 \
+            -e WEIR_SESSION_SECRET="$WEIR_SESSION_SECRET" \
+            -e WEIR_SESSION_COOKIE_SECURE=false \
             "${{ steps.image.outputs.name }}:latest"
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8788/health >/tmp/mediamop-health.json; then
-              cat /tmp/mediamop-health.json
+            if curl -fsS http://127.0.0.1:8788/health >/tmp/weir-health.json; then
+              cat /tmp/weir-health.json
               exit 0
             fi
             sleep 2
           done
-          docker logs mediamop-release-smoke
+          docker logs weir-release-smoke
           exit 1
 
       - name: Cleanup Docker smoke container
         if: always()
-        run: docker rm -f mediamop-release-smoke >/dev/null 2>&1 || true
+        run: docker rm -f weir-release-smoke >/dev/null 2>&1 || true
 
       - name: Prepare user-facing release notes
         run: |
@@ -432,6 +432,6 @@ jobs:
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           files: |
-            mediamop-web-dist.zip
+            weir-web-dist.zip
             windows-artifact/*
           body_path: release-notes.md

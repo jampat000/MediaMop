@@ -134,14 +134,11 @@ export function LoginPage() {
       status === 500 ||
       status === 503
     ) {
-      console.error("MediaMop login failed against the backend.", login.error);
-      return "Sign-in failed. Check that the MediaMop server is running.";
+      console.error("Weir login failed against the backend.", login.error);
+      return "Sign-in failed. Check that the Weir server is running.";
     }
-    console.error(
-      "MediaMop login failed with an unexpected error.",
-      login.error,
-    );
-    return "Sign-in failed. Check that the MediaMop server is running.";
+    console.error("Weir login failed with an unexpected error.", login.error);
+    return "Sign-in failed. Check that the Weir server is running.";
   })();
 
   return (
@@ -149,10 +146,10 @@ export function LoginPage() {
       <div className="mm-auth-frame">
         <AuthBrandStack />
         <div className="mm-auth-card">
-          <p className="mm-auth-eyebrow">MediaMop</p>
+          <p className="mm-auth-eyebrow">Weir</p>
           <h1 className="mm-auth-title">Sign in</h1>
           <p className="mm-auth-lead">
-            Server-side session sign-in — MediaMop keeps your sign-in on the
+            Server-side session sign-in — Weir keeps your sign-in on the
             backend, not browser storage.
           </p>
 
@@ -163,7 +160,7 @@ export function LoginPage() {
           ) : null}
           {sessionExpired ? (
             <p className="mm-auth-banner" role="status">
-              Your session expired. Sign in again to keep using MediaMop.
+              Your session expired. Sign in again to keep using Weir.
             </p>
           ) : null}
           {sessionNotKept ? (
@@ -172,10 +169,9 @@ export function LoginPage() {
                 Your password was correct, but the session did not stick.
               </strong>{" "}
               Your browser rejected the sign-in cookie. This usually happens
-              when MediaMop is reached over plain HTTP while HTTPS-only cookies
-              are switched on. Set{" "}
-              <code>MEDIAMOP_SESSION_COOKIE_SECURE=auto</code> and restart, or
-              reach MediaMop over HTTPS.
+              when Weir is reached over plain HTTP while HTTPS-only cookies are
+              switched on. Set <code>WEIR_SESSION_COOKIE_SECURE=auto</code> and
+              restart, or reach Weir over HTTPS.
             </div>
           ) : null}
 

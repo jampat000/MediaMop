@@ -13,10 +13,10 @@ import pytest
 from sqlalchemy import delete
 from starlette.testclient import TestClient
 
-import mediamop.platform.media_managers.connections_api as connections_api
-from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
+import weir.platform.media_managers.connections_api as connections_api
 from tests.integration_helpers import auth_post, auth_put, trusted_browser_origin_headers
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.platform.media_managers.connection_model import MediaManagerConnectionRow
 
 
 def _login_admin(client: TestClient) -> None:
@@ -143,7 +143,7 @@ def test_an_unreachable_connection_is_a_normal_test_result(
     monkeypatch.setattr(
         connections_api,
         "_probe",
-        lambda *_args: (False, "MediaMop could not reach Deluno. Check the address."),
+        lambda *_args: (False, "Weir could not reach Deluno. Check the address."),
     )
 
     response = auth_post(

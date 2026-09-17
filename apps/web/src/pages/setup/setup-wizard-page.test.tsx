@@ -98,7 +98,7 @@ function renderWizard() {
   });
   client.setQueryData(qk.me, { id: 1, username: "admin", role: "admin" });
   client.setQueryData(suiteSettingsQueryKey, {
-    product_display_name: "MediaMop",
+    product_display_name: "Weir",
     signed_in_home_notice: null,
     setup_wizard_state: "pending",
     app_timezone: "UTC",

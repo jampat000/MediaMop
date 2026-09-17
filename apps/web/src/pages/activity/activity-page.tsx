@@ -779,7 +779,7 @@ export function ActivityPage() {
           <h1 className="mm-page__title">Activity</h1>
           <p className="mm-page__lead">
             {isLikelyNetworkFailure(err)
-              ? "Could not reach the MediaMop API."
+              ? "Could not reach the Weir API."
               : isHttpErrorFromApi(err)
                 ? "The server refused this request. Sign in again if needed."
                 : "Could not load activity."}
@@ -1022,7 +1022,7 @@ export function ActivityPage() {
         <p className="mm-page__eyebrow">Overview</p>
         <h1 className="mm-page__title">Activity</h1>
         <p className="mm-page__subtitle">
-          Live activity timeline for MediaMop, newest first.
+          Live activity timeline for Weir, newest first.
         </p>
         <p className="mm-page__lead">
           Use this page to understand what just happened across Refiner and the
@@ -1326,8 +1326,8 @@ export function ActivityPage() {
         >
           <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
             {singleFileTarget
-              ? `Everything MediaMop recorded about ${singleFileTarget.relative_path}, newest first.`
-              : `Everything MediaMop recorded about files matching “${applied.file.trim()}”, newest first.`}
+              ? `Everything Weir recorded about ${singleFileTarget.relative_path}, newest first.`
+              : `Everything Weir recorded about files matching “${applied.file.trim()}”, newest first.`}
           </span>
           {singleFileTarget && canRemove ? (
             <button

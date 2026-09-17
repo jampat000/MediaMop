@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def test_compose_documents_session_secret_generation() -> None:
     compose = (REPO_ROOT / "compose.yaml").read_text(encoding="utf-8")
 
-    assert "MEDIAMOP_SESSION_SECRET" in compose
+    assert "WEIR_SESSION_SECRET" in compose
     assert "openssl rand -hex 32" in compose
     assert "session.secret" in compose
 
@@ -16,14 +16,14 @@ def test_compose_documents_session_secret_generation() -> None:
 def test_docker_env_example_documents_required_and_recommended_values() -> None:
     example = (REPO_ROOT / "docker" / ".env.example").read_text(encoding="utf-8")
 
-    assert "MEDIAMOP_SESSION_SECRET" in example
-    assert "MEDIAMOP_CREDENTIALS_SECRET" in example
+    assert "WEIR_SESSION_SECRET" in example
+    assert "WEIR_CREDENTIALS_SECRET" in example
     assert "openssl rand -hex 32" in example
-    assert "MEDIAMOP_HOME" in example
-    assert "MEDIAMOP_PUID" in example
-    assert "MEDIAMOP_PGID" in example
-    assert "MEDIAMOP_CHOWN_OUTPUT" in example
-    assert "MEDIAMOP_DIR_MODE_OUTPUT" in example
+    assert "WEIR_HOME" in example
+    assert "WEIR_PUID" in example
+    assert "WEIR_PGID" in example
+    assert "WEIR_CHOWN_OUTPUT" in example
+    assert "WEIR_DIR_MODE_OUTPUT" in example
 
 
 def test_docker_entrypoint_generates_persistent_session_secret() -> None:
@@ -31,11 +31,11 @@ def test_docker_entrypoint_generates_persistent_session_secret() -> None:
 
     assert "generate_secret()" in entrypoint
     assert "session.secret" in entrypoint
-    assert "export MEDIAMOP_SESSION_SECRET" in entrypoint
+    assert "export WEIR_SESSION_SECRET" in entrypoint
     assert "must be at least 32 characters" in entrypoint
-    assert "MEDIAMOP_PUID" in entrypoint
-    assert "MEDIAMOP_CHOWN_OUTPUT" in entrypoint
-    assert "gosu mediamop" in entrypoint
+    assert "WEIR_PUID" in entrypoint
+    assert "WEIR_CHOWN_OUTPUT" in entrypoint
+    assert "gosu weir" in entrypoint
     assert entrypoint.count("--no-server-header") == 2
 
 

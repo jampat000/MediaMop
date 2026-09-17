@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.platform.file_lifecycle.mutations import (
+from weir.platform.file_lifecycle.mutations import (
     FileLifecycleError,
     safe_copy_to_final,
     safe_finalize_file,

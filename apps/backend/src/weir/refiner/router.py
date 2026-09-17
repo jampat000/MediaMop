@@ -1,0 +1,39 @@
+"""Refiner HTTP routes (Refiner-native surfaces).
+
+Includes persisted-queue inspection via ``refiner_jobs_inspection_api`` (``GET …/refiner/jobs/inspection``).
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter
+
+from weir.refiner.direct_play.api import router as refiner_direct_play_router
+from weir.refiner.file_remux_pass.api import router as refiner_file_remux_pass_router
+from weir.refiner.refiner_files_api import router as refiner_files_router
+from weir.refiner.refiner_hardware_api import router as refiner_hardware_router
+from weir.refiner.refiner_hold_diagnostic_api import router as refiner_hold_diagnostic_router
+from weir.refiner.refiner_jobs_inspection_api import router as refiner_jobs_inspection_router
+from weir.refiner.refiner_libraries_api import router as refiner_libraries_router
+from weir.refiner.refiner_maintenance_api import router as refiner_maintenance_router
+from weir.refiner.refiner_metadata_provider_api import router as refiner_metadata_provider_router
+from weir.refiner.refiner_operator_settings_api import router as refiner_operator_settings_router
+from weir.refiner.refiner_overview_stats_api import router as refiner_overview_stats_router
+from weir.refiner.refiner_runtime_settings_api import router as refiner_runtime_settings_router
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_api import (
+    router as refiner_watched_folder_remux_scan_dispatch_router,
+)
+
+router = APIRouter(tags=["refiner"])
+router.include_router(refiner_jobs_inspection_router)
+router.include_router(refiner_operator_settings_router)
+router.include_router(refiner_files_router)
+router.include_router(refiner_direct_play_router)
+router.include_router(refiner_libraries_router)
+router.include_router(refiner_runtime_settings_router)
+router.include_router(refiner_overview_stats_router)
+router.include_router(refiner_hold_diagnostic_router)
+router.include_router(refiner_hardware_router)
+router.include_router(refiner_metadata_provider_router)
+router.include_router(refiner_maintenance_router)
+router.include_router(refiner_file_remux_pass_router)
+router.include_router(refiner_watched_folder_remux_scan_dispatch_router)

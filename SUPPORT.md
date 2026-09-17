@@ -6,7 +6,7 @@ Do not open public issues for unpatched security vulnerabilities. Use the proces
 
 When opening an issue, include:
 
-- MediaMop version or commit
+- Weir version or commit
 - install type: Windows installer, Docker, or local development
 - operating system and browser
 - exact steps to reproduce
@@ -16,8 +16,8 @@ When opening an issue, include:
 
 ## Windows LAN access
 
-If MediaMop opens locally but another device on your LAN cannot reach it, allow
-`MediaMopServer.exe` (located under `%LocalAppData%\MediaMop\current\server\`) through Windows Firewall for your current network profile. Public network
+If Weir opens locally but another device on your LAN cannot reach it, allow
+`WeirServer.exe` (located under `%LocalAppData%\Weir\current\server\`) through Windows Firewall for your current network profile. Public network
 profiles are not opened automatically; switch the network to Private/Domain or add a manual rule only if that matches
 your security setup.
 

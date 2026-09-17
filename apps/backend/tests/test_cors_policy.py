@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from starlette.testclient import TestClient
 
-from mediamop.api.factory import create_app
+from weir.api.factory import create_app
 
 
 def _client_with_cors(monkeypatch):
-    monkeypatch.setenv("MEDIAMOP_CORS_ORIGINS", "http://localhost:5173")
+    monkeypatch.setenv("WEIR_CORS_ORIGINS", "http://localhost:5173")
     return TestClient(create_app())
 
 
-def test_cors_preflight_allows_media_mop_browser_methods_and_headers(monkeypatch) -> None:
+def test_cors_preflight_allows_weir_browser_methods_and_headers(monkeypatch) -> None:
     with _client_with_cors(monkeypatch) as client:
         response = client.options(
             "/api/v1/auth/csrf",

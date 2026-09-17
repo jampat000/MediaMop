@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.refiner.domain import (
+from weir.refiner.domain import (
     FileAnchorCandidate,
     RefinerQueueRowView,
     TitleYearAnchor,

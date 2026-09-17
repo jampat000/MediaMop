@@ -1,4 +1,4 @@
-"""Alembic environment — uses mediamop.core.db.Base metadata."""
+"""Alembic environment — uses weir.core.db.Base metadata."""
 
 from __future__ import annotations
 
@@ -19,25 +19,25 @@ if load_dotenv is not None and _env_file.is_file():
 
 from sqlalchemy import engine_from_config, pool
 
-import mediamop.platform.arr_library.arr_operator_settings_model  # noqa: F401
-import mediamop.platform.media_managers.connection_model  # noqa: F401
-import mediamop.platform.media_managers.handoff_ledger_model  # noqa: F401
-import mediamop.platform.suite_settings.suite_configuration_backup_model  # noqa: F401
+import weir.platform.arr_library.arr_operator_settings_model  # noqa: F401
+import weir.platform.media_managers.connection_model  # noqa: F401
+import weir.platform.media_managers.handoff_ledger_model  # noqa: F401
+import weir.platform.suite_settings.suite_configuration_backup_model  # noqa: F401
 
 # Import Base after ensuring src/ is on path (run from apps/backend with PYTHONPATH=src).
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
+from weir.core.config import WeirSettings
+from weir.core.db import Base
 
 # Register models on Base.metadata (Alembic autogenerate / revision drift checks).
-from mediamop.platform.activity import models as _activity_orm  # noqa: F401
-from mediamop.platform.auth import models as _auth_orm  # noqa: F401
-from mediamop.platform.notifications import model as _notifications_orm  # noqa: F401
-from mediamop.platform.suite_settings import model as _suite_settings_orm  # noqa: F401
-from mediamop.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
-from mediamop.refiner import refiner_file_log_model as _refiner_file_log_orm  # noqa: F401
-from mediamop.refiner import refiner_file_state_model as _refiner_file_state_orm  # noqa: F401
-from mediamop.refiner import refiner_library_model as _refiner_library_orm  # noqa: F401
-from mediamop.refiner import refiner_operator_settings_model as _refiner_operator_settings_orm  # noqa: F401
+from weir.platform.activity import models as _activity_orm  # noqa: F401
+from weir.platform.auth import models as _auth_orm  # noqa: F401
+from weir.platform.notifications import model as _notifications_orm  # noqa: F401
+from weir.platform.suite_settings import model as _suite_settings_orm  # noqa: F401
+from weir.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
+from weir.refiner import refiner_file_log_model as _refiner_file_log_orm  # noqa: F401
+from weir.refiner import refiner_file_state_model as _refiner_file_state_orm  # noqa: F401
+from weir.refiner import refiner_library_model as _refiner_library_orm  # noqa: F401
+from weir.refiner import refiner_operator_settings_model as _refiner_operator_settings_orm  # noqa: F401
 
 # this is the Alembic Config object, which provides access to the values within alembic.ini
 config = context.config
@@ -49,9 +49,9 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    """SQLite-first URL from ``MediaMopSettings`` (same resolution as the running API)."""
+    """SQLite-first URL from ``WeirSettings`` (same resolution as the running API)."""
 
-    return MediaMopSettings.load().sqlalchemy_database_url
+    return WeirSettings.load().sqlalchemy_database_url
 
 
 def run_migrations_offline() -> None:

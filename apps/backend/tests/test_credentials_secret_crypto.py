@@ -2,25 +2,25 @@ from __future__ import annotations
 
 import json
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.platform.arr_library.arr_connection_crypto import (
+from weir.core.config import WeirSettings
+from weir.platform.arr_library.arr_connection_crypto import (
     decrypt_arr_api_key,
     encrypt_arr_api_key,
     rewrap_arr_api_key,
 )
 
 
-def _settings(monkeypatch, *, session: str, credentials: str | None) -> MediaMopSettings:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", session)
+def _settings(monkeypatch, *, session: str, credentials: str | None) -> WeirSettings:
+    monkeypatch.setenv("WEIR_SESSION_SECRET", session)
     if credentials is None:
-        monkeypatch.delenv("MEDIAMOP_CREDENTIALS_SECRET", raising=False)
+        monkeypatch.delenv("WEIR_CREDENTIALS_SECRET", raising=False)
     else:
-        monkeypatch.setenv("MEDIAMOP_CREDENTIALS_SECRET", credentials)
-    return MediaMopSettings.load()
+        monkeypatch.setenv("WEIR_CREDENTIALS_SECRET", credentials)
+    return WeirSettings.load()
 
 
 def test_credentials_secret_decouples_arr_from_session_rotation(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
+    monkeypatch.setenv("WEIR_HOME", str(tmp_path))
     s1 = _settings(
         monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="credentials-secret-a"
     )
@@ -36,7 +36,7 @@ def test_credentials_secret_decouples_arr_from_session_rotation(monkeypatch, tmp
 
 
 def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
+    monkeypatch.setenv("WEIR_HOME", str(tmp_path))
     legacy = _settings(monkeypatch, session="legacy-session-secret-abcdefghijklmnopqrstuvwxyz", credentials=None)
 
     arr_legacy = encrypt_arr_api_key(legacy, "arr-key")
@@ -58,23 +58,23 @@ def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_pat
 
 
 def test_previous_credentials_secret_allows_safe_secret_rotation(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
+    monkeypatch.setenv("WEIR_HOME", str(tmp_path))
     old = _settings(
         monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="old-credentials-secret"
     )
 
     arr = encrypt_arr_api_key(old, "arr-key")
 
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "session-secret-b-abcdefghijklmnopqrstuvwxyz")
-    monkeypatch.setenv("MEDIAMOP_CREDENTIALS_SECRET", "new-credentials-secret")
-    monkeypatch.setenv("MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS", "old-credentials-secret")
-    rotated = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "session-secret-b-abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("WEIR_CREDENTIALS_SECRET", "new-credentials-secret")
+    monkeypatch.setenv("WEIR_PREVIOUS_CREDENTIALS_SECRETS", "old-credentials-secret")
+    rotated = WeirSettings.load()
 
     assert decrypt_arr_api_key(rotated, arr) == "arr-key"
 
     arr_new = rewrap_arr_api_key(rotated, arr)
 
-    monkeypatch.setenv("MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS", "")
-    new_only = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_PREVIOUS_CREDENTIALS_SECRETS", "")
+    new_only = WeirSettings.load()
     assert arr_new is not None
     assert decrypt_arr_api_key(new_only, arr_new) == "arr-key"

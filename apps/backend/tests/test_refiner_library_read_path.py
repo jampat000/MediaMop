@@ -14,25 +14,25 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.media_managers.connection_model  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-import mediamop.refiner.refiner_library_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
-from mediamop.refiner.refiner_library_model import (
+import weir.platform.media_managers.connection_model  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+import weir.refiner.refiner_library_model  # noqa: F401
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.platform.media_managers.connection_model import MediaManagerConnectionRow
+from weir.refiner.refiner_library_model import (
     RefinerLibraryManagerLinkRow,
     RefinerLibraryRow,
     RefinerRuleSetRow,
 )
-from mediamop.refiner.refiner_library_service import (
+from weir.refiner.refiner_library_service import (
     admission_rules_for,
     manager_connection_ids_for,
     resolve_library,
     rules_config_for,
     seeded_library_for_scope,
 )
-from mediamop.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
+from weir.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 
 
 @pytest.fixture
@@ -92,7 +92,7 @@ def test_a_third_library_resolves_its_own_paths(session: Session, tmp_path: Path
 
     _library(session, tmp_path, name="Movies", media_scope="movie", display_order=0)
     kids = _library(session, tmp_path, name="Kids", media_scope="movie", display_order=2)
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
 
     runtime, err = resolve_refiner_path_runtime_for_remux(session, settings, media_scope="movie", library_id=kids.id)
 
@@ -162,7 +162,7 @@ def test_an_unconfigured_library_refuses_and_says_where_to_set_it(session: Sessi
     library = _library(session, tmp_path, name="Movies")
     library.watched_folder = ""
     session.commit()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
 
     runtime, err = resolve_refiner_path_runtime_for_remux(session, settings, media_scope="movie", library_id=library.id)
 
@@ -192,7 +192,7 @@ def test_settings_unchanged_when_no_library_covers_the_scope(session: Session, t
     output.mkdir(parents=True)
     seed_refiner_libraries(session, watched_folder=str(watched), output_folder=str(output))
     session.commit()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path / "home"))
+    settings = replace(WeirSettings.load(), weir_home=str(tmp_path / "home"))
 
     runtime, err = resolve_refiner_path_runtime_for_remux(session, settings, media_scope="movie")
 

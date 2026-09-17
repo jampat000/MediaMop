@@ -12,24 +12,24 @@ if (-not (Test-Path $portsPath)) {
     Write-Error "Missing scripts/dev-ports.json (repo dev port registry)."
 }
 
-$sec = if ($env:MEDIAMOP_SESSION_SECRET) { $env:MEDIAMOP_SESSION_SECRET.Trim() } else { "" }
+$sec = if ($env:WEIR_SESSION_SECRET) { $env:WEIR_SESSION_SECRET.Trim() } else { "" }
 if (-not $sec) {
-    Write-Warning "MEDIAMOP_SESSION_SECRET is empty; set a long random value before using login/bootstrap."
+    Write-Warning "WEIR_SESSION_SECRET is empty; set a long random value before using login/bootstrap."
 }
-Write-Host "SQLite: data under MEDIAMOP_HOME (see apps/backend/.env.example). Run .\scripts\dev-migrate.ps1 once before first API use." -ForegroundColor DarkGray
+Write-Host "SQLite: data under WEIR_HOME (see apps/backend/.env.example). Run .\scripts\dev-migrate.ps1 once before first API use." -ForegroundColor DarkGray
 Write-Host ""
 
 $ports = Get-Content $portsPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $apiHost = $ports.development.apiHost
 $apiPort = [int]$ports.development.apiPort
-if ($env:MEDIAMOP_DEV_API_PORT -and $env:MEDIAMOP_DEV_API_PORT.Trim()) {
-    $apiPort = [int]$env:MEDIAMOP_DEV_API_PORT.Trim()
+if ($env:WEIR_DEV_API_PORT -and $env:WEIR_DEV_API_PORT.Trim()) {
+    $apiPort = [int]$env:WEIR_DEV_API_PORT.Trim()
 }
 
 $busyApi = Get-NetTCPConnection -LocalPort $apiPort -State Listen -ErrorAction SilentlyContinue
 if ($busyApi) {
     Write-Error (
-        "Port $apiPort is already in use. Stop the other API or set MEDIAMOP_DEV_API_PORT. " +
+        "Port $apiPort is already in use. Stop the other API or set WEIR_DEV_API_PORT. " +
         "Vite's /api proxy will fail until the correct API is listening here."
     )
 }
@@ -49,4 +49,4 @@ if (Test-Path $venvPython) {
     $pyExe = $py.Source
 }
 
-& $pyExe -m uvicorn mediamop.api.main:app --host $apiHost --port $apiPort --reload
+& $pyExe -m uvicorn weir.api.main:app --host $apiHost --port $apiPort --reload

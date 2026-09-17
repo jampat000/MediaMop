@@ -9,7 +9,7 @@ Two rules carry the safety here, and both have their own tests:
 - A sidecar that is **not there** is not a failure. The common case is a release with
   none, and treating that as a problem would block source deletion on every file.
 - A sidecar that **exists and could not be copied** blocks the deletion, because
-  proceeding would destroy the only copy of a file MediaMop was asked to keep.
+  proceeding would destroy the only copy of a file Weir was asked to keep.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.platform.file_lifecycle import mutations as file_lifecycle_mutations
-from mediamop.refiner.refiner_sidecar_migration import (
+from weir.platform.file_lifecycle import mutations as file_lifecycle_mutations
+from weir.refiner.refiner_sidecar_migration import (
     DEFAULT_SIDECAR_PATTERNS,
     apply_original_timestamps,
     destination_for_sidecar,

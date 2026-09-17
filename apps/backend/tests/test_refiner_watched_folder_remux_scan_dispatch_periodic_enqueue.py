@@ -10,38 +10,38 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import delete, select, update
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-import mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue import (
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+import weir.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
+from tests.refiner_library_fixtures import seed_refiner_libraries
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue import (
     refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan,
     try_enqueue_periodic_watched_folder_remux_scan_dispatch,
 )
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
     _missed_due_run_count,
     _next_scheduler_sleep_seconds,
     _watched_folder_scan_interval_seconds,
     refiner_scope_periodic_scan_enabled,
 )
-from tests.refiner_library_fixtures import seed_refiner_libraries
 
 
 def _fac():
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     return create_session_factory(eng)
 
 
-def _settings_on() -> MediaMopSettings:
-    base = MediaMopSettings.load()
+def _settings_on() -> WeirSettings:
+    base = WeirSettings.load()
     return replace(
         base,
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=True,

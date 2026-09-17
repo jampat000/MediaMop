@@ -34,7 +34,7 @@ const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
 const viewerMe: UserPublic = { id: 2, username: "bob", role: "viewer" };
 
 const minimalSuiteSettings: SuiteSettingsOut = {
-  product_display_name: "MediaMop",
+  product_display_name: "Weir",
   signed_in_home_notice: null,
   setup_wizard_state: "pending",
   app_timezone: "UTC",
@@ -51,9 +51,9 @@ const minimalUpdateStatus: SuiteUpdateStatusOut = {
   current_version: "1.0.0",
   install_type: "source",
   status: "up_to_date",
-  summary: "This install is already on MediaMop 1.0.0.",
+  summary: "This install is already on Weir 1.0.0.",
   latest_version: "1.0.0",
-  latest_name: "MediaMop 1.0.0",
+  latest_name: "Weir 1.0.0",
   published_at: null,
   release_url: "https://example.com/release",
   windows_installer_url: null,
@@ -69,14 +69,14 @@ const windowsUpdateAvailableStatus: SuiteUpdateStatusOut = {
   current_version: "2.0.7",
   install_type: "windows",
   status: "update_available",
-  summary: "MediaMop 2.0.8 is available.",
+  summary: "Weir 2.0.8 is available.",
   latest_version: "2.0.8",
-  latest_name: "MediaMop 2.0.8",
+  latest_name: "Weir 2.0.8",
   windows_installer_url:
-    "https://github.com/jampat000/MediaMop/releases/download/v2.0.8/MediaMop-win-Setup.exe",
+    "https://github.com/jampat000/weir/releases/download/v2.0.8/Weir-win-Setup.exe",
   in_app_upgrade_supported: true,
   in_app_upgrade_summary:
-    "Updates are managed by the MediaMop desktop app via Velopack.",
+    "Updates are managed by the Weir desktop app via Velopack.",
 };
 
 const minimalSecurity: SuiteSecurityOverviewOut = {
@@ -154,7 +154,7 @@ function renderSettings(
   qc.setQueryData(qk.me, me);
   qc.setQueryData(qk.session, minimalCurrentSession);
   qc.setQueryData(suiteConfigurationBackupsQueryKey, {
-    directory: "C:/MediaMop/backups/suite-configuration",
+    directory: "C:/Weir/backups/suite-configuration",
     items: [],
   });
   qc.setQueryData(
@@ -214,7 +214,7 @@ async function renderSettingsWithSupportConfig(
   qc.setQueryData(qk.me, me);
   qc.setQueryData(qk.session, minimalCurrentSession);
   qc.setQueryData(suiteConfigurationBackupsQueryKey, {
-    directory: "C:/MediaMop/backups/suite-configuration",
+    directory: "C:/Weir/backups/suite-configuration",
     items: [],
   });
   qc.setQueryData(
@@ -266,17 +266,17 @@ describe("SettingsPage (suite settings)", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Support" }));
     expect(screen.getByTestId("suite-settings-support")).toBeInTheDocument();
     expect(
-      screen.getByText("MediaMop is free to use. Support is optional."),
+      screen.getByText("Weir is free to use. Support is optional."),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "If MediaMop saves you time or helps keep your library cleaner, you can support ongoing development.",
+        "If Weir saves you time or keeps your downloads clean, you can support ongoing development.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Development note: set/i)).toBeInTheDocument();
     expect(screen.getByText("VITE_SUPPORT_URL")).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Support MediaMop" }),
+      screen.queryByRole("link", { name: "Support Weir" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
   });
@@ -292,16 +292,17 @@ describe("SettingsPage (suite settings)", () => {
 
     expect(screen.getByTestId("suite-settings-support")).toBeInTheDocument();
     expect(
-      screen.getByText("MediaMop is free to use. Support is optional."),
+      screen.getByText("Weir is free to use. Support is optional."),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "If MediaMop saves you time or helps keep your library cleaner, you can support ongoing development.",
+        "If Weir saves you time or keeps your downloads clean, you can support ongoing development.",
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Support MediaMop" }),
-    ).toHaveAttribute("href", "https://example.com/support");
+    expect(screen.getByRole("link", { name: "Support Weir" })).toHaveAttribute(
+      "href",
+      "https://example.com/support",
+    );
     expect(screen.queryByText("VITE_SUPPORT_URL")).not.toBeInTheDocument();
     expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/feature limits/i)).not.toBeInTheDocument();
@@ -321,7 +322,7 @@ describe("SettingsPage (suite settings)", () => {
       screen.queryByTestId("suite-settings-support"),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Support MediaMop" }),
+      screen.queryByRole("link", { name: "Support Weir" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("VITE_SUPPORT_URL")).not.toBeInTheDocument();
     expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
@@ -544,7 +545,7 @@ describe("SettingsPage (suite settings)", () => {
     qc.setQueryData(qk.me, operatorMe);
     qc.setQueryData(qk.session, minimalCurrentSession);
     qc.setQueryData(suiteConfigurationBackupsQueryKey, {
-      directory: "C:/MediaMop/backups/suite-configuration",
+      directory: "C:/Weir/backups/suite-configuration",
       items: [],
     });
     qc.setQueryData(suiteUpdateStatusQueryKey, windowsUpdateAvailableStatus);

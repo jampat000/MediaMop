@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Stops processes **listening** on the dev API port from ``scripts/dev-ports.json``
- * (override with ``MEDIAMOP_DEV_API_PORT``).
+ * (override with ``WEIR_DEV_API_PORT``).
  *
- * Use when an old MediaMop ``uvicorn`` is still bound (a current route returns 404) or the
+ * Use when an old Weir ``uvicorn`` is still bound (a current route returns 404) or the
  * port is stuck. Then run ``npm run dev`` from ``apps/web`` again.
  */
 import { execFileSync } from "node:child_process";
@@ -17,7 +17,7 @@ const repoRoot = path.join(__dirname, "..");
 const devPortsPath = path.join(repoRoot, "scripts", "dev-ports.json");
 
 function readApiPort() {
-  const forced = (process.env.MEDIAMOP_DEV_API_PORT || "").trim();
+  const forced = (process.env.WEIR_DEV_API_PORT || "").trim();
   if (forced) {
     return Number(forced);
   }

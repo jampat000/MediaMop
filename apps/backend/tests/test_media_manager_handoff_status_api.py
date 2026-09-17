@@ -1,7 +1,7 @@
-"""HTTP: a media manager asking MediaMop about a hand-off it gave us, and cancelling one (#480).
+"""HTTP: a media manager asking Weir about a hand-off it gave us, and cancelling one (#480).
 
 Deluno stops timing hand-offs out and asks instead (Deluno#511). Two wrong answers are the ones
-that cost somebody their media: saying "never heard of it" about a hand-off MediaMop finished
+that cost somebody their media: saying "never heard of it" about a hand-off Weir finished
 (Deluno then imports the unprocessed original), and letting a status read reveal file paths to
 anyone who asks.
 """
@@ -17,19 +17,19 @@ from sqlalchemy import delete, select
 from starlette.testclient import TestClient
 
 from alembic import command
-from mediamop.api.factory import create_app
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.jobs.job_rows_retention_periodic import prune_job_rows
-from mediamop.platform.media_managers.handoff_ledger import LEDGER_RETENTION_DAYS, prune_ledger
-from mediamop.platform.media_managers.handoff_ledger_model import MediaManagerHandoffRow
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
+from weir.api.factory import create_app
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.jobs.job_rows_retention_periodic import prune_job_rows
+from weir.platform.media_managers.handoff_ledger import LEDGER_RETENTION_DAYS, prune_ledger
+from weir.platform.media_managers.handoff_ledger_model import MediaManagerHandoffRow
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 
 WATCHED = "/srv/handoff/movies"
 SECRET = {"X-Webhook-Secret": "s3cret"}
@@ -37,7 +37,7 @@ SECRET = {"X-Webhook-Secret": "s3cret"}
 
 @pytest.fixture(autouse=True)
 def _isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    integration_test_set_home(tmp_path, monkeypatch, "mmhome_handoff_status")
+    integration_test_set_home(tmp_path, monkeypatch, "weirhome_handoff_status")
     integration_test_quiesce_in_process_workers(monkeypatch)
     integration_test_quiesce_periodic_enqueue(monkeypatch)
     backend = Path(__file__).resolve().parents[1]
@@ -46,7 +46,7 @@ def _isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("MEDIAMOP_MEDIA_MANAGER_WEBHOOK_SECRET", "s3cret")
+    monkeypatch.setenv("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "s3cret")
     with TestClient(create_app()) as c:
         from tests.refiner_library_fixtures import seed_refiner_libraries
 
@@ -57,7 +57,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def _factory(client: TestClient):
-    from mediamop.core.db import create_db_engine, create_session_factory
+    from weir.core.db import create_db_engine, create_session_factory
 
     return create_session_factory(create_db_engine(client.app.state.settings))
 
@@ -102,8 +102,8 @@ def _set_job_status(client: TestClient, status: RefinerJobStatus) -> None:
 
 
 def test_no_configured_secret_is_a_403_that_says_what_to_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MEDIAMOP_MEDIA_MANAGER_WEBHOOK_SECRET", raising=False)
-    monkeypatch.delenv("MEDIAMOP_SUBBER_WEBHOOK_SECRET", raising=False)
+    monkeypatch.delenv("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", raising=False)
+    monkeypatch.delenv("WEIR_SUBBER_WEBHOOK_SECRET", raising=False)
     with TestClient(create_app()) as c:
         for method, path in (
             ("GET", "/api/v1/intake/capabilities"),
@@ -214,7 +214,7 @@ def test_a_repeated_poll_does_not_move_last_changed(client: TestClient) -> None:
 def test_the_report_records_the_output_path(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     import httpx
 
-    from mediamop.platform.media_managers.completion_callback import report_handoff_completion
+    from weir.platform.media_managers.completion_callback import report_handoff_completion
 
     monkeypatch.setattr(httpx, "post", lambda url, **kw: httpx.Response(202, request=httpx.Request("POST", url)))
     _hand_off(client)
@@ -302,7 +302,7 @@ def test_only_old_finished_hand_offs_are_pruned(client: TestClient) -> None:
 
 
 def _watch(client: TestClient, folder: Path) -> None:
-    from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+    from weir.refiner.refiner_library_model import RefinerLibraryRow
 
     with _factory(client)() as db:
         library = db.scalars(select(RefinerLibraryRow).where(RefinerLibraryRow.media_type == "movie")).one()

@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.refiner.refiner_path_settings_service import (
+from weir.core.config import WeirSettings
+from weir.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_path_settings_service import (
     _validate_path_separation,
     effective_library_work_folder,
     resolved_default_refiner_tv_work_folder,
@@ -17,23 +17,23 @@ from mediamop.refiner.refiner_path_settings_service import (
 
 
 def test_resolved_default_work_under_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     h = tmp_path / "home2"
     h.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(h))
-    s = MediaMopSettings.load()
-    got = resolved_default_refiner_work_folder(mediamop_home=s.mediamop_home)
+    monkeypatch.setenv("WEIR_HOME", str(h))
+    s = WeirSettings.load()
+    got = resolved_default_refiner_work_folder(weir_home=s.weir_home)
     assert got == str(h.resolve() / "refiner" / "refiner-movie-work")
     assert Path(got).is_absolute()
 
 
 def test_resolved_default_tv_work_under_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     h = tmp_path / "home_tv"
     h.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(h))
-    s = MediaMopSettings.load()
-    got = resolved_default_refiner_tv_work_folder(mediamop_home=s.mediamop_home)
+    monkeypatch.setenv("WEIR_HOME", str(h))
+    s = WeirSettings.load()
+    got = resolved_default_refiner_tv_work_folder(weir_home=s.weir_home)
     assert got == str(h.resolve() / "refiner" / "refiner-tv-work")
     assert Path(got).is_absolute()
 
@@ -45,7 +45,7 @@ def test_legacy_movie_default_is_treated_as_default(tmp_path: Path) -> None:
         name="Movies", media_type="movie", work_folder=r"C:\ProgramData\Media\refiner-movie-work"
     )
 
-    got, is_default = effective_library_work_folder(library=library, mediamop_home=str(tmp_path))
+    got, is_default = effective_library_work_folder(library=library, weir_home=str(tmp_path))
 
     assert is_default is True
     assert got == str(tmp_path.resolve() / "refiner" / "refiner-movie-work")

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — applies to every outbound question MediaMop asks a media manager, and to
+Accepted — applies to every outbound question Weir asks a media manager, and to
 every gate that acts on the answer.
 
 ## Context
@@ -70,7 +70,7 @@ The right answer genuinely differs, so the port does not pick one:
   report which manager could not be reached. Refusing to process anything because a
   manager is down would stop the app doing its job over a safety check that is advisory.
 - **Anything in front of a delete** (output cleanup, season cleanup, failure sweep):
-  refuse. An import check MediaMop could not make is not an import check that passed.
+  refuse. An import check Weir could not make is not an import check that passed.
 
 ### 5. Blocked-upstream reasons name the connection
 
@@ -94,7 +94,7 @@ answer. Retrying inside the call would spend the rest of the window on the retry
   Deluno-only instance that means output-folder cleanup stays off — which is what
   already happened when no Radarr was configured, now said out loud in the activity
   detail rather than left to be inferred.
-- A queue state MediaMop does not recognise is treated as **still in progress**. A
+- A queue state Weir does not recognise is treated as **still in progress**. A
   wrong "wait" costs one scan cycle; a wrong "proceed" costs a file.
 - `refiner.candidate_gate.v1` gained a fourth verdict, `no_upstream_signal`, and its
   manual-enqueue payload asks for a `media_scope` rather than a product `target`. This

@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from mediamop.refiner import refiner_remux_mux as mux
+from weir.refiner import refiner_remux_mux as mux
 
 
 def _probe(*, duration: float, audio: int = 1) -> dict:
@@ -30,7 +30,7 @@ def test_staged_output_is_rejected_when_its_duration_is_only_a_partial_download(
     with pytest.raises(mux.MediaCompletenessError, match=r"212\.5s of 5384\.0s expected"):
         mux.validate_remux_output(
             staged,
-            mediamop_home=str(tmp_path),
+            weir_home=str(tmp_path),
             expected_audio=1,
             expected_duration_seconds=5384.046,
         )
@@ -46,7 +46,7 @@ def test_staged_output_accepts_normal_duration_rounding(
 
     mux.validate_remux_output(
         staged,
-        mediamop_home=str(tmp_path),
+        weir_home=str(tmp_path),
         expected_audio=1,
         expected_duration_seconds=5384.046,
     )
@@ -67,7 +67,7 @@ def test_source_integrity_validation_reads_primary_video_to_completion(
 
     monkeypatch.setattr(mux.subprocess, "run", _run)
 
-    mux.validate_media_integrity(source, mediamop_home=str(tmp_path))
+    mux.validate_media_integrity(source, weir_home=str(tmp_path))
 
     assert calls == [
         [
@@ -105,7 +105,7 @@ def test_source_integrity_validation_rejects_incomplete_media(
     )
 
     with pytest.raises(mux.MediaCompletenessError, match="Invalid data found when processing input"):
-        mux.validate_media_integrity(source, mediamop_home=str(tmp_path))
+        mux.validate_media_integrity(source, weir_home=str(tmp_path))
 
 
 def test_temp_output_is_deleted_when_duration_validation_fails(
@@ -129,7 +129,7 @@ def test_temp_output_is_deleted_when_duration_validation_fails(
             src=source,
             work_dir=tmp_path / "work",
             plan=plan,  # type: ignore[arg-type]
-            mediamop_home=str(tmp_path),
+            weir_home=str(tmp_path),
             duration_seconds=100.0,
         )
 

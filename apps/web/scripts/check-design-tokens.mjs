@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(scriptDir, "..");
 const sourceRoot = path.join(webRoot, "src");
-const tokenPath = path.join(sourceRoot, "styles", "mediamop-tokens.css");
+const tokenPath = path.join(sourceRoot, "styles", "weir-tokens.css");
 const allowedExtensions = new Set([".css", ".ts", ".tsx"]);
 const requiredTokens = [
   "mm-text1",

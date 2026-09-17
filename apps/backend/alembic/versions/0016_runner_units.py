@@ -86,7 +86,7 @@ def upgrade() -> None:
 
     # Preserve the effective concurrency an operator already chose.
     if _columns("refiner_operator_settings"):
-        from mediamop.refiner.refiner_runner_units import capacity_from_legacy_concurrency
+        from weir.refiner.refiner_runner_units import capacity_from_legacy_concurrency
 
         saved = bind.execute(
             sa.text("SELECT max_concurrent_files FROM refiner_operator_settings WHERE id = 1")

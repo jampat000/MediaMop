@@ -9,7 +9,7 @@ for a product that manages a media library.
 
 ## Context
 
-MediaMop grew up alongside Radarr and Sonarr, so "the media manager" and "Radarr or
+Weir grew up alongside Radarr and Sonarr, so "the media manager" and "Radarr or
 Sonarr" were the same statement. That assumption then hardened into the schema, the
 routes, and the module layout:
 

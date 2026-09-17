@@ -7,9 +7,9 @@ These checklists define the minimum user-level validation before calling a relea
 Use the Velopack setup exe from the release being validated.
 
 1. Run the setup exe on a clean Windows user profile or a reset test profile.
-2. Confirm application files install under `%LocalAppData%\MediaMop`.
-3. Confirm runtime data is created under `C:\ProgramData\MediaMop`.
-4. Launch MediaMop from the Start Menu shortcut.
+2. Confirm application files install under `%LocalAppData%\Weir`.
+3. Confirm runtime data is created under `C:\ProgramData\Weir`.
+4. Launch Weir from the Start Menu shortcut.
 5. Confirm the tray icon appears and the browser opens the app.
 6. Confirm first-run user creation appears when no user exists.
 7. Attempt a password shorter than 8 characters and confirm it is blocked.
@@ -25,8 +25,8 @@ Use the Velopack setup exe from the release being validated.
 17. Right-click the tray icon and confirm `Check for updates` is present and reaches the current release status.
 18. Open Refiner path inputs and use Browse for a local folder.
 19. Enter a UNC-style path manually and confirm validation warns without blocking legitimate save paths by design.
-20. Quit MediaMop from the tray icon.
-21. Relaunch MediaMop and confirm the existing user, settings, and wizard completion state persist.
+20. Quit Weir from the tray icon.
+21. Relaunch Weir and confirm the existing user, settings, and wizard completion state persist.
 22. Install the next version over the current version and confirm Velopack applies a delta update cleanly.
 23. Uninstall and reinstall only when intentionally testing clean-install behavior.
 24. Confirm the automated packaged smoke reports that Refiner placed a byte-identical
@@ -39,13 +39,13 @@ Use the published release image, not a locally built image.
 1. Pull the versioned image:
 
    ```bash
-   docker pull ghcr.io/jampat000/mediamop:vX.Y.Z
+   docker pull ghcr.io/jampat000/weir:vX.Y.Z
    ```
 
 2. Start with a fresh named volume:
 
    ```bash
-   docker run --rm -p 8788:8788 -v mediamop-smoke:/data/mediamop ghcr.io/jampat000/mediamop:vX.Y.Z
+   docker run --rm -p 8788:8788 -v weir-smoke:/data/weir ghcr.io/jampat000/weir:vX.Y.Z
    ```
 
 3. Open `http://localhost:8788/`.

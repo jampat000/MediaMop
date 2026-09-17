@@ -18,22 +18,22 @@ from sqlalchemy import select
 from starlette.testclient import TestClient
 
 from alembic import command
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.configuration_bundle.service import _restore_refiner_libraries
-from mediamop.refiner.jobs_model import RefinerJob
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
 from tests.integration_helpers import auth_post, auth_put
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.configuration_bundle.service import _restore_refiner_libraries
+from weir.refiner.jobs_model import RefinerJob
+from weir.refiner.refiner_library_model import RefinerLibraryRow
 
 # --- the migration --------------------------------------------------------------------------------
 
 
 def _config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Config:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
-    home = tmp_path / "mmhome_media_type"
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    home = tmp_path / "weirhome_media_type"
     home.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(home))
+    monkeypatch.setenv("WEIR_HOME", str(home))
     backend = Path(__file__).resolve().parents[1]
     monkeypatch.chdir(backend)
     return Config(str(backend / "alembic.ini"))
@@ -50,7 +50,7 @@ def test_the_rename_keeps_every_library_and_everything_hanging_off_it(
 
     cfg = _config(monkeypatch, tmp_path)
     command.upgrade(cfg, "0032_media_manager_handoffs")
-    engine = create_db_engine(MediaMopSettings.load())
+    engine = create_db_engine(WeirSettings.load())
     with engine.begin() as conn:
         if "media_scope" not in _columns(engine):
             # A greenfield 0001 builds today's models; put the old name back to model an upgrade.
@@ -65,7 +65,7 @@ def test_the_rename_keeps_every_library_and_everything_hanging_off_it(
 
     command.upgrade(cfg, "head")
 
-    engine = create_db_engine(MediaMopSettings.load())
+    engine = create_db_engine(WeirSettings.load())
     assert "media_type" in _columns(engine)
     assert "media_scope" not in _columns(engine)
     with engine.connect() as conn:
@@ -82,7 +82,7 @@ def test_the_rename_keeps_every_library_and_everything_hanging_off_it(
 
 
 def test_a_backup_taken_before_the_rename_still_restores_its_media_type() -> None:
-    factory = create_session_factory(create_db_engine(MediaMopSettings.load()))
+    factory = create_session_factory(create_db_engine(WeirSettings.load()))
     with factory() as session:
         _restore_refiner_libraries(
             session,
@@ -125,7 +125,7 @@ def _create(client: TestClient, **overrides: object):
 def operator(client_with_admin: TestClient):
     client = _login(client_with_admin)
     yield client
-    factory = create_session_factory(create_db_engine(MediaMopSettings.load()))
+    factory = create_session_factory(create_db_engine(WeirSettings.load()))
     with factory() as session:
         for row in session.scalars(select(RefinerLibraryRow)):
             if row.name not in ("Movies", "TV"):
@@ -198,9 +198,9 @@ def test_a_hand_off_lands_in_the_library_whose_folder_holds_the_file(operator: T
     import json
 
     # Another test's connection may carry a webhook secret; this hand-off is about routing, not auth.
-    from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
+    from weir.platform.media_managers.connection_model import MediaManagerConnectionRow
 
-    with create_session_factory(create_db_engine(MediaMopSettings.load()))() as session:
+    with create_session_factory(create_db_engine(WeirSettings.load()))() as session:
         session.execute(sa.delete(MediaManagerConnectionRow))
         session.commit()
 
@@ -219,7 +219,7 @@ def test_a_hand_off_lands_in_the_library_whose_folder_holds_the_file(operator: T
     )
     assert response.status_code == 200, response.text
 
-    factory = create_session_factory(create_db_engine(MediaMopSettings.load()))
+    factory = create_session_factory(create_db_engine(WeirSettings.load()))
     with factory() as session:
         job = session.scalars(select(RefinerJob).where(RefinerJob.dedupe_key.like("%handoff:h-1080"))).one()
     payload = json.loads(job.payload_json or "{}")

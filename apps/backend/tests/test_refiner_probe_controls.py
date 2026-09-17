@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.refiner.refiner_remux_mux import build_ffprobe_argv, resolve_ffprobe_ffmpeg
+from weir.core.config import WeirSettings
+from weir.refiner.refiner_remux_mux import build_ffprobe_argv, resolve_ffprobe_ffmpeg
 
 
 def test_build_ffprobe_argv_includes_probe_controls() -> None:
@@ -34,9 +34,9 @@ def test_build_ffprobe_argv_clamps_out_of_range_controls() -> None:
 
 
 def test_refiner_probe_controls_load_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_PROBE_SIZE_MB", "32")
-    monkeypatch.setenv("MEDIAMOP_REFINER_ANALYZE_DURATION_SECONDS", "28")
-    s = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_PROBE_SIZE_MB", "32")
+    monkeypatch.setenv("WEIR_REFINER_ANALYZE_DURATION_SECONDS", "28")
+    s = WeirSettings.load()
     assert s.refiner_probe_size_mb == 32
     assert s.refiner_analyze_duration_seconds == 28
 
@@ -48,6 +48,6 @@ def test_resolve_ffprobe_ffmpeg_uses_explicit_tool_dir(monkeypatch: pytest.Monke
     ffmpeg = tool_dir / ("ffmpeg.exe" if os.name == "nt" else "ffmpeg")
     ffprobe.write_text("", encoding="utf-8")
     ffmpeg.write_text("", encoding="utf-8")
-    monkeypatch.setenv("MEDIAMOP_FFMPEG_DIR", str(tool_dir))
+    monkeypatch.setenv("WEIR_FFMPEG_DIR", str(tool_dir))
 
-    assert resolve_ffprobe_ffmpeg(mediamop_home=str(tmp_path / "home")) == (str(ffprobe), str(ffmpeg))
+    assert resolve_ffprobe_ffmpeg(weir_home=str(tmp_path / "home")) == (str(ffprobe), str(ffmpeg))

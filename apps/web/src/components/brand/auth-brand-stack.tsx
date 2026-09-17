@@ -1,14 +1,14 @@
-import { MediaMopLogo } from "./mediamop-logo";
+import { WeirLogo } from "./weir-logo";
 
 /** Auth/setup — premium logo + primary blurb above the card. */
 export function AuthBrandStack() {
   return (
     <div className="mm-auth-brand">
       <div className="mm-auth-brand-logo">
-        <MediaMopLogo variant="auth" />
+        <WeirLogo variant="auth" />
       </div>
       <p className="mm-auth-brand-tagline">
-        Keep your library clean and under control.
+        Cleans every download before your media manager imports it.
       </p>
     </div>
   );

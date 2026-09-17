@@ -2,7 +2,7 @@
 
 Refiner deletes source folders after a successful pass, so a watched folder that
 silently repoints is a destructive surprise. Every test here that touches a path asserts
-MediaMop reported rather than moved it.
+Weir reported rather than moved it.
 """
 
 from __future__ import annotations
@@ -13,15 +13,15 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.media_managers.connection_model  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-import mediamop.refiner.refiner_library_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
-from mediamop.platform.media_managers.manager_port import ManagerLibraryDescriptor
-from mediamop.refiner import refiner_library_discovery as discovery
-from mediamop.refiner.refiner_library_discovery import (
+import weir.platform.media_managers.connection_model  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+import weir.refiner.refiner_library_model  # noqa: F401
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.platform.media_managers.connection_model import MediaManagerConnectionRow
+from weir.platform.media_managers.manager_port import ManagerLibraryDescriptor
+from weir.refiner import refiner_library_discovery as discovery
+from weir.refiner.refiner_library_discovery import (
     RefinerDiscoveryError,
     discoverable_libraries,
     import_libraries,
@@ -29,7 +29,7 @@ from mediamop.refiner.refiner_library_discovery import (
     resync_drift,
     unlink_library,
 )
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_library_model import RefinerLibraryRow
 
 
 @pytest.fixture
@@ -57,15 +57,15 @@ def _reports(monkeypatch: pytest.MonkeyPatch, *descriptors: ManagerLibraryDescri
     monkeypatch.setattr(discovery, "_descriptors_for", lambda _s, _c, _row: tuple(descriptors))
 
 
-def _settings() -> MediaMopSettings:
-    return MediaMopSettings.load()
+def _settings() -> WeirSettings:
+    return WeirSettings.load()
 
 
 def test_a_local_path_that_exists_has_no_problem(tmp_path: Path) -> None:
     assert local_path_problem(str(tmp_path)) is None
 
 
-def test_a_path_the_manager_sees_but_mediamop_cannot_is_reported_with_both_values(tmp_path: Path) -> None:
+def test_a_path_the_manager_sees_but_weir_cannot_is_reported_with_both_values(tmp_path: Path) -> None:
     problem = local_path_problem("/srv/on-another-host/movies")
     assert problem is not None
     assert "/srv/on-another-host/movies" in problem
@@ -116,7 +116,7 @@ def test_importing_a_subset_creates_only_what_was_chosen(
     assert sorted(r.name for r in created) == ["Films", "Kids"]
     assert {r.discovered_library_key for r in created} == {"7", "9"}
     assert all(r.discovered_from_connection_id == connection.id for r in created)
-    # The manager's root is adopted as the watched folder when MediaMop can see it.
+    # The manager's root is adopted as the watched folder when Weir can see it.
     assert all(r.watched_folder == str(tmp_path) for r in created)
 
 
@@ -139,7 +139,7 @@ def test_an_imported_library_is_editable_afterwards(
     assert reloaded.discovered_library_key == "7"
 
 
-def test_a_root_mediamop_cannot_see_imports_without_a_watched_folder(
+def test_a_root_weir_cannot_see_imports_without_a_watched_folder(
     session: Session, connection: MediaManagerConnectionRow, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Better an empty folder the operator fills in than one that fails every scan."""
@@ -199,7 +199,7 @@ def test_resync_reports_a_moved_root_and_changes_nothing(
     moved = [d for d in drift if d.kind == "root_moved"]
     assert len(moved) == 1
     assert moved[0].manager_value == str(tmp_path / "new")
-    assert moved[0].mediamop_value == str(tmp_path / "old")
+    assert moved[0].weir_value == str(tmp_path / "old")
     # Nothing applied.
     session.refresh(row)
     assert row.watched_folder == str(tmp_path / "old")
@@ -302,7 +302,7 @@ def test_a_connection_with_no_saved_key_cannot_be_asked(session: Session, tmp_pa
     session.commit()
 
     with pytest.raises(RefinerDiscoveryError) as exc:
-        discoverable_libraries(session, MediaMopSettings.load(), row)
+        discoverable_libraries(session, WeirSettings.load(), row)
     assert "address and API key" in str(exc.value)
 
 
@@ -335,7 +335,7 @@ DELUNO_MANIFEST_LIBRARIES: list[dict] = [
 
 
 def test_the_real_deluno_manifest_entries_parse() -> None:
-    from mediamop.platform.media_managers.manager_dialects import _manifest_library_descriptor
+    from weir.platform.media_managers.manager_dialects import _manifest_library_descriptor
 
     movies, tv = (_manifest_library_descriptor(entry) for entry in DELUNO_MANIFEST_LIBRARIES)
 
@@ -349,7 +349,7 @@ def test_the_real_deluno_manifest_entries_parse() -> None:
 
 
 def test_a_refine_before_import_library_carries_its_processed_output_root() -> None:
-    from mediamop.platform.media_managers.manager_dialects import _manifest_library_descriptor
+    from weir.platform.media_managers.manager_dialects import _manifest_library_descriptor
 
     movies = _manifest_library_descriptor(DELUNO_MANIFEST_LIBRARIES[0])
 
@@ -364,7 +364,7 @@ def test_a_standard_library_reports_no_processed_output_root() -> None:
     value as a configured path would seed an output folder of "".
     """
 
-    from mediamop.platform.media_managers.manager_dialects import _manifest_library_descriptor
+    from weir.platform.media_managers.manager_dialects import _manifest_library_descriptor
 
     tv = _manifest_library_descriptor(DELUNO_MANIFEST_LIBRARIES[1])
 
@@ -373,7 +373,7 @@ def test_a_standard_library_reports_no_processed_output_root() -> None:
 
 
 def test_an_entry_with_no_id_is_skipped_rather_than_imported_anonymously() -> None:
-    from mediamop.platform.media_managers.manager_dialects import _manifest_library_key
+    from weir.platform.media_managers.manager_dialects import _manifest_library_key
 
     assert _manifest_library_key({"name": "Nameless", "rootPath": "/srv"}) is None
     assert _manifest_library_key(DELUNO_MANIFEST_LIBRARIES[0]) == "01a03d99f2f47c6587a496701b52f58f"
@@ -385,7 +385,7 @@ def test_importing_a_refine_before_import_library_seeds_its_output_folder(
     """Without this a discovered library arrived with no output folder and could not run.
 
     Discovery was a half-import: it filled in the watched folder and left the operator to
-    type the one the manager had already told MediaMop about.
+    type the one the manager had already told Weir about.
     """
 
     watched = tmp_path / "library"
@@ -414,7 +414,7 @@ def test_a_standard_library_is_imported_with_no_output_folder(
     session: Session, connection: MediaManagerConnectionRow, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """It is not a refine-before-import library, so the manager has nowhere to expect
-    output and MediaMop must not invent one."""
+    output and Weir must not invent one."""
 
     watched = tmp_path / "library"
     watched.mkdir()
@@ -432,7 +432,7 @@ def test_an_output_root_this_machine_cannot_see_is_left_empty_rather_than_saved(
     session: Session, connection: MediaManagerConnectionRow, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Same rule as the watched folder: the manager's path is not necessarily one
-    MediaMop can see, and a library pointed at a folder that is not there would fail."""
+    Weir can see, and a library pointed at a folder that is not there would fail."""
 
     watched = tmp_path / "library"
     watched.mkdir()

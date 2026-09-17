@@ -199,7 +199,7 @@ it("says what being stuck actually costs", async () => {
   mount([file({ status: "processing_failed" })]);
 
   expect(
-    await screen.findByText(/1 file is stuck in MediaMop's hands/),
+    await screen.findByText(/1 file is stuck in Weir's hands/),
   ).toBeInTheDocument();
   expect(
     screen.getByText(/will not see these until they are dealt with/),
@@ -231,8 +231,7 @@ it("opens a file's story from its row", async () => {
         story: [
           {
             heading: "Picked up",
-            sentence:
-              "MediaMop took this file as a film in the Films 4K library.",
+            sentence: "Weir took this file as a film in the Films 4K library.",
             tone: "neutral",
           },
         ],
@@ -290,7 +289,7 @@ it("shows the Direct Play badge on a row, and the full reasons in the file's sto
     "iPhone cannot play it directly, so the media server will convert it: cannot play DTS audio; cannot play MKV files.",
   );
   expect(story).toHaveTextContent(
-    "Information only. MediaMop never changes a file because of this.",
+    "Information only. Weir never changes a file because of this.",
   );
 });
 

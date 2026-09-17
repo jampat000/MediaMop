@@ -70,7 +70,7 @@ def upgrade() -> None:
     # Backfill from the window each library already has, so an upgrade preserves exactly
     # when work runs. A library with no hour limit keeps an empty grid, which means no
     # restriction — not an all-zero grid, which would mean never.
-    from mediamop.refiner.refiner_schedule_grid import grid_from_days_and_times
+    from weir.refiner.refiner_schedule_grid import grid_from_days_and_times
 
     rows = bind.execute(
         sa.text("SELECT id, schedule_hours_limited, schedule_days, schedule_start, schedule_end FROM refiner_libraries")

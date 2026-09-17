@@ -1,6 +1,6 @@
 """Drop the Subber tables — Subber moved to Deluno
 
-Subber fetched subtitles for a library MediaMop could only ever see through
+Subber fetched subtitles for a library Weir could only ever see through
 Sonarr and Radarr. Deluno owns that library, so Subber lives there now and the
 four tables it kept here have nothing left reading them.
 

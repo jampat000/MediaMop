@@ -16,25 +16,25 @@ import sqlalchemy as sa
 from alembic.config import Config
 
 from alembic import command
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine
 
 _BEFORE = "0010_drop_subber_tables"
 
 
 def _config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, name: str) -> Config:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     home = tmp_path / name
     home.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(home))
-    MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_HOME", str(home))
+    WeirSettings.load()
     backend = Path(__file__).resolve().parents[1]
     monkeypatch.chdir(backend)
     return Config(str(backend / "alembic.ini"))
 
 
 def _engine() -> sa.Engine:
-    return create_db_engine(MediaMopSettings.load())
+    return create_db_engine(WeirSettings.load())
 
 
 def _rows(engine: sa.Engine, sql: str) -> list[dict]:

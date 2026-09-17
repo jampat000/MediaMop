@@ -5,7 +5,7 @@
 # Intended order: apps/backend/.env → .\scripts\dev-migrate.ps1 → this script.
 # See docs/local-development.md.
 $ErrorActionPreference = "Stop"
-. "$PSScriptRoot\mediamop-env.ps1"
+. "$PSScriptRoot\weir-env.ps1"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $backendScript = Join-Path $PSScriptRoot "dev-backend.ps1"
@@ -27,10 +27,10 @@ if (-not (Test-Path -LiteralPath $envFile)) {
     $issues++
 }
 
-Import-MediaMopBackendDotEnv -BackendDir $backendDir
+Import-WeirBackendDotEnv -BackendDir $backendDir
 
-if (-not ($env:MEDIAMOP_SESSION_SECRET -and $env:MEDIAMOP_SESSION_SECRET.Trim())) {
-    Write-Host "MISSING: MEDIAMOP_SESSION_SECRET - auth/CSRF will not work until set." -ForegroundColor Yellow
+if (-not ($env:WEIR_SESSION_SECRET -and $env:WEIR_SESSION_SECRET.Trim())) {
+    Write-Host "MISSING: WEIR_SESSION_SECRET - auth/CSRF will not work until set." -ForegroundColor Yellow
     $issues++
 }
 

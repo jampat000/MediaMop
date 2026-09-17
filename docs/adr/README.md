@@ -1,4 +1,4 @@
-# Architecture Decision Records - MediaMop
+# Architecture Decision Records - Weir
 
 ADRs in this folder capture locked structural and platform choices for this repository.
 They override ad hoc experimentation when the two conflict.
@@ -15,7 +15,7 @@ and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isola
 | [ADR-0002](ADR-0002-database-sqlite-alembic.md) | Database and Alembic (SQLite-first) |
 | [ADR-0003](ADR-0003-auth-session-model.md) | Auth and session model |
 | [ADR-0007](ADR-0007-module-owned-worker-lanes.md) | Module-owned worker lanes (SQLite) — superseded in part by one lane (#459) |
-| [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md) | `MediaMopSettings` aggregate for runtime configuration |
+| [ADR-0008](ADR-0008-weir-settings-aggregate-runtime-config.md) | `WeirSettings` aggregate for runtime configuration |
 | [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) | Suite-wide timing isolation (durable work) |
 | [ADR-0012](ADR-0012-refiner-preflight-parity-boundary.md) | Refiner preflight parity boundary (FileFlows-aligned) |
 | [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) | A media manager is a kind, not a product name |

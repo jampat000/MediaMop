@@ -1,4 +1,4 @@
-"""Pytest fixtures for MediaMop backend integration tests."""
+"""Pytest fixtures for Weir backend integration tests."""
 
 from __future__ import annotations
 
@@ -11,18 +11,18 @@ from alembic.config import Config
 from starlette.testclient import TestClient
 
 from alembic import command
-from mediamop.api.factory import create_app
-from mediamop.platform.jobs.worker_health import reset_worker_health_for_tests
 from tests.integration_helpers import seed_admin_user, seed_viewer_user
+from weir.api.factory import create_app
+from weir.platform.jobs.worker_health import reset_worker_health_for_tests
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _mediamop_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
-    """Isolated SQLite under a temp ``MEDIAMOP_HOME`` + Alembic at head (shared session DB)."""
+def _weir_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Isolated SQLite under a temp ``WEIR_HOME`` + Alembic at head (shared session DB)."""
 
-    home = tmp_path_factory.mktemp("mediamop_pytest_home")
-    os.environ["MEDIAMOP_HOME"] = str(home)
-    os.environ["MEDIAMOP_REFINER_WORKER_COUNT"] = "0"
+    home = tmp_path_factory.mktemp("weir_pytest_home")
+    os.environ["WEIR_HOME"] = str(home)
+    os.environ["WEIR_REFINER_WORKER_COUNT"] = "0"
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))
     cfg.set_main_option("script_location", str(backend / "alembic"))
@@ -33,8 +33,8 @@ def _mediamop_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterat
 @pytest.fixture(autouse=True)
 def ensure_session_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(
-        "MEDIAMOP_SESSION_SECRET",
-        os.environ.get("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!"),
+        "WEIR_SESSION_SECRET",
+        os.environ.get("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!"),
     )
 
 

@@ -1,5 +1,5 @@
 /**
- * MediaMop standard **On / Off** segmented control for persisted boolean settings
+ * Weir standard **On / Off** segmented control for persisted boolean settings
  * (Enable/Disable, limit hours, etc.). Use `mmActionButtonClass` from `lib/ui/mm-control-roles` for Save/Test/helpers.
  */
 export function MmOnOffSwitch({

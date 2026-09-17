@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from mediamop.refiner.refiner_candidate_gate_evaluate import (
+from tests.manager_signal_helpers import no_queue_signal, reported, unreachable
+from weir.refiner.refiner_candidate_gate_evaluate import (
     evaluate_refiner_candidate_gate_from_manager_signals,
 )
-from tests.manager_signal_helpers import no_queue_signal, reported, unreachable
 
 
 def _evaluate(signals, **kwargs):

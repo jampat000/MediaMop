@@ -1,4 +1,4 @@
-# MediaMop all-in-one (API + production web UI) from GHCR.
+# Weir all-in-one (API + production web UI) from GHCR.
 # This is the default `docker compose` entrypoint at repo root.
 #
 # From repo root:
@@ -7,39 +7,39 @@
 #
 # Open http://localhost:8788/ after the container starts.
 # Stable releases currently publish linux/amd64 images.
-# Override the image with MEDIAMOP_DOCKER_IMAGE if needed.
+# Override the image with WEIR_DOCKER_IMAGE if needed.
 
-name: mediamop
+name: weir
 
 services:
-  mediamop:
-    image: ${MEDIAMOP_DOCKER_IMAGE:-ghcr.io/jampat000/mediamop:latest}
+  weir:
+    image: ${WEIR_DOCKER_IMAGE:-ghcr.io/jampat000/weir:latest}
     pull_policy: always
     ports:
       - "8788:8788"
     environment:
-      MEDIAMOP_HOME: ${MEDIAMOP_HOME:-/data/mediamop}
+      WEIR_HOME: ${WEIR_HOME:-/data/weir}
       # Optional UID/GID remap for the runtime account inside the container.
-      # MEDIAMOP_PUID: ${MEDIAMOP_PUID:-1000}
-      # MEDIAMOP_PGID: ${MEDIAMOP_PGID:-1000}
+      # WEIR_PUID: ${WEIR_PUID:-1000}
+      # WEIR_PGID: ${WEIR_PGID:-1000}
       # Optional Refiner path ownership policies for configured watched/work/output folders.
-      # MEDIAMOP_CHOWN_WATCHED: ${MEDIAMOP_CHOWN_WATCHED:-false}
-      # MEDIAMOP_CHOWN_TEMP: ${MEDIAMOP_CHOWN_TEMP:-false}
-      # MEDIAMOP_CHOWN_OUTPUT: ${MEDIAMOP_CHOWN_OUTPUT:-false}
+      # WEIR_CHOWN_WATCHED: ${WEIR_CHOWN_WATCHED:-false}
+      # WEIR_CHOWN_TEMP: ${WEIR_CHOWN_TEMP:-false}
+      # WEIR_CHOWN_OUTPUT: ${WEIR_CHOWN_OUTPUT:-false}
       # Optional directory-only modes (octal) applied recursively to configured folders.
-      # MEDIAMOP_DIR_MODE_WATCHED: ${MEDIAMOP_DIR_MODE_WATCHED:-}
-      # MEDIAMOP_DIR_MODE_TEMP: ${MEDIAMOP_DIR_MODE_TEMP:-}
-      # MEDIAMOP_DIR_MODE_OUTPUT: ${MEDIAMOP_DIR_MODE_OUTPUT:-}
-      # Optional. If omitted, the container generates and persists /data/mediamop/session.secret.
+      # WEIR_DIR_MODE_WATCHED: ${WEIR_DIR_MODE_WATCHED:-}
+      # WEIR_DIR_MODE_TEMP: ${WEIR_DIR_MODE_TEMP:-}
+      # WEIR_DIR_MODE_OUTPUT: ${WEIR_DIR_MODE_OUTPUT:-}
+      # Optional. If omitted, the container generates and persists /data/weir/session.secret.
       # To provide your own value, generate one with: openssl rand -hex 32
-      # MEDIAMOP_SESSION_SECRET: ${MEDIAMOP_SESSION_SECRET}
+      # WEIR_SESSION_SECRET: ${WEIR_SESSION_SECRET}
       # Recommended before saving Sonarr/Radarr credentials:
-      # MEDIAMOP_CREDENTIALS_SECRET: ${MEDIAMOP_CREDENTIALS_SECRET}
+      # WEIR_CREDENTIALS_SECRET: ${WEIR_CREDENTIALS_SECRET}
       # Optional bearer token for Prometheus or other machine scrapes of /metrics:
-      # MEDIAMOP_METRICS_BEARER_TOKEN: ${MEDIAMOP_METRICS_BEARER_TOKEN}
+      # WEIR_METRICS_BEARER_TOKEN: ${WEIR_METRICS_BEARER_TOKEN}
     volumes:
-      - mediamop_data:/data/mediamop
+      - weir_data:/data/weir
     restart: unless-stopped
 
 volumes:
-  mediamop_data:
+  weir_data:

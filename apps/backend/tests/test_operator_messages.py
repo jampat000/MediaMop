@@ -1,10 +1,10 @@
-from mediamop.platform.observability.diagnostics import (
+from weir.platform.observability.diagnostics import (
     DiagnosticAction,
     DiagnosticModule,
     DiagnosticResult,
     DiagnosticTrigger,
 )
-from mediamop.platform.observability.operator_messages import (
+from weir.platform.observability.operator_messages import (
     activity_detail_envelope,
     count_summary,
     media_scope_label,

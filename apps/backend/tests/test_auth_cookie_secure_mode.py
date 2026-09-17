@@ -12,9 +12,9 @@ import dataclasses
 import pytest
 from starlette.testclient import TestClient
 
-from mediamop.platform.auth.sessions import resolve_cookie_secure
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.platform.auth.sessions import resolve_cookie_secure
 
 
 @pytest.mark.parametrize(

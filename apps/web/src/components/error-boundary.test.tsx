@@ -39,7 +39,7 @@ describe("ErrorBoundary", () => {
       screen.getByRole("navigation", { name: "Unavailable sections" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Reload MediaMop" }),
+      screen.getByRole("button", { name: "Reload Weir" }),
     ).toBeInTheDocument();
   });
 
@@ -52,7 +52,7 @@ describe("ErrorBoundary", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Reload MediaMop" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reload Weir" }));
 
     expect(onReload).toHaveBeenCalledTimes(1);
   });

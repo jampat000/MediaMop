@@ -9,21 +9,21 @@ import pytest
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from mediamop.api.factory import create_app
-from mediamop.core.config import (
-    MediaMopSettings,
+from weir.api.factory import create_app
+from weir.core.config import (
+    WeirSettings,
     _expand_loopback_browser_origins_in_development,
 )
-from mediamop.platform.auth.csrf import (
+from weir.platform.auth.csrf import (
     issue_csrf_token,
     validate_browser_post_origin,
     verify_csrf_token,
 )
 
 
-def _csrf_settings(**overrides: object) -> MediaMopSettings:
-    home = Path(tempfile.gettempdir()) / "mediamop-csrf-unit"
-    db = home / "data" / "mediamop.sqlite3"
+def _csrf_settings(**overrides: object) -> WeirSettings:
+    home = Path(tempfile.gettempdir()) / "weir-csrf-unit"
+    db = home / "data" / "weir.sqlite3"
     base = dict(
         env="development",
         log_level="INFO",
@@ -31,7 +31,7 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         session_secret="x",
         credentials_secret=None,
         previous_credentials_secrets=(),
-        session_cookie_name="mediamop_session",
+        session_cookie_name="weir_session",
         session_cookie_secure_mode="auto",
         session_cookie_samesite="lax",
         session_idle_minutes=720,
@@ -46,7 +46,7 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         bootstrap_rate_window_seconds=3600,
         security_enable_hsts=False,
         metrics_bearer_token=None,
-        mediamop_home=str(home),
+        weir_home=str(home),
         db_path=str(db),
         backup_dir=str(home / "backups"),
         log_dir=str(home / "logs"),
@@ -82,7 +82,7 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         job_rows_retention_schedule_interval_seconds=3600,
     )
     base.update(overrides)
-    return MediaMopSettings(**base)  # type: ignore[arg-type]
+    return WeirSettings(**base)  # type: ignore[arg-type]
 
 
 def test_issue_and_verify_csrf() -> None:
@@ -167,10 +167,10 @@ def test_origin_uses_trusted_browser_origins_override() -> None:
 def test_auth_csrf_endpoint_503_without_session_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     # Avoid loading real apps/backend/.env (would repopulate the secret after delenv).
     monkeypatch.setattr(
-        "mediamop.core.config._load_backend_dotenv_if_present",
+        "weir.core.config._load_backend_dotenv_if_present",
         lambda: None,
     )
-    monkeypatch.delenv("MEDIAMOP_SESSION_SECRET", raising=False)
+    monkeypatch.delenv("WEIR_SESSION_SECRET", raising=False)
     app = create_app()
     with TestClient(app) as cli:
         r = cli.get("/api/v1/auth/csrf")

@@ -1,8 +1,8 @@
 """What a library does once a file has used up its retries.
 
-MediaMop sits in the middle of a pipeline it does not own. A file that fails processing used to
-stay in MediaMop's hands for good, which meant it never reached the media manager — the user's
-media simply went missing, and MediaMop was the reason.
+Weir sits in the middle of a pipeline it does not own. A file that fails processing used to
+stay in Weir's hands for good, which meant it never reached the media manager — the user's
+media simply went missing, and Weir was the reason.
 
 ``pass_through`` (the new default) hands the original back unmodified. ``hold`` keeps the old
 behaviour. Every existing library moves to ``pass_through``: that is the product's guarantee, and

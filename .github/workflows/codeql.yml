@@ -1,4 +1,4 @@
-# Static security analysis for MediaMop source.
+# Static security analysis for Weir source.
 name: CodeQL
 
 on:

@@ -1,4 +1,4 @@
-# MediaMop Documentation Index
+# Weir Documentation Index
 
 This directory is the repository-local system of record. Keep durable decisions here instead of relying on chat history, issue comments, or local notes.
 

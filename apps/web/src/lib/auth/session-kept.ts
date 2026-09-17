@@ -2,7 +2,7 @@
  * Detects a sign-in that succeeded but did not stick (#453).
  *
  * A browser can accept a 200 from `/auth/login` and then discard the session cookie — most often
- * because the cookie is marked `Secure` while MediaMop is served over plain HTTP. The next call
+ * because the cookie is marked `Secure` while Weir is served over plain HTTP. The next call
  * to `/auth/me` returns 401, `RequireAuth` redirects, and the operator lands back on an empty
  * form with a correct password and nothing explaining why.
  *

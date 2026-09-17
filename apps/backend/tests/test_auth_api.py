@@ -1,4 +1,4 @@
-"""Auth boundary integration tests — SQLite under ``MEDIAMOP_HOME`` (session autouse in conftest)."""
+"""Auth boundary integration tests — SQLite under ``WEIR_HOME`` (session autouse in conftest)."""
 
 from __future__ import annotations
 
@@ -11,18 +11,18 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
-from mediamop.api.factory import create_app
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.datetime_util import as_utc
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.auth import service as auth_service
-from mediamop.platform.auth.models import User, UserRole, UserSession
-from mediamop.platform.auth.password import hash_password
-from mediamop.platform.auth.sessions import revoke_session
 from tests.integration_helpers import auth_post, reset_user_tables, seed_admin_user
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.api.factory import create_app
+from weir.core.config import WeirSettings
+from weir.core.datetime_util import as_utc
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.auth import service as auth_service
+from weir.platform.auth.models import User, UserRole, UserSession
+from weir.platform.auth.password import hash_password
+from weir.platform.auth.sessions import revoke_session
 
 
 def test_login_me_logout_flow(client_with_admin: TestClient) -> None:
@@ -38,7 +38,7 @@ def test_login_me_logout_flow(client_with_admin: TestClient) -> None:
     )
     assert r_login.status_code == 200, r_login.text
     assert r_login.json()["user"]["username"] == "alice"
-    cookie_name = MediaMopSettings.load().session_cookie_name
+    cookie_name = WeirSettings.load().session_cookie_name
     cookie = client_with_admin.cookies.get(cookie_name)
     assert cookie is not None and len(cookie) > 20
 
@@ -151,7 +151,7 @@ def test_change_password_rejects_wrong_current_password(client_with_admin: TestC
 
 
 def test_login_failed_persisted_throttled_per_username(client_with_admin: TestClient) -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -234,7 +234,7 @@ def test_session_rotation_replaces_old_cookie(client_with_admin: TestClient) -> 
             "csrf_token": csrf1,
         },
     )
-    cookie_name = MediaMopSettings.load().session_cookie_name
+    cookie_name = WeirSettings.load().session_cookie_name
     old_cookie = client_with_admin.cookies.get(cookie_name)
     csrf2 = fetch_csrf(client_with_admin)
     auth_post(
@@ -288,7 +288,7 @@ def test_trusted_device_login_uses_extended_session_policy(client_with_admin: Te
     assert body["idle_timeout_minutes"] == 60 * 1440
     assert body["absolute_timeout_days"] == 365
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -299,7 +299,7 @@ def test_trusted_device_login_uses_extended_session_policy(client_with_admin: Te
 
 def test_session_cookie_survives_backend_app_restart() -> None:
     seed_admin_user()
-    cookie_name = MediaMopSettings.load().session_cookie_name
+    cookie_name = WeirSettings.load().session_cookie_name
     app1 = create_app()
     with TestClient(app1) as client1:
         csrf = fetch_csrf(client1)
@@ -387,7 +387,7 @@ def test_authenticated_csrf_token_is_rejected_across_sessions() -> None:
 
 def test_login_keeps_only_newest_five_active_sessions() -> None:
     seed_admin_user()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     app = create_app()
     clients = [TestClient(app) for _ in range(6)]
     with clients[0], clients[1], clients[2], clients[3], clients[4], clients[5]:
@@ -415,11 +415,11 @@ def test_login_keeps_only_newest_five_active_sessions() -> None:
 
 def test_session_limit_ignores_absolute_expired_sessions() -> None:
     seed_admin_user()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+    with patch("weir.platform.auth.service.utcnow", return_value=base), fac() as db:
         user = db.scalars(select(User).where(User.username == "alice")).one()
         for _ in range(5):
             row, _raw = auth_service.create_user_session(db, user, settings=settings)
@@ -468,8 +468,8 @@ def test_admin_ping_forbidden_for_viewer(client_with_viewer: TestClient) -> None
 
 
 def test_bootstrap_allowed_when_no_admin(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS", "100")
-    monkeypatch.setenv("MEDIAMOP_BOOTSTRAP_RATE_WINDOW_SECONDS", "60")
+    monkeypatch.setenv("WEIR_BOOTSTRAP_RATE_MAX_ATTEMPTS", "100")
+    monkeypatch.setenv("WEIR_BOOTSTRAP_RATE_WINDOW_SECONDS", "60")
     reset_user_tables()
     app = create_app()
     with TestClient(app) as client:
@@ -510,7 +510,7 @@ def test_bootstrap_allowed_when_no_admin(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_bootstrap_username_conflict_returns_409() -> None:
     reset_user_tables()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -598,7 +598,7 @@ def test_bootstrap_blocked_after_admin_exists(client_with_admin: TestClient) -> 
 
 
 def test_bootstrap_denied_persisted_throttled(client_with_admin: TestClient) -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -650,10 +650,10 @@ def test_bootstrap_denied_persisted_throttled(client_with_admin: TestClient) -> 
 
 
 def test_login_rate_limited(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_AUTH_LOGIN_RATE_MAX_ATTEMPTS", "3")
-    monkeypatch.setenv("MEDIAMOP_AUTH_LOGIN_RATE_WINDOW_SECONDS", "120")
+    monkeypatch.setenv("WEIR_AUTH_LOGIN_RATE_MAX_ATTEMPTS", "3")
+    monkeypatch.setenv("WEIR_AUTH_LOGIN_RATE_WINDOW_SECONDS", "120")
     reset_user_tables()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -757,17 +757,17 @@ def test_activity_recent_includes_logout_event(client_with_admin: TestClient) ->
 def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid persisting last_seen on every authenticated read (SQLite write pressure)."""
 
-    # Touch gap is min(60s, idle/2); a low MEDIAMOP_SESSION_IDLE_MINUTES in .env/CI would
+    # Touch gap is min(60s, idle/2); a low WEIR_SESSION_IDLE_MINUTES in .env/CI would
     # shrink the gap and make +30s persist last_seen, breaking the assertions below.
-    monkeypatch.setenv("MEDIAMOP_SESSION_IDLE_MINUTES", "720")
+    monkeypatch.setenv("WEIR_SESSION_IDLE_MINUTES", "720")
     seed_admin_user()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
     sid: int
     raw: str
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+    with patch("weir.platform.auth.service.utcnow", return_value=base), fac() as db:
         user = db.scalars(select(User).where(User.username == "alice")).one()
         row, raw = auth_service.create_user_session(db, user, settings=settings)
         sid = row.id
@@ -783,7 +783,7 @@ def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.
 
     with (
         patch(
-            "mediamop.platform.auth.service.utcnow",
+            "weir.platform.auth.service.utcnow",
             return_value=base + timedelta(seconds=30),
         ),
         fac() as db,
@@ -795,7 +795,7 @@ def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.
     assert read_last_seen() == base
 
     later = base + timedelta(seconds=61)
-    with patch("mediamop.platform.auth.service.utcnow", return_value=later), fac() as db:
+    with patch("weir.platform.auth.service.utcnow", return_value=later), fac() as db:
         pair = auth_service.load_valid_session_for_request(db, raw, settings)
         assert pair is not None
         db.commit()
@@ -804,14 +804,14 @@ def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.
 
 
 def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_IDLE_MINUTES", "720")
+    monkeypatch.setenv("WEIR_SESSION_IDLE_MINUTES", "720")
     seed_admin_user()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
 
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+    with patch("weir.platform.auth.service.utcnow", return_value=base), fac() as db:
         user = db.scalars(select(User).where(User.username == "alice")).one()
         row, raw = auth_service.create_user_session(db, user, settings=settings)
         sid = row.id
@@ -819,7 +819,7 @@ def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch
 
     with (
         patch(
-            "mediamop.platform.auth.service.utcnow",
+            "weir.platform.auth.service.utcnow",
             return_value=base + timedelta(days=settings.session_absolute_days + 1),
         ),
         fac() as db,
@@ -835,14 +835,14 @@ def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch
 
 
 def test_session_cleanup_deletes_revoked_and_expired_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_IDLE_MINUTES", "720")
+    monkeypatch.setenv("WEIR_SESSION_IDLE_MINUTES", "720")
     seed_admin_user()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
 
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+    with patch("weir.platform.auth.service.utcnow", return_value=base), fac() as db:
         user = db.scalars(select(User).where(User.username == "alice")).one()
         revoked, _ = auth_service.create_user_session(db, user, settings=settings)
         expired, _ = auth_service.create_user_session(db, user, settings=settings)
@@ -862,7 +862,7 @@ def test_session_cleanup_deletes_revoked_and_expired_sessions(monkeypatch: pytes
 
 
 def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_SECURITY_ENABLE_HSTS", "1")
+    monkeypatch.setenv("WEIR_SECURITY_ENABLE_HSTS", "1")
     reset_user_tables()
     app = create_app()
     with TestClient(app) as client:
@@ -893,7 +893,7 @@ def test_static_assets_do_not_get_api_no_store(monkeypatch: pytest.MonkeyPatch, 
     assets.mkdir(parents=True)
     (dist / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
     (assets / "app.js").write_text("console.log('ok');", encoding="utf-8")
-    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+    monkeypatch.setenv("WEIR_WEB_DIST", str(dist))
 
     app = create_app()
     with TestClient(app) as client:
@@ -907,7 +907,7 @@ def test_bundled_html_csp_does_not_allow_inline_styles(monkeypatch: pytest.Monke
     dist = tmp_path / "web"
     dist.mkdir(parents=True)
     (dist / "index.html").write_text("<!doctype html><div id='root'></div>", encoding="utf-8")
-    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+    monkeypatch.setenv("WEIR_WEB_DIST", str(dist))
 
     app = create_app()
     with TestClient(app) as client:
@@ -924,9 +924,9 @@ def test_bundled_html_csp_does_not_allow_inline_styles(monkeypatch: pytest.Monke
 def test_spa_login_route_serves_index_html(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     dist = tmp_path / "web"
     dist.mkdir(parents=True)
-    html = "<!doctype html><html><body><div id='root'>MediaMop</div></body></html>"
+    html = "<!doctype html><html><body><div id='root'>Weir</div></body></html>"
     (dist / "index.html").write_text(html, encoding="utf-8")
-    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+    monkeypatch.setenv("WEIR_WEB_DIST", str(dist))
 
     app = create_app()
     with TestClient(app) as client:
@@ -934,14 +934,14 @@ def test_spa_login_route_serves_index_html(monkeypatch: pytest.MonkeyPatch, tmp_
 
     assert response.status_code == 200
     assert "text/html" in (response.headers.get("content-type") or "").lower()
-    assert "MediaMop" in response.text
+    assert "Weir" in response.text
 
 
 def test_missing_static_asset_still_returns_404(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     dist = tmp_path / "web"
     dist.mkdir(parents=True)
     (dist / "index.html").write_text("<!doctype html><div id='root'></div>", encoding="utf-8")
-    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+    monkeypatch.setenv("WEIR_WEB_DIST", str(dist))
 
     app = create_app()
     with TestClient(app) as client:

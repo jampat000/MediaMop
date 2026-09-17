@@ -51,7 +51,7 @@ function rejectText(source, marker, file) {
 }
 
 const invalidRunnerTempFixture =
-  "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ runner.temp }}";
+  "WEIR_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ runner.temp }}";
 rejectText(release, invalidRunnerTempFixture, ".github/workflows/release.yml");
 rejectText(ci, invalidRunnerTempFixture, ".github/workflows/ci.yml");
 
@@ -94,11 +94,11 @@ requireOrder(
 );
 
 for (const marker of [
-  "MEDIAMOP_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}",
-  "MEDIAMOP_SESSION_COOKIE_SECURE=false",
-  "MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture",
-  "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT",
-  "name: mediamop-docker-release-candidate-audit",
+  "WEIR_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}",
+  "WEIR_SESSION_COOKIE_SECURE=false",
+  "WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture",
+  "WEIR_LIVE_E2E_FIXTURE_HOST_ROOT:$WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT",
+  "name: weir-docker-release-candidate-audit",
 ]) {
   requireText(releasePublish, marker, ".github/workflows/release.yml publish job");
 }
@@ -106,20 +106,20 @@ for (const marker of [
 requireOrder(
   ci,
   [
-    "- name: Build MediaMop Docker image",
-    "- name: Start MediaMop Docker candidate",
+    "- name: Build Weir Docker image",
+    "- name: Start Weir Docker candidate",
     "- name: Full live E2E against Docker candidate",
     "- name: Upload Docker live-audit evidence",
-    "- name: Cleanup MediaMop Docker smoke",
+    "- name: Cleanup Weir Docker smoke",
   ],
   ".github/workflows/ci.yml",
 );
 
 for (const marker of [
-  "MEDIAMOP_SESSION_COOKIE_SECURE=false",
-  "MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture",
-  "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT",
-  "name: mediamop-docker-live-audit",
+  "WEIR_SESSION_COOKIE_SECURE=false",
+  "WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture",
+  "WEIR_LIVE_E2E_FIXTURE_HOST_ROOT:$WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT",
+  "name: weir-docker-live-audit",
 ]) {
   requireText(ciDockerSmoke, marker, ".github/workflows/ci.yml docker-smoke job");
 }

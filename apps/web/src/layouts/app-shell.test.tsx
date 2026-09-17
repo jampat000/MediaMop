@@ -40,7 +40,7 @@ vi.mock("../lib/system/readiness-queries", () => ({
 vi.mock("../lib/suite/queries", () => ({
   useSuiteSettingsQuery: () => ({
     data: {
-      product_display_name: "MediaMop",
+      product_display_name: "Weir",
     },
   }),
 }));
@@ -66,7 +66,7 @@ describe("AppShell", () => {
     expect(screen.getByText("Version 2.1.2")).toBeInTheDocument();
     expect(screen.getByTestId("sign-out")).toBeInTheDocument();
     expect(screen.queryByTestId("sidebar-support")).not.toBeInTheDocument();
-    expect(screen.queryByText("Support MediaMop")).not.toBeInTheDocument();
+    expect(screen.queryByText("Support Weir")).not.toBeInTheDocument();
     expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/licence checks/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/feature limits/i)).not.toBeInTheDocument();

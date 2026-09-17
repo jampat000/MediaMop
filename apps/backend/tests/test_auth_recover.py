@@ -12,14 +12,14 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.auth.models import User, UserRole, UserSession
-from mediamop.platform.auth.password import hash_password, verify_password
-from mediamop.platform.auth.recover import main, reset_account_password
-from mediamop.platform.auth.sessions import (
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.auth.models import User, UserRole, UserSession
+from weir.platform.auth.password import hash_password, verify_password
+from weir.platform.auth.recover import main, reset_account_password
+from weir.platform.auth.sessions import (
     compute_absolute_expiry,
     generate_raw_session_token,
     hash_session_token,
@@ -31,7 +31,7 @@ _NEW = "brand-new-password-strong"
 
 @pytest.fixture
 def db_session() -> Iterator[Session]:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     factory = create_session_factory(engine)
     with factory() as session:

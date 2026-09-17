@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.platform.media_managers import relative_media_path_for_handoff
+from weir.platform.media_managers import relative_media_path_for_handoff
 
 
 @pytest.mark.parametrize(
@@ -19,7 +19,7 @@ from mediamop.platform.media_managers import relative_media_path_for_handoff
         ("/srv/handoff/", "/srv/handoff/film.mkv", "film.mkv"),
         ("D:\\Handoff", "D:\\Handoff\\Film\\film.mkv", "Film/film.mkv"),
         ("D:/Handoff", "D:\\Handoff\\Film\\film.mkv", "Film/film.mkv"),
-        # Case folds: the manager may report a different case than MediaMop stored.
+        # Case folds: the manager may report a different case than Weir stored.
         ("D:\\handoff", "D:\\HANDOFF\\Film\\film.mkv", "Film/film.mkv"),
         # A UNC share both hosts mount.
         (r"\\storage-city\Data\Media\Handoff", r"\\storage-city\data\media\handoff\a\b.mkv", "a/b.mkv"),

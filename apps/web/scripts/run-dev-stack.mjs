@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Starts the MediaMop API, waits until it actually serves traffic, then starts Vite.
+ * Starts the Weir API, waits until it actually serves traffic, then starts Vite.
  * Avoids the browser hitting the proxy before uvicorn has finished lifespan/migrations
  * (which produced HTTP 500 / "Cannot reach the API" on every dev refresh).
  *
@@ -8,21 +8,21 @@
  * with a healthy ``/health``, we **reuse** it and only start Vite — otherwise a second API
  * would bind-fail and the web UI would not come up. (``npm run dev`` in ``package.json`` stops
  * the default API/web ports first so a leftover process is not reused by accident.)
- * Set ``MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API=1`` to force spawning the API child anyway.
+ * Set ``WEIR_DEV_STACK_ALWAYS_SPAWN_API=1`` to force spawning the API child anyway.
  *
  * If ``/health`` works but required routes (e.g.
  * ``/api/v1/system/suite-configuration-bundle``) return **404**, the default port usually holds an
- * **older** MediaMop build. The local folder picker route is also checked because Windows can leave
+ * **older** Weir build. The local folder picker route is also checked because Windows can leave
  * an unkillable stale listener behind after desktop/dev restarts. We then start this repo's API on
- * the **next free TCP port** and set ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET`` for Vite so the UI still
+ * the **next free TCP port** and set ``WEIR_DEV_STACK_API_PROXY_TARGET`` for Vite so the UI still
  * works without manually killing the stale process.
  *
  * If the **web** port from ``dev-ports.json`` is busy (leftover Vite), the next free port is used
- * and ``MEDIAMOP_DEV_WEB_PORT`` is set for Vite (see ``vite.config.ts``). Run ``npm run dev:stop-web``
+ * and ``WEIR_DEV_WEB_PORT`` is set for Vite (see ``vite.config.ts``). Run ``npm run dev:stop-web``
  * to free the default port, or use the URL printed in the log.
  *
- * The API validates browser ``Origin``/``Referer`` against ``MEDIAMOP_TRUSTED_BROWSER_ORIGINS`` or
- * ``MEDIAMOP_CORS_ORIGINS``. ``localhost`` and ``127.0.0.1`` are different origins, so this script
+ * The API validates browser ``Origin``/``Referer`` against ``WEIR_TRUSTED_BROWSER_ORIGINS`` or
+ * ``WEIR_CORS_ORIGINS``. ``localhost`` and ``127.0.0.1`` are different origins, so this script
  * merges both into the spawned API env to avoid ``403 Origin not allowed`` on login.
  */
 import { spawn } from "node:child_process";
@@ -97,11 +97,11 @@ function mergeCsvUrlEnv(existingCsv, additions) {
  */
 function buildApiDevOriginEnvPatch(webPort) {
   const extra = devWebBrowserOrigins(webPort);
-  const cors = mergeCsvUrlEnv(process.env.MEDIAMOP_CORS_ORIGINS, extra);
-  const patch = { MEDIAMOP_CORS_ORIGINS: cors };
-  const trustedRaw = (process.env.MEDIAMOP_TRUSTED_BROWSER_ORIGINS || "").trim();
+  const cors = mergeCsvUrlEnv(process.env.WEIR_CORS_ORIGINS, extra);
+  const patch = { WEIR_CORS_ORIGINS: cors };
+  const trustedRaw = (process.env.WEIR_TRUSTED_BROWSER_ORIGINS || "").trim();
   if (trustedRaw.length > 0) {
-    patch.MEDIAMOP_TRUSTED_BROWSER_ORIGINS = mergeCsvUrlEnv(process.env.MEDIAMOP_TRUSTED_BROWSER_ORIGINS, extra);
+    patch.WEIR_TRUSTED_BROWSER_ORIGINS = mergeCsvUrlEnv(process.env.WEIR_TRUSTED_BROWSER_ORIGINS, extra);
   }
   return patch;
 }
@@ -338,7 +338,7 @@ async function waitForHttpOk(opts) {
       if (label.includes("API")) {
         console.error(
           "[dev-stack] API exited before startup finished. Fix errors above (venv, " +
-            "MEDIAMOP_SESSION_SECRET, SQLite path, or Alembic). If you see duplicate-column errors " +
+            "WEIR_SESSION_SECRET, SQLite path, or Alembic). If you see duplicate-column errors " +
             "after splitting migration 0041/0042, pull latest backend and run migrations again.",
         );
       } else {
@@ -429,8 +429,8 @@ async function waitForWebHttpReady(webChild, apiChild, { webHost, webPort, timeo
 
 const node = process.execPath;
 const { apiHost, apiPort: portFromFile, webHost, webPort: configuredWebPort } = readDevPorts();
-const apiPort = process.env.MEDIAMOP_DEV_API_PORT?.trim()
-  ? Number(process.env.MEDIAMOP_DEV_API_PORT.trim())
+const apiPort = process.env.WEIR_DEV_API_PORT?.trim()
+  ? Number(process.env.WEIR_DEV_API_PORT.trim())
   : Number(portFromFile);
 
 let api = null;
@@ -477,12 +477,12 @@ function wireExit(name, child, other) {
   });
 }
 
-const waitMs = Number(process.env.MEDIAMOP_DEV_STACK_API_WAIT_MS || 120000);
-const webWaitMs = Number(process.env.MEDIAMOP_DEV_STACK_WEB_WAIT_MS || 120000);
+const waitMs = Number(process.env.WEIR_DEV_STACK_API_WAIT_MS || 120000);
+const webWaitMs = Number(process.env.WEIR_DEV_STACK_WEB_WAIT_MS || 120000);
 
 async function main() {
   const expectedApiVersion = readExpectedApiVersion();
-  const forceSpawn = (process.env.MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API || "").trim() === "1";
+  const forceSpawn = (process.env.WEIR_DEV_STACK_ALWAYS_SPAWN_API || "").trim() === "1";
   const healthOk = await probeApiAlreadyServing(apiHost, apiPort);
   let configBundleRouteOk = true;
   let directoryBrowserRouteOk = true;
@@ -507,7 +507,7 @@ async function main() {
     const found = existingCurrent ?? (await findFirstTcpPortWithoutHealthyApi(apiHost, apiPort + 1, maxPort));
     if (found == null) {
       console.error(
-        `[dev-stack] http://${hostname}:${stalePort} is an outdated MediaMop API. ` +
+        `[dev-stack] http://${hostname}:${stalePort} is an outdated Weir API. ` +
           `No free port found between ${apiPort + 1} and ${maxPort} for a new API.\n` +
           `[dev-stack] Free a port or stop the old process, then run npm run dev again.`,
       );
@@ -519,12 +519,12 @@ async function main() {
     if (existingCurrent != null) {
       reuseAlternateApi = true;
       console.error(
-        `[dev-stack] Port ${stalePort} has an older MediaMop API build. Reusing current API on ` +
+        `[dev-stack] Port ${stalePort} has an older Weir API build. Reusing current API on ` +
           `${bindProbePort} and proxying /api there.`,
       );
     } else {
       console.error(
-        `[dev-stack] Port ${stalePort} has an older MediaMop API build. Starting this repo's API on ` +
+        `[dev-stack] Port ${stalePort} has an older Weir API build. Starting this repo's API on ` +
           `${bindProbePort} and proxying /api there (close the old terminal when convenient).`,
       );
     }
@@ -549,14 +549,14 @@ async function main() {
     const { hostname, port } = apiConnectTarget(apiHost, reusePort);
     console.error(
       `[dev-stack] API already serving at http://${hostname}:${port}/health — skipping API spawn. ` +
-        `Starting Vite only. (Set MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API=1 to spawn a new API.)`,
+        `Starting Vite only. (Set WEIR_DEV_STACK_ALWAYS_SPAWN_API=1 to spawn a new API.)`,
     );
     api = null;
   } else {
     api = spawn(node, [apiScript], {
       cwd: webDir,
       stdio: "inherit",
-      env: { ...process.env, ...apiOriginEnvPatch, MEDIAMOP_DEV_API_PORT: String(bindPort) },
+      env: { ...process.env, ...apiOriginEnvPatch, WEIR_DEV_API_PORT: String(bindPort) },
     });
 
     await waitForApiHttpReady(api, { apiHost, apiPort: bindPort, timeoutMs: waitMs });
@@ -566,12 +566,12 @@ async function main() {
     viteProxyOverride.trim().length > 0
       ? {
           ...process.env,
-          MEDIAMOP_DEV_STACK_API_PROXY_TARGET: viteProxyOverride.trim(),
+          WEIR_DEV_STACK_API_PROXY_TARGET: viteProxyOverride.trim(),
           VITE_DEV_API_PROXY_TARGET: viteProxyOverride.trim(),
         }
       : { ...process.env };
 
-  const viteEnvWithPort = { ...viteEnv, MEDIAMOP_DEV_WEB_PORT: String(chosenWebPort) };
+  const viteEnvWithPort = { ...viteEnv, WEIR_DEV_WEB_PORT: String(chosenWebPort) };
 
   web = spawn(node, [viteEntry], {
     cwd: webDir,

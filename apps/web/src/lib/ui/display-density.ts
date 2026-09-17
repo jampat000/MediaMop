@@ -1,6 +1,6 @@
 /** Browser-local UI density; not synced to the server (easy to revert / no migration). */
 
-export const DISPLAY_DENSITY_STORAGE_KEY = "mediamop-display-density";
+export const DISPLAY_DENSITY_STORAGE_KEY = "weir-display-density";
 
 export type DisplayDensity = "default" | "compact" | "comfortable" | "expanded";
 

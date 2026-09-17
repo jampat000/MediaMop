@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Stops processes **listening** on the dev **Vite** port from ``scripts/dev-ports.json``
- * (override with ``MEDIAMOP_DEV_WEB_PORT``).
+ * (override with ``WEIR_DEV_WEB_PORT``).
  *
  * Use when ``npm run dev`` fails with **Port 8782 is already in use** (leftover Node/Vite).
  */
@@ -16,7 +16,7 @@ const repoRoot = path.join(__dirname, "..");
 const devPortsPath = path.join(repoRoot, "scripts", "dev-ports.json");
 
 function readWebPort() {
-  const forced = (process.env.MEDIAMOP_DEV_WEB_PORT || "").trim();
+  const forced = (process.env.WEIR_DEV_WEB_PORT || "").trim();
   if (forced) {
     return Number(forced);
   }

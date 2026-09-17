@@ -100,7 +100,7 @@ it("shows the reason a file is not being processed", async () => {
         file({
           status: "blocked_upstream",
           status_reason:
-            "Deluno (Main) is still importing this file, so MediaMop left it alone for now.",
+            "Deluno (Main) is still importing this file, so Weir left it alone for now.",
           blocked_by_connection: "Deluno (Main)",
         }),
       ],
@@ -195,7 +195,7 @@ it("labels paused work as paused instead of claiming its schedule is closed", as
         file({
           status: "out_of_schedule",
           status_reason:
-            "Processing is paused. MediaMop will start work again when you resume it.",
+            "Processing is paused. Weir will start work again when you resume it.",
         }),
       ],
       status_counts: { out_of_schedule: 1 },
@@ -220,7 +220,7 @@ it("asks for a re-check when a saved pause reason is stale", async () => {
         file({
           status: "out_of_schedule",
           status_reason:
-            "Processing is paused. MediaMop will start work again when you resume it.",
+            "Processing is paused. Weir will start work again when you resume it.",
         }),
       ],
       status_counts: { out_of_schedule: 1 },
@@ -318,7 +318,7 @@ it("invents no release time when the wait is on a writer rather than the clock",
       files: [
         file({
           status: "on_hold",
-          status_reason: "MediaMop could not open this file for reading.",
+          status_reason: "Weir could not open this file for reading.",
           hold_until: null,
         }),
       ],

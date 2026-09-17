@@ -7,14 +7,14 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 
 def _login(client: TestClient) -> None:
@@ -49,10 +49,10 @@ def test_refiner_overview_stats_shape(client_with_admin: TestClient) -> None:
 
 
 def test_refiner_overview_stats_aggregates_remux_savings(client_with_admin: TestClient) -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
-    home = Path(settings.mediamop_home)
+    home = Path(settings.weir_home)
     out1 = home / "stats-out-1.mkv"
     out2 = home / "stats-out-2.mkv"
     unchanged = home / "stats-unchanged.mkv"
@@ -121,10 +121,10 @@ def test_refiner_overview_stats_aggregates_remux_savings(client_with_admin: Test
 
 
 def test_refiner_overview_stats_excludes_non_finalized_successes(client_with_admin: TestClient) -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
-    home = Path(settings.mediamop_home)
+    home = Path(settings.weir_home)
     finalized = home / "stats-finalized.mkv"
     finalized.parent.mkdir(parents=True, exist_ok=True)
     finalized.write_bytes(b"ok")

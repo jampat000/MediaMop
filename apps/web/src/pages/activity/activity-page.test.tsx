@@ -414,7 +414,7 @@ describe("ActivityPage", () => {
     mocks.useActivityRecentQuery.mockReturnValue(recentResult([]));
     mocks.fetchActivityExport.mockResolvedValue({
       blob: new Blob(["id\n"]),
-      filename: "mediamop-activity.csv",
+      filename: "weir-activity.csv",
     });
     const createObjectURL = vi.fn(() => "blob:activity");
     vi.stubGlobal("URL", Object.assign(URL, { createObjectURL }));

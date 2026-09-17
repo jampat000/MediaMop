@@ -1,5 +1,5 @@
 /**
- * MediaMop-wide **control roles** (action buttons + section tabs).
+ * Weir-wide **control roles** (action buttons + section tabs).
  *
  * Hierarchy (primary / secondary / tertiary):
  * - **primary** — commit/save (Save, Apply, Confirm, …)
@@ -23,7 +23,7 @@ export const mmEditableTextFieldClass = "mm-input w-full min-w-0";
 
 /**
  * Shared layout/interaction for native selects and anchored listbox triggers.
- * Visual chrome (inset, border, height, padding, focus) lives on `.mm-input` in `mediamop-shell.css`.
+ * Visual chrome (inset, border, height, padding, focus) lives on `.mm-input` in `weir-shell.css`.
  */
 const mmNativeFieldShell =
   "mm-input w-full min-w-0 text-sm text-[var(--mm-text)] transition-[border-color,background-color,box-shadow] duration-150 " +

@@ -75,7 +75,7 @@ export function SetupPage() {
           <h1 className="mm-auth-title">Create admin</h1>
           <p className="mm-auth-lead">
             This workspace has no administrator yet. Choose credentials for the
-            initial account. After you sign in, MediaMop will run the first-run
+            initial account. After you sign in, Weir will run the first-run
             setup wizard.
           </p>
 

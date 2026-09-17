@@ -164,7 +164,7 @@ describe("RefinerPage", () => {
     const overview =
       screen.getByTestId("refiner-overview-panel").textContent ?? "";
     expect(overview).toMatch(/At a glance/i);
-    expect(overview).not.toMatch(/MEDIAMOP_/i);
+    expect(overview).not.toMatch(/WEIR_/i);
     expect(overview).not.toMatch(/refiner_jobs/i);
     expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute(
       "href",

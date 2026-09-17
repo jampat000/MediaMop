@@ -1,9 +1,9 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/jampat000/MediaMop/security/advisories/new
+    url: https://github.com/jampat000/weir/security/advisories/new
     about: Report unpatched security vulnerabilities privately.
   - name: Support policy
-    url: https://github.com/jampat000/MediaMop/blob/main/SUPPORT.md
+    url: https://github.com/jampat000/weir/blob/main/SUPPORT.md
     about: Read what information to include before opening an issue.
 

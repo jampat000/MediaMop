@@ -1,4 +1,4 @@
-# ADR-0016: MediaMop is one thing, and it never strands a file
+# ADR-0016: Weir is one thing, and it never strands a file
 
 ## Status
 
@@ -15,7 +15,7 @@ unchanged and is load-bearing here.
 
 ## Context
 
-MediaMop has been built as a suite: a platform with modules, a dashboard that aggregates
+Weir has been built as a suite: a platform with modules, a dashboard that aggregates
 across them, suite-wide settings, suite-wide pause, and worker lanes owned per module.
 Two of the three modules have since been deleted or hollowed out — Subber went in `0010`,
 Dashboard exists only to aggregate — and what is left is Refiner, which is the product,
@@ -23,10 +23,10 @@ and Pruner, which is not.
 
 Three facts settle this, and the first one was wrong in our own heads for a long time.
 
-1. **MediaMop is a stage in the middle of a pipeline. It never sees the library.** A
+1. **Weir is a stage in the middle of a pipeline. It never sees the library.** A
    manager picks a release and downloads it; the file lands in a completed folder;
-   MediaMop takes it, works it, and writes it to an output folder; the manager imports
-   and renames it onto storage. Every path MediaMop knows is `watched_folder` or
+   Weir takes it, works it, and writes it to an output folder; the manager imports
+   and renames it onto storage. Every path Weir knows is `watched_folder` or
    `output_folder` on a library row. It has no view of what is on the NAS, has never had
    one, and should not acquire one. Any screen, metric or claim phrased as "your library"
    is a claim this product cannot support.
@@ -53,7 +53,7 @@ media is not on their NAS, and the tool that took it is the reason.
 
 ## Decision
 
-1. **MediaMop is a single-purpose processing stage.** The `mediamop.modules.*` layer is
+1. **Weir is a single-purpose processing stage.** The `weir.modules.*` layer is
    removed. Refiner stops being a module and becomes the application. Suite settings,
    suite pause, module-owned lane boundaries and the aggregating Dashboard module go with
    it; one lane set serves the whole app.
@@ -70,7 +70,7 @@ media is not on their NAS, and the tool that took it is the reason.
    so the design transfers and the code does not.
 
    The move also fixes a defect in the current design rather than merely relocating it.
-   Deleting from MediaMop is a dead end: the item is removed from a media server, and the
+   Deleting from Weir is a dead end: the item is removed from a media server, and the
    manager — which still monitors it and still reads RSS — is free to download it again.
    In Deluno, one deletion can remove the file from disk, remove it from Plex, Jellyfin
    and Emby, unmonitor it, and blocklist the release so it is not re-acquired. Retention
@@ -96,10 +96,10 @@ media is not on their NAS, and the tool that took it is the reason.
    `pass_through` rather than delete a file nobody can be told about. It is opt-in and
    never the default, because it destroys a file the user paid bandwidth for.
 
-5. **Processing is what the operator configured, and nothing more.** MediaMop has no
+5. **Processing is what the operator configured, and nothing more.** Weir has no
    opinion about what a file ought to be — the manager already decided that at
    acquisition, against the user's quality configuration. If the configuration says strip
-   subtitles, MediaMop strips subtitles and changes nothing else. There is no flow graph
+   subtitles, Weir strips subtitles and changes nothing else. There is no flow graph
    and no inference.
 
 6. **Device compatibility is a read-only lens.** Files may be labelled with the devices
@@ -135,7 +135,7 @@ media is not on their NAS, and the tool that took it is the reason.
   migration cannot tell anyone whether a real regression landed. The suite is also
   already the flakiest gate in the repo — intermittent failures in a full run that pass
   in isolation, usually from a stale uvicorn or Vite process holding a previous
-  `MEDIAMOP_HOME`. Rebaselining is the moment to fix that isolation properly rather than
+  `WEIR_HOME`. Rebaselining is the moment to fix that isolation properly rather than
   re-recording screenshots over a known-unreliable harness.
 - The intake webhook stays generic per ADR-0013. Sonarr and Radarr users outnumber Deluno
   users and this product must keep working for them.

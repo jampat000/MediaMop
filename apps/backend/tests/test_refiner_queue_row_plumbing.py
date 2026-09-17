@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.refiner import normalize_storage_path
+from weir.refiner import normalize_storage_path
 
 
 def test_normalize_storage_path_contract() -> None:

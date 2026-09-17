@@ -20,14 +20,13 @@ function log(over: Partial<RefinerFileLog> = {}): RefinerFileLog {
         story: [
           {
             heading: "Picked up",
-            sentence:
-              "MediaMop took this file as a film in the Films 4K library.",
+            sentence: "Weir took this file as a film in the Films 4K library.",
             tone: "neutral",
           },
           {
             heading: "Planned",
             sentence:
-              "MediaMop planned to remove 2 audio tracks. The video is copied, not re-encoded, so picture quality is unchanged.",
+              "Weir planned to remove 2 audio tracks. The video is copied, not re-encoded, so picture quality is unchanged.",
             tone: "neutral",
           },
           { heading: "Checked", sentence: "It was complete.", tone: "good" },
@@ -74,7 +73,7 @@ it("keeps the technical detail behind a disclosure, never leading", () => {
 it("says how long records are kept", () => {
   mount();
   expect(
-    screen.getByText("MediaMop keeps these records for 90 days."),
+    screen.getByText("Weir keeps these records for 90 days."),
   ).toBeInTheDocument();
 });
 

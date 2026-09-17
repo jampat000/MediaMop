@@ -71,7 +71,7 @@ export function RefinerMaintenanceSection() {
   return (
     <div className="space-y-4" data-testid="refiner-maintenance-section">
       <p className="text-sm text-[var(--mm-text2)]">
-        Housekeeping MediaMop runs on a schedule. You can also start one now —
+        Housekeeping Weir runs on a schedule. You can also start one now —
         starting it by hand ignores the schedule switch.
       </p>
 

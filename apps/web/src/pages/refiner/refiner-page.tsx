@@ -41,7 +41,7 @@ const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
     "Every file Refiner has looked at, and why it is or is not being processed.",
   jobs: "View queued, running, and recent Refiner jobs for troubleshooting and progress.",
   maintenance:
-    "Housekeeping MediaMop runs on a schedule, and what this instance is configured with. Start one now if you need to.",
+    "Housekeeping Weir runs on a schedule, and what this instance is configured with. Start one now if you need to.",
 };
 
 const REFINER_TABS = [
@@ -102,7 +102,7 @@ export function RefinerPage() {
 
   return (
     <WorkspacePage
-      eyebrow="MediaMop"
+      eyebrow="Weir"
       title="Refiner"
       dataTestId="refiner-scope-page"
       description={

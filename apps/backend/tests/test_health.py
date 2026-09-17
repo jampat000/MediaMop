@@ -1,4 +1,4 @@
-"""Smoke tests for the MediaMop backend spine."""
+"""Smoke tests for the Weir backend spine."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from mediamop.api.factory import create_app
-from mediamop.core.config import MediaMopSettings
-from mediamop.platform.jobs.worker_health import reset_worker_health_for_tests
-from mediamop.platform.readiness.service import build_readiness
+from weir.api.factory import create_app
+from weir.core.config import WeirSettings
+from weir.platform.jobs.worker_health import reset_worker_health_for_tests
+from weir.platform.readiness.service import build_readiness
 
 
 def test_health_ok() -> None:
@@ -62,7 +62,7 @@ def test_readiness_reports_failed_when_worker_heartbeat_missing() -> None:
         startup_ready = True
         engine = None
         session_factory = None
-        settings = replace(MediaMopSettings.load(), refiner_worker_count=1)
+        settings = replace(WeirSettings.load(), refiner_worker_count=1)
 
     payload = build_readiness(State())
 
@@ -92,8 +92,8 @@ def test_regular_unknown_api_path_still_returns_json_404() -> None:
 def test_packaged_app_routes_refresh_to_react_shell(tmp_path: Path, monkeypatch) -> None:
     web_dist = tmp_path / "web"
     web_dist.mkdir()
-    (web_dist / "index.html").write_text("<!doctype html><title>MediaMop</title>", encoding="utf-8")
-    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(web_dist))
+    (web_dist / "index.html").write_text("<!doctype html><title>Weir</title>", encoding="utf-8")
+    monkeypatch.setenv("WEIR_WEB_DIST", str(web_dist))
     client = TestClient(create_app())
 
     response = client.get(
@@ -104,14 +104,14 @@ def test_packaged_app_routes_refresh_to_react_shell(tmp_path: Path, monkeypatch)
 
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "MediaMop" in response.text
+    assert "Weir" in response.text
 
 
 def test_unknown_non_app_path_still_returns_404(tmp_path: Path, monkeypatch) -> None:
     web_dist = tmp_path / "web"
     web_dist.mkdir()
-    (web_dist / "index.html").write_text("<!doctype html><title>MediaMop</title>", encoding="utf-8")
-    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(web_dist))
+    (web_dist / "index.html").write_text("<!doctype html><title>Weir</title>", encoding="utf-8")
+    monkeypatch.setenv("WEIR_WEB_DIST", str(web_dist))
     client = TestClient(create_app())
 
     response = client.get("/not-a-real-route", follow_redirects=False)

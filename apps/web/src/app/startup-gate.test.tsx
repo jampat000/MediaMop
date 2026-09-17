@@ -38,7 +38,7 @@ describe("StartupGate", () => {
       </StartupGate>,
     );
 
-    expect(await screen.findByText("Starting MediaMop...")).toBeInTheDocument();
+    expect(await screen.findByText("Starting Weir...")).toBeInTheDocument();
     expect(screen.queryByText("App mounted")).not.toBeInTheDocument();
     expect(await screen.findByText("Preparing database.")).toBeInTheDocument();
   });
@@ -69,6 +69,6 @@ describe("StartupGate", () => {
     await waitFor(() =>
       expect(screen.getByText("App mounted")).toBeInTheDocument(),
     );
-    expect(screen.queryByText("Starting MediaMop...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Starting Weir...")).not.toBeInTheDocument();
   });
 });

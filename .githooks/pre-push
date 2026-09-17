@@ -19,10 +19,10 @@ else
         node "$REPO/scripts/check-dead-code.mjs"
         echo "[pre-push] api:types drift..."
         (cd "$REPO/apps/web" && npm run api:types:sync)
-        if ! git -C "$REPO" diff --quiet -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts; then
+        if ! git -C "$REPO" diff --quiet -- apps/web/openapi/weir-openapi.json apps/web/src/lib/api/generated/openapi-types.ts; then
             echo "[pre-push] ERROR: OpenAPI spec or types out of sync - commit them first"
-            git -C "$REPO" diff -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
-            git -C "$REPO" restore -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
+            git -C "$REPO" diff -- apps/web/openapi/weir-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
+            git -C "$REPO" restore -- apps/web/openapi/weir-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
             exit 1
         fi
     fi
