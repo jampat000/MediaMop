@@ -556,15 +556,16 @@ class LiveAudit:
             "apply Activity filters",
         )
         self.visible(
-            self.page.get_by_text("Filters active", exact=True),
+            self.page.get_by_test_id("activity-summary").get_by_text("matching your filters"),
             "Activity active filter state",
         )
         self.click(
             self.page.get_by_role("button", name="Clear", exact=True),
             "clear Activity filters",
         )
+        self.page.wait_for_timeout(500)
         self.require(
-            not self.page.get_by_text("Filters active", exact=True).count(),
+            not self.page.get_by_test_id("activity-summary").get_by_text("matching your filters").count(),
             "Activity filters did not clear",
         )
         self.screenshot("activity")
