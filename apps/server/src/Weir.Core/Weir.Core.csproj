@@ -1,10 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Domain: records and rules. No IO, no framework dependencies. -->
+  <!-- Domain: records and rules. No IO, no framework dependencies (TimeZoneConverter is data). -->
   <PropertyGroup>
     <RootNamespace>Weir.Core</RootNamespace>
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Weir.Core.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- IANA time zone names on every platform (see Time/TimeZones.cs). -->
+    <PackageReference Include="TimeZoneConverter" />
   </ItemGroup>
 </Project>

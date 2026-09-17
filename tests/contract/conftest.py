@@ -55,6 +55,10 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "real_ffmpeg: uses the real ffmpeg/ffprobe on tiny generated files; skipped when they are missing"
     )
+    config.addinivalue_line(
+        "markers",
+        "backends(*kinds, reason): runs only against these servers (python, dotnet); skipped with the reason on others",
+    )
 
 
 def _area_of(item: pytest.Item) -> str | None:
@@ -98,6 +102,17 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             continue
         if dotnet_reason is not None:
             item.add_marker(pytest.mark.skip(reason=dotnet_reason))
+        backends = item.get_closest_marker("backends")
+        if backends is not None:
+            unknown_kinds = set(backends.args).difference(launcher.SERVER_KINDS)
+            if not backends.args or unknown_kinds:
+                raise pytest.UsageError(
+                    f"{item.nodeid}: @pytest.mark.backends needs server kinds from {', '.join(launcher.SERVER_KINDS)}; "
+                    f"got {backends.args!r}"
+                )
+            if kind not in backends.args:
+                reason = backends.kwargs.get("reason") or f"runs only against {', '.join(backends.args)}"
+                item.add_marker(pytest.mark.skip(reason=reason))
         if ffmpeg_missing and item.get_closest_marker("real_ffmpeg") is not None:
             item.add_marker(
                 pytest.mark.skip(reason="ffmpeg and ffprobe are not on PATH (or WEIR_CONTRACT_REAL_FFMPEG_DIR)")

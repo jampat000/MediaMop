@@ -102,6 +102,7 @@ def test_api_startup_fails_without_migrations(server_factory) -> None:
         conn.close()
 
 
+@pytest.mark.backends("python", reason="the .NET server only opens databases at the current schema head (ADR-0017)")
 def test_api_startup_auto_upgrades_known_behind_revision_to_head(server, server_factory, client_factory) -> None:
     """A database an older release left at its first schema revision is upgraded when the server starts."""
 

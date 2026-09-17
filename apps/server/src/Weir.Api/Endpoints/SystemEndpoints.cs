@@ -23,6 +23,10 @@ public static class SystemEndpoints
     public static IEndpointRouteBuilder MapSystemEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
+        var routes = endpoints.ServiceProvider.GetRequiredService<RouteTable>();
+        routes.Add("/health", [HttpMethods.Get], "/health");
+        routes.Add("/ready", [HttpMethods.Get], "/ready");
+        routes.Add("/api/v1/system/readiness", [HttpMethods.Get], "/api/v1/system/readiness");
 
         endpoints.MapMethods("/health", GetAndHead, async (HttpContext context) =>
         {
@@ -32,7 +36,7 @@ public static class SystemEndpoints
                 report.IsOk ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable,
                 new HealthResponse(report.Status, report.Dependencies),
                 ApiJsonContext.Default.HealthResponse).ConfigureAwait(false);
-        });
+        }).WithMetadata(new RouteLabel("/health"));
 
         endpoints.MapMethods("/ready", GetAndHead, async (HttpContext context) =>
         {
@@ -42,7 +46,7 @@ public static class SystemEndpoints
                 report.Ready ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable,
                 new PublicReadinessResponse(report.Ready, report.Status),
                 ApiJsonContext.Default.PublicReadinessResponse).ConfigureAwait(false);
-        });
+        }).WithMetadata(new RouteLabel("/ready"));
 
         endpoints.MapMethods("/api/v1/system/readiness", GetAndHead, async (HttpContext context) =>
         {
@@ -58,7 +62,7 @@ public static class SystemEndpoints
                 report.Ready ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable,
                 ToResponse(report),
                 ApiJsonContext.Default.ReadinessResponse).ConfigureAwait(false);
-        });
+        }).WithMetadata(new RouteLabel("/api/v1/system/readiness"));
 
         return endpoints;
     }

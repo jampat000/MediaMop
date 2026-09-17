@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Weir.Core.Json;
 
 namespace Weir.Core.Rules;
 
@@ -73,7 +74,7 @@ public sealed record ProbeStreamInfo
     public long? Index => Py.TryInt(Get("index"), out var index) ? index : null;
 
     /// <summary><c>codec_type</c>, stripped and lower-cased; empty when absent or not a string.</summary>
-    public string CodecType => Py.IsStr(Get("codec_type")) ? Py.Lower(Py.Strip(Get("codec_type")!.Value.GetString()!)) : string.Empty;
+    public string CodecType => Py.IsStr(Get("codec_type")) ? Py.Lower(PyStrings.Strip(Get("codec_type")!.Value.GetString()!)) : string.Empty;
 
     /// <summary><c>codec_name</c> as written; empty when absent.</summary>
     public string CodecName => Py.StrOr(Get("codec_name"), string.Empty);

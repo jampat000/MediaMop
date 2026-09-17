@@ -1,3 +1,5 @@
+using Weir.Core.Json;
+
 namespace Weir.Core.Rules;
 
 /// <summary>What to strip (<c>refiner_metadata_rules.MetadataRules</c>). All off by default, so an upgrade changes nothing.</summary>
@@ -34,7 +36,7 @@ public static class MetadataStreams
             }
         }
 
-        var codec = Py.Lower(Py.Strip(Py.StrOr(stream.Get("codec_name"), string.Empty)));
+        var codec = Py.Lower(PyStrings.Strip(Py.StrOr(stream.Get("codec_name"), string.Empty)));
         if (!ImageCodecs.Contains(codec))
         {
             return false;
@@ -47,7 +49,7 @@ public static class MetadataStreams
             return true;
         }
 
-        var rate = Py.Strip(Py.StrOr(stream.Get("avg_frame_rate"), string.Empty));
+        var rate = PyStrings.Strip(Py.StrOr(stream.Get("avg_frame_rate"), string.Empty));
         return rate is "" or "0/0" or "0/1";
     }
 
@@ -55,7 +57,7 @@ public static class MetadataStreams
     public static bool IsAttachmentStream(ProbeStreamInfo stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        return Py.Lower(Py.Strip(Py.StrOr(stream.Get("codec_type"), string.Empty))) == "attachment";
+        return Py.Lower(PyStrings.Strip(Py.StrOr(stream.Get("codec_type"), string.Empty))) == "attachment";
     }
 
     /// <summary>(real video, embedded images). A file of nothing but images keeps its first stream as the picture.</summary>
@@ -80,7 +82,7 @@ public static class MetadataStreams
     public static string DescribeImageStream(ProbeStreamInfo stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        var codec = Py.Strip(Py.StrOr(stream.Get("codec_name"), "unknown"));
+        var codec = PyStrings.Strip(Py.StrOr(stream.Get("codec_name"), "unknown"));
         var width = stream.Get("width");
         var height = stream.Get("height");
         var size = Py.Truthy(width) && Py.Truthy(height) ? $"{Py.Str(width)}x{Py.Str(height)}" : "unknown size";
@@ -96,7 +98,7 @@ public static class MetadataStreams
         {
             var filename = Py.Get(tags!.Value, "filename");
             var chosen = Py.Truthy(filename) ? filename : Py.Get(tags.Value, "title");
-            name = Py.Strip(Py.StrOr(chosen, string.Empty));
+            name = PyStrings.Strip(Py.StrOr(chosen, string.Empty));
         }
 
         return name.Length > 0 ? $"attachment ({name})" : "attachment";

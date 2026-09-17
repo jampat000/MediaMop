@@ -2,6 +2,8 @@
   <!-- SQLite, filesystem, logging sinks, processes and HTTP clients. -->
   <PropertyGroup>
     <RootNamespace>Weir.Infrastructure</RootNamespace>
+    <!-- LibraryImport marshalling for GetFinalPathNameByHandle (folder browsing on Windows). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Weir.Core\Weir.Core.csproj" />

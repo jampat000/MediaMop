@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Weir.Core.Json;
 
 namespace Weir.Core.Rules;
 
@@ -132,7 +133,7 @@ public static partial class RemuxRules
     /// <summary>Lower rank is the better codec.</summary>
     public static int AudioCodecQualityRank(string? codecName)
     {
-        var c = Py.Lower(Py.Strip(codecName ?? string.Empty));
+        var c = Py.Lower(PyStrings.Strip(codecName ?? string.Empty));
         if (c.Length == 0)
         {
             return CodecUnknownRank;
@@ -144,7 +145,7 @@ public static partial class RemuxRules
     /// <summary>The canonical policy; unknown stored values use the default policy.</summary>
     public static string NormalizeAudioPreferenceMode(string? raw)
     {
-        var m = Py.Lower(Py.Strip(raw ?? string.Empty));
+        var m = Py.Lower(PyStrings.Strip(raw ?? string.Empty));
         return m is RemuxRuleValues.PolicyPreferredLangsQuality or RemuxRuleValues.PolicyPreferredLangsStrict or RemuxRuleValues.PolicyQualityAllLanguages
             ? m
             : RemuxRuleValues.PolicyPreferredLangsQuality;
@@ -161,14 +162,14 @@ public static partial class RemuxRules
             return string.Empty;
         }
 
-        var s = Py.Lower(Py.Strip(tag));
+        var s = Py.Lower(PyStrings.Strip(tag));
         if (s.Length == 0)
         {
             return string.Empty;
         }
 
         var match = LanguageTagRegex().Match(s);
-        return match.Success ? match.Groups[1].Value : Py.Slice(s, 12);
+        return match.Success ? match.Groups[1].Value : PyStrings.Slice(s, 12);
     }
 
     public static IReadOnlyList<string> ParseSubtitleLangsCsv(string? raw)
@@ -192,7 +193,7 @@ public static partial class RemuxRules
         var lines = new List<string>();
         foreach (var line in SplitLines(raw ?? string.Empty))
         {
-            var s = Py.Strip(line);
+            var s = PyStrings.Strip(line);
             if (s.Length > 0)
             {
                 lines.Add(s);
@@ -260,7 +261,7 @@ public static partial class RemuxRules
         var subtitles = new List<ProbeStreamInfo>();
         foreach (var stream in probe.Streams)
         {
-            var codecType = Py.Lower(Py.Strip(Py.StrMethodTarget(stream.Get("codec_type"))));
+            var codecType = Py.Lower(PyStrings.Strip(Py.StrMethodTarget(stream.Get("codec_type"))));
             switch (codecType)
             {
                 case "video":
@@ -332,7 +333,7 @@ public static partial class RemuxRules
         return !oldSubtitles.SequenceEqual(newSubtitles);
     }
 
-    private static bool IsLosslessAudio(string? codecName) => LosslessCodecs.Contains(Py.Lower(Py.Strip(codecName ?? string.Empty)));
+    private static bool IsLosslessAudio(string? codecName) => LosslessCodecs.Contains(Py.Lower(PyStrings.Strip(codecName ?? string.Empty)));
 
     private static List<string> OrderedPreferenceLangs(RefinerRulesConfig config)
     {

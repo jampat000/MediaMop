@@ -1,0 +1,1330 @@
+[
+  {
+    "name": "ok-streams",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{\"streams\":[]}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {
+        "streams": []
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"{\\\"streams\\\":[]}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "ok-full",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{\"streams\": [{\"index\": 0, \"codec_type\": \"video\"}], \"format\": {\"duration\": \"12.5\"}}\n",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "video"
+          }
+        ],
+        "format": {
+          "duration": "12.5"
+        }
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"{\\\"streams\\\": [{\\\"index\\\": 0, \\\"codec_type\\\": \\\"video\\\"}], \\\"format\\\": {\\\"duration\\\": \\\"12.5\\\"}}\\n\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "ok-with-stderr-noise",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{\"format\": {}}",
+        "stderr": "[mov] something harmless"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {
+        "format": {}
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"{\\\"format\\\": {}}\", \"stderr\": \"[mov] something harmless\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "ok-unicode",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{\"format\": {\"tags\": {\"title\": \"Amélie \\u2014 ☃\"}}}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {
+        "format": {
+          "tags": {
+            "title": "Amélie — ☃"
+          }
+        }
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"{\\\"format\\\": {\\\"tags\\\": {\\\"title\\\": \\\"Am\\u00e9lie \\\\u2014 \\u2603\\\"}}}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-stdout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe returned invalid or empty output"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "whitespace-stdout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": " \n\t ",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe returned invalid or empty output"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \" \\n\\t \", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "list-stdout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "[]",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe returned invalid or empty output"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"[]\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "null-stdout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "null",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe returned invalid or empty output"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"null\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "number-stdout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "42",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe returned invalid or empty output"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"42\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bad-json",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{bad",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe returned invalid or empty output"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"{bad\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "truncated-json",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{\"streams\": [",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe returned invalid or empty output"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"{\\\"streams\\\": [\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "invalid-data",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "film.mkv: Invalid data found when processing input"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "film.mkv: Invalid data found when processing input"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"film.mkv: Invalid data found when processing input\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "ebml",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "EBML header parsing failed"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "EBML header parsing failed"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"EBML header parsing failed\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "moov",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "[mov,mp4,m4a] moov atom not found\nfilm.mp4: Invalid data"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "[mov,mp4,m4a] moov atom not found\nfilm.mp4: Invalid data"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"[mov,mp4,m4a] moov atom not found\\nfilm.mp4: Invalid data\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "codec-params",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "Could not find codec parameters for stream 0"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "Could not find codec parameters for stream 0"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"Could not find codec parameters for stream 0\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "end-of-file",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "film.mkv: End of file"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "film.mkv: End of file"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"film.mkv: End of file\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "marker-upper-case",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "  INVALID DATA FOUND WHEN PROCESSING INPUT  \n"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "INVALID DATA FOUND WHEN PROCESSING INPUT"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"  INVALID DATA FOUND WHEN PROCESSING INPUT  \\n\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "marker-in-stdout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "moov atom not found",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "moov atom not found"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"moov atom not found\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "stderr-wins-over-stdout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "moov atom not found",
+        "stderr": "Permission denied"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "Permission denied"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"moov atom not found\", \"stderr\": \"Permission denied\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "permission-denied",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "film.mkv: Permission denied"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "film.mkv: Permission denied"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"film.mkv: Permission denied\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "no-such-file",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "film.mkv: No such file or directory"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "film.mkv: No such file or directory"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"film.mkv: No such file or directory\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "broken",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "broken"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "broken"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"broken\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "silent-failure",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe failed"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "whitespace-failure",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 234,
+        "stdout": "  ",
+        "stderr": " \n "
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "ffprobe failed"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 234, \"stdout\": \"  \", \"stderr\": \" \\n \"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "negative-exit",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": -11,
+        "stdout": "",
+        "stderr": "Segmentation fault"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "Segmentation fault"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": -11, \"stdout\": \"\", \"stderr\": \"Segmentation fault\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "long-stderr",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx end of file"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "MediaUnreadableError",
+        "message": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx end of file"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\\u2026(truncated)\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "long-stdout-ok",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{\"format\": {\"comment\": \"éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé\"}}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {
+        "format": {
+          "comment": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+        }
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 0, \"stdout\": \"{\\\"format\\\": {\\\"comment\\\": \\\"\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u00e9\\u2026(truncated)\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "marker-split-by-newline",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "invalid data found\nwhen processing input"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "invalid data found\nwhen processing input"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"invalid data found\\nwhen processing input\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "unicode-stderr",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "Fichier « film » : données invalides �"
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "Fichier « film » : données invalides �"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        },
+        {
+          "level": "warning",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Film (2019).mkv\", \"returncode\": 1, \"stdout\": \"\", \"stderr\": \"Fichier \\u00ab film \\u00bb : donn\\u00e9es invalides \\ufffd\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "timeout",
+    "input": {
+      "path": "Film (2019).mkv",
+      "run": {
+        "timeout": true
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "TimeoutExpired",
+        "message": "Command '['ffprobe', '-v', 'quiet', '-probesize', '10485760', '-analyzeduration', '10000000', '-print_format', 'json', '-show_streams', '-show_format', 'Film (2019).mkv']' timed out after 120 seconds"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Film (2019).mkv\", \"resolved_path\": \"Film (2019).mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Film (2019).mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Film (2019).mkv\"]}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "path-missing",
+    "input": {
+      "path": "C:\\Media\\gone.mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": {
+        "exists": false,
+        "is_file": false,
+        "size": -1,
+        "mtime": 0.0
+      },
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "file missing or empty at probe time"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"C:\\\\Media\\\\gone.mkv\", \"resolved_path\": \"C:\\\\Media\\\\gone.mkv\", \"exists\": false, \"is_file\": false, \"size_bytes\": -1, \"suffix\": \".mkv\", \"mtime_epoch\": 0.0}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "path-directory",
+    "input": {
+      "path": "C:\\Media\\gone.mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": {
+        "exists": true,
+        "is_file": false,
+        "size": 0,
+        "mtime": 1700000001.0
+      },
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "file missing or empty at probe time"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"C:\\\\Media\\\\gone.mkv\", \"resolved_path\": \"C:\\\\Media\\\\gone.mkv\", \"exists\": true, \"is_file\": false, \"size_bytes\": 0, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000001.0}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "path-empty",
+    "input": {
+      "path": "C:\\Media\\gone.mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": {
+        "exists": true,
+        "is_file": true,
+        "size": 0,
+        "mtime": 1700000002.5
+      },
+      "kwargs": {}
+    },
+    "expected": {
+      "error": {
+        "type": "RuntimeError",
+        "message": "file missing or empty at probe time"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"C:\\\\Media\\\\gone.mkv\", \"resolved_path\": \"C:\\\\Media\\\\gone.mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 0, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000002.5}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "controls",
+    "input": {
+      "path": "a.b.c.mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {
+        "probe_size_mb": 64,
+        "analyze_duration_seconds": 30
+      }
+    },
+    "expected": {
+      "result": {},
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"a.b.c.mkv\", \"resolved_path\": \"a.b.c.mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"a.b.c.mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"67108864\", \"-analyzeduration\", \"30000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"a.b.c.mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"a.b.c.mkv\", \"returncode\": 0, \"stdout\": \"{}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "controls-clamped",
+    "input": {
+      "path": "a.b.c.mkv",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {
+        "probe_size_mb": 5000,
+        "analyze_duration_seconds": 0
+      }
+    },
+    "expected": {
+      "result": {},
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"a.b.c.mkv\", \"resolved_path\": \"a.b.c.mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"a.b.c.mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"1073741824\", \"-analyzeduration\", \"1000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"a.b.c.mkv\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"a.b.c.mkv\", \"returncode\": 0, \"stdout\": \"{}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "timeout-custom",
+    "input": {
+      "path": "a.b.c.mkv",
+      "run": {
+        "timeout": true
+      },
+      "path_state": null,
+      "kwargs": {
+        "timeout_s": 7
+      }
+    },
+    "expected": {
+      "error": {
+        "type": "TimeoutExpired",
+        "message": "Command '['ffprobe', '-v', 'quiet', '-probesize', '10485760', '-analyzeduration', '10000000', '-print_format', 'json', '-show_streams', '-show_format', 'a.b.c.mkv']' timed out after 7 seconds"
+      },
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"a.b.c.mkv\", \"resolved_path\": \"a.b.c.mkv\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".mkv\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"a.b.c.mkv\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"a.b.c.mkv\"]}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "suffix-.hidden",
+    "input": {
+      "path": ".hidden",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {},
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \".hidden\", \"resolved_path\": \".hidden\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \"\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \".hidden\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \".hidden\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \".hidden\", \"returncode\": 0, \"stdout\": \"{}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "suffix-noext",
+    "input": {
+      "path": "noext",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {},
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"noext\", \"resolved_path\": \"noext\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \"\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"noext\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"noext\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"noext\", \"returncode\": 0, \"stdout\": \"{}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "suffix-trailing.",
+    "input": {
+      "path": "trailing.",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {},
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"trailing.\", \"resolved_path\": \"trailing.\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \"\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"trailing.\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"trailing.\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"trailing.\", \"returncode\": 0, \"stdout\": \"{}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "suffix-Movie.MKV",
+    "input": {
+      "path": "Movie.MKV",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {},
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"Movie.MKV\", \"resolved_path\": \"Movie.MKV\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".MKV\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"Movie.MKV\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"Movie.MKV\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"Movie.MKV\", \"returncode\": 0, \"stdout\": \"{}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  },
+  {
+    "name": "suffix-aaaaaaaaaaaa",
+    "input": {
+      "path": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+      "run": {
+        "returncode": 0,
+        "stdout": "{}",
+        "stderr": ""
+      },
+      "path_state": null,
+      "kwargs": {}
+    },
+    "expected": {
+      "result": {},
+      "logs": [
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_FILE_STATE: {\"path\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\", \"resolved_path\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\", \"exists\": true, \"is_file\": true, \"size_bytes\": 1234, \"suffix\": \".xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\\u2026(truncated)\", \"mtime_epoch\": 1700000000.25}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_CALL: {\"path\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\", \"argv\": [\"ffprobe\", \"-v\", \"quiet\", \"-probesize\", \"10485760\", \"-analyzeduration\", \"10000000\", \"-print_format\", \"json\", \"-show_streams\", \"-show_format\", \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\"]}"
+        },
+        {
+          "level": "debug",
+          "message": "REFINER_FFPROBE_RESULT: {\"path\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\", \"returncode\": 0, \"stdout\": \"{}\", \"stderr\": \"\"}"
+        }
+      ]
+    }
+  }
+]

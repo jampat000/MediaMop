@@ -1,0 +1,5140 @@
+{
+  "detection": [
+    {
+      "name": "typical",
+      "input": {
+        "returncode": 0,
+        "stdout": "Hardware acceleration methods:\ncuda\nvaapi\nqsv\n"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [
+            "cuda",
+            "qsv",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "ffmpeg reports 3 acceleration method(s). Being listed does not prove a device is present.",
+          "vendors": [
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      }
+    },
+    {
+      "name": "windows-build",
+      "input": {
+        "returncode": 0,
+        "stdout": "Hardware acceleration methods:\r\ncuda\r\ndxva2\r\nqsv\r\nd3d11va\r\nopencl\r\nvulkan\r\nd3d12va\r\namf\r\n"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "d3d12va",
+            "dxva2",
+            "opencl",
+            "qsv",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "ffmpeg reports 8 acceleration method(s). Being listed does not prove a device is present.",
+          "vendors": [
+            "amd",
+            "intel",
+            "nvidia"
+          ]
+        }
+      }
+    },
+    {
+      "name": "none",
+      "input": {
+        "returncode": 0,
+        "stdout": "Hardware acceleration methods:\n"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration methods, so decoding is done in software.",
+          "vendors": []
+        }
+      }
+    },
+    {
+      "name": "empty",
+      "input": {
+        "returncode": 0,
+        "stdout": ""
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration methods, so decoding is done in software.",
+          "vendors": []
+        }
+      }
+    },
+    {
+      "name": "duplicates-and-case",
+      "input": {
+        "returncode": 0,
+        "stdout": "Hardware acceleration methods:\nCUDA\ncuda\n  VAAPI  \n\n"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [
+            "cuda",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "ffmpeg reports 3 acceleration method(s). Being listed does not prove a device is present.",
+          "vendors": [
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      }
+    },
+    {
+      "name": "prose-and-symbols",
+      "input": {
+        "returncode": 0,
+        "stdout": "Hardware acceleration methods:\nnot a method\ncuda-x\nvideo_toolbox2\nqsv\tx\n\fvdpau\u000b"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [
+            "vdpau",
+            "video_toolbox2"
+          ],
+          "detected": true,
+          "detail": "ffmpeg reports 2 acceleration method(s). Being listed does not prove a device is present.",
+          "vendors": []
+        }
+      }
+    },
+    {
+      "name": "videotoolbox",
+      "input": {
+        "returncode": 0,
+        "stdout": "Hardware acceleration methods:\nvideotoolbox\n"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "ffmpeg reports 1 acceleration method(s). Being listed does not prove a device is present.",
+          "vendors": [
+            "apple"
+          ]
+        }
+      }
+    },
+    {
+      "name": "failed",
+      "input": {
+        "returncode": 1,
+        "stdout": ""
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "ffmpeg did not report its acceleration methods (exit code 1). Weir will use software decoding.",
+          "vendors": []
+        }
+      }
+    },
+    {
+      "name": "negative-exit",
+      "input": {
+        "returncode": -1073741515,
+        "stdout": "cuda\n"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "ffmpeg did not report its acceleration methods (exit code -1073741515). Weir will use software decoding.",
+          "vendors": []
+        }
+      }
+    },
+    {
+      "name": "oserror",
+      "input": {
+        "raise": "oserror"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg which acceleration methods it supports (no such file).",
+          "vendors": []
+        }
+      }
+    },
+    {
+      "name": "timeout",
+      "input": {
+        "raise": "timeout"
+      },
+      "expected": {
+        "argv": [
+          "ffmpeg",
+          "-hide_banner",
+          "-hwaccels"
+        ],
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg which acceleration methods it supports (Command '['ffmpeg', '-hide_banner', '-hwaccels']' timed out after 10.0 seconds).",
+          "vendors": []
+        }
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "name": "default/none-detected",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/undetected",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/cuda",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/all",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/windows",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "default/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto/none-detected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto/undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto/cuda",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto/all",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto/windows",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "qsv",
+        "argv_flags": [
+          "-hwaccel",
+          "qsv"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'qsv' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "d3d11va",
+        "argv_flags": [
+          "-hwaccel",
+          "d3d11va"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'd3d11va' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "vaapi",
+        "argv_flags": [
+          "-hwaccel",
+          "vaapi"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'vaapi' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-nvidia/none-detected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-nvidia/undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-nvidia/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-nvidia/cuda",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-nvidia/all",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "qsv",
+        "argv_flags": [
+          "-hwaccel",
+          "qsv"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'qsv' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-no-nvidia/windows",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "qsv",
+        "argv_flags": [
+          "-hwaccel",
+          "qsv"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'qsv' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-no-nvidia/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "d3d11va",
+        "argv_flags": [
+          "-hwaccel",
+          "d3d11va"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'd3d11va' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-no-nvidia/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "vaapi",
+        "argv_flags": [
+          "-hwaccel",
+          "vaapi"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'vaapi' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-no-nvidia/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-nvidia/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/none-detected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/cuda",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/all",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/windows",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "vaapi",
+        "argv_flags": [
+          "-hwaccel",
+          "vaapi"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'vaapi' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-no-intel-amd/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "intel",
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/none-detected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/cuda",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/all",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/windows",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-all-off/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [
+            "nvidia",
+            "intel",
+            "amd",
+            "vaapi",
+            "apple"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-experimental/none-detected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-experimental/undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-experimental/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-experimental/cuda",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda",
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-experimental/all",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda",
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-experimental/windows",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "qsv",
+        "argv_flags": [
+          "-hwaccel",
+          "qsv",
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'qsv' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-experimental/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "d3d11va",
+        "argv_flags": [
+          "-hwaccel",
+          "d3d11va",
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'd3d11va' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-experimental/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "vaapi",
+        "argv_flags": [
+          "-hwaccel",
+          "vaapi",
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'vaapi' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "auto-experimental/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "auto-experimental/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "experimental",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "experimental"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/none-detected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/cuda",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'cuda', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-cuda/all",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'cuda', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-cuda/windows",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'cuda' is not one this ffmpeg build supports. It offers: d3d11va, dxva2, qsv.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'cuda' is not one this ffmpeg build supports. It offers: d3d11va.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'cuda' is not one this ffmpeg build supports. It offers: amf, vaapi.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'cuda' is not one this ffmpeg build supports. It offers: opencl, vulkan.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-cuda/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "cuda",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/none-detected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/cuda",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'qsv' is not one this ffmpeg build supports. It offers: cuda.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/all",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "qsv",
+        "argv_flags": [
+          "-hwaccel",
+          "qsv"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'qsv', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-padded-upper/windows",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "qsv",
+        "argv_flags": [
+          "-hwaccel",
+          "qsv"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'qsv', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-padded-upper/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'qsv' is not one this ffmpeg build supports. It offers: d3d11va.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'qsv' is not one this ffmpeg build supports. It offers: amf, vaapi.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'qsv' is not one this ffmpeg build supports. It offers: opencl, vulkan.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-padded-upper/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "  QSV ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/none-detected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/cuda",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this library is set to use a named device but no device name was given.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/all",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this library is set to use a named device but no device name was given.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/windows",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this library is set to use a named device but no device name was given.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this library is set to use a named device but no device name was given.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this library is set to use a named device but no device name was given.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this library is set to use a named device but no device name was given.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-blank/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "   ",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/none-detected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/cuda",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'd3d11va' is not one this ffmpeg build supports. It offers: cuda.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/all",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because 'd3d11va' belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/windows",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because 'd3d11va' belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because 'd3d11va' belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'd3d11va' is not one this ffmpeg build supports. It offers: amf, vaapi.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'd3d11va' is not one this ffmpeg build supports. It offers: opencl, vulkan.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-intel/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "intel"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/none-detected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/cuda",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'd3d11va' is not one this ffmpeg build supports. It offers: cuda.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/all",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "d3d11va",
+        "argv_flags": [
+          "-hwaccel",
+          "d3d11va"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'd3d11va', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/windows",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "d3d11va",
+        "argv_flags": [
+          "-hwaccel",
+          "d3d11va"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'd3d11va', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "d3d11va",
+        "argv_flags": [
+          "-hwaccel",
+          "d3d11va"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'd3d11va', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'd3d11va' is not one this ffmpeg build supports. It offers: amf, vaapi.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'd3d11va' is not one this ffmpeg build supports. It offers: opencl, vulkan.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-d3d11va-no-amd/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "d3d11va",
+          "disabled_vendors": [
+            "amd"
+          ],
+          "strictness": "normal",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/none-detected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/cuda",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'opencl' is not one this ffmpeg build supports. It offers: cuda.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/all",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'opencl' is not one this ffmpeg build supports. It offers: amf, cuda, d3d11va, qsv, vaapi, videotoolbox.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/windows",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'opencl' is not one this ffmpeg build supports. It offers: d3d11va, dxva2, qsv.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'opencl' is not one this ffmpeg build supports. It offers: d3d11va.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because the configured device 'opencl' is not one this ffmpeg build supports. It offers: amf, vaapi.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "device-unknown-vendor/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "opencl",
+        "argv_flags": [
+          "-hwaccel",
+          "opencl",
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Decoding with 'opencl', as configured for this library.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "device-unknown-vendor/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "device",
+          "device": "opencl",
+          "disabled_vendors": [],
+          "strictness": "very",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "very"
+        ],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/none-detected",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/undetected",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/cuda",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/all",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/windows",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "off-strict/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "off",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "strict",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [
+          "-strict",
+          "strict"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "strictness-empty/none-detected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. This ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "strictness-empty/undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. Weir could not ask ffmpeg.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "strictness-empty/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "strictness-empty/cuda",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "strictness-empty/all",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "cuda",
+        "argv_flags": [
+          "-hwaccel",
+          "cuda"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'cuda' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "strictness-empty/windows",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "qsv",
+        "argv_flags": [
+          "-hwaccel",
+          "qsv"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'qsv' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "strictness-empty/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "d3d11va",
+        "argv_flags": [
+          "-hwaccel",
+          "d3d11va"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'd3d11va' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "strictness-empty/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "vaapi",
+        "argv_flags": [
+          "-hwaccel",
+          "vaapi"
+        ],
+        "fell_back_to_software": false,
+        "reason": "Chose 'vaapi' automatically from what this ffmpeg build offers.",
+        "using_hardware": true
+      }
+    },
+    {
+      "name": "strictness-empty/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because every acceleration method this ffmpeg build offers belongs to a vendor this library has switched off.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "strictness-empty/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "",
+          "wants_hardware": true
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": true,
+        "reason": "Weir fell back to software decoding because this ffmpeg build reports no hardware acceleration. odd",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/none-detected",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": true,
+          "detail": "This ffmpeg build reports no hardware acceleration.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/undetected",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "Weir could not ask ffmpeg.",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/undetected-blank",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [],
+          "detected": false,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/cuda",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/all",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "cuda",
+            "d3d11va",
+            "qsv",
+            "vaapi",
+            "videotoolbox"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "apple",
+            "intel",
+            "nvidia",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/windows",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va",
+            "dxva2",
+            "qsv"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/d3d11va-only",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "d3d11va"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "intel"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/amf-vaapi",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "amf",
+            "vaapi"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": [
+            "amd",
+            "vaapi"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/unknown-only",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "opencl",
+            "vulkan"
+          ],
+          "detected": true,
+          "detail": "",
+          "vendors": []
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    },
+    {
+      "name": "mode-unnormalized/methods-but-undetected",
+      "input": {
+        "settings": {
+          "mode": "Auto",
+          "device": "",
+          "disabled_vendors": [],
+          "strictness": "normal",
+          "wants_hardware": false
+        },
+        "report": {
+          "available_methods": [
+            "cuda"
+          ],
+          "detected": false,
+          "detail": "odd",
+          "vendors": [
+            "nvidia"
+          ]
+        }
+      },
+      "expected": {
+        "method": "",
+        "argv_flags": [],
+        "fell_back_to_software": false,
+        "reason": "Hardware decoding is switched off for this library, so Weir decoded in software.",
+        "using_hardware": false
+      }
+    }
+  ],
+  "parse_disabled_vendors": [
+    {
+      "input": null,
+      "expected": []
+    },
+    {
+      "input": "",
+      "expected": []
+    },
+    {
+      "input": "nvidia",
+      "expected": [
+        "nvidia"
+      ]
+    },
+    {
+      "input": " NVIDIA , intel,nvidia,,amd ",
+      "expected": [
+        "nvidia",
+        "intel",
+        "amd"
+      ]
+    },
+    {
+      "input": "apple,vaapi,other",
+      "expected": [
+        "apple",
+        "vaapi"
+      ]
+    },
+    {
+      "input": "Experimental",
+      "expected": []
+    },
+    {
+      "input": " strict ",
+      "expected": []
+    },
+    {
+      "input": "auto",
+      "expected": []
+    },
+    {
+      "input": "DEVICE",
+      "expected": []
+    },
+    {
+      "input": "on",
+      "expected": []
+    }
+  ],
+  "normalize_strictness": [
+    {
+      "input": null,
+      "expected": "normal"
+    },
+    {
+      "input": "",
+      "expected": "normal"
+    },
+    {
+      "input": "nvidia",
+      "expected": "normal"
+    },
+    {
+      "input": " NVIDIA , intel,nvidia,,amd ",
+      "expected": "normal"
+    },
+    {
+      "input": "apple,vaapi,other",
+      "expected": "normal"
+    },
+    {
+      "input": "Experimental",
+      "expected": "experimental"
+    },
+    {
+      "input": " strict ",
+      "expected": "strict"
+    },
+    {
+      "input": "auto",
+      "expected": "normal"
+    },
+    {
+      "input": "DEVICE",
+      "expected": "normal"
+    },
+    {
+      "input": "on",
+      "expected": "normal"
+    }
+  ],
+  "normalize_decode_mode": [
+    {
+      "input": null,
+      "expected": "off"
+    },
+    {
+      "input": "",
+      "expected": "off"
+    },
+    {
+      "input": "nvidia",
+      "expected": "off"
+    },
+    {
+      "input": " NVIDIA , intel,nvidia,,amd ",
+      "expected": "off"
+    },
+    {
+      "input": "apple,vaapi,other",
+      "expected": "off"
+    },
+    {
+      "input": "Experimental",
+      "expected": "off"
+    },
+    {
+      "input": " strict ",
+      "expected": "off"
+    },
+    {
+      "input": "auto",
+      "expected": "auto"
+    },
+    {
+      "input": "DEVICE",
+      "expected": "device"
+    },
+    {
+      "input": "on",
+      "expected": "off"
+    }
+  ],
+  "vendor_methods": [
+    [
+      "nvidia",
+      [
+        "cuda",
+        "nvdec",
+        "cuvid"
+      ]
+    ],
+    [
+      "intel",
+      [
+        "qsv",
+        "d3d11va"
+      ]
+    ],
+    [
+      "amd",
+      [
+        "amf",
+        "d3d11va"
+      ]
+    ],
+    [
+      "vaapi",
+      [
+        "vaapi"
+      ]
+    ],
+    [
+      "apple",
+      [
+        "videotoolbox"
+      ]
+    ]
+  ],
+  "strictness_levels": [
+    "very",
+    "strict",
+    "normal",
+    "unofficial",
+    "experimental"
+  ]
+}

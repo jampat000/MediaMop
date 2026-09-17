@@ -1,3 +1,5 @@
+using Weir.Core.Json;
+
 namespace Weir.Core.Rules;
 
 /// <summary>What a metadata provider knows about one title (<c>provider_port.TitleMetadata</c>).</summary>
@@ -10,7 +12,7 @@ public sealed record TitleMetadata
     public int? Year { get; init; }
     public string ProviderId { get; init; } = string.Empty;
 
-    public bool HasOriginalLanguage => Py.Strip(OriginalLanguage).Length > 0;
+    public bool HasOriginalLanguage => PyStrings.Strip(OriginalLanguage).Length > 0;
 }
 
 /// <summary>
@@ -120,7 +122,7 @@ public static class OriginalLanguage
     /// <summary>One form per language, whichever standard the caller used. Unknown codes are returned as they are.</summary>
     public static string CanonicalLanguage(string? raw)
     {
-        var code = RemuxRules.NormalizeLang(Py.Strip(raw ?? string.Empty));
+        var code = RemuxRules.NormalizeLang(PyStrings.Strip(raw ?? string.Empty));
         return Canonical.GetValueOrDefault(code, code);
     }
 

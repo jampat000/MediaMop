@@ -27,12 +27,19 @@ internal sealed class WeirTestServer : IAsyncDisposable
 
     public IServiceProvider Services => _app.Services;
 
+    public TestServer TestServer => _app.GetTestServer();
+
+    /// <summary>Keep the home directory on dispose (for a second server on the same home).</summary>
+    public bool KeepHome { get; set; }
+
     public static async Task<WeirTestServer> StartAsync(
         IEnumerable<(string Name, string Value)>? variables = null,
         bool signedIn = false,
-        Action<string>? prepareHome = null)
+        Action<string>? prepareHome = null,
+        string? home = null,
+        Action<IServiceCollection>? configureServices = null)
     {
-        var home = Path.Join(Path.GetTempPath(), "weir-api-tests-" + Guid.NewGuid().ToString("N"));
+        home ??= Path.Join(Path.GetTempPath(), "weir-api-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(home);
         prepareHome?.Invoke(home);
         var dictionary = new Dictionary<string, string>(StringComparer.Ordinal) { ["WEIR_HOME"] = home };
@@ -49,6 +56,8 @@ internal sealed class WeirTestServer : IAsyncDisposable
             {
                 builder.Services.AddSingleton<IOperatorAuthentication, SignedInAuthentication>();
             }
+
+            configureServices?.Invoke(builder.Services);
         });
         await app.StartAsync();
         return new WeirTestServer(home, app);
@@ -67,12 +76,46 @@ internal sealed class WeirTestServer : IAsyncDisposable
         File.WriteAllText(Path.Join(dist, "assets", "font.woff2"), "font");
     }
 
+    /// <summary>
+    /// Replace the database file with a directory, so every new connection fails. The periodic tasks may
+    /// hold the file open for a moment, which makes the delete fail or stay pending on Windows, so retry.
+    /// </summary>
+    public async Task BreakDatabaseAsync()
+    {
+        var dbPath = Path.Join(Home, "data", "weir.sqlite3");
+        for (var attempt = 0; ; attempt++)
+        {
+            SqliteConnection.ClearAllPools();
+            try
+            {
+                File.Delete(dbPath);
+                File.Delete(dbPath + "-wal");
+                File.Delete(dbPath + "-shm");
+                Directory.CreateDirectory(dbPath);
+                return;
+            }
+            catch (IOException) when (attempt < 50)
+            {
+                await Task.Delay(100);
+            }
+            catch (UnauthorizedAccessException) when (attempt < 50)
+            {
+                await Task.Delay(100);
+            }
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         Client.Dispose();
         await _app.StopAsync();
         await _app.DisposeAsync();
         SqliteConnection.ClearAllPools();
+        if (KeepHome)
+        {
+            return;
+        }
+
         try
         {
             Directory.Delete(Home, recursive: true);

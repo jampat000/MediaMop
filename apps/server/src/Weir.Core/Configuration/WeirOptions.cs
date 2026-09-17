@@ -103,6 +103,9 @@ public sealed record WeirOptions
     /// <summary><c>WEIR_VERSION</c> when set; otherwise the build's own version is reported.</summary>
     public required string? VersionOverride { get; init; }
 
+    /// <summary><c>WEIR_RUNTIME</c> (<c>windows</c>, <c>docker</c> or <c>source</c>), which the update check reports as the install type.</summary>
+    public string? RuntimeKind { get; init; }
+
     /// <summary>Origins allowed for the unsafe-request Origin/Referer check.</summary>
     public IReadOnlyList<string> TrustedBrowserOrigins =>
         TrustedBrowserOriginsOverride.Count > 0 ? TrustedBrowserOriginsOverride : CorsOrigins;

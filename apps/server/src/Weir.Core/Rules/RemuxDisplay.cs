@@ -1,3 +1,5 @@
+using Weir.Core.Json;
+
 namespace Weir.Core.Rules;
 
 /// <summary>
@@ -82,7 +84,7 @@ public static class RemuxDisplay
 
     private static string CodecLabel(string codecName)
     {
-        var c = Py.Lower(Py.Strip(codecName));
+        var c = Py.Lower(PyStrings.Strip(codecName));
         return c switch
         {
             "" => string.Empty,
@@ -125,8 +127,8 @@ public static class RemuxDisplay
     {
         ArgumentNullException.ThrowIfNull(lines);
         var cleaned = lines
-            .Where(x => Py.Strip(x ?? string.Empty).Length > 0 && Py.Strip(x!) != Dash)
-            .Select(x => Py.Strip(x!))
+            .Where(x => PyStrings.Strip(x ?? string.Empty).Length > 0 && PyStrings.Strip(x!) != Dash)
+            .Select(x => PyStrings.Strip(x!))
             .ToList();
         return cleaned.Count > 0 ? string.Join(" · ", cleaned) : Dash;
     }

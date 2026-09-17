@@ -1,0 +1,76 @@
+{
+  "generated_by": "apps/backend/.venv (argon2-cffi, itsdangerous, cryptography) via weir.platform.* helpers",
+  "password": {
+    "plain": "correct horse battery staple",
+    "hash": "$argon2id$v=19$m=65536,t=3,p=1$OvtyS5oUq/LHjZMuJRwg0g$Zpvft0BOqV3YujjxGAodQNWQIRSMCeq7RLTR4KI/jfI",
+    "unicode_plain": "pässwörd-ünïcode-😀",
+    "unicode_hash": "$argon2id$v=19$m=65536,t=3,p=1$zlS8HAwxJAjZk1j053uY5A$pDHYJQJqImMs3cCWWlmGQgJz16uU3qxJtRHNsx8+5No",
+    "raw_vectors": [
+      {
+        "type": "id",
+        "version": 19,
+        "password": "password",
+        "salt": "somesalt",
+        "t": 2,
+        "m": 64,
+        "p": 2,
+        "len": 40,
+        "hex": "f277942872b2e332626226ec9d9c36672c284367fa556c07fc69cf09bf4e33fdcd9748f520312727"
+      },
+      {
+        "type": "i",
+        "version": 19,
+        "password": "password",
+        "salt": "somesalt",
+        "t": 2,
+        "m": 64,
+        "p": 2,
+        "len": 100,
+        "hex": "0a77f22002f28a51693eafd4a7ab706f236510940be92a928446d4e9c8711ea209c0cd2da690f62a836567ca2f966ee69e2e884d557922e5eb3d6d4b2b5856285c9b4556475c7fee4ca7749c37f3f4e4ba21f8d2d5bc0fc35ed43c3bdafa8bb260f763b1"
+      },
+      {
+        "type": "d",
+        "version": 16,
+        "password": "password",
+        "salt": "somesalt",
+        "t": 1,
+        "m": 64,
+        "p": 1,
+        "len": 32,
+        "hex": "043b6d578e5b724a11b607809b10ca0dfdb546e8259b5c7bf6678c055dd7923b"
+      },
+      {
+        "type": "id",
+        "version": 19,
+        "password": "pw",
+        "salt": "saltsaltsaltsalt",
+        "t": 1,
+        "m": 256,
+        "p": 3,
+        "len": 64,
+        "hex": "910327030a50a5e108fe30a625752defac7956348907373442b5cca53390478513dadd21e121034493d2ce9d2d7878ed348c025067aab62cea891b34f5569eb5"
+      }
+    ]
+  },
+  "csrf": {
+    "secret": "fixture-session-secret-0123456789abcdef",
+    "timestamp": 1790000000,
+    "raw_session_token": "fixture-raw-session-token_abcdefghijklmnopqrstu",
+    "anonymous": "csrf.anonymous.arE7gA.s7B1Vd8vLIqxLmaCqQuVDCqzrok",
+    "session_bound": "csrf.session:33f42ac64ee9ef256fb02b02d2cec959c7d242e6b9e9f03c6461d0c6da916f2f.arE7gA.gQRe9ThZn6Qe83gvfd0fMCMqPWw"
+  },
+  "session_token_hash": {
+    "raw": "fixture-raw-session-token_abcdefghijklmnopqrstu",
+    "sha256": "33f42ac64ee9ef256fb02b02d2cec959c7d242e6b9e9f03c6461d0c6da916f2f"
+  },
+  "credentials": {
+    "plaintext": "arr-api-key-0123456789",
+    "credentials_secret": "fixture-credentials-secret-0123456789",
+    "previous_secret": "fixture-old-credentials-secret-012345",
+    "session_secret": "fixture-session-secret-0123456789abcdef",
+    "envelope_credentials": "{\"version\":2,\"key_id\":\"credentials:v1\",\"token\":\"gAAAAABqq1rN3gZB_rtq3oNR4tJ_9c69Pc-UmrJyyHQOEtB75hKqkxAtGWrHYSJ07fI9G8yTt0EvY-l7c7Q9lwbZA2dg1UjDeUs7BJsj0duFtEM9L_LKO-I=\"}",
+    "envelope_previous": "{\"version\":2,\"key_id\":\"credentials:v1\",\"token\":\"gAAAAABqq1rNkIXIux8823eImWgO6zQ5fBXMqAVs4glCt16xZgNHmd5H8HHab1kQJcn68rEOpZZuvoEklFURTT2axFzSTf7ACnx4YahgF2DAh-6f_dY5t4k=\"}",
+    "envelope_session_legacy": "{\"version\":2,\"key_id\":\"session-legacy:v1\",\"token\":\"gAAAAABqq1rNI_F98TNpefwahRTXbkyYTiB5l76mbn6N_HVwbJ_-TbjPxZzznXjCgQZIe0Pd5dIEU95z7x4CF2EoNbq0M9757QnhMrgJehUlHdmR7WMvzZQ=\"}",
+    "raw_legacy_token": "gAAAAABqq1rNlwTOxIgg51qsDNlxH39atEOsoy53oDFcjwZSzk-VeRjej1gGYYz9tXylL5PxzcnFTtGDRhSbvl6k6gil6vxlYQ=="
+  }
+}
