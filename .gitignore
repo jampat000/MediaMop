@@ -68,3 +68,6 @@ docs-site/.docusaurus/
 .coverage
 .coverage.*
 htmlcov/
+
+# Scratch WEIR_CONTRACT_LEDGER files from local contract-suite runs
+.contract-ledger/
