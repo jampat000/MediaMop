@@ -4,7 +4,7 @@ using Weir.Core.Activity;
 using Weir.Core.Json;
 using Weir.Core.Time;
 using Weir.Infrastructure.Activity;
-using Weir.Infrastructure.Jobs;
+using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Settings;
 using Weir.Infrastructure.Sqlite;
 using Weir.Infrastructure.Tests.Jobs;
@@ -100,17 +100,34 @@ public sealed class ActivityHistoryStoreTests
         db.Execute(
             "INSERT INTO refiner_file_logs (relative_path, recorded_at) VALUES ('old.mkv', '2026-03-01 11:59:59.000000'), ('edge.mkv', '2026-03-03 12:00:00.000000'), ('new.mkv', '2026-05-31 00:00:00')");
 
+        async Task<int> PruneOnceAsync(DateTimeOffset moment)
+        {
+            var uow = await UnitOfWork.OpenAsync(db.Database);
+            await using (uow)
+            {
+                var operatorRow = await OperatorSettingsStore.EnsureAsync(uow);
+                if (operatorRow.FileLogRetentionDays <= 0)
+                {
+                    return 0;
+                }
+
+                var removed = await FileLogStore.PruneAsync(uow, operatorRow.FileLogRetentionDays, moment);
+                await uow.CommitAsync();
+                return removed;
+            }
+        }
+
         db.Execute("UPDATE refiner_operator_settings SET file_log_retention_days = 0");
-        Assert.Equal(0, await RefinerFileLogRetention.PruneOnceAsync(db.Store, now));
+        Assert.Equal(0, await PruneOnceAsync(now));
 
         db.Execute("UPDATE refiner_operator_settings SET file_log_retention_days = 90");
-        Assert.Equal(1, await RefinerFileLogRetention.PruneOnceAsync(db.Store, now));
+        Assert.Equal(1, await PruneOnceAsync(now));
         Assert.Equal(2, db.Count("SELECT count(*) FROM refiner_file_logs"));
 
         // No settings row: Python creates it with 90 days.
         db.Execute("DELETE FROM refiner_operator_settings");
-        Assert.Equal(0, await RefinerFileLogRetention.PruneOnceAsync(db.Store, now));
-        Assert.Equal(1, await RefinerFileLogRetention.PruneOnceAsync(db.Store, now.AddDays(1)));
+        Assert.Equal(0, await PruneOnceAsync(now));
+        Assert.Equal(1, await PruneOnceAsync(now.AddDays(1)));
         Assert.Equal("new.mkv", db.Scalar("SELECT group_concat(relative_path) FROM refiner_file_logs"));
     }
 

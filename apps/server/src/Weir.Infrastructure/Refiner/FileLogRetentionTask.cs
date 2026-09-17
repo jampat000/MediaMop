@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Sqlite;
 
@@ -8,13 +9,14 @@ namespace Weir.Infrastructure.Refiner;
 /// Separate from the suite log's own retention: a suite log diagnoses the application, a per-file record
 /// diagnoses a file, and the two need different lifetimes.
 /// </summary>
-public sealed class FileLogRetentionTask(SqliteDatabase database, TimeProvider time) : IPeriodicTask
+public sealed class FileLogRetentionTask(SqliteDatabase database, TimeProvider time, ILogger<FileLogRetentionTask> logger) : IPeriodicTask
 {
     public string Name => "refiner-file-log-retention";
 
     public TimeSpan Interval => TimeSpan.FromSeconds(3600);
 
-    public bool RunAtStart => false;
+    /// <summary>Python's <c>_run_forever</c> prunes once before its first wait, so the .NET host does too.</summary>
+    public bool RunAtStart => true;
 
     public TimeSpan? FailureCooldown => null;
 
@@ -31,8 +33,12 @@ public sealed class FileLogRetentionTask(SqliteDatabase database, TimeProvider t
                 return;
             }
 
-            await FileLogStore.PruneAsync(uow, operatorRow.FileLogRetentionDays, time.GetUtcNow()).ConfigureAwait(false);
+            var removed = await FileLogStore.PruneAsync(uow, operatorRow.FileLogRetentionDays, time.GetUtcNow()).ConfigureAwait(false);
             await uow.CommitAsync().ConfigureAwait(false);
+            if (removed > 0)
+            {
+                logger.LogInformation("Refiner removed {Removed} processing record(s) past their retention window.", removed);
+            }
         }
     }
 }
