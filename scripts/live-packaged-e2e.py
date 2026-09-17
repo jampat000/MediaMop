@@ -374,10 +374,10 @@ class LiveAudit:
             "/api/v1/auth/me",
             "/api/v1/auth/session",
             "/api/v1/auth/sessions",
-            "/api/v1/dashboard/status",
             "/api/v1/media-managers/capabilities",
             "/api/v1/media-managers/connections",
             "/api/v1/media-managers/connections/999999",
+            "/api/v1/pause",
             "/api/v1/refiner/files?limit=5",
             "/api/v1/refiner/files/999999/log",
             "/api/v1/refiner/files/999999/log/download",
@@ -400,7 +400,6 @@ class LiveAudit:
             "/api/v1/suite/logs?limit=5",
             "/api/v1/suite/metrics",
             "/api/v1/suite/notification-channels",
-            "/api/v1/suite/pause",
             "/api/v1/suite/security-overview",
             "/api/v1/suite/settings",
             "/api/v1/suite/settings/configuration-bundle",
@@ -519,23 +518,19 @@ class LiveAudit:
         self.page.set_viewport_size({"width": 1_440, "height": 1_000})
         self.record("desktop collapse/theme and mobile navigation controls")
 
-    def dashboard(self) -> None:
-        self.open_sidebar("Dashboard")
-        self.visible(self.page.get_by_test_id("dashboard-page"), "Dashboard page")
-        for test_id in (
-            "dashboard-status-strip",
-            "dashboard-module-cards",
-            "dashboard-needs-attention",
-            "dashboard-active-work",
-        ):
-            self.visible(self.page.get_by_test_id(test_id), f"Dashboard {test_id}")
+    def in_hand(self) -> None:
+        self.open_sidebar("In hand")
+        self.visible(
+            self.page.get_by_role("heading", name="In hand", exact=True), "In hand page"
+        )
+        # The dashboard folded into In hand (#459): no sidebar entry any more.
         self.require(
-            not self.page.get_by_test_id("dashboard-global-jobs").count(),
-            "Dashboard must keep completed job history in Activity and module job views",
+            not self.page.get_by_role("link", name="Dashboard", exact=True).count(),
+            "Dashboard must not appear in the sidebar",
         )
         self.assert_no_visible_crash()
-        self.screenshot("dashboard")
-        self.record("Dashboard screen, truthful status cards, and action areas")
+        self.screenshot("in-hand")
+        self.record("In hand main screen")
 
     def activity(self) -> None:
         self.open_sidebar("Activity")
@@ -1243,7 +1238,7 @@ def run(playwright: Playwright) -> dict[str, Any]:
         audit.bootstrap_and_sign_in()
         audit.authenticated_read_surface()
         audit.shell_and_responsive()
-        audit.dashboard()
+        audit.in_hand()
         audit.activity()
         audit.refiner()
         audit.settings_general_and_setup()

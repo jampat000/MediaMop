@@ -26,11 +26,6 @@ from sqlalchemy.orm import Session
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_library_service import list_libraries, resolve_library
-from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
@@ -50,6 +45,11 @@ from mediamop.platform.media_managers.import_events import (
     dialect_for_source,
     known_source_keys,
 )
+from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_library_service import list_libraries, resolve_library
+from mediamop.refiner.refiner_remux_rules import is_refiner_media_candidate
 
 router = APIRouter(tags=["media-manager-intake"])
 

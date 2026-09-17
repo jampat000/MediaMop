@@ -1,4 +1,4 @@
-"""Shared helpers for DB-backed API tests (auth, dashboard, activity)."""
+"""Shared helpers for DB-backed API tests (auth, activity, refiner)."""
 
 from __future__ import annotations
 

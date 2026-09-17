@@ -14,25 +14,25 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_library_model  # noqa: F401
 import mediamop.platform.media_managers.connection_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_library_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.refiner_library_model import (
+from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
+from mediamop.refiner.refiner_library_model import (
     RefinerLibraryManagerLinkRow,
     RefinerLibraryRow,
     RefinerRuleSetRow,
 )
-from mediamop.modules.refiner.refiner_library_service import (
+from mediamop.refiner.refiner_library_service import (
     admission_rules_for,
     manager_connection_ids_for,
     resolve_library,
     rules_config_for,
     seeded_library_for_scope,
 )
-from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
-from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
+from mediamop.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 
 
 @pytest.fixture

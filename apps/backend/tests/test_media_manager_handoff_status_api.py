@@ -18,13 +18,13 @@ from starlette.testclient import TestClient
 
 from alembic import command
 from mediamop.api.factory import create_app
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.jobs.job_rows_retention_periodic import prune_job_rows
 from mediamop.platform.media_managers.handoff_ledger import LEDGER_RETENTION_DAYS, prune_ledger
 from mediamop.platform.media_managers.handoff_ledger_model import MediaManagerHandoffRow
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
@@ -302,7 +302,7 @@ def test_only_old_finished_hand_offs_are_pruned(client: TestClient) -> None:
 
 
 def _watch(client: TestClient, folder: Path) -> None:
-    from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+    from mediamop.refiner.refiner_library_model import RefinerLibraryRow
 
     with _factory(client)() as db:
         library = db.scalars(select(RefinerLibraryRow).where(RefinerLibraryRow.media_type == "movie")).one()

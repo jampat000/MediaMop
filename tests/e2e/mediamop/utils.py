@@ -6,7 +6,7 @@ from sqlalchemy import delete, update
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.platform.auth.models import User, UserSession
 from mediamop.platform.suite_settings.model import SuiteSettingsRow
 

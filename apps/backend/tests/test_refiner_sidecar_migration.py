@@ -19,7 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.modules.refiner.refiner_sidecar_migration import (
+from mediamop.platform.file_lifecycle import mutations as file_lifecycle_mutations
+from mediamop.refiner.refiner_sidecar_migration import (
     DEFAULT_SIDECAR_PATTERNS,
     apply_original_timestamps,
     destination_for_sidecar,
@@ -27,7 +28,6 @@ from mediamop.modules.refiner.refiner_sidecar_migration import (
     migrate_sidecars,
     parse_sidecar_patterns,
 )
-from mediamop.platform.file_lifecycle import mutations as file_lifecycle_mutations
 
 
 @pytest.fixture

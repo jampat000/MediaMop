@@ -5,9 +5,11 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import * as filesApi from "../../lib/refiner/files-api";
+import * as jobsApi from "../../lib/refiner/jobs-inspection/api";
 import type { RefinerFile } from "../../lib/refiner/files-api";
 import * as librariesApi from "../../lib/refiner/libraries-api";
 import * as statsApi from "../../lib/refiner/overview-stats-api";
+import * as readinessApi from "../../lib/system/readiness-api";
 import { InHandPage } from "./in-hand-page";
 
 function file(over: Partial<RefinerFile> = {}): RefinerFile {
@@ -46,9 +48,16 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
   };
 }
 
+type Surroundings = {
+  libraries?: { enabled: boolean; watched_folder: string }[];
+  failedJobs?: number;
+  workerDetail?: string | null;
+};
+
 function mount(
   files: RefinerFile[],
   counts: Record<string, number> = {},
+  surroundings: Surroundings = {},
 ): void {
   vi.spyOn(filesApi, "fetchRefinerFiles").mockResolvedValue({
     files,
@@ -66,8 +75,37 @@ function mount(
     net_space_saved_percent: 12.5,
   } as never);
   vi.spyOn(librariesApi, "fetchRefinerLibraries").mockResolvedValue(
-    [] as never,
+    (surroundings.libraries ?? [
+      { enabled: true, watched_folder: "/downloads/complete" },
+    ]) as never,
   );
+  vi.spyOn(jobsApi, "fetchRefinerJobsInspection").mockResolvedValue({
+    jobs: Array.from({ length: surroundings.failedJobs ?? 0 }, (_, i) => ({
+      id: i + 1,
+      status: "failed",
+    })),
+    default_recent_slice: false,
+  } as never);
+  vi.spyOn(readinessApi, "fetchSystemReadiness").mockResolvedValue({
+    ready: !surroundings.workerDetail,
+    version: "3.0.0",
+    status: surroundings.workerDetail ? "failed" : "ready",
+    startup_seconds: 1,
+    steps: [],
+    worker_health: surroundings.workerDetail
+      ? [
+          {
+            module: "refiner",
+            expected_workers: 1,
+            active_workers: 0,
+            stale_workers: 1,
+            stopped_workers: 0,
+            status: "degraded",
+            detail: surroundings.workerDetail,
+          },
+        ]
+      : [],
+  });
 
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -262,4 +300,43 @@ it("shows no Direct Play badge when no devices are chosen", async () => {
   await screen.findByTestId("in-hand-row");
   expect(screen.queryByTestId("in-hand-direct-play-1")).not.toBeInTheDocument();
   expect(screen.queryByText(/Direct Play/)).not.toBeInTheDocument();
+});
+
+it("asks nothing of a healthy install", async () => {
+  mount([file()]);
+
+  await screen.findByTestId("in-hand-row");
+  expect(screen.queryByTestId("in-hand-notices")).not.toBeInTheDocument();
+});
+
+it("says there is nothing to watch before any watched folder is set (#459)", async () => {
+  mount([], {}, { libraries: [{ enabled: false, watched_folder: "/x" }] });
+
+  expect(await screen.findByText("Nothing to watch yet")).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Set up a library" }),
+  ).toHaveAttribute("href", "/refiner?tab=libraries");
+});
+
+it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", async () => {
+  mount(
+    [],
+    {},
+    {
+      failedJobs: 2,
+      workerDetail:
+        "Refiner is not processing new work because 1 worker slot(s) stopped responding.",
+    },
+  );
+
+  expect(
+    await screen.findByText("Background work has stopped"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/1 worker slot\(s\) stopped responding/),
+  ).toBeInTheDocument();
+  expect(await screen.findByText("2 jobs failed")).toBeInTheDocument();
+  expect(
+    screen.getByRole("link", { name: "Review failed jobs" }),
+  ).toHaveAttribute("href", "/refiner?tab=jobs&status=failed");
 });

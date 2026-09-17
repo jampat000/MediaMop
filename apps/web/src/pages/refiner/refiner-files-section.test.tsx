@@ -17,7 +17,7 @@ import type {
 } from "../../lib/refiner/files-api";
 import * as librariesApi from "../../lib/refiner/libraries-api";
 import * as authQueries from "../../lib/auth/queries";
-import * as pauseApi from "../../lib/suite/pause-api";
+import * as pauseApi from "../../lib/pause/pause-api";
 import { RefinerFilesSection } from "./refiner-files-section";
 
 function file(over: Partial<RefinerFile> = {}): RefinerFile {
@@ -78,7 +78,7 @@ function asOperator() {
     data: { role: "operator" },
   } as ReturnType<typeof authQueries.useMeQuery>);
   vi.spyOn(librariesApi, "fetchRefinerLibraries").mockResolvedValue([]);
-  vi.spyOn(pauseApi, "fetchSuitePause").mockResolvedValue({
+  vi.spyOn(pauseApi, "fetchPause").mockResolvedValue({
     paused: false,
     paused_until: null,
     scan_while_paused: true,
@@ -182,7 +182,7 @@ it("shows a bucket for every state, including empty ones", async () => {
 
 it("labels paused work as paused instead of claiming its schedule is closed", async () => {
   asOperator();
-  vi.mocked(pauseApi.fetchSuitePause).mockResolvedValue({
+  vi.mocked(pauseApi.fetchPause).mockResolvedValue({
     paused: true,
     paused_until: null,
     scan_while_paused: true,

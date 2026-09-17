@@ -13,7 +13,7 @@ from __future__ import annotations
 import subprocess
 from unittest.mock import patch
 
-from mediamop.modules.refiner.refiner_hardware_acceleration import (
+from mediamop.refiner.refiner_hardware_acceleration import (
     DEFAULT_STRICTNESS,
     STRICTNESS_LEVELS,
     VENDOR_METHODS,

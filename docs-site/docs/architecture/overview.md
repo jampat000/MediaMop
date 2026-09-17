@@ -5,10 +5,10 @@ title: Overview
 
 # Architecture Overview
 
-MediaMop is a self-hosted media operations app with two main areas:
-
-- **Refiner** — remuxes watched media into cleaner outputs
-- **Dashboard** — exposes runtime health, history, logs, backups, upgrades, and security posture
+MediaMop is a self-hosted media processing stage. Refiner is the application: it remuxes
+watched media into cleaner outputs. Around it, the platform provides activity history, logs,
+backups, upgrades, and security posture. The main screen, **In hand**, shows what MediaMop is
+holding right now and anything that needs a person.
 
 ## Runtime shape
 
@@ -16,11 +16,11 @@ MediaMop is a self-hosted media operations app with two main areas:
 flowchart LR
   UI["Frontend (React/Vite)"] --> API["FastAPI API Layer"]
   API --> Core["Core + Platform Services"]
-  Core --> Refiner["Refiner Module"]
-  Core --> Dashboard["Dashboard + Activity"]
+  Core --> Refiner["Refiner (the application)"]
+  Core --> Activity["Activity"]
   Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
   Core --> DB["SQLite (Alembic managed)"]
-  Refiner --> Lanes["Worker Lanes / Durable Jobs"]
+  Refiner --> Jobs["Durable jobs (refiner_jobs) + workers"]
 ```
 
 ## Technology stack
@@ -40,7 +40,7 @@ flowchart LR
 | `mediamop.api` | FastAPI app factory, router composition, request dependencies |
 | `mediamop.core` | Config, runtime paths, database setup, lifespan, logging |
 | `mediamop.platform` | Shared services: auth, activity, jobs, settings, observability |
-| `mediamop.modules` | Module-owned domains for Refiner, Dashboard |
+| `mediamop.refiner` | The application: libraries, files, durable jobs and workers, remux passes |
 | `mediamop.integrations` | External service integration code |
 | `mediamop.windows` | Windows tray and package-specific helpers |
 
@@ -50,7 +50,7 @@ flowchart LR
 |-----------|---------------|
 | `src/app` | App-level router and providers |
 | `src/layouts` | Shell/navigation layout |
-| `src/pages` | Feature pages by module |
+| `src/pages` | Feature pages (In hand, Refiner, Activity, Settings, setup) |
 | `src/lib` | API clients, query hooks, typed data helpers |
 | `src/components` | Reusable UI and brand components |
 
@@ -58,8 +58,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  Enqueue["Enqueue request"] --> Lane["Module worker lane"]
-  Lane --> Result["Job result (completed/failed/pending retry)"]
+  Enqueue["Enqueue request"] --> Jobs["refiner_jobs + workers"]
+  Jobs --> Result["Job result (completed/failed/pending retry)"]
   Result --> Activity["Activity + logs"]
   Result --> Metrics["Runtime metrics / Prometheus"]
 ```
@@ -77,7 +77,7 @@ Horizontal scaling is not supported. Worker counts control in-process job slots 
 
 ## Boundary rules
 
-- Module code keeps destructive behavior behind explicit services and tests
+- Refiner code keeps destructive behavior behind explicit services and tests
 - Backend APIs expose typed schemas at boundaries
 - Frontend pages use typed API/query helpers from `src/lib`
 - Cross-cutting concerns belong in `mediamop.platform` or `mediamop.core`

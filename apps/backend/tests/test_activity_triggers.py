@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import json
 
-from mediamop.modules.refiner.file_remux_pass.visibility import clip_remux_pass_payload_for_activity
-from mediamop.modules.refiner.refiner_failure_cleanup_activity import record_refiner_failure_cleanup_sweep_completed
-from mediamop.modules.refiner.refiner_work_temp_stale_sweep_activity import (
-    record_refiner_work_temp_stale_sweep_completed,
-)
 from mediamop.platform.activity.classify import classify_activity
 from mediamop.platform.activity.provenance import SCAN_TRIGGER_TO_TRIGGER, job_provenance, with_provenance
 from mediamop.platform.media_managers.completion_callback import HandoffReportDelivery, HandoffReportTarget
 from mediamop.platform.media_managers.manager_port import ManagerConnection
+from mediamop.refiner.file_remux_pass.visibility import clip_remux_pass_payload_for_activity
+from mediamop.refiner.refiner_failure_cleanup_activity import record_refiner_failure_cleanup_sweep_completed
+from mediamop.refiner.refiner_work_temp_stale_sweep_activity import (
+    record_refiner_work_temp_stale_sweep_completed,
+)
 
 # --- carrying it ---------------------------------------------------------------------------------------
 

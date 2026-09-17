@@ -1,4 +1,4 @@
-"""MediaMop backend package — modular monolith spine."""
+"""MediaMop backend package."""
 
 from mediamop.version import __version__
 

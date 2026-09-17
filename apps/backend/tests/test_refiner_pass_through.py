@@ -19,11 +19,13 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner import refiner_pass_through
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_pass_through import (
+from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity.models import ActivityEvent
+from mediamop.refiner import refiner_pass_through
+from mediamop.refiner.jobs_model import RefinerJob
+from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_pass_through import (
     REFINER_FILE_PASS_THROUGH_JOB_KIND,
     DeliverySettings,
     PassThroughIntegrityError,
@@ -33,8 +35,6 @@ from mediamop.modules.refiner.refiner_pass_through import (
     make_refiner_file_pass_through_handler,
     normalize_failure_policy,
 )
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
 from tests.refiner_library_fixtures import seed_refiner_library
 
 _REL = "Arrival (2016)/Arrival.2016.2160p.mkv"

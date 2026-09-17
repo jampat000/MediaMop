@@ -23,6 +23,7 @@ class ReadinessWorkerOut(BaseModel):
 
 class ReadinessResponse(BaseModel):
     ready: bool
+    version: str = Field(..., description="Installed MediaMop version reported by the running server.")
     status: str
     startup_seconds: float
     steps: list[ReadinessStep]

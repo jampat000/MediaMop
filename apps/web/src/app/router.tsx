@@ -60,13 +60,9 @@ const router = createBrowserRouter([
                 errorElement: routeErrorElement,
               },
               {
-                // The cross-module summary; its retirement is tracked in #459.
+                // The dashboard folded into In hand (#459). Old bookmarks land there.
                 path: "dashboard",
-                lazy: async () => ({
-                  Component: (await import("../pages/dashboard/dashboard-page"))
-                    .DashboardPage,
-                }),
-                errorElement: routeErrorElement,
+                element: <Navigate to="/" replace />,
               },
               {
                 path: "activity",

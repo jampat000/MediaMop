@@ -27,17 +27,17 @@ import mediamop.platform.suite_settings.suite_configuration_backup_model  # noqa
 # Import Base after ensuring src/ is on path (run from apps/backend with PYTHONPATH=src).
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
-from mediamop.modules.refiner import refiner_file_log_model as _refiner_file_log_orm  # noqa: F401
-from mediamop.modules.refiner import refiner_file_state_model as _refiner_file_state_orm  # noqa: F401
-from mediamop.modules.refiner import refiner_library_model as _refiner_library_orm  # noqa: F401
-from mediamop.modules.refiner import refiner_operator_settings_model as _refiner_operator_settings_orm  # noqa: F401
 
 # Register models on Base.metadata (Alembic autogenerate / revision drift checks).
 from mediamop.platform.activity import models as _activity_orm  # noqa: F401
 from mediamop.platform.auth import models as _auth_orm  # noqa: F401
 from mediamop.platform.notifications import model as _notifications_orm  # noqa: F401
 from mediamop.platform.suite_settings import model as _suite_settings_orm  # noqa: F401
+from mediamop.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
+from mediamop.refiner import refiner_file_log_model as _refiner_file_log_orm  # noqa: F401
+from mediamop.refiner import refiner_file_state_model as _refiner_file_state_orm  # noqa: F401
+from mediamop.refiner import refiner_library_model as _refiner_library_orm  # noqa: F401
+from mediamop.refiner import refiner_operator_settings_model as _refiner_operator_settings_orm  # noqa: F401
 
 # this is the Alembic Config object, which provides access to the values within alembic.ini
 config = context.config

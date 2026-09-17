@@ -15,14 +15,14 @@ import mediamop.platform.auth.models  # noqa: F401
 from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.file_remux_pass import run as refiner_run
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
-from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
-from mediamop.modules.refiner.refiner_overview_stats_service import build_refiner_overview_stats
-from mediamop.modules.refiner.worker_loop import process_one_refiner_job
+from mediamop.refiner.file_remux_pass import run as refiner_run
+from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.refiner.refiner_job_handlers import build_refiner_job_handlers
+from mediamop.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
+from mediamop.refiner.refiner_overview_stats_service import build_refiner_overview_stats
+from mediamop.refiner.worker_loop import process_one_refiner_job
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,

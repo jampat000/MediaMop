@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.modules.refiner.refiner_remux_rules import split_streams
+from mediamop.refiner.refiner_remux_rules import split_streams
 
 
 def test_split_streams_orders_by_index() -> None:

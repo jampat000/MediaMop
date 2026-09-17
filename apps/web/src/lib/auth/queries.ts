@@ -14,7 +14,6 @@ import {
 } from "../api/auth-api";
 import { markLoginSucceeded } from "./session-kept";
 import { activityRecentKey } from "../activity/queries";
-import { dashboardStatusKey } from "../dashboard/queries";
 
 export const qk = {
   me: ["auth", "me"] as const,
@@ -105,7 +104,6 @@ export function useLoginMutation() {
       void qc.invalidateQueries({ queryKey: qk.bootstrap });
       void qc.invalidateQueries({ queryKey: qk.session });
       void qc.invalidateQueries({ queryKey: activityRecentKey });
-      void qc.invalidateQueries({ queryKey: dashboardStatusKey });
     },
   });
 }
@@ -125,7 +123,6 @@ export function useLogoutMutation() {
       void qc.invalidateQueries({ queryKey: qk.session });
       void qc.invalidateQueries({ queryKey: qk.bootstrap });
       void qc.invalidateQueries({ queryKey: activityRecentKey });
-      void qc.invalidateQueries({ queryKey: dashboardStatusKey });
     },
   });
 }
@@ -143,7 +140,6 @@ export function useBootstrapMutation() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.bootstrap });
       void qc.invalidateQueries({ queryKey: activityRecentKey });
-      void qc.invalidateQueries({ queryKey: dashboardStatusKey });
     },
   });
 }
@@ -180,7 +176,6 @@ export function useChangePasswordMutation() {
       void qc.invalidateQueries({ queryKey: qk.me });
       void qc.invalidateQueries({ queryKey: qk.session });
       void qc.invalidateQueries({ queryKey: activityRecentKey });
-      void qc.invalidateQueries({ queryKey: dashboardStatusKey });
     },
   });
 }

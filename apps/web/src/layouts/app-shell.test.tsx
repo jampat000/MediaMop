@@ -16,8 +16,8 @@ vi.mock("../lib/auth/queries", () => ({
   useMeQuery: () => ({ data: { role: "operator" } }),
 }));
 
-vi.mock("../lib/suite/pause-queries", () => ({
-  useSuitePauseQuery: () => ({
+vi.mock("../lib/pause/pause-queries", () => ({
+  usePauseQuery: () => ({
     data: {
       paused: false,
       paused_until: null,
@@ -26,15 +26,13 @@ vi.mock("../lib/suite/pause-queries", () => ({
       in_flight_policy: "Work already running finishes.",
     },
   }),
-  useSaveSuitePause: () => ({ mutate: vi.fn(), isPending: false }),
+  useSavePause: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-vi.mock("../lib/dashboard/queries", () => ({
-  useDashboardStatusQuery: () => ({
+vi.mock("../lib/system/readiness-queries", () => ({
+  useSystemReadinessQuery: () => ({
     data: {
-      system: {
-        api_version: "2.1.2",
-      },
+      version: "2.1.2",
     },
   }),
 }));
@@ -59,7 +57,7 @@ describe("AppShell", () => {
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<AppShell />}>
-            <Route index element={<div>Dashboard</div>} />
+            <Route index element={<div>In hand</div>} />
           </Route>
         </Routes>
       </MemoryRouter>,
@@ -74,12 +72,29 @@ describe("AppShell", () => {
     expect(screen.queryByText(/feature limits/i)).not.toBeInTheDocument();
   });
 
+  it("has no Dashboard entry; In hand is the main screen (#459)", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<div>Main</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "In hand" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Dashboard" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("returns document scrolling to the top when the route changes", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<AppShell />}>
-            <Route index element={<div>Dashboard page</div>} />
+            <Route index element={<div>In hand page</div>} />
             <Route path="activity" element={<div>Activity page</div>} />
           </Route>
         </Routes>

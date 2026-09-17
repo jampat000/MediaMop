@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from mediamop.modules.refiner import refiner_remux_mux as mux
+from mediamop.refiner import refiner_remux_mux as mux
 
 
 def _probe(*, duration: float, audio: int = 1) -> dict:

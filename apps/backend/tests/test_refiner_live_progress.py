@@ -12,13 +12,13 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.refiner_live_progress import (
-    STALE_AFTER,
-    live_progress_by_path,
-)
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.auth.sessions import utcnow
+from mediamop.refiner.refiner_live_progress import (
+    STALE_AFTER,
+    live_progress_by_path,
+)
 
 _PATH = "movies/Arrival.2016.2160p.mkv"
 

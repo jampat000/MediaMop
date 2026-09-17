@@ -18,33 +18,6 @@ from mediamop.core.db import (
     dispose_engine,
 )
 from mediamop.core.logging import configure_logging
-from mediamop.modules.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
-from mediamop.modules.refiner.refiner_failure_cleanup_periodic_enqueue import (
-    start_refiner_failure_cleanup_enqueue_tasks,
-    stop_refiner_failure_cleanup_enqueue_tasks,
-)
-from mediamop.modules.refiner.refiner_file_log_retention_periodic import (
-    start_refiner_file_log_retention_tasks,
-    stop_refiner_file_log_retention_tasks,
-)
-from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
-from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
-from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
-    start_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks,
-    stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks,
-)
-from mediamop.modules.refiner.refiner_watched_folder_watcher import (
-    start_refiner_watched_folder_watcher_tasks,
-    stop_refiner_watched_folder_watcher_tasks,
-)
-from mediamop.modules.refiner.refiner_work_temp_stale_sweep_periodic_enqueue import (
-    start_refiner_work_temp_stale_sweep_enqueue_tasks,
-    stop_refiner_work_temp_stale_sweep_enqueue_tasks,
-)
-from mediamop.modules.refiner.worker_loop import (
-    start_refiner_worker_background_tasks,
-    stop_refiner_worker_background_tasks,
-)
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
 from mediamop.platform.auth.service import cleanup_inactive_sessions
 from mediamop.platform.auth.session_cleanup import start_session_cleanup_task, stop_session_cleanup_task
@@ -61,6 +34,33 @@ from mediamop.platform.suite_settings.logs_service import prune_logs_for_retenti
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import (
     start_suite_configuration_backup_tasks,
     stop_suite_configuration_backup_tasks,
+)
+from mediamop.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
+from mediamop.refiner.refiner_failure_cleanup_periodic_enqueue import (
+    start_refiner_failure_cleanup_enqueue_tasks,
+    stop_refiner_failure_cleanup_enqueue_tasks,
+)
+from mediamop.refiner.refiner_file_log_retention_periodic import (
+    start_refiner_file_log_retention_tasks,
+    stop_refiner_file_log_retention_tasks,
+)
+from mediamop.refiner.refiner_job_handlers import build_refiner_job_handlers
+from mediamop.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
+from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
+    start_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks,
+    stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks,
+)
+from mediamop.refiner.refiner_watched_folder_watcher import (
+    start_refiner_watched_folder_watcher_tasks,
+    stop_refiner_watched_folder_watcher_tasks,
+)
+from mediamop.refiner.refiner_work_temp_stale_sweep_periodic_enqueue import (
+    start_refiner_work_temp_stale_sweep_enqueue_tasks,
+    stop_refiner_work_temp_stale_sweep_enqueue_tasks,
+)
+from mediamop.refiner.worker_loop import (
+    start_refiner_worker_background_tasks,
+    stop_refiner_worker_background_tasks,
 )
 
 _lifespan_log = logging.getLogger(__name__)

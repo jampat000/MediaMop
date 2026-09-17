@@ -11,12 +11,17 @@
  *   2. what is in hand right now, and what is happening to each file
  *   3. what is stuck — and therefore missing from the manager
  *   4. what was handed back
+ *
+ * It is also the main screen, so it carries the few things the old dashboard did that
+ * need a person (#459): no watched folder yet, workers that stopped, and jobs that failed.
+ * Those appear only when they are true; a healthy install shows none of them.
  */
 
 import { useCallback, useMemo, useState } from "react";
 import { DirectPlayLine } from "../../components/refiner/direct-play-line";
 import { FileStoryPanel } from "../../components/refiner/file-story-panel";
 import { Link } from "react-router-dom";
+import { useActivityStreamInvalidations } from "../../lib/activity/use-activity-stream-invalidation";
 import { PageLoading } from "../../components/shared/page-loading";
 import { ApiEntryError } from "../../components/shared/api-entry-error";
 import {
@@ -24,11 +29,20 @@ import {
   type RefinerFile,
 } from "../../lib/refiner/files-api";
 import {
+  refinerFilesKey,
   useRefinerFileLog,
   useRefinerFilesQuery,
 } from "../../lib/refiner/files-queries";
+import {
+  refinerJobsInspectionQueryKey,
+  useRefinerJobsInspectionQuery,
+} from "../../lib/refiner/jobs-inspection/queries";
 import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
-import { useRefinerOverviewStatsQuery } from "../../lib/refiner/queries";
+import {
+  refinerOverviewStatsQueryKey,
+  useRefinerOverviewStatsQuery,
+} from "../../lib/refiner/queries";
+import { useSystemReadinessQuery } from "../../lib/system/readiness-queries";
 
 /** Statuses that mean the file is MediaMop's responsibility right now. */
 const IN_HAND: ReadonlySet<string> = new Set([
@@ -41,6 +55,23 @@ const IN_HAND: ReadonlySet<string> = new Set([
 
 /** Statuses that mean the manager will not see this file until somebody acts. */
 const STUCK: ReadonlySet<string> = new Set(["processing_failed"]);
+
+const FILES_QUERY = { limit: 200 } as const;
+const FAILED_JOBS_LIMIT = 100;
+// The screen moves as work does, so it follows the activity stream rather than a reload.
+const LIVE_KEYS = [
+  refinerFilesKey(FILES_QUERY),
+  [...refinerOverviewStatsQueryKey, 1],
+  refinerJobsInspectionQueryKey("failed", FAILED_JOBS_LIMIT),
+] as const;
+
+type Notice = {
+  key: string;
+  title: string;
+  body: string;
+  to: string;
+  action: string;
+};
 
 function formatBytes(bytes: number | null | undefined): string {
   if (bytes === null || bytes === undefined) return "—";
@@ -171,9 +202,12 @@ function FileRow({
 }
 
 export function InHandPage(): React.ReactElement {
-  const files = useRefinerFilesQuery({ limit: 200 });
+  useActivityStreamInvalidations(LIVE_KEYS, { exact: true, throttleMs: 1_500 });
+  const files = useRefinerFilesQuery(FILES_QUERY);
   const today = useRefinerOverviewStatsQuery(1);
   const libraries = useRefinerLibrariesQuery();
+  const failedJobs = useRefinerJobsInspectionQuery("failed", FAILED_JOBS_LIMIT);
+  const readiness = useSystemReadinessQuery();
   const fileLog = useRefinerFileLog();
   const [storyFile, setStoryFile] = useState<RefinerFile | null>(null);
 
@@ -230,6 +264,44 @@ export function InHandPage(): React.ReactElement {
   const watchedFolder = libraries.data?.[0]?.watched_folder ?? "";
   const outputFolder = libraries.data?.[0]?.output_folder ?? "";
 
+  const notices: Notice[] = [];
+  if (
+    libraries.data &&
+    !libraries.data.some((l) => l.enabled && l.watched_folder.trim())
+  ) {
+    notices.push({
+      key: "setup",
+      title: "Nothing to watch yet",
+      body: "MediaMop picks files up from a library's watched folder. Add one, or turn an existing library on.",
+      to: "/refiner?tab=libraries",
+      action: "Set up a library",
+    });
+  }
+  for (const worker of readiness.data?.worker_health ?? []) {
+    if (worker.status !== "degraded") continue;
+    notices.push({
+      key: `worker-${worker.module}`,
+      title: "Background work has stopped",
+      body: worker.detail,
+      to: "/refiner?tab=jobs",
+      action: "Open jobs",
+    });
+  }
+  const failedJobCount = failedJobs.data?.jobs.length ?? 0;
+  if (failedJobCount > 0) {
+    const shown =
+      failedJobCount >= FAILED_JOBS_LIMIT
+        ? `${FAILED_JOBS_LIMIT}+`
+        : String(failedJobCount);
+    notices.push({
+      key: "failed-jobs",
+      title: failedJobCount === 1 ? "1 job failed" : `${shown} jobs failed`,
+      body: "Each one says what went wrong and what to do next.",
+      to: "/refiner?tab=jobs&status=failed",
+      action: "Review failed jobs",
+    });
+  }
+
   return (
     <div className="mm-page">
       <header className="mm-page__intro">
@@ -279,6 +351,24 @@ export function InHandPage(): React.ReactElement {
           </p>
         </div>
       </section>
+
+      {notices.length > 0 ? (
+        <section
+          className="mm-inhand-notices"
+          aria-label="Needs you"
+          data-testid="in-hand-notices"
+        >
+          {notices.map((notice) => (
+            <div key={notice.key} className="mm-inhand-notice">
+              <p className="mm-inhand-notice__title">{notice.title}</p>
+              <p className="mm-inhand-notice__body">{notice.body}</p>
+              <Link className="mm-inhand-notice__link" to={notice.to}>
+                {notice.action}
+              </Link>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {stuck.length > 0 ? (
         <section className="mm-inhand-stuck" aria-labelledby="in-hand-stuck">

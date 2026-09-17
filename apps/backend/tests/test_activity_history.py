@@ -21,10 +21,10 @@ from starlette.testclient import TestClient
 from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.refiner_file_log_model import RefinerFileLogRow
 from mediamop.platform.activity.classify import classify_activity
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.activity.service import prune_activity_events, record_activity_event
+from mediamop.refiner.refiner_file_log_model import RefinerFileLogRow
 from tests.integration_helpers import auth_post, auth_put
 from tests.integration_helpers import csrf as fetch_csrf
 

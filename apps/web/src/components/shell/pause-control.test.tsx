@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import * as authQueries from "../../lib/auth/queries";
-import type { SuitePause } from "../../lib/suite/pause-api";
-import * as pauseQueries from "../../lib/suite/pause-queries";
+import type { PauseState } from "../../lib/pause/pause-api";
+import * as pauseQueries from "../../lib/pause/pause-queries";
 import { PauseControl } from "./pause-control";
 
 const mutate = vi.fn();
@@ -17,7 +17,7 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-function state(over: Partial<SuitePause> = {}): SuitePause {
+function state(over: Partial<PauseState> = {}): PauseState {
   return {
     paused: false,
     paused_until: null,
@@ -29,17 +29,17 @@ function state(over: Partial<SuitePause> = {}): SuitePause {
   };
 }
 
-function setup(pause: SuitePause, role = "operator") {
+function setup(pause: PauseState, role = "operator") {
   vi.spyOn(authQueries, "useMeQuery").mockReturnValue({
     data: { role },
   } as ReturnType<typeof authQueries.useMeQuery>);
-  vi.spyOn(pauseQueries, "useSuitePauseQuery").mockReturnValue({
+  vi.spyOn(pauseQueries, "usePauseQuery").mockReturnValue({
     data: pause,
-  } as ReturnType<typeof pauseQueries.useSuitePauseQuery>);
-  vi.spyOn(pauseQueries, "useSaveSuitePause").mockReturnValue({
+  } as ReturnType<typeof pauseQueries.usePauseQuery>);
+  vi.spyOn(pauseQueries, "useSavePause").mockReturnValue({
     mutate,
     isPending: false,
-  } as unknown as ReturnType<typeof pauseQueries.useSaveSuitePause>);
+  } as unknown as ReturnType<typeof pauseQueries.useSavePause>);
 }
 
 afterEach(() => {

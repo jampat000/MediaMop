@@ -21,8 +21,7 @@ export function isLikelyNetworkFailure(error: unknown): boolean {
   );
 }
 
-const _API_HTTP_ERR =
-  /^(bootstrap status|me|CSRF|dashboard status|activity recent): (\d{3})\b/;
+const _API_HTTP_ERR = /^(bootstrap status|me|CSRF|activity recent): (\d{3})\b/;
 
 /** True when {@link ./auth-api} threw after receiving an HTTP status (API was reached). */
 export function isHttpErrorFromApi(error: unknown): boolean {

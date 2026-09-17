@@ -21,11 +21,11 @@ from mediamop.core.runtime_paths import (
     resolve_all_runtime_paths,
     sqlalchemy_sqlite_url,
 )
-from mediamop.modules.refiner.refiner_family_intervals import (
+from mediamop.refiner.refiner_family_intervals import (
     clamp_refiner_min_file_age_seconds,
     clamp_refiner_schedule_interval_seconds,
 )
-from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
+from mediamop.refiner.worker_limits import clamp_refiner_worker_count
 
 
 def _load_backend_dotenv_if_present() -> None:

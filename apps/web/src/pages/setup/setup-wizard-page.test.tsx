@@ -124,18 +124,17 @@ describe("SetupWizardPage", () => {
     updateLibraryMock.mockResolvedValue({});
   });
 
-  it("offers In hand as the start page at / and the dashboard at /dashboard", async () => {
+  it("finishes on In hand, with no start page to choose (#459)", async () => {
     renderWizard();
 
-    fireEvent.click(screen.getByText("Dashboard"));
+    expect(
+      screen.queryByRole("radiogroup", { name: "Open first" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/dashboard", {
-        replace: true,
-      });
+      expect(navigateMock).toHaveBeenCalledWith("/", { replace: true });
     });
-    expect(screen.getByText("In hand")).toBeInTheDocument();
   });
 
   it("skips and persists skipped wizard state", async () => {
@@ -154,7 +153,7 @@ describe("SetupWizardPage", () => {
     });
   });
 
-  it("completes and saves backup plus module starter settings", async () => {
+  it("completes and saves backup plus library starter settings", async () => {
     renderWizard();
 
     fireEvent.change(screen.getByDisplayValue("02:00"), {
@@ -166,7 +165,6 @@ describe("SetupWizardPage", () => {
     fireEvent.change(screen.getByPlaceholderText("Movies output folder"), {
       target: { value: "E:\\MoviesOut" },
     });
-    fireEvent.click(screen.getByText("Refiner"));
     fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
 
     await waitFor(() => {
@@ -186,9 +184,7 @@ describe("SetupWizardPage", () => {
     });
     expect(updateLibraryMock).not.toHaveBeenCalled();
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/refiner", {
-        replace: true,
-      });
+      expect(navigateMock).toHaveBeenCalledWith("/", { replace: true });
     });
   });
 

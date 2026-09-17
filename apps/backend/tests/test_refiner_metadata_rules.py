@@ -12,7 +12,7 @@ nobody asked it to change.
 
 from __future__ import annotations
 
-from mediamop.modules.refiner.refiner_metadata_rules import (
+from mediamop.refiner.refiner_metadata_rules import (
     MetadataRules,
     is_attachment_stream,
     is_image_stream,
@@ -20,8 +20,8 @@ from mediamop.modules.refiner.refiner_metadata_rules import (
     metadata_removal_notes,
     split_video_and_images,
 )
-from mediamop.modules.refiner.refiner_remux_mux import build_ffmpeg_argv
-from mediamop.modules.refiner.refiner_remux_rules import (
+from mediamop.refiner.refiner_remux_mux import build_ffmpeg_argv
+from mediamop.refiner.refiner_remux_rules import (
     attachment_streams,
     default_refiner_remux_rules_config,
     is_remux_required,
@@ -309,7 +309,7 @@ def test_the_notes_say_what_was_removed() -> None:
 
 
 def test_the_display_line_is_empty_when_nothing_was_removed() -> None:
-    from mediamop.modules.refiner.refiner_remux_track_display import metadata_removed_line_from_plan
+    from mediamop.refiner.refiner_remux_track_display import metadata_removed_line_from_plan
 
     video, audio, subs = split_streams(_probe(_video(0), _audio(1)))
     plan = plan_remux(video=video, audio=audio, subtitles=subs, config=_config())
@@ -319,7 +319,7 @@ def test_the_display_line_is_empty_when_nothing_was_removed() -> None:
 
 
 def test_the_display_line_names_a_removed_poster() -> None:
-    from mediamop.modules.refiner.refiner_remux_track_display import metadata_removed_line_from_plan
+    from mediamop.refiner.refiner_remux_track_display import metadata_removed_line_from_plan
 
     video, audio, subs = split_streams(_probe(_video(0), _cover_art(1), _audio(2)))
     plan = plan_remux(video=video, audio=audio, subtitles=subs, config=_config(remove_images=True))

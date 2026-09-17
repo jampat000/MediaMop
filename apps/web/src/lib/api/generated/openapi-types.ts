@@ -327,26 +327,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/dashboard/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Dashboard Status
-     * @description Read-only shell dashboard — system status + persisted activity summary.
-     */
-    get: operations["get_dashboard_status_api_v1_dashboard_status_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/intake/capabilities": {
     parameters: {
       query?: never;
@@ -535,6 +515,24 @@ export interface paths {
      * @description Generate a fresh inbound secret for this manager. Shown once, stored encrypted.
      */
     post: operations["post_media_manager_webhook_secret_api_v1_media_managers_connections__connection_id__webhook_secret_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/pause": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Pause */
+    get: operations["get_pause_api_v1_pause_get"];
+    /** Put Pause */
+    put: operations["put_pause_api_v1_pause_put"];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1405,27 +1403,9 @@ export interface paths {
     put?: never;
     /**
      * Post Suite Operational History Reset
-     * @description Explicitly clear dashboard/activity history without touching settings or active work.
+     * @description Explicitly clear activity and finished job history without touching settings or active work.
      */
     post: operations["post_suite_operational_history_reset_api_v1_suite_operational_history_reset_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/pause": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Suite Pause */
-    get: operations["get_suite_pause_api_v1_suite_pause_get"];
-    /** Put Suite Pause */
-    put: operations["put_suite_pause_api_v1_suite_pause_put"];
-    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1865,19 +1845,6 @@ export interface components {
       total: number;
     };
     /**
-     * ActivitySummaryOut
-     * @description Derived from persisted ``activity_events`` only — snapshot at request time.
-     */
-    ActivitySummaryOut: {
-      /**
-       * Events Last 24H
-       * @description Count of rows with created_at in the last 24 hours.
-       */
-      events_last_24h: number;
-      /** @description Newest event of any type, if any. */
-      latest?: components["schemas"]["ActivityEventItemOut"] | null;
-    };
-    /**
      * ApplyUpdateIn
      * @description Body for POST /suite/apply-update.
      */
@@ -1999,24 +1966,6 @@ export interface components {
       session_id: string;
       /** Trusted Device */
       trusted_device: boolean;
-    };
-    /** DashboardStatusOut */
-    DashboardStatusOut: {
-      activity_summary: components["schemas"]["ActivitySummaryOut"];
-      /**
-       * Incident Count
-       * @default 0
-       */
-      incident_count: number;
-      /** Modules */
-      modules?: components["schemas"]["ModuleOperationalStatusOut"][];
-      /**
-       * Scope Note
-       * @description Fixed honesty line for the dashboard slice.
-       * @default Read-only overview. No jobs or settings are changed from this view.
-       */
-      scope_note: string;
-      system: components["schemas"]["SystemStatusOut"];
     };
     /** DirectPlayDeviceOut */
     DirectPlayDeviceOut: {
@@ -2575,50 +2524,6 @@ export interface components {
        */
       status: "matched" | "no_match" | "not_configured" | "unreachable";
     };
-    /**
-     * ModuleOperationalStatusOut
-     * @description Current module state, deliberately separate from historical counters.
-     */
-    ModuleOperationalStatusOut: {
-      /** Action Path */
-      action_path: string;
-      /**
-       * Active Job Count
-       * @default 0
-       */
-      active_job_count: number;
-      /** Configured */
-      configured: boolean;
-      /**
-       * Failed File Count
-       * @default 0
-       */
-      failed_file_count: number;
-      /**
-       * Failed Job Count
-       * @default 0
-       */
-      failed_job_count: number;
-      /** Module */
-      module: string;
-      /**
-       * Quarantined File Count
-       * @default 0
-       */
-      quarantined_file_count: number;
-      /**
-       * Queued Job Count
-       * @default 0
-       */
-      queued_job_count: number;
-      /**
-       * State
-       * @description setup_required, processing, degraded, paused, or healthy.
-       */
-      state: string;
-      /** Summary */
-      summary: string;
-    };
     /** NotificationChannelIn */
     NotificationChannelIn: {
       /** Csrf Token */
@@ -2697,6 +2602,48 @@ export interface components {
       /** Ok */
       ok: boolean;
     };
+    /** PauseIn */
+    PauseIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Pause For Minutes
+       * @description Lift the pause automatically after this many minutes. Omit for a pause with no expiry.
+       */
+      pause_for_minutes?: number | null;
+      /** Paused */
+      paused: boolean;
+      /**
+       * Scan While Paused
+       * @default true
+       */
+      scan_while_paused: boolean;
+    };
+    /** PauseOut */
+    PauseOut: {
+      /**
+       * In Flight Policy
+       * @description What happens to work that is already running when a pause or a schedule window starts.
+       */
+      in_flight_policy: string;
+      /** Paused */
+      paused: boolean;
+      /**
+       * Paused Until
+       * @description When the pause lifts on its own. Null for a pause that lasts until it is lifted by hand.
+       */
+      paused_until?: string | null;
+      /**
+       * Reason
+       * @description What to show an operator, written for them rather than for the code.
+       */
+      reason: string;
+      /**
+       * Scan While Paused
+       * @description Whether MediaMop keeps noticing new files while it is not working on them.
+       */
+      scan_while_paused: boolean;
+    };
     /**
      * PublicReadinessResponse
      * @description Minimal load-balancer response; detailed startup state is authenticated.
@@ -2717,6 +2664,11 @@ export interface components {
       status: string;
       /** Steps */
       steps: components["schemas"]["ReadinessStep"][];
+      /**
+       * Version
+       * @description Installed MediaMop version reported by the running server.
+       */
+      version: string;
       /** Worker Health */
       worker_health?: components["schemas"]["ReadinessWorkerOut"][];
     };
@@ -4749,48 +4701,6 @@ export interface components {
       /** Total Deleted */
       total_deleted: number;
     };
-    /** SuitePauseIn */
-    SuitePauseIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Pause For Minutes
-       * @description Lift the pause automatically after this many minutes. Omit for a pause with no expiry.
-       */
-      pause_for_minutes?: number | null;
-      /** Paused */
-      paused: boolean;
-      /**
-       * Scan While Paused
-       * @default true
-       */
-      scan_while_paused: boolean;
-    };
-    /** SuitePauseOut */
-    SuitePauseOut: {
-      /**
-       * In Flight Policy
-       * @description What happens to work that is already running when a pause or a schedule window starts.
-       */
-      in_flight_policy: string;
-      /** Paused */
-      paused: boolean;
-      /**
-       * Paused Until
-       * @description When the pause lifts on its own. Null for a pause that lasts until it is lifted by hand.
-       */
-      paused_until?: string | null;
-      /**
-       * Reason
-       * @description What to show an operator, written for them rather than for the code.
-       */
-      reason: string;
-      /**
-       * Scan While Paused
-       * @description Whether MediaMop keeps noticing new files while it is not working on them.
-       */
-      scan_while_paused: boolean;
-    };
     /**
      * SuiteSecurityOverviewOut
      * @description Read-only snapshot from startup configuration — not stored in ``suite_settings``.
@@ -5019,26 +4929,6 @@ export interface components {
       /** Windows Installer Url */
       windows_installer_url?: string | null;
     };
-    /** SystemStatusOut */
-    SystemStatusOut: {
-      /**
-       * Api Version
-       * @description MediaMop API package version.
-       */
-      api_version: string;
-      /**
-       * Environment
-       * @description MEDIAMOP_ENV value.
-       */
-      environment: string;
-      /**
-       * Healthy
-       * @description Process liveness (same signal as GET /health).
-       */
-      healthy: boolean;
-      /** Worker Health */
-      worker_health?: components["schemas"]["WorkerLaneHealthOut"][];
-    };
     /**
      * UpdateSettingsOut
      * @description Tray update behaviour persisted in update-settings.json.
@@ -5114,26 +5004,6 @@ export interface components {
       msg: string;
       /** Error Type */
       type: string;
-    };
-    /** WorkerLaneHealthOut */
-    WorkerLaneHealthOut: {
-      /** Active Workers */
-      active_workers: number;
-      /** Detail */
-      detail: string;
-      /** Expected Workers */
-      expected_workers: number;
-      /** Module */
-      module: string;
-      /** Stale Workers */
-      stale_workers: number;
-      /**
-       * Status
-       * @description healthy, degraded, or disabled.
-       */
-      status: string;
-      /** Stopped Workers */
-      stopped_workers: number;
     };
   };
   responses: never;
@@ -5639,26 +5509,6 @@ export interface operations {
       };
     };
   };
-  get_dashboard_status_api_v1_dashboard_status_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["DashboardStatusOut"];
-        };
-      };
-    };
-  };
   get_intake_capabilities_api_v1_intake_capabilities_get: {
     parameters: {
       query?: never;
@@ -6071,6 +5921,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["MediaManagerWebhookSecretOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_pause_api_v1_pause_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PauseOut"];
+        };
+      };
+    };
+  };
+  put_pause_api_v1_pause_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PauseIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PauseOut"];
         };
       };
       /** @description Validation Error */
@@ -7707,59 +7610,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SuiteOperationalHistoryResetOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_pause_api_v1_suite_pause_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuitePauseOut"];
-        };
-      };
-    };
-  };
-  put_suite_pause_api_v1_suite_pause_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SuitePauseIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuitePauseOut"];
         };
       };
       /** @description Validation Error */

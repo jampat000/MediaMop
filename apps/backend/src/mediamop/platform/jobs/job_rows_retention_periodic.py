@@ -15,10 +15,10 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.platform.activity.service import prune_activity_events
 from mediamop.platform.media_managers.handoff_ledger import prune_ledger
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 logger = logging.getLogger(__name__)
 

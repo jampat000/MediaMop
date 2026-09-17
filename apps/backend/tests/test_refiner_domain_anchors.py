@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.modules.refiner.domain import (
+from mediamop.refiner.domain import (
     FileAnchorCandidate,
     RefinerQueueRowView,
     TitleYearAnchor,

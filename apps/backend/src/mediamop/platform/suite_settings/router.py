@@ -287,7 +287,7 @@ def post_suite_operational_history_reset(
     db: DbSessionDep,
     settings: SettingsDep,
 ) -> SuiteOperationalHistoryResetOut:
-    """Explicitly clear dashboard/activity history without touching settings or active work."""
+    """Explicitly clear activity and finished job history without touching settings or active work."""
 
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
@@ -299,7 +299,7 @@ def post_suite_operational_history_reset(
     if body.confirm.strip().upper() != "RESET":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Type RESET to confirm clearing dashboard and activity history.",
+            detail="Type RESET to confirm clearing activity history.",
         )
     result = reset_operational_history(db)
     db.commit()

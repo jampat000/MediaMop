@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.modules.refiner import (
+from mediamop.refiner import (
     MOVIE_QUEUE_DIALECT,
     TV_QUEUE_DIALECT,
     FileAnchorCandidate,

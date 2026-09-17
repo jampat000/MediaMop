@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mediamop.modules.refiner.domain import FileAnchorCandidate, RefinerQueueRowView
-from mediamop.modules.refiner.manager_queue_signals import AttributedQueueRow
-from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
+from mediamop.refiner.domain import FileAnchorCandidate, RefinerQueueRowView
+from mediamop.refiner.manager_queue_signals import AttributedQueueRow
+from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
     evaluate_watched_media_file_for_dispatch,
     merge_queue_views_for_watched_file,
     verdict_for_watched_scan_file,

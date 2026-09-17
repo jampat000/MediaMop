@@ -1,6 +1,6 @@
 """Refiner asks the media manager port, never a product.
 
-The rule this guards (issue #350): a vendor name inside ``modules/refiner/`` means a
+The rule this guards (issue #350): a vendor name inside ``refiner/`` means a
 library served by some other manager gets a worse answer — in the case that started
 this, no upstream safety check at all. Product knowledge belongs in an outbound dialect
 under ``platform/media_managers/``, the way inbound payload knowledge already does.
@@ -11,8 +11,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import mediamop.modules.refiner as refiner_pkg
 import mediamop.platform.media_managers as media_managers_pkg
+import mediamop.refiner as refiner_pkg
 
 _VENDOR_NAMES = re.compile(r"radarr|sonarr", re.IGNORECASE)
 

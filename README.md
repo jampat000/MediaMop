@@ -20,7 +20,7 @@ MediaMop is a self-hosted media operations app for people who want more control 
 It brings a few focused tools together in one place:
 
 - **Refiner** cleans up media files by remuxing them into a cleaner, more consistent result.
-- **Dashboard, Activity, and Settings** give you a live view of system health, recent work, logs, and core app configuration.
+- **In hand, Activity, and Settings** give you a live view of what MediaMop is holding, recent work, logs, and core app configuration.
 
 The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
 

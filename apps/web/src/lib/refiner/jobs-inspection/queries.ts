@@ -68,7 +68,6 @@ export function useRefinerJobRecoverFinalizeFailedMutation() {
       void qc.invalidateQueries({
         queryKey: ["refiner", "jobs", "inspection"],
       });
-      void qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

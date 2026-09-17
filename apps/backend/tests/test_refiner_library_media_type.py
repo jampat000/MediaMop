@@ -20,9 +20,9 @@ from starlette.testclient import TestClient
 from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.platform.configuration_bundle.service import _restore_refiner_libraries
+from mediamop.refiner.jobs_model import RefinerJob
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
 from tests.integration_helpers import auth_post, auth_put
 from tests.integration_helpers import csrf as fetch_csrf
 

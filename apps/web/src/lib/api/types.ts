@@ -9,7 +9,7 @@ export type ActiveSession = OpenApiSchema<"SessionOut">;
 export type SessionAction = OpenApiSchema<"SessionActionOut">;
 export type BootstrapStatus = OpenApiSchema<"BootstrapStatusOut">;
 export type ActivityEventItem = OpenApiSchema<"ActivityEventItemOut">;
-export type DashboardStatus = OpenApiSchema<"DashboardStatusOut">;
+export type SystemReadiness = OpenApiSchema<"ReadinessResponse">;
 export type ActivityRecentResponse = OpenApiSchema<"ActivityRecentOut">;
 export type ActivityFileHistoryPreview =
   OpenApiSchema<"ActivityFileHistoryCountOut">;

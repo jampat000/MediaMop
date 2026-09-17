@@ -19,16 +19,16 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner import refiner_movie_output_cleanup as mod
-from mediamop.modules.refiner.refiner_movie_output_cleanup import (
+from mediamop.refiner import refiner_movie_output_cleanup as mod
+from mediamop.refiner.refiner_movie_output_cleanup import (
     _cascade_delete_empty_parents_under_output_root,
     maybe_run_movie_output_folder_cleanup_after_remux,
     newest_mtime_seconds_under_tree,
 )
-from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
+from mediamop.refiner.refiner_path_settings_service import RefinerPathRuntime
 from tests.manager_signal_helpers import truth_no_signal, truth_unreachable
 
 

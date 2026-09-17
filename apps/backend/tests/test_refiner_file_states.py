@@ -14,16 +14,16 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.modules.refiner.refiner_library_model  # noqa: F401
 import mediamop.platform.media_managers.connection_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_file_state_model  # noqa: F401
+import mediamop.refiner.refiner_library_model  # noqa: F401
 from mediamop.core.db import Base
-from mediamop.modules.refiner.refiner_file_state_model import (
+from mediamop.refiner.refiner_file_state_model import (
     REFINER_WITHHELD_STATUSES,
     RefinerFileStatus,
 )
-from mediamop.modules.refiner.refiner_file_state_service import (
+from mediamop.refiner.refiner_file_state_service import (
     decide_file_state,
     forget_file,
     list_files,
@@ -31,7 +31,7 @@ from mediamop.modules.refiner.refiner_file_state_service import (
     record_file_state,
     status_counts,
 )
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
 
 
 @pytest.fixture

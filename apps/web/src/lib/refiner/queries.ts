@@ -63,7 +63,6 @@ export function useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["refiner", "files"] });
       void qc.invalidateQueries({ queryKey: ["refiner", "jobs"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

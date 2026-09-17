@@ -55,7 +55,7 @@ export function AppErrorScreen({
             <strong>Recovery mode</strong>
           </div>
           <nav className="mm-nav-list" aria-label="Unavailable sections">
-            <span className="mm-nav-link">Dashboard</span>
+            <span className="mm-nav-link">In hand</span>
             <span className="mm-nav-link">Refiner</span>
             <span className="mm-nav-link">Settings</span>
           </nav>

@@ -13,13 +13,15 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_library_model  # noqa: F401
 import mediamop.platform.media_managers.connection_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_library_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner import refiner_library_discovery as discovery
-from mediamop.modules.refiner.refiner_library_discovery import (
+from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
+from mediamop.platform.media_managers.manager_port import ManagerLibraryDescriptor
+from mediamop.refiner import refiner_library_discovery as discovery
+from mediamop.refiner.refiner_library_discovery import (
     RefinerDiscoveryError,
     discoverable_libraries,
     import_libraries,
@@ -27,9 +29,7 @@ from mediamop.modules.refiner.refiner_library_discovery import (
     resync_drift,
     unlink_library,
 )
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
-from mediamop.platform.media_managers.manager_port import ManagerLibraryDescriptor
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
 
 
 @pytest.fixture

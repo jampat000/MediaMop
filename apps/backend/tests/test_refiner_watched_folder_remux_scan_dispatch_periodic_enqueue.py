@@ -10,22 +10,22 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import delete, select, update
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue import (
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue import (
     refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan,
     try_enqueue_periodic_watched_folder_remux_scan_dispatch,
 )
-from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
+from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
-from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
+from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
     _missed_due_run_count,
     _next_scheduler_sleep_seconds,
     _watched_folder_scan_interval_seconds,

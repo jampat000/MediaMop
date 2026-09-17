@@ -27,13 +27,14 @@ def test_signed_in_navigation_covers_main_screens_and_tabs(mediamop_shell: str) 
 
             ensure_signed_in(page, base)
 
-            open_sidebar(page, "Dashboard")
+            open_sidebar(page, "In hand")
             expect(page).to_have_url(re.compile(r".*/(?:$|[/?#])"))
-            expect(page.get_by_test_id("dashboard-page")).to_be_visible()
-            expect(page.get_by_test_id("dashboard-status-strip")).to_be_visible()
-            expect(page.get_by_test_id("dashboard-module-cards")).to_be_visible()
-            expect(page.get_by_test_id("dashboard-global-jobs")).not_to_be_attached()
-            expect(page.get_by_test_id("dashboard-runtime-health")).not_to_be_visible()
+            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
+            # The dashboard folded into In hand (#459): no sidebar entry, and old links land here.
+            expect(page.get_by_role("link", name="Dashboard", exact=True)).to_have_count(0)
+            page.goto(f"{base}/dashboard", wait_until="domcontentloaded")
+            expect(page).to_have_url(re.compile(r".*/(?:$|[?#])"))
+            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
 
             open_sidebar(page, "Activity")
             expect(page).to_have_url(re.compile(r".*/activity"))

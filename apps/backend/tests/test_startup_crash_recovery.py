@@ -10,9 +10,9 @@ import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
 from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
 from tests.refiner_library_fixtures import seed_refiner_libraries
 
 

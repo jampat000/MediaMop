@@ -16,22 +16,23 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.modules.refiner.refiner_library_model  # noqa: F401
-import mediamop.modules.refiner.refiner_operator_settings_model  # noqa: F401
 import mediamop.platform.suite_settings.model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_file_state_model  # noqa: F401
+import mediamop.refiner.refiner_library_model  # noqa: F401
+import mediamop.refiner.refiner_operator_settings_model  # noqa: F401
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import (
+from mediamop.platform.suite_settings.model import SuiteSettingsRow
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.jobs_ops import (
     claim_next_eligible_refiner_job,
     move_refiner_job_to_top,
     refiner_enqueue_or_get_job,
 )
-from mediamop.modules.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
-from mediamop.modules.refiner.refiner_runner_units import (
+from mediamop.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
+from mediamop.refiner.refiner_runner_units import (
     RunnerBudget,
     budget_from_settings,
     capacity_from_legacy_concurrency,
@@ -39,8 +40,7 @@ from mediamop.modules.refiner.refiner_runner_units import (
     resolution_class_for_height,
     video_height_from_streams,
 )
-from mediamop.modules.refiner.refiner_work_admission import evaluate_work_admission
-from mediamop.platform.suite_settings.model import SuiteSettingsRow
+from mediamop.refiner.refiner_work_admission import evaluate_work_admission
 
 REMUX = "refiner.file.remux_pass.v1"
 NOW = datetime(2026, 8, 26, 14, 0, tzinfo=UTC)

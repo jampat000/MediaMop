@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from mediamop.modules.refiner.file_remux_pass.visibility import (
+from mediamop.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
     REMUX_PASS_OUTCOME_SOURCE_NOT_READY,
@@ -13,7 +13,7 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
     remux_pass_result_to_activity_detail,
     summarize_remux_plan,
 )
-from mediamop.modules.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
+from mediamop.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
 
 
 def test_summarize_remux_plan_includes_streams() -> None:

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.modules.refiner.refiner_output_collision import (
+from mediamop.refiner.refiner_output_collision import (
     COLLISION_POLICIES,
     DEFAULT_COLLISION_POLICY,
     decide_output_collision,

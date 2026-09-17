@@ -13,8 +13,8 @@ import pytest
 from sqlalchemy import delete
 from starlette.testclient import TestClient
 
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
 from tests.integration_helpers import auth_post, auth_put, trusted_browser_origin_headers
 from tests.integration_helpers import csrf as fetch_csrf
 

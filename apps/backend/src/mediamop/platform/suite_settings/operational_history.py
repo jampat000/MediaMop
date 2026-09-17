@@ -1,7 +1,7 @@
 """User-controlled reset for operational history.
 
 This deliberately does not run from session expiry, log retention, or startup cleanup.
-Operational history backs dashboard/overview facts and must only reset when an
+Operational history backs overview facts and must only reset when an
 operator explicitly asks for it.
 """
 
@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.platform.activity.models import ActivityEvent
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 
 @dataclass(frozen=True)
