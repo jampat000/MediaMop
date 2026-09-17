@@ -1,4 +1,4 @@
-"""Activity SSE stream tests — SQLite (session ``MEDIAMOP_HOME``)."""
+"""Activity SSE stream tests — SQLite (session ``WEIR_HOME``)."""
 
 from __future__ import annotations
 
@@ -12,21 +12,21 @@ from sqlalchemy.orm import Session
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from mediamop.api.deps import get_db_session
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity import service as activity_service
-from mediamop.platform.activity.live_stream import activity_latest_notifier
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.activity.router import get_activity_stream, iter_activity_latest_sse
-from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.api.deps import get_db_session
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity import service as activity_service
+from weir.platform.activity.live_stream import activity_latest_notifier
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.activity.router import get_activity_stream, iter_activity_latest_sse
+from weir.platform.suite_settings.service import ensure_suite_settings_row
 
 
 def _seed_activity_row(*, title: str) -> int:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -63,7 +63,7 @@ def test_activity_stream_requires_authentication(client_with_admin: TestClient) 
 
 def test_record_activity_event_notifies_only_after_commit() -> None:
     activity_latest_notifier.reset_for_tests()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -84,7 +84,7 @@ def test_record_activity_event_notifies_only_after_commit() -> None:
 
 
 def test_record_activity_event_does_not_prune_history_using_log_retention() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -121,7 +121,7 @@ def test_record_activity_event_does_not_prune_history_using_log_retention() -> N
 
 def test_update_activity_event_notifies_same_row_progress_after_commit() -> None:
     activity_latest_notifier.reset_for_tests()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -181,7 +181,7 @@ async def test_activity_latest_notifier_removes_timed_out_stream_subscribers() -
 async def test_activity_stream_authenticated_emits_latest_format(client_with_admin: TestClient) -> None:
     _login(client_with_admin)
     _seed_activity_row(title="SSE test row")
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     cookie_name = settings.session_cookie_name
     raw = client_with_admin.cookies.get(cookie_name)
     assert raw is not None

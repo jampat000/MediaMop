@@ -21,7 +21,7 @@ export function ApiEntryError({ error }: { error: unknown }) {
             With Vite alone, <code className="text-[0.85em]">/api</code> is
             proxied to the API port. If nothing is listening there, the dev
             server often returns <strong>HTTP 500</strong> — that means the API
-            is not up, not a handler bug inside MediaMop.
+            is not up, not a handler bug inside Weir.
           </p>
         ) : null}
         <p className="mm-auth-lead">
@@ -36,7 +36,7 @@ export function ApiEntryError({ error }: { error: unknown }) {
           <code className="text-[0.85em]">scripts/dev-ports.json</code>
           ). If you still see this screen, the API never became ready: read the
           same terminal for Python errors (venv,{" "}
-          <code className="text-[0.85em]">MEDIAMOP_SESSION_SECRET</code>,
+          <code className="text-[0.85em]">WEIR_SESSION_SECRET</code>,
           migrations).
         </p>
         <p className="mm-auth-lead">
@@ -85,15 +85,15 @@ export function ApiEntryError({ error }: { error: unknown }) {
           <p className="mm-auth-lead">
             Auth routes need a migrated SQLite database under{" "}
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              MEDIAMOP_HOME
+              WEIR_HOME
             </code>{" "}
             (optional{" "}
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              MEDIAMOP_DB_PATH
+              WEIR_DB_PATH
             </code>
             ), plus{" "}
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              MEDIAMOP_SESSION_SECRET
+              WEIR_SESSION_SECRET
             </code>
             . Run{" "}
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">

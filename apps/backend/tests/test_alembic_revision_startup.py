@@ -12,18 +12,18 @@ from alembic.script import ScriptDirectory
 from starlette.testclient import TestClient
 
 from alembic import command
-from mediamop.api.factory import create_app
-from mediamop.core.alembic_revision_check import (
+from weir.api.factory import create_app
+from weir.core.alembic_revision_check import (
     DatabaseSchemaMismatch,
     _script_and_head,
     ensure_database_at_application_head,
 )
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine
 
 
 def test_ensure_database_at_application_head_ok_on_migrated_db() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     ensure_database_at_application_head(engine)
 
@@ -36,7 +36,7 @@ def test_head_schema_no_longer_carries_the_refiner_singleton_settings_tables() -
     it straight back.
     """
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     insp = sa.inspect(engine)
 
@@ -45,7 +45,7 @@ def test_head_schema_no_longer_carries_the_refiner_singleton_settings_tables() -
 
 
 def test_head_schema_carries_the_libraries_that_replaced_them() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     insp = sa.inspect(engine)
 
@@ -61,7 +61,7 @@ def test_head_schema_carries_the_libraries_that_replaced_them() -> None:
 
 
 def test_head_schema_includes_suite_settings_table() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     insp = sa.inspect(engine)
     assert insp.has_table("suite_settings")
@@ -75,7 +75,7 @@ def test_head_schema_includes_suite_settings_table() -> None:
 
 
 def test_head_schema_includes_arr_library_operator_settings_table() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     insp = sa.inspect(engine)
     assert insp.has_table("arr_library_operator_settings")
@@ -85,11 +85,11 @@ def test_head_schema_includes_arr_library_operator_settings_table() -> None:
 
 
 def test_api_startup_fails_without_migrations(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     isolated = tmp_path / "nodb"
     isolated.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(isolated))
-    MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_HOME", str(isolated))
+    WeirSettings.load()
 
     with pytest.raises(DatabaseSchemaMismatch) as excinfo, TestClient(create_app()):
         pass
@@ -100,12 +100,12 @@ def test_unversioned_error_includes_cross_platform_migration_instructions(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     isolated = tmp_path / "empty_schema"
     isolated.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(isolated))
-    MediaMopSettings.load()
-    eng = create_db_engine(MediaMopSettings.load())
+    monkeypatch.setenv("WEIR_HOME", str(isolated))
+    WeirSettings.load()
+    eng = create_db_engine(WeirSettings.load())
     with pytest.raises(DatabaseSchemaMismatch) as excinfo:
         ensure_database_at_application_head(eng)
     msg = str(excinfo.value).lower()
@@ -117,21 +117,21 @@ def test_api_startup_auto_upgrades_known_behind_revision_to_head(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     home = tmp_path / "behind"
     home.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(home))
-    MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_HOME", str(home))
+    WeirSettings.load()
 
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))
     monkeypatch.chdir(backend)
-    command.upgrade(cfg, "0001_mediamop_initial_schema")
+    command.upgrade(cfg, "0001_weir_initial_schema")
 
     with TestClient(create_app()) as client:
         assert client.get("/health").status_code == 200
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     script = ScriptDirectory.from_config(cfg)
     head = script.get_heads()[0]
@@ -142,7 +142,7 @@ def test_api_startup_auto_upgrades_known_behind_revision_to_head(
 
 def test_alembic_root_env_supports_packaged_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     backend = Path(__file__).resolve().parents[1]
-    monkeypatch.setenv("MEDIAMOP_ALEMBIC_ROOT", str(backend))
+    monkeypatch.setenv("WEIR_ALEMBIC_ROOT", str(backend))
 
     script, head = _script_and_head()
 

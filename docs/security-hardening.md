@@ -1,6 +1,6 @@
 # Security Hardening
 
-This checklist defines the current practical hardening baseline for MediaMop.
+This checklist defines the current practical hardening baseline for Weir.
 
 ## Authentication and setup
 
@@ -19,18 +19,18 @@ This checklist defines the current practical hardening baseline for MediaMop.
 - Logs, backups, media paths, API keys, provider tokens, and session secrets must never be committed.
 - Public issue logs must redact secrets, private hostnames, and private filesystem paths.
 - Docker can generate a persistent session secret when one is not provided.
-- `MEDIAMOP_SESSION_SECRET` signs sessions and CSRF tokens; `MEDIAMOP_CREDENTIALS_SECRET` encrypts saved provider
+- `WEIR_SESSION_SECRET` signs sessions and CSRF tokens; `WEIR_CREDENTIALS_SECRET` encrypts saved provider
   credentials. Keep them separate.
-- `MEDIAMOP_METRICS_BEARER_TOKEN` can gate machine access to `/metrics` without requiring an operator browser session.
-- To rotate `MEDIAMOP_CREDENTIALS_SECRET`, set the new value as `MEDIAMOP_CREDENTIALS_SECRET`, add the old value to
-  `MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS`, restart MediaMop, then re-save Sonarr and Radarr
+- `WEIR_METRICS_BEARER_TOKEN` can gate machine access to `/metrics` without requiring an operator browser session.
+- To rotate `WEIR_CREDENTIALS_SECRET`, set the new value as `WEIR_CREDENTIALS_SECRET`, add the old value to
+  `WEIR_PREVIOUS_CREDENTIALS_SECRETS`, restart Weir, then re-save Sonarr and Radarr
   credentials. After every saved credential has been re-written with the new value, remove the old value from
-  `MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS` and restart again.
+  `WEIR_PREVIOUS_CREDENTIALS_SECRETS` and restart again.
 
 ## Repository and dependency controls
 
 - `main` is protected by GitHub rules.
-- Required checks are `mediamop`, `docker-smoke`, and `windows-package-smoke`.
+- Required checks are `weir`, `docker-smoke`, and `windows-package-smoke`.
 - Dependabot is enabled for Python and GitHub Actions dependencies.
 - CodeQL code scanning runs on `main`, pull requests to `main`, weekly schedule, and manual dispatch.
 - Security vulnerabilities are reported privately through `SECURITY.md`.

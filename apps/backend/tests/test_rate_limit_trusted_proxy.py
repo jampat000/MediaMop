@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from mediamop.platform.auth.rate_limit import client_rate_limit_key
+from weir.platform.auth.rate_limit import client_rate_limit_key
 
 
 def _request(*, peer: str, xff: str = "", trusted_proxy_ips: tuple[str, ...] = ()):

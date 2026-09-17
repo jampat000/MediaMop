@@ -7,13 +7,13 @@ import json
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.db import Base
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
+import weir.platform.activity.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+from weir.core.db import Base
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
     iter_watched_folder_media_candidate_files,
     refiner_active_remux_pass_exists_for_relative_path,
     refiner_completed_remux_output_exists_for_relative_path,

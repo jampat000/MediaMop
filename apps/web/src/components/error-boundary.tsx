@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("MediaMop UI crashed", error, info.componentStack);
+    console.error("Weir UI crashed", error, info.componentStack);
   }
 
   render(): ReactNode {
@@ -49,9 +49,9 @@ export function AppErrorScreen({
   return (
     <main className="mm-auth-body" id="mm-main-content" tabIndex={-1}>
       <div className="mm-auth-frame">
-        <aside className="mm-sidebar" aria-label="MediaMop recovery navigation">
+        <aside className="mm-sidebar" aria-label="Weir recovery navigation">
           <div className="mm-sidebar-brand">
-            <span className="mm-brand-kicker">MediaMop</span>
+            <span className="mm-brand-kicker">Weir</span>
             <strong>Recovery mode</strong>
           </div>
           <nav className="mm-nav-list" aria-label="Unavailable sections">
@@ -64,15 +64,15 @@ export function AppErrorScreen({
           <p className="mm-section-kicker">Application recovery</p>
           <h1 id="app-error-title">Something went wrong</h1>
           <p className="mm-muted">
-            MediaMop hit a screen error before it could finish loading this
-            view. Reloading usually clears a temporary browser state problem.
+            Weir hit a screen error before it could finish loading this view.
+            Reloading usually clears a temporary browser state problem.
           </p>
           <button
             className="mm-btn mm-btn-primary"
             type="button"
             onClick={reload}
           >
-            Reload MediaMop
+            Reload Weir
           </button>
           <details className="mm-error-details">
             <summary>Show technical details</summary>

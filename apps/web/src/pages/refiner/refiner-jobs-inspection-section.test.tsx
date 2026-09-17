@@ -82,9 +82,7 @@ describe("RefinerJobsInspectionSection", () => {
 
     expect(screen.getByText("Clean temporary work files")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "This job is safely waiting because MediaMop is paused.",
-      ),
+      screen.getByText("This job is safely waiting because Weir is paused."),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Use Resume at the top of the page/),

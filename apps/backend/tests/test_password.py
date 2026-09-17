@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.platform.auth.password import hash_password, verify_password
+from weir.platform.auth.password import hash_password, verify_password
 
 
 def test_hash_and_verify_round_trip() -> None:

@@ -1,4 +1,4 @@
-# MediaMop — ports (canonical)
+# Weir — ports (canonical)
 
 **Single source of numeric defaults:** [`scripts/dev-ports.json`](../scripts/dev-ports.json)  
 Vite reads it from [`apps/web/vite.config.ts`](../apps/web/vite.config.ts). PowerShell dev scripts read the same file.
@@ -16,7 +16,7 @@ The browser should use the **web** URL. `/api` is proxied to the API origin abov
 
 **Overrides (temporary):**
 
-- API port: `MEDIAMOP_DEV_API_PORT` when running `dev-backend.ps1`.
+- API port: `WEIR_DEV_API_PORT` when running `dev-backend.ps1`.
 - Vite proxy target: `VITE_DEV_API_PROXY_TARGET` (must match wherever uvicorn listens).
 
 **Changing defaults:** edit `scripts/dev-ports.json` and restart dev servers.
@@ -32,8 +32,8 @@ For **containers** (Docker/Kubernetes), the API process bind port (e.g. **8000**
 
 ## Database (local dev)
 
-MediaMop **`apps/backend`** uses **file-backed SQLite** under **`MEDIAMOP_HOME`** — there is **no** extra listen port for the database. An optional **developer-only** compose file may expose PostgreSQL on **5433** for experiments; the shipped MediaMop container path is **SQLite-only** (see **`docs/local-development.md`**).
+Weir **`apps/backend`** uses **file-backed SQLite** under **`WEIR_HOME`** — there is **no** extra listen port for the database. An optional **developer-only** compose file may expose PostgreSQL on **5433** for experiments; the shipped Weir container path is **SQLite-only** (see **`docs/local-development.md`**).
 
 ## CI / E2E
 
-Automated tests pick **ephemeral loopback ports** (see `tests/e2e/mediamop/conftest.py`) so they do not depend on 8782/8788 being free.
+Automated tests pick **ephemeral loopback ports** (see `tests/e2e/weir/conftest.py`) so they do not depend on 8782/8788 being free.

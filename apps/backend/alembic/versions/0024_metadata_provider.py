@@ -2,7 +2,7 @@
 
 Refiner picks audio from a fixed preference list. For a French film with English and
 French audio, an ``eng``-first preference keeps **the dub**. Most people who care about
-audio quality want the original, and nothing in MediaMop knew what the original was.
+audio quality want the original, and nothing in Weir knew what the original was.
 
 ``suite_settings`` gains the provider connection. The key is stored encrypted with the
 same helper the media manager credentials use, and the base URL is configurable rather

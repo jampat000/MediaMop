@@ -9,27 +9,6 @@ import pytest
 from sqlalchemy import delete, func, select
 from starlette.testclient import TestClient
 
-from mediamop.api.factory import create_app
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as act_c
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.activity.service import record_activity_event
-from mediamop.platform.auth.models import User
-from mediamop.platform.auth.password import hash_password
-from mediamop.platform.suite_settings.logs_retention_periodic import (
-    reset_log_retention_periodic_state_for_tests,
-    run_log_retention_tick,
-)
-from mediamop.platform.suite_settings.logs_service import ParsedLogEntry
-from mediamop.platform.suite_settings.model import SuiteSettingsRow
-from mediamop.platform.suite_settings.release_catalog import (
-    GitHubReleaseAsset,
-    GitHubReleaseRecord,
-)
-from mediamop.platform.suite_settings.service import apply_suite_settings_put, ensure_suite_settings_row
-from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
-from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
 from tests.integration_helpers import (
     auth_post,
     reset_user_tables,
@@ -38,22 +17,43 @@ from tests.integration_helpers import (
 from tests.integration_helpers import (
     csrf as fetch_csrf,
 )
+from weir.api.factory import create_app
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as act_c
+from weir.platform.activity.models import ActivityEvent
+from weir.platform.activity.service import record_activity_event
+from weir.platform.auth.models import User
+from weir.platform.auth.password import hash_password
+from weir.platform.suite_settings.logs_retention_periodic import (
+    reset_log_retention_periodic_state_for_tests,
+    run_log_retention_tick,
+)
+from weir.platform.suite_settings.logs_service import ParsedLogEntry
+from weir.platform.suite_settings.model import SuiteSettingsRow
+from weir.platform.suite_settings.release_catalog import (
+    GitHubReleaseAsset,
+    GitHubReleaseRecord,
+)
+from weir.platform.suite_settings.service import apply_suite_settings_put, ensure_suite_settings_row
+from weir.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
+from weir.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
 
 
 def _release_record(version: str = "1.2.3") -> GitHubReleaseRecord:
     return GitHubReleaseRecord(
         tag_name=f"v{version}",
         version=version,
-        release_name=f"MediaMop {version}",
+        release_name=f"Weir {version}",
         html_url="https://example.com/release",
         published_at=datetime(2026, 4, 23, tzinfo=UTC),
         draft=False,
         prerelease=False,
         assets=(
             GitHubReleaseAsset(
-                name="MediaMop-win-Setup.exe",
-                api_url=f"https://api.github.com/repos/jampat000/MediaMop/releases/assets/{version.replace('.', '')}",
-                browser_download_url=f"https://github.com/jampat000/MediaMop/releases/download/v{version}/MediaMop-win-Setup.exe",
+                name="Weir-win-Setup.exe",
+                api_url=f"https://api.github.com/repos/jampat000/weir/releases/assets/{version.replace('.', '')}",
+                browser_download_url=f"https://github.com/jampat000/weir/releases/download/v{version}/Weir-win-Setup.exe",
                 size_bytes=123456789,
                 content_type="application/octet-stream",
             ),
@@ -86,7 +86,7 @@ def test_suite_settings_get_ok_for_viewer(client_with_viewer: TestClient) -> Non
     assert r_login.status_code == 200, r_login.text
     r = client_with_viewer.get("/api/v1/suite/settings")
     assert r.status_code == 200, r.text
-    assert r.json()["product_display_name"] == "MediaMop"
+    assert r.json()["product_display_name"] == "Weir"
 
 
 def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None:
@@ -94,7 +94,7 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
     r = client_with_admin.get("/api/v1/suite/settings")
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["product_display_name"] == "MediaMop"
+    assert body["product_display_name"] == "Weir"
     assert body["signed_in_home_notice"] is None
     assert body["setup_wizard_state"] == "pending"
     assert body["app_timezone"] in {"UTC", "America/New_York"}
@@ -107,7 +107,7 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
 
 
 def test_ensure_suite_settings_row_defaults_to_skipped_for_existing_install() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
         db.execute(delete(SuiteSettingsRow))
@@ -160,7 +160,7 @@ def test_bootstrap_explicitly_keeps_setup_wizard_pending_for_true_first_run() ->
 
 def test_log_retention_tick_runs_once_per_day(monkeypatch: pytest.MonkeyPatch) -> None:
     reset_log_retention_periodic_state_for_tests()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     calls: list[int] = []
 
@@ -168,7 +168,7 @@ def test_log_retention_tick_runs_once_per_day(monkeypatch: pytest.MonkeyPatch) -
         calls.append(1)
 
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.logs_retention_periodic.prune_logs_for_retention",
+        "weir.platform.suite_settings.logs_retention_periodic.prune_logs_for_retention",
         fake_prune,
     )
 
@@ -222,7 +222,7 @@ def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:
     assert r2.status_code == 200
     assert r2.json()["product_display_name"] == "House Library"
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
         row = db.scalars(select(SuiteSettingsRow).where(SuiteSettingsRow.id == 1)).one()
@@ -258,7 +258,7 @@ def test_suite_settings_put_viewer_forbidden(client_with_viewer: TestClient) -> 
 
 
 def test_apply_suite_settings_put_rejects_blank_name() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
         try:
@@ -276,13 +276,13 @@ def test_apply_suite_settings_put_rejects_blank_name() -> None:
 
 
 def test_apply_suite_settings_put_rejects_invalid_timezone() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
         try:
             apply_suite_settings_put(
                 db,
-                product_display_name="MediaMop",
+                product_display_name="Weir",
                 signed_in_home_notice=None,
                 app_timezone="Not/A_Real_Zone",
                 log_retention_days=30,
@@ -294,7 +294,7 @@ def test_apply_suite_settings_put_rejects_invalid_timezone() -> None:
 
 
 def test_activity_event_detail_always_persisted() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
         row = record_activity_event(
@@ -317,7 +317,7 @@ def test_log_retention_does_not_prune_activity_history(client_with_admin: TestCl
         "/api/v1/suite/settings",
         json={
             "csrf_token": tok,
-            "product_display_name": "MediaMop",
+            "product_display_name": "Weir",
             "signed_in_home_notice": None,
             "app_timezone": "UTC",
             "log_retention_days": 30,
@@ -325,7 +325,7 @@ def test_log_retention_does_not_prune_activity_history(client_with_admin: TestCl
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
     assert r.status_code == 200, r.text
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
         row = record_activity_event(
@@ -348,7 +348,7 @@ def test_log_retention_does_not_prune_activity_history(client_with_admin: TestCl
         "/api/v1/suite/settings",
         json={
             "csrf_token": tok,
-            "product_display_name": "MediaMop",
+            "product_display_name": "Weir",
             "signed_in_home_notice": None,
             "app_timezone": "UTC",
             "log_retention_days": 30,
@@ -372,11 +372,11 @@ def test_log_retention_does_not_prune_activity_history(client_with_admin: TestCl
 def test_suite_update_status_ok(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     _login_admin(client_with_admin)
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         lambda **_kwargs: _release_record("1.2.3"),
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
 
     r = client_with_admin.get("/api/v1/suite/update-status")
 
@@ -391,11 +391,11 @@ def test_suite_update_status_ok(client_with_admin: TestClient, monkeypatch: pyte
 def test_suite_update_status_alias_ok(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     _login_admin(client_with_admin)
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         lambda **_kwargs: _release_record("1.2.3"),
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
 
     r = client_with_admin.get("/api/v1/suite/settings/update-status")
 
@@ -410,7 +410,7 @@ def test_suite_logs_skips_items_with_invalid_timestamp(
 ) -> None:
     _login_admin(client_with_admin)
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.router.read_suite_logs",
+        "weir.platform.suite_settings.router.read_suite_logs",
         lambda *_args, **_kwargs: (
             [
                 ParsedLogEntry(
@@ -421,7 +421,7 @@ def test_suite_logs_skips_items_with_invalid_timestamp(
                     detail=None,
                     traceback=None,
                     source=None,
-                    logger="mediamop.platform.suite_settings",
+                    logger="weir.platform.suite_settings",
                     correlation_id=None,
                     job_id=None,
                 ),
@@ -433,7 +433,7 @@ def test_suite_logs_skips_items_with_invalid_timestamp(
                     detail=None,
                     traceback=None,
                     source=None,
-                    logger="mediamop.platform.suite_settings",
+                    logger="weir.platform.suite_settings",
                     correlation_id=None,
                     job_id=None,
                 ),
@@ -457,24 +457,24 @@ def test_suite_update_status_not_published_when_release_missing(
 ) -> None:
     _login_admin(client_with_admin)
 
-    request = httpx.Request("GET", "https://api.github.com/repos/jampat000/MediaMop/releases/latest")
+    request = httpx.Request("GET", "https://api.github.com/repos/jampat000/weir/releases/latest")
     response = httpx.Response(404, request=request)
 
     def _raise_not_found(**_kwargs) -> None:  # noqa: ANN003
         raise httpx.HTTPStatusError("not found", request=request, response=response)
 
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         _raise_not_found,
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "1.0.0")
 
     r = client_with_admin.get("/api/v1/suite/update-status")
 
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["status"] == "not_published"
-    assert "no public mediamop release is published yet" in body["summary"].lower()
+    assert "no public weir release is published yet" in body["summary"].lower()
 
 
 def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: TestClient) -> None:
@@ -484,7 +484,7 @@ def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: Tes
         "/api/v1/suite/settings",
         json={
             "csrf_token": tok,
-            "product_display_name": "MediaMop",
+            "product_display_name": "Weir",
             "signed_in_home_notice": None,
             "setup_wizard_state": "completed",
             "app_timezone": "UTC",
@@ -497,7 +497,7 @@ def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: Tes
     )
     assert r.status_code == 200, r.text
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     fac = create_session_factory(engine)
     with fac() as db:
@@ -528,7 +528,7 @@ def test_suite_configuration_backup_tick_waits_for_preferred_time(client_with_ad
         "/api/v1/suite/settings",
         json={
             "csrf_token": tok,
-            "product_display_name": "MediaMop",
+            "product_display_name": "Weir",
             "signed_in_home_notice": None,
             "setup_wizard_state": "completed",
             "app_timezone": "Australia/Sydney",
@@ -541,7 +541,7 @@ def test_suite_configuration_backup_tick_waits_for_preferred_time(client_with_ad
     )
     assert r.status_code == 200, r.text
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
         suite = db.scalars(select(SuiteSettingsRow).where(SuiteSettingsRow.id == 1)).one()

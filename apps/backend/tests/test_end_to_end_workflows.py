@@ -10,37 +10,37 @@ from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
 from alembic import command
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.refiner.file_remux_pass import run as refiner_run
-from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.refiner.refiner_job_handlers import build_refiner_job_handlers
-from mediamop.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
-from mediamop.refiner.refiner_overview_stats_service import build_refiner_overview_stats
-from mediamop.refiner.worker_loop import process_one_refiner_job
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
 from tests.refiner_library_fixtures import seed_refiner_libraries
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.refiner.file_remux_pass import run as refiner_run
+from weir.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.jobs_ops import refiner_enqueue_or_get_job
+from weir.refiner.refiner_job_handlers import build_refiner_job_handlers
+from weir.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
+from weir.refiner.refiner_overview_stats_service import build_refiner_overview_stats
+from weir.refiner.worker_loop import process_one_refiner_job
 
 
 @pytest.fixture
 def isolated_session_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> sessionmaker[Session]:
-    integration_test_set_home(tmp_path, monkeypatch, "mmhome_e2e_workflows")
+    integration_test_set_home(tmp_path, monkeypatch, "weirhome_e2e_workflows")
     integration_test_quiesce_in_process_workers(monkeypatch)
     integration_test_quiesce_periodic_enqueue(monkeypatch)
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))
     cfg.set_main_option("script_location", str(backend / "alembic"))
     command.upgrade(cfg, "head")
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     return create_session_factory(create_db_engine(settings))
 
 
@@ -64,7 +64,7 @@ def test_refiner_file_reaches_output_cleanup_and_stats(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     watched = tmp_path / "watched"
     output = tmp_path / "output"
     work = tmp_path / "work"
@@ -104,8 +104,8 @@ def test_refiner_file_reaches_output_cleanup_and_stats(
             ),
         )
 
-    monkeypatch.setattr(refiner_run, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(refiner_run, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe", "ffmpeg"))
+    monkeypatch.setattr(refiner_run, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(refiner_run, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe", "ffmpeg"))
     monkeypatch.setattr(refiner_run, "is_remux_required", lambda *_args, **_kwargs: False)
     # This workflow uses byte fixtures; media validation has focused real-contract tests.
     monkeypatch.setattr(refiner_run, "validate_media_integrity", lambda *_args, **_kwargs: None)

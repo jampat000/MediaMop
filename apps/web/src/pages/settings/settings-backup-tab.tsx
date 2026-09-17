@@ -67,7 +67,7 @@ export function SettingsBackupTab({
     <div data-testid="suite-settings-backup-tab" className="mm-bubble-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          Export, restore, and automatically snapshot MediaMop configuration.
+          Export, restore, and automatically snapshot Weir configuration.
         </p>
       </div>
 
@@ -85,8 +85,8 @@ export function SettingsBackupTab({
               Backup and restore
             </h3>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Keep a clean copy of MediaMop settings and restore them if
-              something goes wrong.
+              Keep a clean copy of Weir settings and restore them if something
+              goes wrong.
             </p>
           </div>
 
@@ -101,8 +101,8 @@ export function SettingsBackupTab({
                     Scheduled snapshots
                   </h4>
                   <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                    MediaMop keeps the latest five configuration snapshots using
-                    the same restore-safe JSON format.
+                    Weir keeps the latest five configuration snapshots using the
+                    same restore-safe JSON format.
                   </p>
                 </div>
                 <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
@@ -206,7 +206,7 @@ export function SettingsBackupTab({
                     Export or restore now
                   </h4>
                   <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                    Download a full settings file, or restore a MediaMop
+                    Download a full settings file, or restore a Weir
                     configuration JSON from disk.
                   </p>
                 </div>

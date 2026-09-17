@@ -5,14 +5,14 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
+from weir.core.config import WeirSettings
+from weir.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
 
 
-def _settings(tmp_path: Path) -> MediaMopSettings:
+def _settings(tmp_path: Path) -> WeirSettings:
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
-    return replace(MediaMopSettings.load(), log_dir=str(log_dir))
+    return replace(WeirSettings.load(), log_dir=str(log_dir))
 
 
 def _line(at: datetime, *, level: str = "INFO", message: str = "hello") -> str:
@@ -20,7 +20,7 @@ def _line(at: datetime, *, level: str = "INFO", message: str = "hello") -> str:
         {
             "timestamp": at.isoformat().replace("+00:00", "Z"),
             "level": level,
-            "logger": "mediamop.tests",
+            "logger": "weir.tests",
             "message": message,
             "source": "test.py:1",
         },
@@ -31,7 +31,7 @@ def _line(at: datetime, *, level: str = "INFO", message: str = "hello") -> str:
 def test_read_suite_logs_streams_and_returns_newest_matching_rows(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     now = datetime.now(UTC)
-    path = Path(settings.log_dir) / "mediamop.log"
+    path = Path(settings.log_dir) / "weir.log"
     with path.open("w", encoding="utf-8") as handle:
         for i in range(20):
             handle.write(_line(now + timedelta(seconds=i), message=f"row-{i}") + "\n")
@@ -46,7 +46,7 @@ def test_read_suite_logs_streams_and_returns_newest_matching_rows(tmp_path: Path
 def test_prune_log_file_replaces_atomically_and_removes_temp_on_success(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     now = datetime.now(UTC)
-    path = Path(settings.log_dir) / "mediamop.log"
+    path = Path(settings.log_dir) / "weir.log"
     path.write_text(
         "\n".join(
             [

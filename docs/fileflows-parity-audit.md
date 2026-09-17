@@ -3,7 +3,7 @@
 Audit date: 2026-09-01
 
 This is the durable follow-up to closed epic
-[#347, Refiner — reach FileFlows and pass it](https://github.com/jampat000/MediaMop/issues/347).
+[#347, Refiner — reach FileFlows and pass it](https://github.com/jampat000/weir/issues/347).
 It answers two questions:
 
 1. Did every capability identified by the live FileFlows audit survive later
@@ -13,7 +13,7 @@ It answers two questions:
 
 ## Scope and method
 
-- Searched all 187 closed MediaMop issues, including issue bodies, for FileFlows,
+- Searched all 187 closed Weir issues, including issue bodies, for FileFlows,
   parity, intake, file-size, skip/bypass, cleanup, and processed-output work.
 - Re-audited epic #347 and every child issue #328–#351 against current source and
   regression tests.
@@ -54,7 +54,7 @@ It answers two questions:
 
 ### File-size intake and rejected-file cleanup (#92)
 
-MediaMop already has both levels FileFlows operators expect:
+Weir already has both levels FileFlows operators expect:
 
 - a global conservative minimum input size and target-volume free-space guardrail
   under Refiner processing settings;
@@ -85,7 +85,7 @@ the held source handle mandatorily denies writers for the complete pass. It crea
 a staged same-volume hardlink, validates it, then atomically publishes it. A
 cross-volume link falls back to the progress-reporting validated copy.
 
-If a later cleanup safety gate preserves the watched source, MediaMop immediately
+If a later cleanup safety gate preserves the watched source, Weir immediately
 replaces the output link with an independent validated copy. That uncommon fallback
 prevents a future writer at the watched path from mutating the published output.
 
@@ -98,7 +98,7 @@ through a shared inode after the watched name is removed.
 - **#363:** migration 0025 drops the two singleton tables. Scope-shaped compatibility
   APIs remain but read/write libraries, so there is one configuration store.
 - **#364:** Deluno#331 confirmed `id`, `mediaType`, `rootPath`, `importWorkflow`, and
-  `processorOutputPath` from a populated live manifest. MediaMop now parses those
+  `processorOutputPath` from a populated live manifest. Weir now parses those
   exact keys, seeds refine-before-import output paths, and tests the captured body.
 - **#366:** update mode, startup/interval controls, tray double-click, Docker version
   behavior, and the docs-site dependency remediation were re-landed on `main` in

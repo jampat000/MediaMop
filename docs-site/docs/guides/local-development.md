@@ -5,14 +5,14 @@ title: Local Development
 
 # Local Development
 
-This guide covers backend and web development setup for MediaMop.
+This guide covers backend and web development setup for Weir.
 
 ## Prerequisites
 
 - **Python 3.11+**
 - **Node.js LTS** (npm on `PATH`)
 
-The backend uses file-backed SQLite under `MEDIAMOP_HOME`. No PostgreSQL required.
+The backend uses file-backed SQLite under `WEIR_HOME`. No PostgreSQL required.
 
 ## Backend setup
 
@@ -22,12 +22,12 @@ Copy `apps/backend/.env.example` to `apps/backend/.env`. Required variables:
 
 | Variable | Purpose |
 |----------|---------|
-| `MEDIAMOP_SESSION_SECRET` | Signs sessions and CSRF tokens |
-| `MEDIAMOP_CREDENTIALS_SECRET` | Encrypts saved provider credentials |
+| `WEIR_SESSION_SECRET` | Signs sessions and CSRF tokens |
+| `WEIR_CREDENTIALS_SECRET` | Encrypts saved provider credentials |
 
-Optional path overrides (defaults are under `MEDIAMOP_HOME`):
+Optional path overrides (defaults are under `WEIR_HOME`):
 
-- `MEDIAMOP_HOME`, `MEDIAMOP_DB_PATH`, `MEDIAMOP_BACKUP_DIR`, `MEDIAMOP_LOG_DIR`, `MEDIAMOP_TEMP_DIR`
+- `WEIR_HOME`, `WEIR_DB_PATH`, `WEIR_BACKUP_DIR`, `WEIR_LOG_DIR`, `WEIR_TEMP_DIR`
 
 ### Apply migrations
 
@@ -55,8 +55,8 @@ Or manually:
 ```powershell
 cd apps/backend
 $env:PYTHONPATH = "src"
-$env:MEDIAMOP_SESSION_SECRET = "<long random>"
-uvicorn mediamop.api.main:app --host 127.0.0.1 --port 8788 --reload
+$env:WEIR_SESSION_SECRET = "<long random>"
+uvicorn weir.api.main:app --host 127.0.0.1 --port 8788 --reload
 ```
 
 ## Web app
@@ -78,16 +78,16 @@ cd apps/web
 npm run api:types:sync
 ```
 
-This exports the schema to `apps/web/openapi/mediamop-openapi.json` and regenerates types at `apps/web/src/lib/api/generated/openapi-types.ts`. Run this whenever backend request/response schemas change.
+This exports the schema to `apps/web/openapi/weir-openapi.json` and regenerates types at `apps/web/src/lib/api/generated/openapi-types.ts`. Run this whenever backend request/response schemas change.
 
-## MediaMop home paths
+## Weir home paths
 
-| Platform | Default `MEDIAMOP_HOME` |
+| Platform | Default `WEIR_HOME` |
 |----------|------------------------|
-| Windows | `%PROGRAMDATA%\MediaMop` |
-| Linux/macOS | `$XDG_DATA_HOME/mediamop` or `~/.local/share/mediamop` |
+| Windows | `%PROGRAMDATA%\Weir` |
+| Linux/macOS | `$XDG_DATA_HOME/weir` or `~/.local/share/weir` |
 
-The default SQLite file is `{MEDIAMOP_HOME}/data/mediamop.sqlite3` unless `MEDIAMOP_DB_PATH` overrides.
+The default SQLite file is `{WEIR_HOME}/data/weir.sqlite3` unless `WEIR_DB_PATH` overrides.
 
 ## E2E tests (optional)
 
@@ -98,9 +98,9 @@ cd apps/web
 npm ci
 npm run build
 cd ../..
-$env:MEDIAMOP_E2E = "1"
-$env:MEDIAMOP_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
-pytest tests/e2e/mediamop -q --tb=short
+$env:WEIR_E2E = "1"
+$env:WEIR_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
+pytest tests/e2e/weir -q --tb=short
 ```
 
 ## Troubleshooting
@@ -111,5 +111,5 @@ pytest tests/e2e/mediamop -q --tb=short
 | Login/setup broken | Use the Vite proxy (same origin); don't set `VITE_API_BASE_URL` |
 | "Cannot reach the API" | Check `GET /health` on port 8788; ensure migrations ran |
 | SQLite errors | Confirm `.\scripts\dev-migrate.ps1` completed without errors |
-| `No module named mediamop` | Use `PYTHONPATH=src` with cwd `apps/backend` |
+| `No module named weir` | Use `PYTHONPATH=src` with cwd `apps/backend` |
 | Port already in use | See `scripts/dev-ports.json` for defaults |

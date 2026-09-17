@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "./styles/mediamop-tokens.css";
-@import "./styles/mediamop-shell.css";
+@import "./styles/weir-tokens.css";
+@import "./styles/weir-shell.css";
 
 @theme {
   --font-outfit: "Outfit", system-ui, -apple-system, sans-serif;

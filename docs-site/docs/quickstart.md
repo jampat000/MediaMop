@@ -5,7 +5,7 @@ title: Quickstart
 
 # Quickstart
 
-Get MediaMop running locally in under five minutes.
+Get Weir running locally in under five minutes.
 
 ## Prerequisites
 
@@ -15,8 +15,8 @@ Get MediaMop running locally in under five minutes.
 ## 1. Clone and set up the backend
 
 ```powershell
-git clone https://github.com/jampat000/MediaMop.git
-cd MediaMop/apps/backend
+git clone https://github.com/jampat000/weir.git
+cd Weir/apps/backend
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --require-hashes -r requirements-runtime.lock
@@ -27,8 +27,8 @@ python -m pip install --no-deps --no-build-isolation -e .
 
 Copy `apps/backend/.env.example` to `apps/backend/.env` and set:
 
-- **`MEDIAMOP_SESSION_SECRET`** — a long random string (required for auth)
-- **`MEDIAMOP_CREDENTIALS_SECRET`** — a separate long random value (required before saving provider credentials)
+- **`WEIR_SESSION_SECRET`** — a long random string (required for auth)
+- **`WEIR_CREDENTIALS_SECRET`** — a separate long random value (required before saving provider credentials)
 
 ## 3. Run database migrations
 
@@ -59,6 +59,6 @@ The Vite dev server proxies `/api` requests to the backend automatically — no 
 
 ## Next steps
 
-- [Docker deployment](deployment/docker) — run MediaMop in a container
+- [Docker deployment](deployment/docker) — run Weir in a container
 - [Windows installer](deployment/windows) — install as a desktop app
-- [Architecture overview](architecture/overview) — understand how MediaMop is structured
+- [Architecture overview](architecture/overview) — understand how Weir is structured

@@ -92,7 +92,7 @@ export async function fetchActivityExport(
     blob: await r.blob(),
     filename: filenameFromDisposition(
       r.headers.get("Content-Disposition"),
-      `mediamop-activity.${format}`,
+      `weir-activity.${format}`,
     ),
   };
 }

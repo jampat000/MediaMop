@@ -52,7 +52,7 @@ def test_system_directories_lists_roots(client_with_admin: TestClient) -> None:
 
 def test_system_directories_returns_not_found(client_with_admin: TestClient) -> None:
     _login_admin(client_with_admin)
-    missing_path = Path(tempfile.gettempdir()) / f"mediamop-missing-{uuid.uuid4()}"
+    missing_path = Path(tempfile.gettempdir()) / f"weir-missing-{uuid.uuid4()}"
 
     r = client_with_admin.get("/api/v1/system/directories", params={"path": str(missing_path)})
 

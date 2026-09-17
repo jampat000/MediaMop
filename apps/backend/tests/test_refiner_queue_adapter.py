@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.refiner import (
+from weir.refiner import (
     MOVIE_QUEUE_DIALECT,
     TV_QUEUE_DIALECT,
     FileAnchorCandidate,

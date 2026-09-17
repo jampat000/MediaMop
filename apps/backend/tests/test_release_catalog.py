@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.platform.suite_settings import release_catalog
+from weir.platform.suite_settings import release_catalog
 
 
 def _asset(name: str) -> release_catalog.GitHubReleaseAsset:
@@ -19,7 +19,7 @@ def _record(*assets: release_catalog.GitHubReleaseAsset) -> release_catalog.GitH
     return release_catalog.GitHubReleaseRecord(
         tag_name="v2.6.1",
         version="2.6.1",
-        release_name="MediaMop 2.6.1",
+        release_name="Weir 2.6.1",
         html_url="https://github.test/releases/v2.6.1",
         published_at=None,
         draft=False,
@@ -35,14 +35,14 @@ def test_normalize_release_version_strips_v_prefix() -> None:
 
 
 def test_windows_installer_asset_prefers_current_velopack_name() -> None:
-    current = _asset("MediaMop-win-Setup.exe")
-    legacy = _asset("MediaMopSetup.exe")
+    current = _asset("Weir-win-Setup.exe")
+    legacy = _asset("WeirSetup.exe")
 
     assert _record(legacy, current).windows_installer_asset() is current
 
 
 def test_windows_installer_asset_accepts_legacy_release_name() -> None:
-    legacy = _asset("MediaMopSetup.exe")
+    legacy = _asset("WeirSetup.exe")
 
     assert _record(legacy).windows_installer_asset() is legacy
 
@@ -50,8 +50,8 @@ def test_windows_installer_asset_accepts_legacy_release_name() -> None:
 def test_fetch_release_record_by_version_rejects_wrong_returned_tag(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = {
         "tag_name": "v2.0.7",
-        "name": "MediaMop 2.0.7",
-        "html_url": "https://github.com/jampat000/MediaMop/releases/tag/v2.0.7",
+        "name": "Weir 2.0.7",
+        "html_url": "https://github.com/jampat000/weir/releases/tag/v2.0.7",
         "published_at": "2026-05-07T00:00:00Z",
         "draft": False,
         "prerelease": False,
@@ -87,8 +87,8 @@ def test_fetch_release_record_by_version_rejects_wrong_returned_tag(monkeypatch:
 def test_fetch_release_record_by_version_rejects_prerelease(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = {
         "tag_name": "v2.0.8",
-        "name": "MediaMop 2.0.8-rc1",
-        "html_url": "https://github.com/jampat000/MediaMop/releases/tag/v2.0.8",
+        "name": "Weir 2.0.8-rc1",
+        "html_url": "https://github.com/jampat000/weir/releases/tag/v2.0.8",
         "published_at": "2026-05-07T00:00:00Z",
         "draft": False,
         "prerelease": True,

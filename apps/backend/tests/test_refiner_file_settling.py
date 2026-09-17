@@ -16,22 +16,22 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.media_managers.connection_model  # noqa: F401
-import mediamop.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.refiner.refiner_library_model  # noqa: F401
-from mediamop.core.db import Base
-from mediamop.refiner.refiner_file_settling import (
+import weir.platform.media_managers.connection_model  # noqa: F401
+import weir.refiner.refiner_file_state_model  # noqa: F401
+import weir.refiner.refiner_library_model  # noqa: F401
+from weir.core.db import Base
+from weir.refiner.refiner_file_settling import (
     check_file_access,
     observe_size_settling,
     source_writer_problem,
 )
-from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.refiner.refiner_file_state_service import (
+from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from weir.refiner.refiner_file_state_service import (
     decide_file_state,
     existing_file_row,
     record_file_state,
 )
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_library_model import RefinerLibraryRow
 
 NOW = datetime(2026, 8, 29, 12, 0, tzinfo=UTC)
 
@@ -239,7 +239,7 @@ def test_settling_is_reported_ahead_of_an_access_problem() -> None:
         file_age_seconds=99_999,
         size_is_settling=True,
         settling_reason="This file is still growing, so something is writing to it.",
-        access_problem="MediaMop could not open this file for reading.",
+        access_problem="Weir could not open this file for reading.",
     )
 
     assert "still growing" in verdict.reason
@@ -250,7 +250,7 @@ def test_an_access_problem_holds_the_file_without_inventing_a_release_time() -> 
         library=_library(),
         in_schedule_window=True,
         file_age_seconds=99_999,
-        access_problem="MediaMop could not open this file for reading.",
+        access_problem="Weir could not open this file for reading.",
     )
 
     assert verdict.status is RefinerFileStatus.ON_HOLD
@@ -262,7 +262,7 @@ def test_an_access_problem_never_outranks_the_library_being_switched_off() -> No
         library=_library(enabled=False),
         in_schedule_window=True,
         file_age_seconds=99_999,
-        access_problem="MediaMop could not open this file for reading.",
+        access_problem="Weir could not open this file for reading.",
     )
 
     assert verdict.status is RefinerFileStatus.DISABLED

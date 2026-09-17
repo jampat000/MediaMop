@@ -12,21 +12,21 @@ from unittest.mock import patch
 from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.refiner.jobs_model  # noqa: F401
-import mediamop.refiner.refiner_temp_cleanup as refiner_temp_cleanup
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.refiner_temp_cleanup import (
+import weir.refiner.jobs_model  # noqa: F401
+import weir.refiner.refiner_temp_cleanup as refiner_temp_cleanup
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.refiner_temp_cleanup import (
     is_refiner_owned_temp_work_file,
     refiner_file_remux_pass_job_active_for_scope,
     run_refiner_work_temp_stale_sweep_for_scope,
 )
-from mediamop.refiner.refiner_work_temp_stale_sweep_enqueue import (
+from weir.refiner.refiner_work_temp_stale_sweep_enqueue import (
     enqueue_refiner_work_temp_stale_sweep_job,
 )
-from mediamop.refiner.refiner_work_temp_stale_sweep_job_kinds import (
+from weir.refiner.refiner_work_temp_stale_sweep_job_kinds import (
     REFINER_WORK_TEMP_STALE_SWEEP_DEDUPE_KEY_MOVIE,
     REFINER_WORK_TEMP_STALE_SWEEP_DEDUPE_KEY_TV,
 )
@@ -40,12 +40,12 @@ def _session(tmp_path: Path) -> tuple[sessionmaker[Session], Session]:
     return fac, fac()
 
 
-def _settings(*, min_stale: int = 0) -> MediaMopSettings:
-    return replace(MediaMopSettings.load(), refiner_work_temp_stale_sweep_min_stale_age_seconds=min_stale)
+def _settings(*, min_stale: int = 0) -> WeirSettings:
+    return replace(WeirSettings.load(), refiner_work_temp_stale_sweep_min_stale_age_seconds=min_stale)
 
 
 def _patch_roots(movie: Path, tv: Path):
-    def _fake(*, session: Session, settings: MediaMopSettings) -> tuple[Path, Path]:
+    def _fake(*, session: Session, settings: WeirSettings) -> tuple[Path, Path]:
         return movie.resolve(), tv.resolve()
 
     return patch.object(refiner_temp_cleanup, "_resolved_movie_and_tv_work_roots", _fake)

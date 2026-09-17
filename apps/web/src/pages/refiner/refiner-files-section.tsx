@@ -115,7 +115,7 @@ function guidanceForFile(
     if (!processingPaused) {
       return {
         title: "Refresh this file's status.",
-        next: "Use Check again. MediaMop will apply the current schedule, readiness, size, and path rules without deleting the original file.",
+        next: "Use Check again. Weir will apply the current schedule, readiness, size, and path rules without deleting the original file.",
       };
     }
     return {
@@ -142,7 +142,7 @@ function guidanceForFile(
     case "on_hold":
       return {
         title: "Waiting for the file to settle.",
-        next: "Finish the copy or import, then use Check again. MediaMop will not touch a changing file.",
+        next: "Finish the copy or import, then use Check again. Weir will not touch a changing file.",
       };
     case "blocked_upstream":
       return {
@@ -447,7 +447,7 @@ export function RefinerFilesSection() {
           : "The media managers had nothing to say about this file.",
       );
     } catch {
-      setNotice("MediaMop could not ask why that file is held.");
+      setNotice("Weir could not ask why that file is held.");
     }
   };
 
@@ -470,7 +470,7 @@ export function RefinerFilesSection() {
 
   const passThroughFile = async (file: RefinerFile) => {
     const confirmed = window.confirm(
-      "Pass this file through unchanged?\n\nMediaMop will bypass audio, subtitle, and metadata rules, copy and validate the original in this library's output folder, then remove the watched source using the normal successful-cleanup rules. Readiness checks still apply, so an active download will remain untouched.",
+      "Pass this file through unchanged?\n\nWeir will bypass audio, subtitle, and metadata rules, copy and validate the original in this library's output folder, then remove the watched source using the normal successful-cleanup rules. Readiness checks still apply, so an active download will remain untouched.",
     );
     if (!confirmed) return;
 
@@ -484,7 +484,7 @@ export function RefinerFilesSection() {
         pass_through_unchanged: true,
       });
       setNotice(
-        "Queued to pass through unchanged. MediaMop will validate the output before removing the watched source.",
+        "Queued to pass through unchanged. Weir will validate the output before removing the watched source.",
       );
     } catch {
       setNotice(
@@ -502,7 +502,7 @@ export function RefinerFilesSection() {
         library_id: file.library_id,
       });
       setNotice(
-        `Queued a fresh check for ${file.relative_path}. MediaMop will re-evaluate the file and queue it when it is ready.`,
+        `Queued a fresh check for ${file.relative_path}. Weir will re-evaluate the file and queue it when it is ready.`,
       );
     } catch {
       setNotice(
@@ -553,7 +553,7 @@ export function RefinerFilesSection() {
       if (started) parts.push(`${started} file(s) queued`);
       if (checked) parts.push(`${checked} library/libraries rechecked`);
       setNotice(
-        `${parts.join("; ")}. MediaMop will update the file state as work moves.`,
+        `${parts.join("; ")}. Weir will update the file state as work moves.`,
       );
     } catch {
       setNotice(
@@ -570,13 +570,13 @@ export function RefinerFilesSection() {
       const log = await fileLog.mutateAsync(file.id);
       if (log.entries.length === 0) {
         setNotice(
-          "MediaMop has not processed this file yet, so there is no record to show.",
+          "Weir has not processed this file yet, so there is no record to show.",
         );
         return;
       }
       setOpenLog(log);
     } catch {
-      setNotice("MediaMop could not read that file's processing record.");
+      setNotice("Weir could not read that file's processing record.");
     }
   };
 
@@ -962,7 +962,7 @@ export function RefinerFilesSection() {
                       <p className="mt-1 text-sm text-[var(--mm-text2)]">
                         {displayReasonForFile(file, processingPaused)}
                       </p>
-                      {/* A hold with no release time reads as held forever. When MediaMop
+                      {/* A hold with no release time reads as held forever. When Weir
                       knows when the wait ends, it says so; when the wait is on a writer
                       rather than the clock, hold_until is null and nothing is invented. */}
                       {file.status === "on_hold" && file.hold_until ? (
@@ -1085,7 +1085,7 @@ export function RefinerFilesSection() {
                           })}
                           onClick={() => void showLog(file)}
                           data-testid={`refiner-file-log-${file.id}`}
-                          title="What MediaMop did to this file, and why. Kept beyond the activity feed."
+                          title="What Weir did to this file, and why. Kept beyond the activity feed."
                         >
                           Processing record
                         </button>
@@ -1096,7 +1096,7 @@ export function RefinerFilesSection() {
                           })}
                           onClick={() => void removeFile(file)}
                           data-testid={`refiner-file-forget-${file.id}`}
-                          title="Removes MediaMop's record of this file. The file on disk is untouched."
+                          title="Removes Weir's record of this file. The file on disk is untouched."
                         >
                           Remove from list
                         </button>

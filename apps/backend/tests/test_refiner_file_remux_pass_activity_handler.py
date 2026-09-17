@@ -10,22 +10,22 @@ from typing import Any
 from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base, create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.live_stream import activity_latest_notifier
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner.file_remux_pass import handlers as handler_mod
-from mediamop.refiner.file_remux_pass.visibility import REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
-from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.refiner.worker_loop import RefinerJobWorkContext
+from weir.core.config import WeirSettings
+from weir.core.db import Base, create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.live_stream import activity_latest_notifier
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner.file_remux_pass import handlers as handler_mod
+from weir.refiner.file_remux_pass.visibility import REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
+from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from weir.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.worker_loop import RefinerJobWorkContext
 
 
 def test_refiner_remux_handler_updates_progress_row_to_completed_activity(
     monkeypatch,
 ) -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     activity_latest_notifier.reset_for_tests()

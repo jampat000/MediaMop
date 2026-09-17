@@ -24,7 +24,7 @@ function state(over: Partial<PauseState> = {}): PauseState {
     scan_while_paused: true,
     reason: "",
     in_flight_policy:
-      "Work already running finishes. Pausing stops MediaMop starting anything new.",
+      "Work already running finishes. Pausing stops Weir starting anything new.",
     ...over,
   };
 }
@@ -92,7 +92,7 @@ it("shows the reason, which carries when the pause lifts", () => {
       paused: true,
       paused_until: "2026-08-26T16:00:00Z",
       reason:
-        "Processing is paused. MediaMop will start work again automatically at 2026-08-26 16:00 UTC.",
+        "Processing is paused. Weir will start work again automatically at 2026-08-26 16:00 UTC.",
     }),
   );
 

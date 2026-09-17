@@ -1,4 +1,4 @@
-# MediaMop Agent Map
+# Weir Agent Map
 
 This file is the short entry point for coding agents. Keep detailed rules in linked docs so this stays readable.
 

@@ -27,13 +27,12 @@ import { SUITE_SETTINGS_DASH_CARD_CLASS } from "./settings-shared";
 
 const KINDS: MediaManagerKind[] = ["radarr", "sonarr", "deluno", "native"];
 
-/** What choosing each one means, without naming what MediaMop does internally. */
+/** What choosing each one means, without naming what Weir does internally. */
 const KIND_BLURBS: Record<MediaManagerKind, string> = {
-  radarr: "Tells MediaMop when it has added a film.",
-  sonarr: "Tells MediaMop when it has added an episode.",
-  deluno:
-    "Hands a file to MediaMop to work on, and waits to be told it is ready.",
-  native: "Anything else that can send MediaMop a message.",
+  radarr: "Tells Weir when it has added a film.",
+  sonarr: "Tells Weir when it has added an episode.",
+  deluno: "Hands a file to Weir to work on, and waits to be told it is ready.",
+  native: "Anything else that can send Weir a message.",
 };
 
 type FormState = {
@@ -52,7 +51,7 @@ const EMPTY_FORM: FormState = {
 
 function webhookUrl(connection: MediaManagerConnection): string {
   // The API returns a path, but this gets pasted into another app on another
-  // machine, so it needs the host MediaMop is actually reachable on.
+  // machine, so it needs the host Weir is actually reachable on.
   if (typeof window === "undefined") return connection.webhook_url_path;
   return `${window.location.origin}${connection.webhook_url_path}`;
 }
@@ -102,7 +101,7 @@ function ConnectionStatusPanel({
       ) : null}
       {connection.last_test_ok === null ? (
         <p className="mt-2 text-xs text-[var(--mm-text2)]">
-          Run a test to check MediaMop can reach it.
+          Run a test to check Weir can reach it.
         </p>
       ) : null}
     </div>
@@ -177,7 +176,7 @@ function AddConnectionForm({ onCancel }: { onCancel: () => void }) {
             onChange={(e) => setForm({ ...form, api_key: e.target.value })}
           />
           <span className="text-xs text-[var(--mm-text2)]">
-            MediaMop stores this safely and never shows it again.
+            Weir stores this safely and never shows it again.
           </span>
         </label>
       </div>
@@ -282,7 +281,7 @@ function ConnectionCard({
       >
         <summary className="cursor-pointer list-none font-medium text-[var(--mm-text2)] marker:hidden [&::-webkit-details-marker]:hidden">
           <span className="underline-offset-2 group-open:underline">
-            How to point {connection.name} at MediaMop
+            How to point {connection.name} at Weir
           </span>
         </summary>
 
@@ -310,7 +309,7 @@ function ConnectionCard({
             >
               <code className={mmTechnicalMonoSmallClass}>{revealed}</code>
               <span className="mt-1 block text-[var(--mm-text3)]">
-                Copy this into {connection.name} now — MediaMop will not show it
+                Copy this into {connection.name} now — Weir will not show it
                 again.
               </span>
             </div>
@@ -337,7 +336,7 @@ function ConnectionCard({
   );
 }
 
-/** Settings: the apps that send files to MediaMop. */
+/** Settings: the apps that send files to Weir. */
 export function SettingsMediaManagersTab() {
   const connections = useMediaManagerConnectionsQuery();
   const fmt = useAppDateFormatter();
@@ -347,8 +346,8 @@ export function SettingsMediaManagersTab() {
     <div className="grid gap-4">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          The apps that send files to MediaMop. Connect one so MediaMop knows
-          when there is something to work on.
+          The apps that send files to Weir. Connect one so Weir knows when there
+          is something to work on.
         </p>
       </div>
 
@@ -358,8 +357,8 @@ export function SettingsMediaManagersTab() {
 
       {connections.data?.length === 0 && !adding ? (
         <p className="text-sm text-[var(--mm-text2)]">
-          Nothing is connected yet, so no files are reaching MediaMop. Add an
-          app below to get started.
+          Nothing is connected yet, so no files are reaching Weir. Add an app
+          below to get started.
         </p>
       ) : null}
 

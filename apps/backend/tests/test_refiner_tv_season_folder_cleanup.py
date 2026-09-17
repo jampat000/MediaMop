@@ -12,25 +12,25 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.platform.activity import constants as activity_c
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.refiner.file_remux_pass.visibility import (
+import weir.platform.activity.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+from tests.manager_signal_helpers import reported, unreachable
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.platform.activity import constants as activity_c
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from weir.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
 )
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.manager_queue_signals import report_for_signals
-from mediamop.refiner.refiner_path_settings_service import RefinerPathRuntime
-from mediamop.refiner.refiner_tv_season_folder_cleanup import (
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.manager_queue_signals import report_for_signals
+from weir.refiner.refiner_path_settings_service import RefinerPathRuntime
+from weir.refiner.refiner_tv_season_folder_cleanup import (
     get_tv_episode_set_media_files,
     handle_tv_cleanup_after_success,
 )
-from tests.manager_signal_helpers import reported, unreachable
 
 
 def _quiet_manager(_session, _settings, *, media_scope):
@@ -88,15 +88,15 @@ def test_tv_cleanup_skips_when_a_manager_is_unreachable(tmp_path: Path, monkeypa
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     def _boom(_s, _settings, *, media_scope):
-        signals = (unreachable(kind="sonarr", detail="MediaMop could not reach Sonarr (Main) (connection refused)."),)
+        signals = (unreachable(kind="sonarr", detail="Weir could not reach Sonarr (Main) (connection refused)."),)
         return signals, report_for_signals(signals)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _boom,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -126,7 +126,7 @@ def test_tv_cleanup_skips_when_a_manager_is_unreachable(tmp_path: Path, monkeypa
 def test_tv_cleanup_blocked_by_active_other_tv_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _sqlite_session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
     home = tmp_path / "h"
@@ -153,7 +153,7 @@ def test_tv_cleanup_blocked_by_active_other_tv_job(tmp_path: Path, monkeypatch: 
     )
     session.commit()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -206,12 +206,12 @@ def test_tv_cleanup_not_blocked_by_movie_scope_job_same_path(tmp_path: Path, mon
     )
     session.commit()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
     handle_tv_cleanup_after_success(
@@ -252,11 +252,11 @@ def test_tv_cleanup_legacy_dry_run_flag_does_not_block_cleanup(tmp_path: Path, m
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -294,11 +294,11 @@ def test_tv_cleanup_season_equals_watched_root_skipped(tmp_path: Path, monkeypat
     (out / "e.mkv").write_bytes(b"y" * 80)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -360,11 +360,11 @@ def test_tv_cleanup_blocked_output_too_small_for_prior_pass(tmp_path: Path, monk
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -415,11 +415,11 @@ def test_tv_cleanup_blocked_when_a_manager_still_holds_a_sibling_episode(
         return signals, report_for_signals(signals)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _fetch,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -465,11 +465,11 @@ def test_tv_cleanup_check4_never_processed_old_sibling_passes(tmp_path: Path, mo
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -512,11 +512,11 @@ def test_tv_cleanup_check4_blocked_when_min_age_not_met(tmp_path: Path, monkeypa
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -581,11 +581,11 @@ def test_tv_cleanup_activity_movie_scope_ignored_for_prior_success(
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -646,11 +646,11 @@ def test_tv_cleanup_failed_tv_activity_does_not_clear_episode(tmp_path: Path, mo
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -714,11 +714,11 @@ def test_tv_cleanup_dry_run_activity_row_does_not_count_as_tv_success(
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -781,11 +781,11 @@ def test_tv_cleanup_blocked_when_prior_tv_success_but_output_missing(
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -827,16 +827,16 @@ def test_tv_cleanup_rmtree_oserror_skips_season(tmp_path: Path, monkeypatch: pyt
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
     def _boom(_path, ignore_errors=False, onerror=None):
         raise OSError("locked")
 
-    monkeypatch.setattr("mediamop.refiner.refiner_tv_season_folder_cleanup.shutil.rmtree", _boom)
+    monkeypatch.setattr("weir.refiner.refiner_tv_season_folder_cleanup.shutil.rmtree", _boom)
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(
@@ -880,11 +880,11 @@ def test_tv_cleanup_cascade_removes_empty_show_folder(tmp_path: Path, monkeypatc
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _quiet_manager,
     )
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
     handle_tv_cleanup_after_success(

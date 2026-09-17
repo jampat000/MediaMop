@@ -115,8 +115,8 @@ export function ServerFolderPickerButton({
                     {title}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--mm-text3)]">
-                    Pick a folder visible to the machine running MediaMop, or
-                    jump to a UNC/Docker path directly.
+                    Pick a folder visible to the machine running Weir, or jump
+                    to a UNC/Docker path directly.
                   </p>
                 </div>
                 <button

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Dead-code guard for MediaMop.
+// Dead-code guard for Weir.
 //
 // Three refactors landed their behaviour change and left the old code in the tree
 // (#328). Nothing caught it, because nothing was looking. This looks.
 //
 //   web     — `ts-prune` for exports nothing imports.
-//   backend — modules under `src/mediamop` that nothing imports.
+//   backend — modules under `src/weir` that nothing imports.
 //
 // Both compare against `scripts/dead-code-allowlist.json` and fail only on entries
 // that are *not* listed. The allowlist is the deliberate part: something kept on
@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = path.join(REPO, "apps", "web");
-const BACKEND_SRC = path.join(REPO, "apps", "backend", "src", "mediamop");
+const BACKEND_SRC = path.join(REPO, "apps", "backend", "src", "weir");
 const BACKEND_TESTS = path.join(REPO, "apps", "backend", "tests");
 // Migrations import product code (0001 seeds singleton rows), so they count as consumers.
 const BACKEND_ALEMBIC = path.join(REPO, "apps", "backend", "alembic");
@@ -68,23 +68,23 @@ function webUnusedExports() {
   };
 }
 
-// `from mediamop.a.b import x`, `import mediamop.a.b`, and `from .sibling import x`
+// `from weir.a.b import x`, `import weir.a.b`, and `from .sibling import x`
 // resolved against the importing module's package.
 function backendImportedModules() {
   const imported = new Set();
   const files = [...walk(BACKEND_SRC, ".py"), ...walk(BACKEND_TESTS, ".py"), ...walk(BACKEND_ALEMBIC, ".py")];
   for (const file of files) {
     const text = readFileSync(file, "utf8");
-    for (const m of text.matchAll(/^\s*(?:from|import)\s+(mediamop[\w.]*)/gm)) {
+    for (const m of text.matchAll(/^\s*(?:from|import)\s+(weir[\w.]*)/gm)) {
       const parts = m[1].split(".");
       // Record the module and every package above it, so importing a leaf keeps its
       // parents alive too.
       for (let i = parts.length; i > 1; i -= 1) imported.add(parts.slice(0, i).join("."));
     }
-    // `from mediamop.a.b import c` may import the *module* c, not a symbol from b.
-    // Both readings keep `mediamop.a.b.c` alive, so record every imported name —
+    // `from weir.a.b import c` may import the *module* c, not a symbol from b.
+    // Both readings keep `weir.a.b.c` alive, so record every imported name —
     // over-counting here only ever means a module is treated as live, never as dead.
-    for (const m of text.matchAll(/^\s*from\s+(mediamop[\w.]*)\s+import\s+(\([^)]*\)|[^\n]*)/gm)) {
+    for (const m of text.matchAll(/^\s*from\s+(weir[\w.]*)\s+import\s+(\([^)]*\)|[^\n]*)/gm)) {
       for (const name of m[2].replace(/[()]/g, " ").split(",")) {
         const symbol = name.trim().split(/\s+/)[0];
         if (/^\w+$/.test(symbol)) imported.add(`${m[1]}.${symbol}`);
@@ -93,7 +93,7 @@ function backendImportedModules() {
     for (const m of text.matchAll(/^\s*from\s+(\.+)(\w[\w.]*)?\s+import\s+/gm)) {
       const rel = path.relative(BACKEND_SRC, path.dirname(file)).split(path.sep).filter(Boolean);
       const up = m[1].length - 1;
-      const base = ["mediamop", ...rel.slice(0, rel.length - up)];
+      const base = ["weir", ...rel.slice(0, rel.length - up)];
       if (m[2]) base.push(...m[2].split("."));
       imported.add(base.join("."));
     }
@@ -107,9 +107,9 @@ function backendUnreferencedModules() {
   for (const file of walk(BACKEND_SRC, ".py")) {
     const rel = path.relative(BACKEND_SRC, file);
     if (path.basename(file) === "__init__.py") continue;
-    const dotted = ["mediamop", ...rel.replace(/\.py$/, "").split(path.sep)].join(".");
+    const dotted = ["weir", ...rel.replace(/\.py$/, "").split(path.sep)].join(".");
     if (!imported.has(dotted)) {
-      findings.push(`apps/backend/src/mediamop/${rel.replace(/\\/g, "/")}`);
+      findings.push(`apps/backend/src/weir/${rel.replace(/\\/g, "/")}`);
     }
   }
   return findings;

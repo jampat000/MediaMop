@@ -3,8 +3,8 @@
 Use when you forgot the admin password or your DB was seeded by integration tests
 (username ``alice``, password ``test-password-strong``).
 
-Uses the SQLite file from ``MEDIAMOP_HOME`` / ``MEDIAMOP_DB_PATH`` (e.g. from ``apps/backend/.env``).
-Refuses to run unless ``MEDIAMOP_ENV`` is ``development`` unless you pass ``--force``.
+Uses the SQLite file from ``WEIR_HOME`` / ``WEIR_DB_PATH`` (e.g. from ``apps/backend/.env``).
+Refuses to run unless ``WEIR_ENV`` is ``development`` unless you pass ``--force``.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def main() -> int:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Allow running when MEDIAMOP_ENV is not development.",
+        help="Allow running when WEIR_ENV is not development.",
     )
     args = parser.parse_args()
 
@@ -57,19 +57,19 @@ def main() -> int:
         from sqlalchemy import delete, select
         from sqlalchemy.orm import Session
 
-        from mediamop.core.config import MediaMopSettings
-        from mediamop.core.db import create_db_engine, create_session_factory
-        from mediamop.platform.auth.models import User, UserSession
+        from weir.core.config import WeirSettings
+        from weir.core.db import create_db_engine, create_session_factory
+        from weir.platform.auth.models import User, UserSession
     except ImportError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
 
     env = (settings.env or "").strip().lower()
     if env != "development" and not args.force:
         print(
-            f"FAIL: MEDIAMOP_ENV is {settings.env!r}, not development. "
+            f"FAIL: WEIR_ENV is {settings.env!r}, not development. "
             "Use --force if you really mean to wipe auth on this database.",
             file=sys.stderr,
         )

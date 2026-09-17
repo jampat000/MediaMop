@@ -6,14 +6,14 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
 from tests.refiner_library_fixtures import seed_refiner_libraries
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
 
 
 def _session_factory(tmp_path: Path) -> sessionmaker[Session]:
@@ -96,7 +96,7 @@ def test_startup_refiner_recovery_removes_hidden_partial_outputs(tmp_path: Path)
     final = nested / "movie.mkv"
     final.write_bytes(b"complete")
 
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     with factory() as session, session.begin():
         seed_refiner_libraries(session, output_folder=str(output))
 

@@ -9,19 +9,19 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.platform.file_lifecycle.guardrails import DiskSpaceCheck
-from mediamop.refiner.file_remux_pass import run as runmod
-from mediamop.refiner.file_remux_pass.visibility import (
+from tests.manager_signal_helpers import reported, truth_reported
+from weir.core.config import WeirSettings
+from weir.platform.file_lifecycle.guardrails import DiskSpaceCheck
+from weir.refiner.file_remux_pass import run as runmod
+from weir.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
     REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
     REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL,
 )
-from mediamop.refiner.manager_queue_signals import report_for_signals
-from mediamop.refiner.refiner_path_settings_service import RefinerPathRuntime
-from mediamop.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
-from tests.manager_signal_helpers import reported, truth_reported
+from weir.refiner.manager_queue_signals import report_for_signals
+from weir.refiner.refiner_path_settings_service import RefinerPathRuntime
+from weir.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
 
 from .test_refiner_tv_season_folder_cleanup import _sqlite_session
 
@@ -70,7 +70,7 @@ def _runtime(
 def test_run_fails_when_watched_root_missing(tmp_path: Path) -> None:
     home = tmp_path / "home"
     home.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     missing = tmp_path / "nope"
     out = tmp_path / "out"
     out.mkdir()
@@ -93,7 +93,7 @@ def test_run_explains_when_the_selected_file_is_missing(tmp_path: Path) -> None:
     media.mkdir()
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
     result = runmod.run_refiner_file_remux_pass(
@@ -116,7 +116,7 @@ def test_run_explains_when_the_selected_file_type_is_not_supported(tmp_path: Pat
     unsupported.write_text("not media", encoding="utf-8")
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
     result = runmod.run_refiner_file_remux_pass(
@@ -143,8 +143,8 @@ def test_run_rejects_audio_only_file_with_video_extension_before_writing(
     out = tmp_path / "out"
     out.mkdir()
     settings = replace(
-        MediaMopSettings.load(),
-        mediamop_home=str(home),
+        WeirSettings.load(),
+        weir_home=str(home),
         refiner_watched_folder_min_file_age_seconds=0,
     )
     runtime = _runtime(media=media, home=home, out=out)
@@ -194,7 +194,7 @@ def test_run_waits_without_probing_when_another_program_has_the_source_open_for_
     source.write_bytes(b"preallocated")
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     runtime = _runtime(media=media, home=home, out=out)
 
     monkeypatch.setattr(
@@ -202,7 +202,7 @@ def test_run_waits_without_probing_when_another_program_has_the_source_open_for_
         "acquire_source_read_guard",
         lambda _path: (
             None,
-            "This file is still open for writing by another program. MediaMop will wait until the downloader closes it.",
+            "This file is still open for writing by another program. Weir will wait until the downloader closes it.",
         ),
     )
     monkeypatch.setattr(
@@ -239,11 +239,11 @@ def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_
     out = tmp_path / "out"
     out.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
     r = runmod.run_refiner_file_remux_pass(
@@ -280,8 +280,8 @@ def test_operator_pass_through_preserves_foreign_audio_and_moves_validated_file_
     out = tmp_path / "out"
     out.mkdir()
     settings = replace(
-        MediaMopSettings.load(),
-        mediamop_home=str(home),
+        WeirSettings.load(),
+        weir_home=str(home),
         refiner_watched_folder_min_file_age_seconds=0,
     )
     runtime = _runtime(media=media, home=home, out=out)
@@ -303,7 +303,7 @@ def test_operator_pass_through_preserves_foreign_audio_and_moves_validated_file_
             ],
         },
     )
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(
         runmod,
         "plan_remux",
@@ -348,8 +348,8 @@ def test_pass_through_uses_validated_hardlink_when_windows_guard_makes_it_safe(
     out = tmp_path / "out"
     out.mkdir()
     settings = replace(
-        MediaMopSettings.load(),
-        mediamop_home=str(home),
+        WeirSettings.load(),
+        weir_home=str(home),
         refiner_watched_folder_min_file_age_seconds=0,
     )
     runtime = _runtime(media=media, home=home, out=out)
@@ -409,7 +409,7 @@ def test_surviving_watched_source_detaches_hardlinked_output(
         src=source,
         final=output,
         method="validated_hardlink",
-        mediamop_home=str(home),
+        weir_home=str(home),
         expected_audio=1,
         expected_duration_seconds=None,
         expected_source_fingerprint=fingerprint,
@@ -437,11 +437,11 @@ def test_live_result_keeps_removed_track_lists_for_activity_detail(
     out = tmp_path / "out"
     out.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(
         runmod,
         "plan_remux",
@@ -484,11 +484,11 @@ def test_live_skips_when_no_remux_required_replaces_existing_output_before_clean
     existing = out_rel / "one.mkv"
     existing.write_bytes(b"tiny")
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
     r = runmod.run_refiner_file_remux_pass(
@@ -512,11 +512,11 @@ def test_live_fails_during_ffmpeg_surfaces_outcome(tmp_path: Path, monkeypatch: 
     out = tmp_path / "out"
     out.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
 
     def _boom(**_kwargs: object) -> object:
@@ -554,7 +554,7 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
     work = tmp_path / "work"
     work.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = RefinerPathRuntime(
         watched_folder=str(media.resolve()),
         output_folder=str(out.resolve()),
@@ -562,8 +562,8 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
         work_folder_is_default=False,
     )
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
 
     tmp_file = work / "t.mkv"
@@ -607,7 +607,7 @@ def test_live_remux_reports_processing_progress(
     work = tmp_path / "work"
     work.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = RefinerPathRuntime(
         watched_folder=str(media.resolve()),
         output_folder=str(out.resolve()),
@@ -617,8 +617,8 @@ def test_live_remux_reports_processing_progress(
 
     probe = _fake_probe()
     probe["format"] = {"duration": "100.0"}
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: probe)
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: probe)
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
 
     tmp_file = work / "t.mkv"
@@ -664,18 +664,18 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
     out_season.mkdir(parents=True)
     (out_season / "ep.mkv").write_bytes(b"b" * 80)
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
     quiet = (reported([], scope="tv", kind="sonarr"),)
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         lambda _s, _settings, *, media_scope: (quiet, report_for_signals(quiet)),
     )
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "weir.refiner.refiner_tv_output_cleanup.collect_library_truth",
         lambda _s, _settings, *, media_scope: (truth_reported([], kind="sonarr"),),
     )
     old = time.time() - 200_000
@@ -721,10 +721,10 @@ def test_movie_live_no_remux_replaces_tiny_existing_output_before_cleanup(
     out_m.mkdir()
     (out_m / "a.mkv").write_bytes(b"tiny")
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
     r = runmod.run_refiner_file_remux_pass(
@@ -756,10 +756,10 @@ def test_movie_live_skips_when_video_sits_directly_under_watched_root(
     out.mkdir()
     (out / "root.mkv").write_bytes(b"y" * 100)
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
     r = runmod.run_refiner_file_remux_pass(
@@ -790,10 +790,10 @@ def test_movie_live_folder_delete_skips_when_rmtree_raises(
     out_x.mkdir()
     (out_x / "a.mkv").write_bytes(b"y" * 120)
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
     def _boom(path: str | Path, *a: object, **k: object) -> None:
@@ -834,10 +834,10 @@ def test_preflight_failure_contract_has_no_cleanup_mutations(
     src.write_bytes(b"x" * 100)
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    def _probe_boom(path: Path, mediamop_home: str, **_kwargs: object) -> dict:
+    def _probe_boom(path: Path, weir_home: str, **_kwargs: object) -> dict:
         raise RuntimeError("probe failure")
 
     monkeypatch.setattr(runmod, "ffprobe_json", _probe_boom)
@@ -867,9 +867,7 @@ def test_preflight_failure_contract_for_age_gate_has_no_cleanup_mutations(tmp_pa
     src.write_bytes(b"x" * 200)
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(
-        MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=999_999
-    )
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=999_999)
     rt = _runtime(media=media, home=home, out=out)
 
     r = runmod.run_refiner_file_remux_pass(
@@ -902,7 +900,7 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
     out_r.mkdir()
     (out_r / "one.mkv").write_bytes(b"z" * 100)
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     work_default = Path(home).resolve() / "refiner" / "work"
     rt = RefinerPathRuntime(
         watched_folder=str(media.resolve()),
@@ -911,8 +909,8 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
         work_folder_is_default=True,
     )
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
 
     tmp_file = work_default / "t.mkv"
@@ -944,7 +942,7 @@ def test_guardrail_skips_below_minimum_size_before_ffprobe(tmp_path: Path, monke
     src.write_bytes(b"x" * 1024)
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
     def _probe_must_not_run(*_args: object, **_kwargs: object) -> dict:
@@ -974,11 +972,11 @@ def test_guardrail_allows_file_at_minimum_size(tmp_path: Path, monkeypatch: pyte
     src.write_bytes(b"x" * 1024 * 1024)
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
     r = runmod.run_refiner_file_remux_pass(
@@ -1004,11 +1002,11 @@ def test_guardrail_skips_before_unchanged_copy_when_output_disk_low(
     src.write_bytes(b"x" * 1024 * 1024)
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    settings = replace(WeirSettings.load(), weir_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
-    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, weir_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, weir_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
     monkeypatch.setattr(
         runmod,

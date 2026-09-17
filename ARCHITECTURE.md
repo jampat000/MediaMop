@@ -1,10 +1,10 @@
-# MediaMop Architecture
+# Weir Architecture
 
 This is the top-level map for agents and contributors. Deeper decisions live in [`docs/adr/`](docs/adr/).
 
 ## Product Shape
 
-MediaMop is a self-hosted media operations app:
+Weir is a self-hosted media operations app:
 
 - **Refiner** remuxes watched media into cleaner outputs. It is configured as any number
   of **libraries** — each a row carrying its own paths, admission rules, schedule,
@@ -17,8 +17,8 @@ MediaMop is a self-hosted media operations app:
   [ADR-0014](docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md). The singleton
   settings rows that libraries replaced were dropped in `0025`, and the scope-shaped
   `path-settings` and `remux-rules-settings` routes that outlived them were removed in #460.
-- **Media managers** are the products MediaMop accepts work from and reports back to.
-  A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting MediaMop's
+- **Media managers** are the products Weir accepts work from and reports back to.
+  A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting Weir's
   own payload) rather than each product having its own routes and columns; every inbound
   event arrives at `POST /api/v1/intake/webhook/{source}`. See
   [ADR-0013](docs/adr/ADR-0013-media-managers-are-kinds-not-products.md).
@@ -30,10 +30,10 @@ MediaMop is a self-hosted media operations app:
 
 ## Runtime Shape
 
-- Backend: FastAPI, SQLite, Alembic, Python package under `apps/backend/src/mediamop`.
+- Backend: FastAPI, SQLite, Alembic, Python package under `apps/backend/src/weir`.
 - Frontend: React + Vite under `apps/web/src`.
 - Packaging: Docker and Windows installer workflows.
-- Runtime data: `MEDIAMOP_HOME`.
+- Runtime data: `WEIR_HOME`.
 
 ```mermaid
 flowchart LR
@@ -48,12 +48,12 @@ flowchart LR
 
 ## Backend Map
 
-- `mediamop.api`: FastAPI app factory, router composition, request dependencies.
-- `mediamop.core`: config, runtime paths, database setup, lifespan, logging, schema revision checks.
-- `mediamop.platform`: shared product services such as auth, activity, jobs, local browse, settings, observability, and suite settings.
-- `mediamop.refiner`: the application — libraries, files, durable jobs and workers, remux passes.
-- `mediamop.integrations`: external service integration code.
-- `mediamop.windows`: Windows tray and package-specific helpers.
+- `weir.api`: FastAPI app factory, router composition, request dependencies.
+- `weir.core`: config, runtime paths, database setup, lifespan, logging, schema revision checks.
+- `weir.platform`: shared product services such as auth, activity, jobs, local browse, settings, observability, and suite settings.
+- `weir.refiner`: the application — libraries, files, durable jobs and workers, remux passes.
+- `weir.integrations`: external service integration code.
+- `weir.windows`: Windows tray and package-specific helpers.
 
 ## Frontend Map
 
@@ -70,7 +70,7 @@ flowchart LR
 - Refiner code should keep destructive or irreversible behavior behind explicit services and tests.
 - Backend APIs should expose typed schemas at boundaries instead of inferred shapes.
 - Frontend pages should use typed API/query helpers from `src/lib` rather than ad hoc fetch calls.
-- Cross-cutting runtime concerns belong in `mediamop.platform` or `mediamop.core`, not inside Refiner implementation details.
+- Cross-cutting runtime concerns belong in `weir.platform` or `weir.core`, not inside Refiner implementation details.
 - File lifecycle changes must preserve the safety contract in [`docs/file-lifecycle-contract.md`](docs/file-lifecycle-contract.md).
 
 ## Job Lifecycle

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mediamop.refiner.domain import FileAnchorCandidate, RefinerQueueRowView
-from mediamop.refiner.manager_queue_signals import AttributedQueueRow
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
+from tests.manager_signal_helpers import reported, unreachable
+from weir.refiner.domain import FileAnchorCandidate, RefinerQueueRowView
+from weir.refiner.manager_queue_signals import AttributedQueueRow
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
     evaluate_watched_media_file_for_dispatch,
     merge_queue_views_for_watched_file,
     verdict_for_watched_scan_file,
 )
-from tests.manager_signal_helpers import reported, unreachable
 
 
 def _row(label: str, view: RefinerQueueRowView) -> AttributedQueueRow:
@@ -87,7 +87,7 @@ def test_verdict_wait_upstream_names_the_connection_not_the_vendor() -> None:
     cand = FileAnchorCandidate(title="Gate Test 2001", year=None)
     outcome = verdict_for_watched_scan_file(rows, candidate=cand)
     assert outcome.verdict == "wait_upstream"
-    assert outcome.blocked_reason == "Deluno (Main) is still importing this file, so MediaMop left it alone for now."
+    assert outcome.blocked_reason == "Deluno (Main) is still importing this file, so Weir left it alone for now."
 
 
 def test_explicit_applies_row_owns_without_anchor_match() -> None:

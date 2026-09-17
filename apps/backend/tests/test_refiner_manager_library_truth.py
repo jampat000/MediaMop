@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mediamop.refiner.manager_library_truth import evaluate_library_truth_for_folder
 from tests.manager_signal_helpers import truth_no_signal, truth_reported, truth_unreachable
+from weir.refiner.manager_library_truth import evaluate_library_truth_for_folder
 
 
 def test_no_manager_connected_never_clears_a_delete(tmp_path: Path) -> None:
@@ -44,13 +44,13 @@ def test_one_manager_keeping_a_file_inside_the_folder_blocks_the_delete(tmp_path
 def test_an_unreachable_manager_blocks_the_delete_and_is_named(tmp_path: Path) -> None:
     answers = [
         truth_reported([], name="1080p", connection_id=1),
-        truth_unreachable(name="4K", connection_id=2, detail="MediaMop could not reach Radarr (4K)."),
+        truth_unreachable(name="4K", connection_id=2, detail="Weir could not reach Radarr (4K)."),
     ]
     verdict = evaluate_library_truth_for_folder(answers, folder=tmp_path, media_scope="movie")
     assert verdict.check == "skipped"
     assert verdict.clears_delete is False
     assert "could not confirm with Radarr (4K)" in verdict.note
-    assert "MediaMop could not reach Radarr (4K)." in verdict.note
+    assert "Weir could not reach Radarr (4K)." in verdict.note
 
 
 def test_a_manager_that_cannot_report_library_truth_also_blocks_the_delete(tmp_path: Path) -> None:

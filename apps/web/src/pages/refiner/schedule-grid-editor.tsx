@@ -77,7 +77,7 @@ export function ScheduleGridEditor({
       <p className="text-xs text-[var(--mm-text3)]">
         {unrestricted
           ? "No schedule set — this library runs at any time. Select hours to limit it."
-          : "Selected hours are when MediaMop may start work. Work already running finishes."}
+          : "Selected hours are when Weir may start work. Work already running finishes."}
       </p>
       <div
         className="mm-schedule-grid-body"

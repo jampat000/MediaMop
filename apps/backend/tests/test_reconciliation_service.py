@@ -8,16 +8,16 @@ import pytest
 from sqlalchemy import delete, update
 from starlette.testclient import TestClient
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.reconciliation.service import build_reconciliation_report, repair_reconciliation_issue
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
 from tests.refiner_library_fixtures import seed_refiner_libraries
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.reconciliation.service import build_reconciliation_report, repair_reconciliation_issue
 
 
 def _fac():
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     return create_session_factory(eng)
 

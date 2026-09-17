@@ -19,17 +19,17 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.refiner import refiner_movie_output_cleanup as mod
-from mediamop.refiner.refiner_movie_output_cleanup import (
+import weir.refiner.jobs_model  # noqa: F401
+from tests.manager_signal_helpers import truth_no_signal, truth_unreachable
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.refiner import refiner_movie_output_cleanup as mod
+from weir.refiner.refiner_movie_output_cleanup import (
     _cascade_delete_empty_parents_under_output_root,
     maybe_run_movie_output_folder_cleanup_after_remux,
     newest_mtime_seconds_under_tree,
 )
-from mediamop.refiner.refiner_path_settings_service import RefinerPathRuntime
-from tests.manager_signal_helpers import truth_no_signal, truth_unreachable
+from weir.refiner.refiner_path_settings_service import RefinerPathRuntime
 
 
 def _session(tmp_path: Path) -> Session:
@@ -42,8 +42,8 @@ def _session(tmp_path: Path) -> Session:
     return sessionmaker(bind=engine, class_=Session, autoflush=False, autocommit=False, future=True)()
 
 
-def _settings(*, min_out_age: int = 0) -> MediaMopSettings:
-    return replace(MediaMopSettings.load(), refiner_movie_output_cleanup_min_age_seconds=min_out_age)
+def _settings(*, min_out_age: int = 0) -> WeirSettings:
+    return replace(WeirSettings.load(), refiner_movie_output_cleanup_min_age_seconds=min_out_age)
 
 
 def _tree(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
@@ -191,7 +191,7 @@ def test_manager_unreachable_refuses_rather_than_assuming_empty(
     monkeypatch.setattr(
         mod,
         "collect_library_truth",
-        lambda _s, _c, *, media_scope: (truth_unreachable(detail="MediaMop could not reach Radarr (Main)."),),
+        lambda _s, _c, *, media_scope: (truth_unreachable(detail="Weir could not reach Radarr (Main)."),),
     )
 
     out = _run(_session(tmp_path), _runtime(watched, output, tmp_path), watched, src, final)

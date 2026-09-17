@@ -1,0 +1,305 @@
+"""Application lifespan — wiring only; no business logic."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from weir.core.alembic_revision_check import ensure_database_at_application_head
+from weir.core.config import WeirSettings
+from weir.core.db import (
+    create_db_engine,
+    create_session_factory,
+    dispose_engine,
+)
+from weir.core.logging import configure_logging
+from weir.platform.auth.rate_limit import SlidingWindowLimiter
+from weir.platform.auth.service import cleanup_inactive_sessions
+from weir.platform.auth.session_cleanup import start_session_cleanup_task, stop_session_cleanup_task
+from weir.platform.jobs.job_rows_retention_periodic import (
+    start_job_rows_retention_tasks,
+    stop_job_rows_retention_tasks,
+)
+from weir.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
+from weir.platform.suite_settings.logs_retention_periodic import (
+    start_log_retention_tasks,
+    stop_log_retention_tasks,
+)
+from weir.platform.suite_settings.logs_service import prune_logs_for_retention
+from weir.platform.suite_settings.suite_configuration_backup_periodic import (
+    start_suite_configuration_backup_tasks,
+    stop_suite_configuration_backup_tasks,
+)
+from weir.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
+from weir.refiner.refiner_failure_cleanup_periodic_enqueue import (
+    start_refiner_failure_cleanup_enqueue_tasks,
+    stop_refiner_failure_cleanup_enqueue_tasks,
+)
+from weir.refiner.refiner_file_log_retention_periodic import (
+    start_refiner_file_log_retention_tasks,
+    stop_refiner_file_log_retention_tasks,
+)
+from weir.refiner.refiner_job_handlers import build_refiner_job_handlers
+from weir.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
+    start_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks,
+    stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks,
+)
+from weir.refiner.refiner_watched_folder_watcher import (
+    start_refiner_watched_folder_watcher_tasks,
+    stop_refiner_watched_folder_watcher_tasks,
+)
+from weir.refiner.refiner_work_temp_stale_sweep_periodic_enqueue import (
+    start_refiner_work_temp_stale_sweep_enqueue_tasks,
+    stop_refiner_work_temp_stale_sweep_enqueue_tasks,
+)
+from weir.refiner.worker_loop import (
+    start_refiner_worker_background_tasks,
+    stop_refiner_worker_background_tasks,
+)
+
+_lifespan_log = logging.getLogger(__name__)
+
+
+def _run_non_essential_startup_step(name: str, step) -> None:
+    try:
+        step()
+    except Exception:
+        _lifespan_log.exception("Weir startup step failed but startup will continue step=%s", name)
+
+
+async def _stop_task_group(name: str, step) -> None:
+    try:
+        await step()
+    except Exception:
+        _lifespan_log.exception("Weir shutdown step failed step=%s", name)
+
+
+def _warn_startup_misconfigurations(settings: WeirSettings) -> None:
+    """Log actionable warnings for common misconfigurations at startup."""
+
+    if not settings.session_secret:
+        _lifespan_log.warning(
+            "WEIR_SESSION_SECRET is not set — all authentication endpoints will return HTTP 503. "
+            "Set this to a long random string before starting Weir."
+        )
+
+    cred = (settings.credentials_secret or "").strip()
+    if cred and len(cred) < 32:
+        _lifespan_log.warning(
+            "WEIR_CREDENTIALS_SECRET is set but shorter than 32 characters (%d chars). "
+            "Use a long random string to protect stored credentials.",
+            len(cred),
+        )
+    elif not cred and settings.env == "production":
+        _lifespan_log.warning(
+            "WEIR_CREDENTIALS_SECRET is not set — stored provider credentials will fall back to "
+            "session-secret encryption. Set a dedicated credentials secret for stronger isolation."
+        )
+
+    if not settings.trusted_browser_origins and settings.env == "production":
+        _lifespan_log.warning(
+            "WEIR_CORS_ORIGINS is not set — the Origin/Referer CSRF check on auth endpoints is "
+            "disabled. Set WEIR_CORS_ORIGINS to the Weir URL to enable this defence."
+        )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    app.state.startup_started_at = time.monotonic()
+    app.state.startup_ready = False
+    settings = WeirSettings.load()
+    app.state.settings = settings
+    app.state.auth_login_rate_limiter = SlidingWindowLimiter(
+        max_events=settings.auth_login_rate_max_attempts,
+        window_seconds=float(settings.auth_login_rate_window_seconds),
+    )
+    app.state.bootstrap_rate_limiter = SlidingWindowLimiter(
+        max_events=settings.bootstrap_rate_max_attempts,
+        window_seconds=float(settings.bootstrap_rate_window_seconds),
+    )
+    configure_logging(settings)
+    _warn_startup_misconfigurations(settings)
+    engine = create_db_engine(settings)
+    ensure_database_at_application_head(engine)
+    app.state.engine = engine
+    session_factory = create_session_factory(engine)
+    app.state.session_factory = session_factory
+    with session_factory() as session:
+        with session.begin():
+            recovered = recover_incomplete_jobs_after_startup(session)
+            partial_outputs_removed = cleanup_refiner_partial_output_files(session, settings)
+            _run_non_essential_startup_step("log_retention_prune", lambda: prune_logs_for_retention(session, settings))
+            _run_non_essential_startup_step(
+                "inactive_session_cleanup",
+                lambda: cleanup_inactive_sessions(session, settings=settings),
+            )
+        if recovered.total_recovered or partial_outputs_removed:
+            _lifespan_log.warning(
+                "Weir startup recovered interrupted work recovered_jobs=%s partial_outputs_removed=%s",
+                recovered.as_log_dict(),
+                partial_outputs_removed,
+            )
+    stop = asyncio.Event()
+    session_cleanup_task = None
+    log_retention_tasks: list[asyncio.Task[None]] = []
+    job_rows_retention_tasks: list[asyncio.Task[None]] = []
+    refiner_watched_folder_scan_dispatch_tasks: list[asyncio.Task[None]] = []
+    refiner_watched_folder_watcher_tasks: list[asyncio.Task[None]] = []
+    refiner_file_log_retention_tasks: list[asyncio.Task[None]] = []
+    refiner_work_temp_stale_sweep_tasks: list[asyncio.Task[None]] = []
+    refiner_failure_cleanup_tasks: list[asyncio.Task[None]] = []
+    refiner_handlers = build_refiner_job_handlers(settings, session_factory)
+
+    def _refiner_max_concurrent_files() -> int:
+        with session_factory() as session:
+            row = ensure_refiner_operator_settings_row(session)
+            return max(1, min(8, int(row.max_concurrent_files)))
+
+    refiner_stop = None
+    refiner_worker_tasks: list[asyncio.Task[None]] = []
+    suite_configuration_backup_tasks: list[asyncio.Task[None]] = []
+
+    def _start_session_cleanup_task() -> None:
+        nonlocal session_cleanup_task
+        session_cleanup_task = start_session_cleanup_task(session_factory, stop_event=stop, settings=settings)
+
+    def _start_log_retention_tasks() -> None:
+        nonlocal log_retention_tasks
+        log_retention_tasks = start_log_retention_tasks(session_factory, stop_event=stop, settings=settings)
+
+    def _start_job_rows_retention_tasks() -> None:
+        nonlocal job_rows_retention_tasks
+        job_rows_retention_tasks = start_job_rows_retention_tasks(session_factory, stop_event=stop, settings=settings)
+
+    def _start_refiner_watched_folder_scan_dispatch_tasks() -> None:
+        nonlocal refiner_watched_folder_scan_dispatch_tasks
+        refiner_watched_folder_scan_dispatch_tasks = start_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(
+            session_factory,
+            stop_event=stop,
+            settings=settings,
+        )
+
+    def _start_refiner_file_log_retention_tasks() -> None:
+        nonlocal refiner_file_log_retention_tasks
+        refiner_file_log_retention_tasks = start_refiner_file_log_retention_tasks(
+            session_factory,
+            stop_event=stop,
+            settings=settings,
+        )
+
+    def _start_refiner_watched_folder_watcher_tasks() -> None:
+        nonlocal refiner_watched_folder_watcher_tasks
+        if not settings.refiner_watcher_enabled:
+            return
+        refiner_watched_folder_watcher_tasks = start_refiner_watched_folder_watcher_tasks(
+            session_factory,
+            stop_event=stop,
+            settings=settings,
+        )
+
+    def _start_refiner_work_temp_stale_sweep_tasks() -> None:
+        nonlocal refiner_work_temp_stale_sweep_tasks
+        refiner_work_temp_stale_sweep_tasks = start_refiner_work_temp_stale_sweep_enqueue_tasks(
+            session_factory,
+            stop_event=stop,
+            settings=settings,
+        )
+
+    def _start_refiner_failure_cleanup_tasks() -> None:
+        nonlocal refiner_failure_cleanup_tasks
+        refiner_failure_cleanup_tasks = start_refiner_failure_cleanup_enqueue_tasks(
+            session_factory,
+            stop_event=stop,
+            settings=settings,
+        )
+
+    def _start_refiner_workers() -> None:
+        nonlocal refiner_stop, refiner_worker_tasks
+        refiner_stop, refiner_worker_tasks = start_refiner_worker_background_tasks(
+            session_factory,
+            settings,
+            stop_event=stop,
+            job_handlers=refiner_handlers,
+            max_concurrent_files_getter=_refiner_max_concurrent_files,
+        )
+
+    def _start_suite_configuration_backup_tasks() -> None:
+        nonlocal suite_configuration_backup_tasks
+        suite_configuration_backup_tasks = start_suite_configuration_backup_tasks(
+            session_factory,
+            stop_event=stop,
+            settings=settings,
+        )
+
+    _run_non_essential_startup_step("session_cleanup_task_start", _start_session_cleanup_task)
+    _run_non_essential_startup_step("log_retention_tasks_start", _start_log_retention_tasks)
+    _run_non_essential_startup_step("job_rows_retention_tasks_start", _start_job_rows_retention_tasks)
+    _run_non_essential_startup_step(
+        "refiner_watched_folder_scan_dispatch_start",
+        _start_refiner_watched_folder_scan_dispatch_tasks,
+    )
+    _run_non_essential_startup_step(
+        "refiner_file_log_retention_start",
+        _start_refiner_file_log_retention_tasks,
+    )
+    _run_non_essential_startup_step(
+        "refiner_watched_folder_watcher_start",
+        _start_refiner_watched_folder_watcher_tasks,
+    )
+    _run_non_essential_startup_step("refiner_work_temp_stale_sweep_start", _start_refiner_work_temp_stale_sweep_tasks)
+    _run_non_essential_startup_step("refiner_failure_cleanup_start", _start_refiner_failure_cleanup_tasks)
+    _run_non_essential_startup_step("refiner_worker_start", _start_refiner_workers)
+    _run_non_essential_startup_step("suite_configuration_backup_start", _start_suite_configuration_backup_tasks)
+    app.state.startup_ready = True
+    try:
+        yield
+    finally:
+        app.state.startup_ready = False
+        stop.set()
+        await _stop_task_group(
+            "refiner_watched_folder_scan_dispatch_stop",
+            lambda: stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(
+                refiner_watched_folder_scan_dispatch_tasks
+            ),
+        )
+        await _stop_task_group(
+            "refiner_file_log_retention_stop",
+            lambda: stop_refiner_file_log_retention_tasks(refiner_file_log_retention_tasks),
+        )
+        await _stop_task_group(
+            "refiner_watched_folder_watcher_stop",
+            lambda: stop_refiner_watched_folder_watcher_tasks(refiner_watched_folder_watcher_tasks),
+        )
+        await _stop_task_group(
+            "refiner_work_temp_stale_sweep_stop",
+            lambda: stop_refiner_work_temp_stale_sweep_enqueue_tasks(refiner_work_temp_stale_sweep_tasks),
+        )
+        await _stop_task_group(
+            "refiner_failure_cleanup_stop",
+            lambda: stop_refiner_failure_cleanup_enqueue_tasks(refiner_failure_cleanup_tasks),
+        )
+        await _stop_task_group(
+            "suite_configuration_backup_stop",
+            lambda: stop_suite_configuration_backup_tasks(suite_configuration_backup_tasks),
+        )
+        if session_cleanup_task is not None:
+            await _stop_task_group("session_cleanup_task_stop", lambda: stop_session_cleanup_task(session_cleanup_task))
+        await _stop_task_group("log_retention_tasks_stop", lambda: stop_log_retention_tasks(log_retention_tasks))
+        await _stop_task_group(
+            "job_rows_retention_tasks_stop",
+            lambda: stop_job_rows_retention_tasks(job_rows_retention_tasks),
+        )
+        if refiner_stop is not None:
+            await _stop_task_group(
+                "refiner_worker_stop",
+                lambda: stop_refiner_worker_background_tasks(refiner_stop, refiner_worker_tasks),
+            )
+        dispose_engine(app.state.engine)
+        app.state.engine = None
+        app.state.session_factory = None

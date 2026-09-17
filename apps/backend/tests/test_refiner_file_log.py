@@ -20,21 +20,21 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.refiner.refiner_file_log_model  # noqa: F401
-import mediamop.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.refiner.refiner_library_model  # noqa: F401
-import mediamop.refiner.refiner_operator_settings_model  # noqa: F401
-from mediamop.core.db import Base
-from mediamop.refiner.refiner_file_log_model import RefinerFileLogRow
-from mediamop.refiner.refiner_file_log_service import (
+import weir.refiner.refiner_file_log_model  # noqa: F401
+import weir.refiner.refiner_file_state_model  # noqa: F401
+import weir.refiner.refiner_library_model  # noqa: F401
+import weir.refiner.refiner_operator_settings_model  # noqa: F401
+from weir.core.db import Base
+from weir.refiner.refiner_file_log_model import RefinerFileLogRow
+from weir.refiner.refiner_file_log_service import (
     MAX_DETAIL_CHARS,
     logs_for_file,
     prune_file_logs,
     record_file_log,
     render_log_text,
 )
-from mediamop.refiner.refiner_file_state_model import RefinerFileRow
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_file_state_model import RefinerFileRow
+from weir.refiner.refiner_library_model import RefinerLibraryRow
 
 NOW = datetime(2026, 8, 26, 14, 0, tzinfo=UTC)
 

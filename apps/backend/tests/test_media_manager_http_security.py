@@ -9,7 +9,7 @@ import urllib.request
 
 import pytest
 
-from mediamop.platform.media_managers.manager_http import (
+from weir.platform.media_managers.manager_http import (
     MediaManagerHttpClient,
     MediaManagerHttpError,
     MediaManagerRateLimitedError,
@@ -118,8 +118,8 @@ def test_a_refused_queue_delete_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_the_queue_dialect_removes_and_blocklists_one_item(monkeypatch: pytest.MonkeyPatch) -> None:
     """Sonarr/Radarr openapi.json: DELETE /api/v3/queue/{id}, removeFromClient + blocklist, skipRedownload left false."""
 
-    from mediamop.platform.media_managers.manager_dialects import port_for_kind
-    from mediamop.platform.media_managers.manager_port import ManagerConnection
+    from weir.platform.media_managers.manager_dialects import port_for_kind
+    from weir.platform.media_managers.manager_port import ManagerConnection
 
     calls: list[tuple[str, dict | None]] = []
     monkeypatch.setattr(MediaManagerHttpClient, "delete", lambda self, path, params=None: calls.append((path, params)))
@@ -134,8 +134,8 @@ def test_the_queue_dialect_removes_and_blocklists_one_item(monkeypatch: pytest.M
 
 
 def test_a_handoff_manager_does_not_remove_queue_items() -> None:
-    from mediamop.platform.media_managers.manager_dialects import port_for_kind
-    from mediamop.platform.media_managers.manager_port import ManagerConnection
+    from weir.platform.media_managers.manager_dialects import port_for_kind
+    from weir.platform.media_managers.manager_port import ManagerConnection
 
     port = port_for_kind("deluno")
     assert port is not None and port.capabilities().removes_queue_items is False

@@ -53,8 +53,8 @@ function Write-BuildPhaseSummary {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..")).Path
 $backendDir = Join-Path $repoRoot "apps\\backend"
 $webDir = Join-Path $repoRoot "apps\\web"
-$trayDir = Join-Path $repoRoot "apps\\tray\\MediaMop.Tray"
-$serverSpecPath = Join-Path $PSScriptRoot "mediamop-server.spec"
+$trayDir = Join-Path $repoRoot "apps\\tray\\Weir.Tray"
+$serverSpecPath = Join-Path $PSScriptRoot "weir-server.spec"
 $distRoot = Join-Path $repoRoot "dist\\windows"
 $velopackOut = Join-Path $distRoot "releases"
 $trayPublishDir = Join-Path $distRoot "tray-publish"
@@ -146,7 +146,7 @@ function Get-ExpectedFfmpegSha256 {
   # A few KB, against ~90 MB for the archive. Worth fetching every time so the
   # rolling "latest" build is still tracked, rather than pinning whatever was
   # vendored first.
-  $checksumsPath = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-ffmpeg-checksums-" + [System.Guid]::NewGuid().ToString("N") + ".sha256")
+  $checksumsPath = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-ffmpeg-checksums-" + [System.Guid]::NewGuid().ToString("N") + ".sha256")
   try {
     Invoke-WebRequest -Uri $ffmpegChecksumsUrl -OutFile $checksumsPath -UseBasicParsing
     $checksumsText = Get-Content -LiteralPath $checksumsPath -Raw
@@ -184,7 +184,7 @@ function Ensure-WindowsFfmpegRuntime {
     Write-Host "Vendored FFmpeg is stale (have $vendoredSha256, want $expectedSha256); refreshing."
   }
 
-  $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-ffmpeg-" + [System.Guid]::NewGuid().ToString("N"))
+  $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-ffmpeg-" + [System.Guid]::NewGuid().ToString("N"))
   $archivePath = Join-Path $downloadRoot $ffmpegArchiveName
   $checksumsPath = Join-Path $downloadRoot "checksums.sha256"
   $extractRoot = Join-Path $downloadRoot "extract"
@@ -230,8 +230,8 @@ function Ensure-WindowsFfmpegRuntime {
 
 # ── Resolve version from backend pyproject.toml ──
 $backendProjectVersion = ((Get-Content -Path (Join-Path $backendDir "pyproject.toml")) | Where-Object { $_ -match '^version = ' } | Select-Object -First 1).Split('"')[1]
-$buildVersion = if ($env:MEDIAMOP_BUILD_VERSION) {
-  $env:MEDIAMOP_BUILD_VERSION
+$buildVersion = if ($env:WEIR_BUILD_VERSION) {
+  $env:WEIR_BUILD_VERSION
 } else {
   $backendProjectVersion
 }
@@ -239,7 +239,7 @@ if ($buildVersion.StartsWith("v")) {
   $buildVersion = $buildVersion.Substring(1)
 }
 if ($buildVersion -ne $backendProjectVersion) {
-  throw "MEDIAMOP_BUILD_VERSION '$buildVersion' does not match backend project version '$backendProjectVersion'."
+  throw "WEIR_BUILD_VERSION '$buildVersion' does not match backend project version '$backendProjectVersion'."
 }
 
 # ── Python venv ──
@@ -257,7 +257,7 @@ if (-not (Test-Path $py)) {
 # ── Web build ──
 Start-BuildPhase "Web build"
 if (-not $SkipWebBuild) {
-  $webBuildRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-web-build-" + [System.Guid]::NewGuid().ToString("N"))
+  $webBuildRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-web-build-" + [System.Guid]::NewGuid().ToString("N"))
   $webBuildWebDir = Join-Path $webBuildRoot "apps\\web"
   $webBuildScriptsDir = Join-Path $webBuildRoot "scripts"
   try {
@@ -310,12 +310,12 @@ try {
   # direct pip.exe invocation refuses to upgrade the interpreter that launched it.
   Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--require-hashes", "--upgrade", "-r", "requirements.lock")
   Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--no-deps", "--no-build-isolation", "--upgrade", "--force-reinstall", "-e", ".")
-  $installedBackendVersion = (& $py -c "import importlib.metadata as m; print(m.version('mediamop-backend'))").Trim()
+  $installedBackendVersion = (& $py -c "import importlib.metadata as m; print(m.version('weir-backend'))").Trim()
   if (-not $installedBackendVersion) {
-    throw "Could not resolve installed mediamop-backend version after editable install."
+    throw "Could not resolve installed weir-backend version after editable install."
   }
   if ($installedBackendVersion -ne $backendProjectVersion) {
-    throw "Installed mediamop-backend version '$installedBackendVersion' does not match backend project version '$backendProjectVersion'."
+    throw "Installed weir-backend version '$installedBackendVersion' does not match backend project version '$backendProjectVersion'."
   }
   $pyinstaller = Resolve-VenvExecutable -ScriptsDir $venvScriptsDir -NamePattern "pyinstaller*.exe" -MissingMessage "pyinstaller launcher was not installed in the backend virtual environment."
 } finally {
@@ -352,14 +352,14 @@ try {
   Pop-Location
 }
 
-$serverOutputDir = Join-Path $distRoot "MediaMopServer"
-$serverExe = Join-Path $serverOutputDir "MediaMopServer.exe"
+$serverOutputDir = Join-Path $distRoot "WeirServer"
+$serverExe = Join-Path $serverOutputDir "WeirServer.exe"
 if (-not (Test-Path -LiteralPath $serverExe)) {
   throw "Expected packaged executable was not found: $serverExe"
 }
 $serverVersion = (& $serverExe --version).Trim()
 if ($serverVersion -ne $buildVersion) {
-  throw "Packaged MediaMopServer.exe reports version '$serverVersion' but expected build version is '$buildVersion'."
+  throw "Packaged WeirServer.exe reports version '$serverVersion' but expected build version is '$buildVersion'."
 }
 
 # ── .NET tray app publish ──
@@ -394,7 +394,7 @@ Copy-Item -Path (Join-Path $serverOutputDir "*") -Destination $serverDestDir -Re
 # ── vpk pack ──
 Start-BuildPhase "vpk pack"
 Write-Host "Running vpk pack..."
-$trayProjectPath = Join-Path $trayDir "MediaMop.Tray.csproj"
+$trayProjectPath = Join-Path $trayDir "Weir.Tray.csproj"
 [xml]$trayProject = Get-Content -LiteralPath $trayProjectPath -Raw
 $velopackReference = @($trayProject.Project.ItemGroup.PackageReference) |
   Where-Object { $_.Include -eq "Velopack" } |
@@ -423,12 +423,12 @@ if (-not (Test-Path -LiteralPath $vpkExe)) {
 
 Invoke-Native -FilePath $vpkExe -ArgumentList @(
   "pack",
-  "--packId", "MediaMop",
+  "--packId", "Weir",
   "--packVersion", $buildVersion,
   "--packDir", $packDir,
-  "--mainExe", "MediaMop.exe",
+  "--mainExe", "Weir.exe",
   "--outputDir", $velopackOut,
-  "--icon", (Join-Path $PSScriptRoot "assets\\mediamop-tray-icon.ico")
+  "--icon", (Join-Path $PSScriptRoot "assets\\weir-tray-icon.ico")
 )
 
 Write-Host ""

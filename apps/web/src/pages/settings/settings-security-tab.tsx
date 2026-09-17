@@ -61,9 +61,9 @@ export function SettingsSecurityTab() {
     >
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          Change your MediaMop password here. Sign-in cookie, HTTPS, and
-          rate-limit settings follow the server configuration at startup - they
-          are not edited in this UI.
+          Change your Weir password here. Sign-in cookie, HTTPS, and rate-limit
+          settings follow the server configuration at startup - they are not
+          edited in this UI.
         </p>
       </div>
       <section
@@ -388,7 +388,7 @@ export function SettingsSecurityTab() {
           Change username
         </h2>
         <p className="mm-card__body text-sm text-[var(--mm-text2)]">
-          MediaMop has one account. Signing in ignores capitalisation, so{" "}
+          Weir has one account. Signing in ignores capitalisation, so{" "}
           <code>admin</code> and <code>Admin</code> are the same name.
         </p>
         <div className="mm-card__body space-y-3">
@@ -480,7 +480,7 @@ export function SettingsSecurityTab() {
           Change password
         </h2>
         <p className="mm-card__body text-sm text-[var(--mm-text2)]">
-          Update your sign-in password. After saving, MediaMop requires a fresh
+          Update your sign-in password. After saving, Weir requires a fresh
           sign-in.
         </p>
         <div className="mm-card__body space-y-3">

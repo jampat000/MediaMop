@@ -41,7 +41,7 @@ for (const rel of requiredFiles) {
 
 const readme = readFileSync(path.join(repoRoot, "README.md"), "utf8");
 for (const legacyUpgradeText of [
-  "MediaMop Updater` service",
+  "Weir Updater` service",
   "predates the updater service",
 ]) {
   if (readme.includes(legacyUpgradeText)) {

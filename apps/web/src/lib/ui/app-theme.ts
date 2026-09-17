@@ -1,6 +1,6 @@
 /** Browser-local color theme; not synced to the server and safe to change instantly. */
 
-export const APP_THEME_STORAGE_KEY = "mediamop-app-theme";
+export const APP_THEME_STORAGE_KEY = "weir-app-theme";
 
 export type AppTheme = "dark" | "light";
 

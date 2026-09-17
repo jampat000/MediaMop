@@ -417,7 +417,7 @@ export function RefinerLibrariesSection() {
       setNotice(
         errorText(
           error,
-          "MediaMop could not discover libraries from that manager.",
+          "Weir could not discover libraries from that manager.",
         ),
       );
     }
@@ -454,10 +454,7 @@ export function RefinerLibrariesSection() {
       await drift.mutateAsync(connectionId);
     } catch (error) {
       setNotice(
-        errorText(
-          error,
-          "MediaMop could not compare libraries with that manager.",
-        ),
+        errorText(error, "Weir could not compare libraries with that manager."),
       );
     }
   };
@@ -706,10 +703,10 @@ export function RefinerLibrariesSection() {
                     <p className="text-sm text-[var(--mm-text2)]">
                       {item.detail}
                     </p>
-                    {item.manager_value || item.mediamop_value ? (
+                    {item.manager_value || item.weir_value ? (
                       <p className="break-all text-xs text-[var(--mm-text3)]">
-                        Manager: {item.manager_value || "Not reported"} ·
-                        MediaMop: {item.mediamop_value || "Not configured"}
+                        Manager: {item.manager_value || "Not reported"} · Weir:{" "}
+                        {item.weir_value || "Not configured"}
                       </p>
                     ) : null}
                   </div>
@@ -913,7 +910,7 @@ export function RefinerLibrariesSection() {
                 "Work folder",
                 "work_folder",
                 "",
-                "Leave empty to use MediaMop's private temporary folder.",
+                "Leave empty to use Weir's private temporary folder.",
               )}
             </div>
           </section>
@@ -992,8 +989,7 @@ export function RefinerLibrariesSection() {
                 </select>
                 <span className="mt-1 block text-xs text-[var(--mm-text3)]">
                   Applies after readiness checks to size and path-rule
-                  rejections. MediaMop never deletes a populated parent folder
-                  here.
+                  rejections. Weir never deletes a populated parent folder here.
                 </span>
               </label>
             </div>
@@ -1009,7 +1005,7 @@ export function RefinerLibrariesSection() {
                 File readiness
               </h4>
               <p className="text-xs text-[var(--mm-text3)]">
-                These checks prevent MediaMop from starting while a downloader,
+                These checks prevent Weir from starting while a downloader,
                 recorder, or media manager still owns the file.
               </p>
             </div>
@@ -1153,8 +1149,8 @@ export function RefinerLibrariesSection() {
                 {form.failure_policy === "pass_through"
                   ? "Your media manager still gets the file, exactly as it arrived. The original stays in the watched folder."
                   : form.failure_policy === "hold"
-                    ? "The file stays with MediaMop and will not reach your media manager until you deal with it."
-                    : "MediaMop tells your media manager the release is bad and removes the download once the manager accepts, so it can find a different one. If that cannot be done safely, the original is handed back unchanged instead."}
+                    ? "The file stays with Weir and will not reach your media manager until you deal with it."
+                    : "Weir tells your media manager the release is bad and removes the download once the manager accepts, so it can find a different one. If that cannot be done safely, the original is handed back unchanged instead."}
               </span>
               <span
                 className="block text-xs text-[var(--mm-text3)]"

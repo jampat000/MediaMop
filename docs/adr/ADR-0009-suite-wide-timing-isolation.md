@@ -37,7 +37,7 @@ These require per-family (and per-module) isolation when operators set expectati
 
 ### Worker count and leases
 
-- **`MEDIAMOP_REFINER_WORKER_COUNT`**, **`MEDIAMOP_PRUNER_WORKER_COUNT`**, and **`MEDIAMOP_SUBBER_WORKER_COUNT`** control **throughput and claim ordering** on their respective lanes. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
+- **`WEIR_REFINER_WORKER_COUNT`**, **`WEIR_PRUNER_WORKER_COUNT`**, and **`WEIR_SUBBER_WORKER_COUNT`** control **throughput and claim ordering** on their respective lanes. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
 
 ### Process-internal mechanics (out of scope for “shared contracts”)
 
@@ -55,10 +55,10 @@ Refiner owns ``refiner_jobs`` and in-process Refiner workers. **Each** durable `
 
 Shipped today:
 
-- **`refiner.supplied_payload_evaluation.v1`** — optional periodic enqueue via ``MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_*`` (legacy ``MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_*`` still read when the new keys are absent) and ``refiner_supplied_payload_evaluation_schedule_enabled`` / ``refiner_supplied_payload_evaluation_schedule_interval_seconds`` on ``MediaMopSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”).
+- **`refiner.supplied_payload_evaluation.v1`** — optional periodic enqueue via ``WEIR_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_*`` (legacy ``WEIR_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_*`` still read when the new keys are absent) and ``refiner_supplied_payload_evaluation_schedule_enabled`` / ``refiner_supplied_payload_evaluation_schedule_interval_seconds`` on ``WeirSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”).
 - **`refiner.candidate_gate.v1`** — manual enqueue only in this product pass; **no** shared schedule/cooldown/last-run row with other Refiner families.
 - **`refiner.file.remux_pass.v1`** — manual enqueue only: per-file ffprobe + remux plan (+ optional ffmpeg when ``dry_run`` is false); **no** periodic schedule or shared timing row with other Refiner families. Activity rows carry a structured JSON ``detail`` (outcome, inspected path, plan summary, before/after track lines, ffmpeg argv preview) rendered readably on the Activity page for that event type only.
-- **`refiner.watched_folder.remux_scan_dispatch.v1`** — operator POST manual enqueue **and** optional Refiner-only periodic enqueue via ``MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` plus separate ``PERIODIC_ENQUEUE_REMUX_JOBS`` / ``PERIODIC_REMUX_DRY_RUN`` flags on ``MediaMopSettings`` (not shared with supplied payload evaluation timing). Each run walks the saved watched folder, applies the same ownership/upstream blocking truth as the candidate gate, optionally enqueues remux rows, and writes one activity summary (``scan_trigger``: ``manual`` vs ``periodic``). Periodic tick skips enqueue when a scan job is already ``pending`` or ``leased``.
+- **`refiner.watched_folder.remux_scan_dispatch.v1`** — operator POST manual enqueue **and** optional Refiner-only periodic enqueue via ``WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` plus separate ``PERIODIC_ENQUEUE_REMUX_JOBS`` / ``PERIODIC_REMUX_DRY_RUN`` flags on ``WeirSettings`` (not shared with supplied payload evaluation timing). Each run walks the saved watched folder, applies the same ownership/upstream blocking truth as the candidate gate, optionally enqueues remux rows, and writes one activity summary (``scan_trigger``: ``manual`` vs ``periodic``). Periodic tick skips enqueue when a scan job is already ``pending`` or ``leased``.
 
 ### Pruner (Phase 1)
 
@@ -68,7 +68,7 @@ Shipped today:
 
 - **Lane only** — ``subber_jobs`` and in-process workers; **TV vs Movies** use separate job kinds and separate ``subber_subtitle_state`` rows (never cross-updating scopes).
 - **Webhook + manual search** — immediate ``subber.subtitle_search.*.v1`` jobs; no shared timing with other modules.
-- **Library scan schedule** — optional periodic enqueue reads ``subber_settings`` (per-scope enable, interval, and optional wall-clock window) plus ``MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_*`` on ``MediaMopSettings`` for the asyncio tick cadence only — not shared with Refiner/Pruner schedules.
+- **Library scan schedule** — optional periodic enqueue reads ``subber_settings`` (per-scope enable, interval, and optional wall-clock window) plus ``WEIR_SUBBER_LIBRARY_SCAN_SCHEDULE_*`` on ``WeirSettings`` for the asyncio tick cadence only — not shared with Refiner/Pruner schedules.
 
 Pruner and Subber packages point to ADR-0007 for lane ownership; **this ADR** is the timing addendum for scheduled/cooled families.
 
@@ -93,4 +93,4 @@ If an operator leaves lane-specific env unset, **legacy fallback env** may popul
 ## Related
 
 - [ADR-0007](ADR-0007-module-owned-worker-lanes.md) — module-owned queues and `job_kind` prefixes.
-- [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md) — where lane-specific env maps into `MediaMopSettings`.
+- [ADR-0008](ADR-0008-weir-settings-aggregate-runtime-config.md) — where lane-specific env maps into `WeirSettings`.

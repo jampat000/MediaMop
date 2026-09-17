@@ -83,7 +83,7 @@ export function RefinerDirectPlaySection() {
         <p className="font-semibold">Could not load Direct Play devices</p>
         <p className="mt-1">
           {isLikelyNetworkFailure(q.error)
-            ? "Check that the MediaMop API is running."
+            ? "Check that the Weir API is running."
             : isHttpErrorFromApi(q.error)
               ? "Sign in, then try again."
               : "Request failed."}
@@ -117,15 +117,15 @@ export function RefinerDirectPlaySection() {
       </h2>
       <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
         Shows which of your devices can play each file without your media server
-        converting it. Information only — MediaMop never changes a file because
-        of this.
+        converting it. Information only — Weir never changes a file because of
+        this.
       </p>
       {q.data.customised ? (
         <p
           className="mt-2 max-w-3xl text-[var(--mm-text3)]"
           data-testid="refiner-direct-play-customised"
         >
-          This list comes from your own direct-play-devices.json in the MediaMop
+          This list comes from your own direct-play-devices.json in the Weir
           data folder.
         </p>
       ) : null}

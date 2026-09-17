@@ -1,6 +1,6 @@
-"""A durable record of each hand-off a media manager gave MediaMop (#480).
+"""A durable record of each hand-off a media manager gave Weir (#480).
 
-Deluno stops timing hand-offs out and asks MediaMop about each one instead (Deluno#511). The
+Deluno stops timing hand-offs out and asks Weir about each one instead (Deluno#511). The
 hand-off id used to live only on a job row, and job rows are pruned, so the answer has to live
 somewhere that outlasts them.
 

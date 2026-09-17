@@ -18,13 +18,13 @@ from sqlalchemy import select
 from starlette.testclient import TestClient
 
 from alembic import command
-from mediamop.api.factory import create_app
-from mediamop.refiner.jobs_model import RefinerJob
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
+from weir.api.factory import create_app
+from weir.refiner.jobs_model import RefinerJob
 
 WATCHED_MOVIES = "/srv/handoff/movies"
 WATCHED_TV = "/srv/handoff/tv"
@@ -32,7 +32,7 @@ WATCHED_TV = "/srv/handoff/tv"
 
 @pytest.fixture(autouse=True)
 def _isolated_intake_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    integration_test_set_home(tmp_path, monkeypatch, "mmhome_intake_webhook")
+    integration_test_set_home(tmp_path, monkeypatch, "weirhome_intake_webhook")
     integration_test_quiesce_in_process_workers(monkeypatch)
     integration_test_quiesce_periodic_enqueue(monkeypatch)
     backend = Path(__file__).resolve().parents[1]
@@ -47,7 +47,7 @@ def client() -> TestClient:
 
 
 def _session_factory(client: TestClient):
-    from mediamop.core.db import create_db_engine, create_session_factory
+    from weir.core.db import create_db_engine, create_session_factory
 
     return create_session_factory(create_db_engine(client.app.state.settings))
 
@@ -264,7 +264,7 @@ def test_source_key_is_case_insensitive(client: TestClient) -> None:
 
 
 def test_configured_secret_is_required(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("MEDIAMOP_MEDIA_MANAGER_WEBHOOK_SECRET", "s3cret")
+    monkeypatch.setenv("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "s3cret")
     app = create_app()
     with TestClient(app) as c:
         body = {"eventType": "Grab"}
@@ -282,11 +282,11 @@ def test_the_old_subber_env_name_still_configures_the_secret(
 ) -> None:
     """The setting was named for Subber; the endpoint it guards outlived the name.
 
-    An install that set MEDIAMOP_SUBBER_WEBHOOK_SECRET and never renamed it must keep
+    An install that set WEIR_SUBBER_WEBHOOK_SECRET and never renamed it must keep
     authenticating, because the alternative is a webhook that quietly stops checking.
     """
 
-    monkeypatch.setenv("MEDIAMOP_SUBBER_WEBHOOK_SECRET", "s3cret")
+    monkeypatch.setenv("WEIR_SUBBER_WEBHOOK_SECRET", "s3cret")
     app = create_app()
     with TestClient(app) as c:
         body = {"eventType": "Grab"}

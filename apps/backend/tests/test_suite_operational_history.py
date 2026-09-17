@@ -5,13 +5,13 @@ import json
 from sqlalchemy import select
 from starlette.testclient import TestClient
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 
 def _login(client: TestClient) -> str:
@@ -37,7 +37,7 @@ def test_operational_history_reset_requires_confirmation(client_with_admin: Test
 
 
 def test_operational_history_reset_clears_history_but_keeps_active_work(client_with_admin: TestClient) -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:

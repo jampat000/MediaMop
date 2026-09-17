@@ -1,8 +1,8 @@
 /**
- * "In hand" — what MediaMop is currently responsible for (#463).
+ * "In hand" — what Weir is currently responsible for (#463).
  *
- * MediaMop is a stage in the middle of a pipeline. A media manager downloads a release into a
- * completed folder, MediaMop takes it, works on it, and writes it to an output folder the
+ * Weir is a stage in the middle of a pipeline. A media manager downloads a release into a
+ * completed folder, Weir takes it, works on it, and writes it to an output folder the
  * manager then imports. It never sees the library on your storage, so this screen deliberately
  * never claims to: the subject is **custody**, not a library.
  *
@@ -44,7 +44,7 @@ import {
 } from "../../lib/refiner/queries";
 import { useSystemReadinessQuery } from "../../lib/system/readiness-queries";
 
-/** Statuses that mean the file is MediaMop's responsibility right now. */
+/** Statuses that mean the file is Weir's responsibility right now. */
 const IN_HAND: ReadonlySet<string> = new Set([
   "unprocessed",
   "processing",
@@ -272,7 +272,7 @@ export function InHandPage(): React.ReactElement {
     notices.push({
       key: "setup",
       title: "Nothing to watch yet",
-      body: "MediaMop picks files up from a library's watched folder. Add one, or turn an existing library on.",
+      body: "Weir picks files up from a library's watched folder. Add one, or turn an existing library on.",
       to: "/refiner?tab=libraries",
       action: "Set up a library",
     });
@@ -310,12 +310,12 @@ export function InHandPage(): React.ReactElement {
         </p>
         <h1 className="mm-page__title">In hand</h1>
         <p className="mm-page__lead">
-          Files MediaMop is responsible for right now, between your media
-          manager handing them over and getting them back.
+          Files Weir is responsible for right now, between your media manager
+          handing them over and getting them back.
         </p>
       </header>
 
-      {/* Where MediaMop sits, made literal. Nobody should have to guess. */}
+      {/* Where Weir sits, made literal. Nobody should have to guess. */}
       <section className="mm-inhand-flow" aria-label="Where these files are">
         <div className="mm-inhand-flow__stage">
           <p className="mm-inhand-flow__label">Arriving</p>
@@ -328,7 +328,7 @@ export function InHandPage(): React.ReactElement {
           →
         </div>
         <div className="mm-inhand-flow__stage mm-inhand-flow__stage--active">
-          <p className="mm-inhand-flow__label">In MediaMop&rsquo;s hands</p>
+          <p className="mm-inhand-flow__label">In Weir&rsquo;s hands</p>
           <p className="mm-inhand-flow__figure">{inHandTotal}</p>
           <p className="mm-inhand-flow__detail">
             {working} being worked on right now
@@ -374,8 +374,8 @@ export function InHandPage(): React.ReactElement {
         <section className="mm-inhand-stuck" aria-labelledby="in-hand-stuck">
           <h2 id="in-hand-stuck" className="mm-inhand-stuck__title">
             {stuck.length === 1
-              ? "1 file is stuck in MediaMop's hands"
-              : `${stuck.length} files are stuck in MediaMop's hands`}
+              ? "1 file is stuck in Weir's hands"
+              : `${stuck.length} files are stuck in Weir's hands`}
           </h2>
           <p className="mm-inhand-stuck__body">
             Your media manager will not see these until they are dealt with. The

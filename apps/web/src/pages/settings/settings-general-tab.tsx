@@ -214,8 +214,8 @@ export function SettingsGeneralTab({
                   Log and history retention
                 </h3>
                 <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Decide how long MediaMop keeps system log entries on disk and
-                  how far back Activity history goes.
+                  Decide how long Weir keeps system log entries on disk and how
+                  far back Activity history goes.
                 </p>
               </div>
               <label className="block max-w-md">
@@ -245,7 +245,7 @@ export function SettingsGeneralTab({
                   className="mt-1 text-xs text-[var(--mm-text3)]"
                 >
                   Between 1 and 3650 days. Older system log entries are removed
-                  automatically while MediaMop is running.
+                  automatically while Weir is running.
                 </p>
               </label>
               {settingsData.activity_retention_days !== undefined ? (

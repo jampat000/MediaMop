@@ -18,15 +18,15 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.suite_settings.model  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-import mediamop.refiner.refiner_library_model  # noqa: F401
-from mediamop.core.db import Base
-from mediamop.platform.suite_settings.model import SuiteSettingsRow
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.jobs_ops import claim_next_eligible_refiner_job, refiner_enqueue_or_get_job
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.refiner.refiner_schedule_grid import (
+import weir.platform.suite_settings.model  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+import weir.refiner.refiner_library_model  # noqa: F401
+from weir.core.db import Base
+from weir.platform.suite_settings.model import SuiteSettingsRow
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.jobs_ops import claim_next_eligible_refiner_job, refiner_enqueue_or_get_job
+from weir.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_schedule_grid import (
     SLOTS_PER_DAY,
     SLOTS_PER_WEEK,
     ScheduleGridError,
@@ -36,7 +36,7 @@ from mediamop.refiner.refiner_schedule_grid import (
     normalize_grid,
     slot_index,
 )
-from mediamop.refiner.refiner_work_admission import (
+from weir.refiner.refiner_work_admission import (
     evaluate_work_admission,
     is_detection_job_kind,
     library_window_open,

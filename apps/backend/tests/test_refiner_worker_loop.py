@@ -10,17 +10,17 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.refiner import worker_loop as refiner_worker_loop_mod
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.jobs_ops import complete_claimed_refiner_job as real_complete_claimed
-from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.refiner.worker_limits import clamp_refiner_worker_count
-from mediamop.refiner.worker_loop import (
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.refiner import worker_loop as refiner_worker_loop_mod
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.jobs_ops import complete_claimed_refiner_job as real_complete_claimed
+from weir.refiner.jobs_ops import refiner_enqueue_or_get_job
+from weir.refiner.worker_limits import clamp_refiner_worker_count
+from weir.refiner.worker_loop import (
     process_one_refiner_job,
     refiner_worker_run_forever,
     start_refiner_worker_background_tasks,
@@ -55,16 +55,16 @@ def session_factory(jobs_engine):
 
 
 def test_refiner_worker_count_defaults_to_eight_slots(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MEDIAMOP_REFINER_WORKER_COUNT", raising=False)
-    s = MediaMopSettings.load()
+    monkeypatch.delenv("WEIR_REFINER_WORKER_COUNT", raising=False)
+    s = WeirSettings.load()
     assert s.refiner_worker_count == 8
 
 
 def test_refiner_worker_count_clamps_low_and_high(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "0")
-    assert MediaMopSettings.load().refiner_worker_count == 0
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "99")
-    assert MediaMopSettings.load().refiner_worker_count == 8
+    monkeypatch.setenv("WEIR_REFINER_WORKER_COUNT", "0")
+    assert WeirSettings.load().refiner_worker_count == 0
+    monkeypatch.setenv("WEIR_REFINER_WORKER_COUNT", "99")
+    assert WeirSettings.load().refiner_worker_count == 8
 
 
 def test_clamp_refiner_worker_count_unit() -> None:
@@ -86,7 +86,7 @@ def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks_even_with_ha
         "REFINER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
-    base = MediaMopSettings.load()
+    base = WeirSettings.load()
     settings = replace(base, refiner_worker_count=0)
     dummy_handlers = {"refiner.file.remux_pass.v1": lambda ctx: None}
 
@@ -112,7 +112,7 @@ def test_refiner_worker_slots_are_gated_by_max_concurrent_files(
         "REFINER_WORKER_IDLE_SLEEP_SECONDS",
         0.01,
     )
-    base = MediaMopSettings.load()
+    base = WeirSettings.load()
     settings = replace(base, refiner_worker_count=8)
     observed: list[int] = []
 
@@ -125,7 +125,7 @@ def test_refiner_worker_slots_are_gated_by_max_concurrent_files(
 
     async def _run() -> None:
         with patch(
-            "mediamop.refiner.worker_loop.refiner_worker_run_forever",
+            "weir.refiner.worker_loop.refiner_worker_run_forever",
             side_effect=_fake_worker_run_forever,
         ):
             stop, tasks = start_refiner_worker_background_tasks(
@@ -223,7 +223,7 @@ def test_process_one_missing_handler_fails_claimed_job(session_factory) -> None:
 
 def test_refiner_worker_loop_processes_one_job_then_stops(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "mediamop.refiner.worker_loop.REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        "weir.refiner.worker_loop.REFINER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)

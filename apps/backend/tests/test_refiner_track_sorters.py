@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from mediamop.refiner.refiner_track_sorters import (
+from weir.refiner.refiner_track_sorters import (
     DEFAULT_AUDIO_SORTERS,
     SORTER_FIELDS,
     TrackSorter,

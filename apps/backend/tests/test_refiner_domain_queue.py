@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.refiner.domain import (
+from weir.refiner.domain import (
     RefinerQueueRowView,
     file_is_owned_by_queue,
     should_block_for_upstream,

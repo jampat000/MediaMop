@@ -12,7 +12,7 @@ describe("workspace shell", () => {
 
     render(
       <WorkspacePage
-        eyebrow="MediaMop"
+        eyebrow="Weir"
         title="Example"
         description="Example sections"
       >

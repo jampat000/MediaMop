@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.platform.jobs.operator_job_status import build_job_operator_status
+from weir.platform.jobs.operator_job_status import build_job_operator_status
 
 
 def test_refiner_database_lock_keeps_actionable_guidance_separate_from_diagnostics() -> None:
@@ -17,7 +17,7 @@ def test_refiner_database_lock_keeps_actionable_guidance_separate_from_diagnosti
     )
 
     assert result.operator_message == (
-        "MediaMop could not save the Refiner result while another local operation was using the database for Film.mkv."
+        "Weir could not save the Refiner result while another local operation was using the database for Film.mkv."
     )
     assert "Files at once" in result.next_action
     assert "database is locked" not in result.operator_message
@@ -56,7 +56,7 @@ def test_file_preflight_failures_explain_the_user_fix() -> None:
         module="refiner",
         job_kind="refiner.file.remux_pass.v1",
         status="failed",
-        last_error="MediaMop could not find this file under the saved watched folder.",
+        last_error="Weir could not find this file under the saved watched folder.",
         payload_json='{"relative_media_path":"Movie/Missing.mkv"}',
     )
     unsupported = build_job_operator_status(

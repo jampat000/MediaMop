@@ -1,6 +1,6 @@
 # Issue Triage
 
-MediaMop issues should stay practical and reproducible. Every issue needs a clear user impact, an affected area, and a next action.
+Weir issues should stay practical and reproducible. Every issue needs a clear user impact, an affected area, and a next action.
 
 ## Labels
 

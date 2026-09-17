@@ -23,7 +23,7 @@ function state(over: Partial<MaintenanceState> = {}): MaintenanceState {
       {
         family: "work_temp_stale_sweep",
         enabled: true,
-        description: "Reclaims MediaMop's own stale working files.",
+        description: "Reclaims Weir's own stale working files.",
         pending: 0,
         running: 0,
         last_completed_at: null,

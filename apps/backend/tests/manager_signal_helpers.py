@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from mediamop.platform.media_managers.manager_port import (
+from weir.platform.media_managers.manager_port import (
     ManagerConnection,
     ManagerLibraryTruth,
     ManagerQueueRow,
@@ -46,7 +46,7 @@ def unreachable(
     kind: str = "radarr",
     name: str = "Main",
     connection_id: int = 1,
-    detail: str = "MediaMop could not reach this manager.",
+    detail: str = "Weir could not reach this manager.",
 ) -> ManagerQueueSignal:
     return ManagerQueueSignal(
         connection=connection(kind=kind, name=name, connection_id=connection_id),
@@ -88,7 +88,7 @@ def truth_unreachable(
     kind: str = "radarr",
     name: str = "Main",
     connection_id: int = 1,
-    detail: str = "MediaMop could not reach this manager.",
+    detail: str = "Weir could not reach this manager.",
 ) -> ManagerLibraryTruth:
     return ManagerLibraryTruth(
         connection=connection(kind=kind, name=name, connection_id=connection_id),

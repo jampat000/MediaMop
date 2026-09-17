@@ -8,17 +8,17 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if (-not $PackageDir) {
-  $PackageDir = Join-Path $repoRoot "dist\windows\MediaMopServer"
+  $PackageDir = Join-Path $repoRoot "dist\windows\WeirServer"
 }
 $packagePath = (Resolve-Path -LiteralPath $PackageDir).Path
 $backendPyproject = Join-Path $repoRoot "apps\backend\pyproject.toml"
 if (-not $ExpectedVersion) {
   $ExpectedVersion = ((Get-Content -Path $backendPyproject) | Where-Object { $_ -match '^version = ' } | Select-Object -First 1).Split('"')[1]
 }
-$serverExe = Join-Path $packagePath "MediaMopServer.exe"
+$serverExe = Join-Path $packagePath "WeirServer.exe"
 $internalRoot = Join-Path $packagePath "_internal"
 $webIndex = Join-Path $packagePath "_internal\web-dist\index.html"
-$trayIcon = Join-Path $packagePath "_internal\assets\mediamop-tray-icon.png"
+$trayIcon = Join-Path $packagePath "_internal\assets\weir-tray-icon.png"
 $alembicIni = Join-Path $packagePath "_internal\alembic.ini"
 $ffmpegExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffmpeg.exe"
 $ffprobeExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffprobe.exe"
@@ -41,40 +41,40 @@ if (-not (Test-Path -LiteralPath $ffmpegExe)) {
 if (-not (Test-Path -LiteralPath $ffprobeExe)) {
   throw "Packaged ffprobe executable not found: $ffprobeExe"
 }
-$distInfoDirs = Get-ChildItem -Path $internalRoot -Directory -Filter "mediamop_backend-*.dist-info" -ErrorAction SilentlyContinue
+$distInfoDirs = Get-ChildItem -Path $internalRoot -Directory -Filter "weir_backend-*.dist-info" -ErrorAction SilentlyContinue
 if (-not $distInfoDirs -or $distInfoDirs.Count -eq 0) {
   throw "Packaged backend dist-info metadata was not found in $internalRoot"
 }
 $indexText = Get-Content -LiteralPath $webIndex -Raw
-if ($indexText -notmatch "MediaMop") {
-  throw "Packaged web index does not look like MediaMop."
+if ($indexText -notmatch "Weir") {
+  throw "Packaged web index does not look like Weir."
 }
 
 $serverVersion = (& $serverExe --version).Trim()
 if ($serverVersion -ne $ExpectedVersion) {
-  throw "Packaged MediaMopServer.exe reports version '$serverVersion' but expected '$ExpectedVersion'."
+  throw "Packaged WeirServer.exe reports version '$serverVersion' but expected '$ExpectedVersion'."
 }
 
-$runtimeHome = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-package-smoke-" + [System.Guid]::NewGuid().ToString("N"))
+$runtimeHome = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-package-smoke-" + [System.Guid]::NewGuid().ToString("N"))
 $stdout = Join-Path $runtimeHome "server.stdout.log"
 $stderr = Join-Path $runtimeHome "server.stderr.log"
 New-Item -ItemType Directory -Path $runtimeHome | Out-Null
 
-$oldHome = $env:MEDIAMOP_HOME
-$oldSecret = $env:MEDIAMOP_SESSION_SECRET
-$oldCookieSecure = $env:MEDIAMOP_SESSION_COOKIE_SECURE
-$oldEnv = $env:MEDIAMOP_ENV
-$oldWebDist = $env:MEDIAMOP_WEB_DIST
-$oldAlembicRoot = $env:MEDIAMOP_ALEMBIC_ROOT
+$oldHome = $env:WEIR_HOME
+$oldSecret = $env:WEIR_SESSION_SECRET
+$oldCookieSecure = $env:WEIR_SESSION_COOKIE_SECURE
+$oldEnv = $env:WEIR_ENV
+$oldWebDist = $env:WEIR_WEB_DIST
+$oldAlembicRoot = $env:WEIR_ALEMBIC_ROOT
 $proc = $null
 
 try {
-  $env:MEDIAMOP_HOME = $runtimeHome
-  $env:MEDIAMOP_SESSION_SECRET = "ci-mediamop-session-secret-32chars-min"
-  $env:MEDIAMOP_SESSION_COOKIE_SECURE = "false"
-  Remove-Item Env:\MEDIAMOP_ENV -ErrorAction SilentlyContinue
-  Remove-Item Env:\MEDIAMOP_WEB_DIST -ErrorAction SilentlyContinue
-  Remove-Item Env:\MEDIAMOP_ALEMBIC_ROOT -ErrorAction SilentlyContinue
+  $env:WEIR_HOME = $runtimeHome
+  $env:WEIR_SESSION_SECRET = "ci-weir-session-secret-32chars-min"
+  $env:WEIR_SESSION_COOKIE_SECURE = "false"
+  Remove-Item Env:\WEIR_ENV -ErrorAction SilentlyContinue
+  Remove-Item Env:\WEIR_WEB_DIST -ErrorAction SilentlyContinue
+  Remove-Item Env:\WEIR_ALEMBIC_ROOT -ErrorAction SilentlyContinue
 
   $proc = Start-Process -FilePath $serverExe `
     -ArgumentList @("--serve", "--port", [string]$Port) `
@@ -90,7 +90,7 @@ try {
   $serverReady = $false
   do {
     if ($proc.HasExited) {
-      throw "Packaged MediaMop server exited early with code $($proc.ExitCode)."
+      throw "Packaged Weir server exited early with code $($proc.ExitCode)."
     }
     try {
       $ready = Invoke-RestMethod -Uri $readyUrl -Method Get -TimeoutSec 2
@@ -98,9 +98,9 @@ try {
         $openApi = Invoke-RestMethod -Uri $openApiUrl -Method Get -TimeoutSec 2
         $reportedVersion = [string]$openApi.info.version
         if ($reportedVersion -ne $ExpectedVersion) {
-          throw "Packaged MediaMop server reported version '$reportedVersion' but expected '$ExpectedVersion'."
+          throw "Packaged Weir server reported version '$reportedVersion' but expected '$ExpectedVersion'."
         }
-        Write-Host "Packaged MediaMop server readiness and version checks passed on $readyUrl"
+        Write-Host "Packaged Weir server readiness and version checks passed on $readyUrl"
         $serverReady = $true
         break
       }
@@ -110,7 +110,7 @@ try {
   } while ((Get-Date) -lt $deadline)
 
   if (-not $serverReady) {
-    throw "Packaged MediaMop server did not become ready at $readyUrl."
+    throw "Packaged Weir server did not become ready at $readyUrl."
   }
 
   # Prove the exact packaged server can pass an intentional edge-case file
@@ -244,9 +244,9 @@ try {
     Write-Host "--- stderr ---"
     Get-Content -LiteralPath $stderr -Tail 200
   }
-  $logPath = Join-Path $runtimeHome "logs\mediamop.log"
+  $logPath = Join-Path $runtimeHome "logs\weir.log"
   if (Test-Path -LiteralPath $logPath) {
-    Write-Host "--- mediamop.log ---"
+    Write-Host "--- weir.log ---"
     Get-Content -LiteralPath $logPath -Tail 200
   }
   throw
@@ -254,11 +254,11 @@ try {
   if ($proc -and -not $proc.HasExited) {
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
   }
-  if ($null -ne $oldHome) { $env:MEDIAMOP_HOME = $oldHome } else { Remove-Item Env:\MEDIAMOP_HOME -ErrorAction SilentlyContinue }
-  if ($null -ne $oldSecret) { $env:MEDIAMOP_SESSION_SECRET = $oldSecret } else { Remove-Item Env:\MEDIAMOP_SESSION_SECRET -ErrorAction SilentlyContinue }
-  if ($null -ne $oldCookieSecure) { $env:MEDIAMOP_SESSION_COOKIE_SECURE = $oldCookieSecure } else { Remove-Item Env:\MEDIAMOP_SESSION_COOKIE_SECURE -ErrorAction SilentlyContinue }
-  if ($null -ne $oldEnv) { $env:MEDIAMOP_ENV = $oldEnv } else { Remove-Item Env:\MEDIAMOP_ENV -ErrorAction SilentlyContinue }
-  if ($null -ne $oldWebDist) { $env:MEDIAMOP_WEB_DIST = $oldWebDist } else { Remove-Item Env:\MEDIAMOP_WEB_DIST -ErrorAction SilentlyContinue }
-  if ($null -ne $oldAlembicRoot) { $env:MEDIAMOP_ALEMBIC_ROOT = $oldAlembicRoot } else { Remove-Item Env:\MEDIAMOP_ALEMBIC_ROOT -ErrorAction SilentlyContinue }
+  if ($null -ne $oldHome) { $env:WEIR_HOME = $oldHome } else { Remove-Item Env:\WEIR_HOME -ErrorAction SilentlyContinue }
+  if ($null -ne $oldSecret) { $env:WEIR_SESSION_SECRET = $oldSecret } else { Remove-Item Env:\WEIR_SESSION_SECRET -ErrorAction SilentlyContinue }
+  if ($null -ne $oldCookieSecure) { $env:WEIR_SESSION_COOKIE_SECURE = $oldCookieSecure } else { Remove-Item Env:\WEIR_SESSION_COOKIE_SECURE -ErrorAction SilentlyContinue }
+  if ($null -ne $oldEnv) { $env:WEIR_ENV = $oldEnv } else { Remove-Item Env:\WEIR_ENV -ErrorAction SilentlyContinue }
+  if ($null -ne $oldWebDist) { $env:WEIR_WEB_DIST = $oldWebDist } else { Remove-Item Env:\WEIR_WEB_DIST -ErrorAction SilentlyContinue }
+  if ($null -ne $oldAlembicRoot) { $env:WEIR_ALEMBIC_ROOT = $oldAlembicRoot } else { Remove-Item Env:\WEIR_ALEMBIC_ROOT -ErrorAction SilentlyContinue }
   Remove-Item -LiteralPath $runtimeHome -Recurse -Force -ErrorAction SilentlyContinue
 }

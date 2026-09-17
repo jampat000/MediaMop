@@ -14,16 +14,16 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.media_managers.connection_model  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-import mediamop.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.refiner.refiner_library_model  # noqa: F401
-from mediamop.core.db import Base
-from mediamop.refiner.refiner_file_state_model import (
+import weir.platform.media_managers.connection_model  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+import weir.refiner.refiner_file_state_model  # noqa: F401
+import weir.refiner.refiner_library_model  # noqa: F401
+from weir.core.db import Base
+from weir.refiner.refiner_file_state_model import (
     REFINER_WITHHELD_STATUSES,
     RefinerFileStatus,
 )
-from mediamop.refiner.refiner_file_state_service import (
+from weir.refiner.refiner_file_state_service import (
     decide_file_state,
     forget_file,
     list_files,
@@ -31,7 +31,7 @@ from mediamop.refiner.refiner_file_state_service import (
     record_file_state,
     status_counts,
 )
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_library_model import RefinerLibraryRow
 
 
 @pytest.fixture
@@ -178,7 +178,7 @@ def test_moving_out_of_blocked_upstream_clears_the_connection(session: Session) 
     assert row.last_attempt_at is not None
 
 
-def test_marking_a_file_mediamop_has_never_seen_does_nothing(session: Session) -> None:
+def test_marking_a_file_weir_has_never_seen_does_nothing(session: Session) -> None:
     library = _library(session)
     assert (
         mark_file_status(

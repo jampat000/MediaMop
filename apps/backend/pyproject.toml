@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mediamop-backend"
+name = "weir-backend"
 version = "2.6.6"
-description = "MediaMop backend spine (FastAPI, SQLite, Alembic)"
+description = "Weir backend spine (FastAPI, SQLite, Alembic)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "AGPL-3.0-or-later"
@@ -27,9 +27,9 @@ dependencies = [
 ]
 
 [project.scripts]
-# Operator account recovery from the server's own shell. MediaMop has one account and no email
+# Operator account recovery from the server's own shell. Weir has one account and no email
 # reset, so reaching the server is the recovery factor. See platform/auth/recover.py and #454.
-mediamop-recover = "mediamop.platform.auth.recover:main"
+weir-recover = "weir.platform.auth.recover:main"
 
 [project.optional-dependencies]
 dev = [
@@ -53,11 +53,11 @@ build = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["mediamop*"]
+include = ["weir*"]
 
 [tool.setuptools.package-data]
 # Data files read at runtime, such as the Direct Play device list (#467).
-"mediamop.refiner.direct_play" = ["devices.json"]
+"weir.refiner.direct_play" = ["devices.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -87,6 +87,6 @@ ignore_errors = false
 # type: ignore[attr-defined] comments on those lines suppress CI (Linux) failures,
 # but on Windows mypy knows the attributes so the comments become "unused-ignore".
 # This narrow override disables only that false-positive for windows-specific code.
-module = ["mediamop.windows.*"]
+module = ["weir.windows.*"]
 disable_error_code = ["unused-ignore"]
 

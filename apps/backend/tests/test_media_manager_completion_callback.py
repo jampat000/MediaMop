@@ -14,23 +14,23 @@ import pytest
 from alembic.config import Config
 
 from alembic import command
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.media_managers import completion_callback
-from mediamop.platform.media_managers.completion_callback import (
+from tests.integration_app_runtime_quiesce import integration_test_set_home
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.media_managers import completion_callback
+from weir.platform.media_managers.completion_callback import (
     HandoffOrigin,
     build_completion_body,
     report_handoff_completion,
     translate_output_path,
 )
-from mediamop.platform.media_managers.connection_service import create_connection
-from mediamop.platform.media_managers.manager_port import (
+from weir.platform.media_managers.connection_service import create_connection
+from weir.platform.media_managers.manager_port import (
     ManagerCapabilities,
     ManagerConnection,
     ManagerDescription,
     ManagerLibraryDescriptor,
 )
-from tests.integration_app_runtime_quiesce import integration_test_set_home
 
 ORIGIN = HandoffOrigin(
     source_key="deluno",
@@ -129,10 +129,10 @@ def test_origin_is_read_from_the_job_payload() -> None:
 
 @pytest.fixture
 def session_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    integration_test_set_home(tmp_path, monkeypatch, "mmhome_callback")
+    integration_test_set_home(tmp_path, monkeypatch, "weirhome_callback")
     backend = Path(__file__).resolve().parents[1]
     command.upgrade(Config(str(backend / "alembic.ini")), "head")
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     return create_session_factory(create_db_engine(settings)), settings
 
 
@@ -274,7 +274,7 @@ def test_a_pass_through_after_failure_says_the_original_was_handed_back() -> Non
         },
     )
     assert body["status"] == "completed"
-    assert body["message"].startswith("MediaMop could not process this file, so it handed the original back")
+    assert body["message"].startswith("Weir could not process this file, so it handed the original back")
 
 
 def test_a_translated_output_path_replaces_the_local_one() -> None:
@@ -534,8 +534,8 @@ def test_a_failure_about_to_be_rejected_is_not_reported_twice(session_factory, m
 def test_every_report_sent_is_recorded_in_activity(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
     from sqlalchemy import select
 
-    from mediamop.platform.activity import constants as activity_constants
-    from mediamop.platform.activity.models import ActivityEvent
+    from weir.platform.activity import constants as activity_constants
+    from weir.platform.activity.models import ActivityEvent
 
     factory, settings = session_factory
     _capture_posts(monkeypatch)

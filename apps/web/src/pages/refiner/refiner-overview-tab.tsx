@@ -250,7 +250,7 @@ function RefinerOverviewLoadError({ err }: { err: unknown }) {
     <div className="mm-page__intro" data-testid="refiner-overview-load-error">
       <p className="mm-page__lead">
         {isLikelyNetworkFailure(err)
-          ? "Could not reach the MediaMop API. Check that the backend is running."
+          ? "Could not reach the Weir API. Check that the backend is running."
           : isHttpErrorFromApi(err)
             ? "The server refused this request. Sign in again or check API logs."
             : "Could not load part of the Refiner overview."}

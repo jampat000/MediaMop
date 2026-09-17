@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.suite_settings.suite_configuration_backup_model import SuiteConfigurationBackupRow
-from mediamop.platform.suite_settings.suite_configuration_backup_service import get_suite_configuration_backup_file_path
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.suite_settings.suite_configuration_backup_model import SuiteConfigurationBackupRow
+from weir.platform.suite_settings.suite_configuration_backup_service import get_suite_configuration_backup_file_path
 
 
 def test_configuration_backup_download_rejects_path_traversal_file_name() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     factory = create_session_factory(create_db_engine(settings))
 
     with factory() as db:

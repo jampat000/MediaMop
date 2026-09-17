@@ -259,7 +259,7 @@ export function SettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `mediamop-configuration-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `weir-configuration-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setBackupMsg("Download started.");
@@ -288,9 +288,7 @@ export function SettingsPage() {
       }
       const bundle = parsed as ConfigurationBundle;
       if (bundle.format_version !== 1) {
-        setBackupErr(
-          "This file is not a supported MediaMop configuration export.",
-        );
+        setBackupErr("This file is not a supported Weir configuration export.");
         return;
       }
       if (
@@ -331,7 +329,7 @@ export function SettingsPage() {
           <h1 className="mm-page__title">Settings</h1>
           <p className="mm-page__lead">
             {isLikelyNetworkFailure(err)
-              ? "Could not reach the MediaMop API. Check that the backend is running."
+              ? "Could not reach the Weir API. Check that the backend is running."
               : isHttpErrorFromApi(err)
                 ? "The server refused this request. Sign in again, then try back here."
                 : "Something went wrong loading settings."}
@@ -378,7 +376,7 @@ export function SettingsPage() {
 
   const buildSuitePutBody = (): SuiteSettingsPutBody => {
     const d = settingsQ.data;
-    const name = (d.product_display_name || "MediaMop").trim() || "MediaMop";
+    const name = (d.product_display_name || "Weir").trim() || "Weir";
     const tz = (appTimezone ?? d.app_timezone ?? "UTC").trim() || "UTC";
     const retention = Math.min(
       3650,
@@ -499,8 +497,8 @@ export function SettingsPage() {
       dataTestId="suite-settings-page"
       description={
         <>
-          MediaMop-wide choices that are not part of Refiner. Library and
-          processing details stay on the Refiner page.
+          Weir-wide choices that are not part of Refiner. Library and processing
+          details stay on the Refiner page.
         </>
       }
     >

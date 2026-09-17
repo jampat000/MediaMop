@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from mediamop.api.deps import get_db_session
+from weir.api.deps import get_db_session
 
 
 def test_get_db_session_503_without_factory() -> None:

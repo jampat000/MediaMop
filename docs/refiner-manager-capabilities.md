@@ -9,7 +9,7 @@ without Radarr, Sonarr, Deluno, or another manager.
 | Watched-folder remux | Supported; local safety gates apply | Supported | Supported | Supported |
 | Upstream import protection | Reduced safety: no upstream import check | Enhanced when the connection answers | Enhanced when the connection answers | Depends on the hand-off signal |
 | Library discovery/sync | Manual libraries | Optional convenience | Optional convenience | Optional convenience |
-| Destructive cleanup requiring manager truth | Safely held until MediaMop can confirm | Available when the manager answers | Available when the manager answers | Depends on the hand-off contract |
+| Destructive cleanup requiring manager truth | Safely held until Weir can confirm | Available when the manager answers | Available when the manager answers | Depends on the hand-off contract |
 | Callback/hand-off | Not required | Integration-specific | Integration-specific | Supported where configured |
 
 The library screen uses three coverage states:

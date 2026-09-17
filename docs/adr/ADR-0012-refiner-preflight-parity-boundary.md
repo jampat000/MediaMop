@@ -6,7 +6,7 @@
 
 ## Context
 
-Refiner `refiner.file.remux_pass.v1` needs stronger preflight behavior to align with the practical intent of FileFlows "Video File" analysis, while keeping MediaMop's existing cleanup contracts unchanged.
+Refiner `refiner.file.remux_pass.v1` needs stronger preflight behavior to align with the practical intent of FileFlows "Video File" analysis, while keeping Weir's existing cleanup contracts unchanged.
 
 Without an explicit boundary, parity work risks either:
 
@@ -17,9 +17,9 @@ Without an explicit boundary, parity work risks either:
 
 1. **Preflight parity scope is probe-depth + observability only**
    - Refiner preflight now supports bounded ffprobe controls:
-     - `MEDIAMOP_REFINER_PROBE_SIZE_MB` (default `10`, clamp `1..1024`)
-     - `MEDIAMOP_REFINER_ANALYZE_DURATION_SECONDS` (default `10`, clamp `1..300`)
-   - These settings are loaded at API startup via `MediaMopSettings`.
+     - `WEIR_REFINER_PROBE_SIZE_MB` (default `10`, clamp `1..1024`)
+     - `WEIR_REFINER_ANALYZE_DURATION_SECONDS` (default `10`, clamp `1..300`)
+   - These settings are loaded at API startup via `WeirSettings`.
    - Remux pass results include stable preflight fields:
      - `preflight_status`
      - `preflight_reason`
@@ -30,12 +30,12 @@ Without an explicit boundary, parity work risks either:
    - Preflight failure (`failed_before_execution`) remains non-destructive and must not emit success-only cleanup mutation fields.
 
 3. **No new module-level settings registry**
-   - Probe controls remain in `MediaMopSettings` per ADR-0008.
+   - Probe controls remain in `WeirSettings` per ADR-0008.
    - Timing/schedule independence across families remains governed by ADR-0009.
 
 ## Related
 
-- [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md)
+- [ADR-0008](ADR-0008-weir-settings-aggregate-runtime-config.md)
 - [ADR-0009](ADR-0009-suite-wide-timing-isolation.md)
 - [ADR-0007](ADR-0007-module-owned-worker-lanes.md)
 

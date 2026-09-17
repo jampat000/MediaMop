@@ -9,14 +9,14 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
 
 # Register all ORM tables on Base.metadata (create_all parity with Alembic surface).
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.db import Base
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.jobs_ops import (
+import weir.refiner.jobs_model  # noqa: F401
+from weir.core.db import Base
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.jobs_ops import (
     cancel_pending_refiner_job,
     claim_next_eligible_refiner_job,
     complete_claimed_refiner_job,

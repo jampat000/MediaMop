@@ -1,6 +1,6 @@
-# Contributing - MediaMop
+# Contributing - Weir
 
-MediaMop is a self-hosted media workflow app with a FastAPI + SQLite backend in `apps/backend` and a React + Vite web shell in `apps/web`.
+Weir is a self-hosted media workflow app with a FastAPI + SQLite backend in `apps/backend` and a React + Vite web shell in `apps/web`.
 
 ## Workflow
 
@@ -8,12 +8,12 @@ Use short-lived branches and open pull requests into `main`. Keep CI green befor
 
 ## Local checks
 
-Backend unit tests. `tests/conftest.py` sets an isolated temporary `MEDIAMOP_HOME` for the session.
+Backend unit tests. `tests/conftest.py` sets an isolated temporary `WEIR_HOME` for the session.
 
 ```powershell
 cd apps/backend
 $env:PYTHONPATH = "src"
-$env:MEDIAMOP_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
+$env:WEIR_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
 python -m pip install --require-hashes -r requirements.lock
 python -m pip install --no-deps --no-build-isolation -e .
 alembic upgrade head
@@ -43,9 +43,9 @@ cd apps/web
 npm ci
 npm run build
 cd ../..
-$env:MEDIAMOP_E2E = "1"
-$env:MEDIAMOP_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
-pytest tests/e2e/mediamop -q --tb=short
+$env:WEIR_E2E = "1"
+$env:WEIR_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
+pytest tests/e2e/weir -q --tb=short
 ```
 
 See `docs/local-development.md` for env layout and CI parity.
@@ -64,4 +64,4 @@ Do not commit `.env`, real secrets, production database files, logs, backups, or
 
 ## License
 
-By contributing to MediaMop, you agree that your contribution is provided under the repository license: AGPL-3.0-or-later.
+By contributing to Weir, you agree that your contribution is provided under the repository license: AGPL-3.0-or-later.

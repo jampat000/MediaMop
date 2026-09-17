@@ -1,10 +1,10 @@
-# MediaMop diagnostics contract
+# Weir diagnostics contract
 
-MediaMop is a single-node media automation app that can move, write, and delete user media. Diagnostics must be useful to an operator without exposing secrets or hiding unsafe states.
+Weir is a single-node media automation app that can move, write, and delete user media. Diagnostics must be useful to an operator without exposing secrets or hiding unsafe states.
 
 ## Structured events
 
-Operational events should use the shared diagnostics vocabulary in `mediamop.platform.observability.diagnostics`.
+Operational events should use the shared diagnostics vocabulary in `weir.platform.observability.diagnostics`.
 
 Events should include the fields that apply:
 

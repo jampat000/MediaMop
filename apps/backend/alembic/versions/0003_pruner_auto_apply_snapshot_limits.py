@@ -1,7 +1,7 @@
 """Pruner scheduled auto-apply controls.
 
 Revision ID: 0003_pruner_auto_apply_snapshot_limits
-Revises: 0002_mediamop_schema_tip
+Revises: 0002_weir_schema_tip
 
 Pruner moved to Deluno (#473) and ``0001`` no longer creates ``pruner_scope_settings`` on a
 fresh database, so both directions do nothing when the table is absent. ``0036`` drops it
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0003_pruner_auto_apply_snapshot_limits"
-down_revision: str | None = "0002_mediamop_schema_tip"
+down_revision: str | None = "0002_weir_schema_tip"
 
 
 def _has_scope_table(bind: sa.engine.Connection) -> bool:

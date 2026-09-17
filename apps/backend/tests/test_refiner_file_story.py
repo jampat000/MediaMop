@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mediamop.refiner.refiner_file_story import narrate_pass
+from weir.refiner.refiner_file_story import narrate_pass
 
 
 def _headings(steps: list[Any]) -> list[str]:
@@ -45,7 +45,7 @@ def test_a_successful_pass_reads_as_a_sequence() -> None:
 
 def test_it_names_the_library_and_kind() -> None:
     steps = narrate_pass(_successful_remux(), library_name="Films 4K")
-    assert steps[0].sentence == "MediaMop took this file as a film in the Films 4K library."
+    assert steps[0].sentence == "Weir took this file as a film in the Films 4K library."
 
 
 def test_it_says_what_it_found_inside() -> None:

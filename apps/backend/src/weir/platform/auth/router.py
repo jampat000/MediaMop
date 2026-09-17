@@ -1,0 +1,507 @@
+"""Cookie session auth JSON API under ``/api/v1/auth/*``."""
+
+from __future__ import annotations
+
+import logging
+import uuid
+
+from fastapi import APIRouter, Body, Header, HTTPException, Request, Response, status
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from weir.api.deps import DbSessionDep, SettingsDep
+from weir.platform.activity import constants as activity_constants
+from weir.platform.activity import service as activity_service
+from weir.platform.auth import bootstrap as bootstrap_service
+from weir.platform.auth import schemas
+from weir.platform.auth import service as auth_service
+from weir.platform.auth.abuse import (
+    raise_if_bootstrap_rate_limited,
+    raise_if_login_rate_limited,
+)
+from weir.platform.auth.authorization import RequireAdminDep
+from weir.platform.auth.bootstrap_status_db import (
+    raise_http_for_bootstrap_status_db,
+    raise_http_for_bootstrap_status_sqlalchemy,
+)
+from weir.platform.auth.csrf import (
+    current_raw_session_token,
+    issue_csrf_token,
+    require_session_secret,
+    validate_browser_post_origin,
+    verify_csrf_token,
+)
+from weir.platform.auth.deps_auth import UserPublicDep
+from weir.platform.auth.sessions import resolve_cookie_secure
+from weir.platform.suite_settings.service import ensure_suite_settings_row
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
+
+
+def _csrf_from_header_or_body(
+    header_token: str | None,
+    body_token: str | None,
+) -> str:
+    t = (header_token or body_token or "").strip()
+    if not t:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing CSRF token (X-CSRF-Token header or body csrf_token).",
+        )
+    return t
+
+
+@router.get("/csrf", response_model=schemas.CsrfOut)
+def get_csrf(request: Request, db: DbSessionDep, settings: SettingsDep) -> schemas.CsrfOut:
+    secret = require_session_secret(settings)
+    raw_session_token = current_raw_session_token(request, settings)
+    if raw_session_token and auth_service.load_valid_session_for_request(db, raw_session_token, settings) is None:
+        raw_session_token = None
+    return schemas.CsrfOut(csrf_token=issue_csrf_token(secret, raw_session_token))
+
+
+@router.post("/login", response_model=schemas.LoginOut)
+def post_login(
+    request: Request,
+    body: schemas.LoginIn,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    response: Response,
+) -> schemas.LoginOut:
+    raise_if_login_rate_limited(request)
+    secret = require_session_secret(settings)
+    validate_browser_post_origin(request, settings)
+    if not verify_csrf_token(
+        secret,
+        body.csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+        allow_anonymous=True,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired CSRF token.",
+        )
+
+    uname = body.username.strip()
+    result = auth_service.login_user(
+        db,
+        username=uname,
+        password=body.password,
+        settings=settings,
+        trusted_device=body.trusted_device,
+        client_label=auth_service.client_label_from_user_agent(request.headers.get("user-agent")),
+    )
+    if result is None:
+        logger.warning("auth event: login failed")
+        activity_service.maybe_record_login_failed(db, username=uname)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password.",
+        )
+    user, session_row, raw = result
+    logger.info("auth event: login succeeded (user_id=%s)", user.id)
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_LOGIN_SUCCEEDED,
+        module="auth",
+        title="Signed in",
+        detail=user.username,
+    )
+
+    response.set_cookie(
+        key=settings.session_cookie_name,
+        value=raw,
+        max_age=auth_service.session_public(session_row, settings=settings)["absolute_timeout_days"] * 86400,
+        httponly=True,
+        secure=resolve_cookie_secure(request.url.scheme, settings.session_cookie_secure_mode),
+        samesite=settings.session_cookie_samesite,
+        path="/",
+    )
+    response.headers.setdefault("Cache-Control", "no-store, private")
+    return schemas.LoginOut(user=schemas.UserPublic(**auth_service.user_public(user)))
+
+
+def _bootstrap_status_session_cleanup(db: Session | None) -> None:
+    """Never raise — a failing ``rollback``/``close`` here would turn a good read into HTTP 500."""
+
+    if db is None:
+        return
+    try:
+        db.rollback()
+    except Exception:
+        logger.debug("bootstrap status: session rollback failed (ignored)", exc_info=True)
+    try:
+        db.close()
+    except Exception:
+        logger.debug("bootstrap status: session close failed (ignored)", exc_info=True)
+
+
+@router.get("/bootstrap/status", response_model=schemas.BootstrapStatusOut)
+def get_bootstrap_status(request: Request) -> schemas.BootstrapStatusOut:
+    """Report whether the initial ``admin`` account may still be created (Phase 6).
+
+    Guest-first endpoint: never return **500**. DB/session failures map to **503** with copy
+    operators can act on. Uses a dedicated session + rollback (no ``get_db_session`` post-``commit``
+    churn on SQLite read-only paths).
+    """
+
+    factory = getattr(request.app.state, "session_factory", None)
+    if factory is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database session factory not initialized (app lifespan did not start cleanly).",
+        )
+    db: Session | None = None
+    try:
+        try:
+            db = factory()
+        except Exception as exc:
+            logger.exception("bootstrap status: could not open database session")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Could not connect to the database for bootstrap status. "
+                    "Check WEIR_HOME / WEIR_DB_PATH and backend logs."
+                ),
+            ) from exc
+        try:
+            allowed = bootstrap_service.bootstrap_allowed(db)
+        except SQLAlchemyError as exc:
+            raise_http_for_bootstrap_status_sqlalchemy(exc)
+        if allowed:
+            return schemas.BootstrapStatusOut(
+                bootstrap_allowed=True,
+                reason="no_admin_user",
+            )
+        return schemas.BootstrapStatusOut(
+            bootstrap_allowed=False,
+            reason="admin_already_exists",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("bootstrap status: unexpected failure")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Could not read bootstrap status. Check backend logs, run database migrations "
+                "(alembic upgrade head), and verify WEIR_HOME / WEIR_DB_PATH."
+            ),
+        ) from exc
+    finally:
+        _bootstrap_status_session_cleanup(db)
+
+
+@router.post("/bootstrap", response_model=schemas.BootstrapOut)
+def post_bootstrap(
+    request: Request,
+    body: schemas.BootstrapIn,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> schemas.BootstrapOut:
+    """Create the first ``admin`` user once per Weir installation (guarded + rate limited).
+
+    Requires the same CSRF + Origin/Referer posture as ``POST /login``. After success,
+    callers use ``POST /login`` normally. Not available once any ``admin`` user exists.
+    """
+
+    raise_if_bootstrap_rate_limited(request)
+    secret = require_session_secret(settings)
+    validate_browser_post_origin(request, settings)
+    if not verify_csrf_token(secret, body.csrf_token, allow_anonymous=True):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired CSRF token.",
+        )
+    logger.info("auth event: bootstrap attempted")
+    bootstrap_service.acquire_bootstrap_transaction_lock(db)
+    if not bootstrap_service.bootstrap_allowed(db):
+        logger.warning("auth event: bootstrap denied (admin already exists)")
+        activity_service.maybe_record_bootstrap_denied(db)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bootstrap is not available: an admin user already exists.",
+        )
+    try:
+        user = bootstrap_service.create_initial_admin(
+            db,
+            username=body.username.strip(),
+            password=body.password,
+        )
+    except ValueError as exc:
+        logger.warning("auth event: bootstrap failed (weak password)")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        logger.warning("auth event: bootstrap failed (username conflict)")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already exists.",
+        ) from exc
+    logger.info(
+        "auth event: bootstrap succeeded (user_id=%s)",
+        user.id,
+    )
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_BOOTSTRAP_SUCCEEDED,
+        module="auth",
+        title="Initial admin created",
+        detail=user.username,
+    )
+    suite_settings = ensure_suite_settings_row(db)
+    suite_settings.setup_wizard_state = "pending"
+    return schemas.BootstrapOut(
+        message="Bootstrap complete. Sign in with POST /api/v1/auth/login.",
+        username=user.username,
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def post_logout(
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    response: Response,
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+    body: schemas.LogoutIn | None = Body(default=None),
+) -> Response:
+    secret = require_session_secret(settings)
+    validate_browser_post_origin(request, settings)
+    token = _csrf_from_header_or_body(x_csrf_token, body.csrf_token if body else None)
+    raw_session_token = current_raw_session_token(request, settings)
+    if not verify_csrf_token(
+        secret, token, raw_session_token=raw_session_token, allow_anonymous=raw_session_token is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired CSRF token.",
+        )
+
+    raw = (request.cookies.get(settings.session_cookie_name) or "").strip() or None
+    if raw:
+        pair = auth_service.load_valid_session_for_request(db, raw, settings)
+        if pair:
+            _srow, user = pair
+            activity_service.record_activity_event(
+                db,
+                event_type=activity_constants.AUTH_LOGOUT,
+                module="auth",
+                title="Signed out",
+                detail=user.username,
+            )
+        revoked = auth_service.logout_by_cookie(db, raw, settings)
+        if revoked:
+            logger.info("auth event: logout (session revoked)")
+        else:
+            logger.info("auth event: logout (no active session matched cookie)")
+    else:
+        logger.info("auth event: logout (no session cookie)")
+    response.delete_cookie(
+        key=settings.session_cookie_name,
+        path="/",
+        httponly=True,
+        secure=resolve_cookie_secure(request.url.scheme, settings.session_cookie_secure_mode),
+        samesite=settings.session_cookie_samesite,
+    )
+    response.headers.setdefault("Cache-Control", "no-store, private")
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
+
+
+@router.get("/me", response_model=schemas.MeOut)
+def get_me(current: UserPublicDep) -> schemas.MeOut:
+    return schemas.MeOut(user=current)
+
+
+@router.get("/session", response_model=schemas.CurrentSessionOut)
+def get_current_session(
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> schemas.CurrentSessionOut:
+    raw = current_raw_session_token(request, settings)
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated.",
+        )
+    session_row, _user = pair
+    return schemas.CurrentSessionOut(**auth_service.session_public(session_row, settings=settings, current=True))
+
+
+@router.get("/sessions", response_model=schemas.SessionsOut)
+def get_sessions(
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+) -> schemas.SessionsOut:
+    raw = current_raw_session_token(request, settings)
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
+    current_id = pair[0].id
+    return schemas.SessionsOut(
+        items=[
+            schemas.SessionOut(**item)
+            for item in auth_service.list_active_sessions(
+                db, user_id=user.id, settings=settings, current_session_id=current_id
+            )
+        ]
+    )
+
+
+@router.post("/sessions/revoke-others", response_model=schemas.SessionActionOut)
+def post_revoke_other_sessions(
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> schemas.SessionActionOut:
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    raw = current_raw_session_token(request, settings)
+    if x_csrf_token is None or not verify_csrf_token(secret, x_csrf_token, raw_session_token=raw):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
+    count = auth_service.revoke_other_user_sessions(db, user_id=user.id, current_session_id=pair[0].id)
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_SESSIONS_REVOKED,
+        module="auth",
+        title="Other sessions signed out",
+        detail=str(count),
+    )
+    db.commit()
+    return schemas.SessionActionOut(message=f"Signed out {count} other session(s).", revoked_count=count)
+
+
+@router.post("/sessions/{session_id}/revoke", response_model=schemas.SessionActionOut)
+def post_revoke_session(
+    session_id: uuid.UUID,
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> schemas.SessionActionOut:
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    raw = current_raw_session_token(request, settings)
+    if x_csrf_token is None or not verify_csrf_token(secret, x_csrf_token, raw_session_token=raw):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
+    if session_id == pair[0].id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="The current session cannot be revoked here."
+        )
+    if not auth_service.revoke_user_session(db, user_id=user.id, session_id=session_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session is no longer active.")
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_SESSIONS_REVOKED,
+        module="auth",
+        title="Session signed out",
+        detail="One other session was revoked.",
+    )
+    db.commit()
+    return schemas.SessionActionOut(message="Session signed out.", revoked_count=1)
+
+
+@router.get("/admin/ping", include_in_schema=False)
+def admin_ping(_admin: RequireAdminDep) -> dict[str, bool]:
+    """Minimal authenticated probe for the admin-only dependency (Phase 6 tests + ops)."""
+
+    return {"ok": True}
+
+
+@router.post("/change-username", response_model=schemas.ChangeUsernameOut)
+def post_change_username(
+    request: Request,
+    body: schemas.ChangeUsernameIn,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+) -> schemas.ChangeUsernameOut:
+    """Rename the signed-in operator account. The session survives — only the label changed."""
+
+    secret = require_session_secret(settings)
+    validate_browser_post_origin(request, settings)
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired CSRF token.",
+        )
+    try:
+        new_username = auth_service.change_username_for_user(
+            db,
+            user_id=user.id,
+            current_password=body.current_password,
+            new_username=body.new_username,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("auth event: username changed (user_id=%s)", user.id)
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_USERNAME_CHANGED,
+        module="auth",
+        title="Username changed",
+        detail=f"Signed in as {new_username}.",
+    )
+    return schemas.ChangeUsernameOut(
+        message="Username changed. Use it the next time you sign in.",
+        username=new_username,
+    )
+
+
+@router.post("/change-password", response_model=schemas.ChangePasswordOut)
+def post_change_password(
+    request: Request,
+    body: schemas.ChangePasswordIn,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+) -> schemas.ChangePasswordOut:
+    """Change the signed-in user's password and revoke active sessions (requires new sign-in)."""
+
+    secret = require_session_secret(settings)
+    validate_browser_post_origin(request, settings)
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired CSRF token.",
+        )
+    try:
+        auth_service.change_password_for_user(
+            db,
+            user_id=user.id,
+            current_password=body.current_password,
+            new_password=body.new_password,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("auth event: password changed (user_id=%s)", user.id)
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_PASSWORD_CHANGED,
+        module="auth",
+        title="Password changed",
+        detail=user.username,
+    )
+    return schemas.ChangePasswordOut(message="Password changed. Sign in again with your new password.")

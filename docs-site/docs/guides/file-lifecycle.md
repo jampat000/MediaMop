@@ -5,7 +5,7 @@ title: File Lifecycle
 
 # File Lifecycle Contract
 
-MediaMop must never report a partial media mutation as successful.
+Weir must never report a partial media mutation as successful.
 
 ## Required mutation pattern
 
@@ -16,7 +16,7 @@ MediaMop must never report a partial media mutation as successful.
 5. Only update job/activity success **after** the final file exists and passes safety checks
 6. Do not delete watched-folder or output-folder material unless the operation has traceable intent and a safety check has passed
 
-Backend code should use `mediamop.platform.file_lifecycle.mutations` for final media file placement instead of direct `shutil.move` or unlink-then-copy patterns.
+Backend code should use `weir.platform.file_lifecycle.mutations` for final media file placement instead of direct `shutil.move` or unlink-then-copy patterns.
 
 ## Deletion rules
 

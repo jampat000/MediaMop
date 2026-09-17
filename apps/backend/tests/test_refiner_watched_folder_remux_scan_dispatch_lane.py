@@ -11,28 +11,28 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.refiner.manager_queue_signals import report_for_signals
-from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.refiner.refiner_job_handlers import build_refiner_job_handlers
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers import (
-    _library_admission_rejection,
-)
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
-    REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
-)
-from mediamop.refiner.worker_loop import process_one_refiner_job
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
 from tests.manager_signal_helpers import reported
 from tests.refiner_library_fixtures import seed_refiner_libraries, seed_refiner_library
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.jobs_ops import refiner_enqueue_or_get_job
+from weir.refiner.manager_queue_signals import report_for_signals
+from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from weir.refiner.refiner_job_handlers import build_refiner_job_handlers
+from weir.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers import (
+    _library_admission_rejection,
+)
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
+    REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+)
+from weir.refiner.worker_loop import process_one_refiner_job
 
 
 @pytest.fixture
@@ -64,10 +64,10 @@ def test_scan_handler_enqueues_remux_when_requested(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    monkeypatch.setenv("MEDIAMOP_ARR_RADARR_BASE_URL", "http://127.0.0.1:9")
-    monkeypatch.setenv("MEDIAMOP_ARR_RADARR_API_KEY", "k")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    monkeypatch.setenv("WEIR_ARR_RADARR_BASE_URL", "http://127.0.0.1:9")
+    monkeypatch.setenv("WEIR_ARR_RADARR_API_KEY", "k")
+    settings = WeirSettings.load()
 
     watch = tmp_path / "watch"
     watch.mkdir()
@@ -86,7 +86,7 @@ def test_scan_handler_enqueues_remux_when_requested(
 
     def _fake_fetch(
         _session: Session,
-        _settings: MediaMopSettings,
+        _settings: WeirSettings,
         *,
         media_scope: str,
         connection_ids: tuple[int, ...] | None = None,
@@ -131,7 +131,7 @@ def test_scan_handler_enqueues_remux_when_requested(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         side_effect=_fake_fetch,
     ):
         assert (
@@ -169,8 +169,8 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
 
     watch = tmp_path / "watch_no_arr"
     watch.mkdir()
@@ -181,7 +181,7 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
 
     def _fake_fetch(
         _session: Session,
-        _settings: MediaMopSettings,
+        _settings: WeirSettings,
         *,
         media_scope: str,
         connection_ids: tuple[int, ...] | None = None,
@@ -223,7 +223,7 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         side_effect=_fake_fetch,
     ):
         assert (
@@ -250,8 +250,8 @@ def test_scan_job_targets_the_named_library_when_two_movie_libraries_exist(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
     first_watch = tmp_path / "movies"
     second_watch = tmp_path / "movies_4k"
     first_out = tmp_path / "movies_out"
@@ -299,7 +299,7 @@ def test_scan_job_targets_the_named_library_when_two_movie_libraries_exist(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         return_value=((), report_for_signals(())),
     ):
         assert (
@@ -328,10 +328,10 @@ def test_per_library_size_and_path_rules_skip_settled_files_before_queueing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+    from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
     watch = tmp_path / "admission_watch"
     out = tmp_path / "admission_out"
     watch.mkdir()
@@ -376,7 +376,7 @@ def test_per_library_size_and_path_rules_skip_settled_files_before_queueing(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         return_value=((), report_for_signals(())),
     ):
         assert (
@@ -413,8 +413,8 @@ def test_per_library_rejection_policy_deletes_only_rejected_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
     watch = tmp_path / "rejection_cleanup_watch"
     out = tmp_path / "rejection_cleanup_out"
     release = watch / "Movie Release"
@@ -452,7 +452,7 @@ def test_per_library_rejection_policy_deletes_only_rejected_file(
         session.commit()
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         return_value=((), report_for_signals(())),
     ):
         assert (
@@ -520,8 +520,8 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
 
     watch = tmp_path / "watch_existing_output"
     watch.mkdir()
@@ -588,7 +588,7 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         return_value=((), report_for_signals(())),
     ):
         assert (
@@ -614,8 +614,8 @@ def test_cleanup_retry_ignores_closed_processing_schedule(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
     watch = tmp_path / "watch_cleanup_outside_schedule"
     out = tmp_path / "out_cleanup_outside_schedule"
     release = watch / "Testament 1983"
@@ -686,15 +686,15 @@ def test_cleanup_retry_ignores_closed_processing_schedule(
     handlers = build_refiner_job_handlers(settings, session_factory)
     with (
         patch(
-            "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+            "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
             return_value=((), report_for_signals(())),
         ),
         patch(
-            "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.library_window_open",
+            "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.library_window_open",
             return_value=False,
         ),
         patch(
-            "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.library_window_reopens_at",
+            "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.library_window_reopens_at",
             return_value=datetime(2026, 4, 13, 0, 0, tzinfo=UTC),
         ),
     ):
@@ -722,8 +722,8 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
 
     watch = tmp_path / "watch_no_activity"
     watch.mkdir()
@@ -758,7 +758,7 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         return_value=((reported([]),), report_for_signals((reported([]),))),
     ):
         assert (
@@ -803,7 +803,7 @@ def _seed_library(session_factory, *, watch: Path, out: Path, **overrides) -> No
 def _run_scan(session_factory, settings, *, dedupe: str, now: datetime) -> str:
     def _fake_fetch(
         _session: Session,
-        _settings: MediaMopSettings,
+        _settings: WeirSettings,
         *,
         media_scope: str,
         connection_ids: tuple[int, ...] | None = None,
@@ -822,7 +822,7 @@ def _run_scan(session_factory, settings, *, dedupe: str, now: datetime) -> str:
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        "weir.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         side_effect=_fake_fetch,
     ):
         return process_one_refiner_job(
@@ -850,8 +850,8 @@ def test_a_file_still_settling_is_never_enqueued(
     settling holds it, and the operator can see why (#335).
     """
 
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
 
     watch = tmp_path / "watch"
     watch.mkdir()
@@ -886,7 +886,7 @@ def test_a_file_still_settling_is_never_enqueued(
 
     assert _remux_jobs(session_factory) == []
 
-    from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+    from weir.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 
     with session_factory() as s:
         row = s.scalars(select(RefinerFileRow)).one()
@@ -903,8 +903,8 @@ def test_a_file_whose_size_has_held_still_is_enqueued_on_the_next_scan(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
-    settings = MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = WeirSettings.load()
 
     watch = tmp_path / "watch"
     watch.mkdir()
@@ -936,7 +936,7 @@ def test_a_file_whose_size_has_held_still_is_enqueued_on_the_next_scan(
     _run_scan(session_factory, settings, dedupe="first", now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC))
     assert _remux_jobs(session_factory) == []
 
-    from mediamop.refiner.refiner_file_state_model import RefinerFileRow
+    from weir.refiner.refiner_file_state_model import RefinerFileRow
 
     # Backdate the observation, which is exactly what the next scan sees once the
     # detection interval has passed with the size unchanged.

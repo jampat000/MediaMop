@@ -12,7 +12,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_library_model import RefinerLibraryRow
 
 
 def seed_refiner_library(

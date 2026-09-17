@@ -2,7 +2,7 @@
  * The Direct Play badge (#467): which of the operator's devices will play a file without the
  * media server converting it, and why not.
  *
- * Information only. It never changes what MediaMop does to a file, so nothing here offers to
+ * Information only. It never changes what Weir does to a file, so nothing here offers to
  * fix or convert anything. Verdicts are carried in words (visible or screen-reader text), never
  * by symbol or colour alone.
  */
@@ -46,7 +46,7 @@ function shortReason(entry: RefinerDirectPlay): string | null {
 
 function fullSentence(entry: RefinerDirectPlay): string {
   if (entry.verdict === "unknown") {
-    return `${entry.device_name}: not measured yet, so MediaMop cannot say.`;
+    return `${entry.device_name}: not measured yet, so Weir cannot say.`;
   }
   const lead = `${entry.device_name} ${SENTENCE[entry.verdict]}`;
   return entry.reasons.length
@@ -106,7 +106,7 @@ export function DirectPlayLine({
           ))}
         </ul>
         <p className="mm-direct-play__note">
-          Information only. MediaMop never changes a file because of this.
+          Information only. Weir never changes a file because of this.
         </p>
       </section>
     );

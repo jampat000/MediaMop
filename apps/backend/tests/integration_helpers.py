@@ -6,15 +6,15 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
-from mediamop.api.factory import create_app
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.auth.models import User, UserRole, UserSession
-from mediamop.platform.auth.password import hash_password
+from weir.api.factory import create_app
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.auth.models import User, UserRole, UserSession
+from weir.platform.auth.password import hash_password
 
 
 def reset_user_tables() -> None:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -26,7 +26,7 @@ def reset_user_tables() -> None:
 
 def seed_admin_user() -> None:
     reset_user_tables()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -43,7 +43,7 @@ def seed_admin_user() -> None:
 
 def seed_viewer_user() -> None:
     reset_user_tables()
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
     with fac() as db:
@@ -65,7 +65,7 @@ def csrf(client: TestClient) -> str:
 
 
 def trusted_browser_origin_headers() -> dict[str, str]:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     trusted = settings.trusted_browser_origins
     if not trusted:
         return {}

@@ -6,14 +6,14 @@ from pathlib import Path
 
 from starlette.testclient import TestClient
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.refiner.jobs_model import RefinerJob
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
-    REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
-)
 from tests.integration_helpers import auth_post, trusted_browser_origin_headers
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.refiner.jobs_model import RefinerJob
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
+    REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+)
 
 
 def _login_admin(client: TestClient) -> None:
@@ -29,9 +29,9 @@ def _login_admin(client: TestClient) -> None:
 def _put_paths(client: TestClient, *, watched: str | None, output: str) -> None:
     del client
     # The path-settings route was retired with #460; the Movies library is configured directly.
-    from mediamop.refiner.refiner_library_service import resolve_library
+    from weir.refiner.refiner_library_service import resolve_library
 
-    with create_session_factory(create_db_engine(MediaMopSettings.load()))() as db:
+    with create_session_factory(create_db_engine(WeirSettings.load()))() as db:
         # The library scope-only work resolves to (first by display order), not the lowest id.
         library = resolve_library(db, media_scope="movie")
         assert library is not None
@@ -91,7 +91,7 @@ def test_watched_folder_scan_enqueue_defaults_to_processing_files(
     )
     assert r.status_code == 200, r.text
     job_id = r.json()["job_id"]
-    engine = create_db_engine(MediaMopSettings.load())
+    engine = create_db_engine(WeirSettings.load())
     with create_session_factory(engine)() as db:
         job = db.get(RefinerJob, job_id)
         assert job is not None

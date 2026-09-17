@@ -162,7 +162,7 @@ export function RefinerSchedulesSection() {
         <p className="font-semibold">Could not load Refiner schedules</p>
         <p className="mt-1">
           {isLikelyNetworkFailure(q.error ?? libraries.error)
-            ? "Check that the MediaMop API is running."
+            ? "Check that the Weir API is running."
             : isHttpErrorFromApi(q.error ?? libraries.error)
               ? "Sign in, then try again."
               : "Request failed."}

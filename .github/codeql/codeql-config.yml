@@ -1,4 +1,4 @@
-name: MediaMop CodeQL security scan
+name: Weir CodeQL security scan
 
 paths:
   - apps/backend/src

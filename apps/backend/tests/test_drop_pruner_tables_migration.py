@@ -14,18 +14,18 @@ import sqlalchemy as sa
 from alembic.config import Config
 
 from alembic import command
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine
 
 _BEFORE = "0035_direct_play_facts"
 
 
 def _config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, name: str) -> Config:
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     home = tmp_path / name
     home.mkdir()
-    monkeypatch.setenv("MEDIAMOP_HOME", str(home))
-    MediaMopSettings.load()
+    monkeypatch.setenv("WEIR_HOME", str(home))
+    WeirSettings.load()
     backend = Path(__file__).resolve().parents[1]
     monkeypatch.chdir(backend)
     return Config(str(backend / "alembic.ini"))
@@ -69,7 +69,7 @@ def test_fresh_install_has_no_pruner_tables(monkeypatch: pytest.MonkeyPatch, tmp
     cfg = _config(monkeypatch, tmp_path, "fresh")
     command.upgrade(cfg, "head")
 
-    assert _pruner_tables(create_db_engine(MediaMopSettings.load())) == set()
+    assert _pruner_tables(create_db_engine(WeirSettings.load())) == set()
 
 
 def test_upgrade_drops_pruner_tables_and_keeps_everything_else(
@@ -79,7 +79,7 @@ def test_upgrade_drops_pruner_tables_and_keeps_everything_else(
     cfg = _config(monkeypatch, tmp_path, "legacy")
     command.upgrade(cfg, _BEFORE)
 
-    engine = create_db_engine(MediaMopSettings.load())
+    engine = create_db_engine(WeirSettings.load())
     _create_legacy_pruner_tables(engine)
     assert len(_pruner_tables(engine)) == 4
     tables_before = set(sa.inspect(engine).get_table_names())
@@ -87,7 +87,7 @@ def test_upgrade_drops_pruner_tables_and_keeps_everything_else(
 
     command.upgrade(cfg, "head")
 
-    engine = create_db_engine(MediaMopSettings.load())
+    engine = create_db_engine(WeirSettings.load())
     assert _pruner_tables(engine) == set()
     assert set(sa.inspect(engine).get_table_names()) == tables_before - {
         "pruner_jobs",

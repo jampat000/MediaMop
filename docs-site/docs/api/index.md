@@ -5,18 +5,18 @@ title: API Reference
 
 # API Reference
 
-MediaMop exposes a REST API via FastAPI. The API is served at `/api/v1` under the same origin as the web UI.
+Weir exposes a REST API via FastAPI. The API is served at `/api/v1` under the same origin as the web UI.
 
 ## OpenAPI specification
 
 The full OpenAPI schema is auto-generated from the FastAPI backend and available at:
 
 - **Development**: `http://localhost:8788/docs` (Swagger UI) or `http://localhost:8788/redoc` (ReDoc)
-- **Source**: [`apps/web/openapi/mediamop-openapi.json`](https://github.com/jampat000/MediaMop/blob/main/apps/web/openapi/mediamop-openapi.json)
+- **Source**: [`apps/web/openapi/weir-openapi.json`](https://github.com/jampat000/weir/blob/main/apps/web/openapi/weir-openapi.json)
 
 ## Authentication
 
-MediaMop uses cookie-based sessions with CSRF protection:
+Weir uses cookie-based sessions with CSRF protection:
 
 - First-run bootstrap creates the admin user
 - Login via `POST /api/v1/auth/login`

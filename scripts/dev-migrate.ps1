@@ -1,10 +1,10 @@
 # Run Alembic migrations. Resolves repo root from this script's location.
 # Loads apps/backend/.env into the process (keys only if not already set in the shell), same as the API.
 #
-# SQLite-first: database path comes from MEDIAMOP_HOME (default OS data dir) and optional MEDIAMOP_DB_PATH.
+# SQLite-first: database path comes from WEIR_HOME (default OS data dir) and optional WEIR_DB_PATH.
 # See docs/local-development.md (being updated for SQLite).
 $ErrorActionPreference = "Stop"
-. "$PSScriptRoot\mediamop-env.ps1"
+. "$PSScriptRoot\weir-env.ps1"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $backend = Join-Path $repoRoot "apps\backend"
 
@@ -12,7 +12,7 @@ if (-not (Test-Path $backend)) {
     Write-Error "Expected apps/backend under $repoRoot"
 }
 
-Import-MediaMopBackendDotEnv -BackendDir $backend
+Import-WeirBackendDotEnv -BackendDir $backend
 
 $env:PYTHONPATH = "src"
 Set-Location $backend
@@ -32,7 +32,7 @@ if (Test-Path $venvPython) {
 Write-Host 'Running: alembic upgrade head' -ForegroundColor Gray
 & $pyExe -m alembic upgrade head
 if ($LASTEXITCODE -ne 0) {
-    Write-Host 'Migrations failed. Confirm MEDIAMOP_HOME / MEDIAMOP_DB_PATH and that the DB file parent directory is writable.' -ForegroundColor Yellow
+    Write-Host 'Migrations failed. Confirm WEIR_HOME / WEIR_DB_PATH and that the DB file parent directory is writable.' -ForegroundColor Yellow
     exit $LASTEXITCODE
 }
 Write-Host 'Migrations complete.' -ForegroundColor Green

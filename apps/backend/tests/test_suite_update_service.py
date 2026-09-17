@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from mediamop.platform.suite_settings import update_service
-from mediamop.platform.suite_settings.release_catalog import (
+from weir.platform.suite_settings import update_service
+from weir.platform.suite_settings.release_catalog import (
     GitHubReleaseAsset,
     GitHubReleaseRecord,
 )
@@ -16,16 +16,16 @@ def _release_record(version: str = "2.0.8") -> GitHubReleaseRecord:
     return GitHubReleaseRecord(
         tag_name=f"v{version}",
         version=version,
-        release_name=f"MediaMop {version}",
+        release_name=f"Weir {version}",
         html_url="https://example.com/release",
         published_at=datetime(2026, 5, 7, tzinfo=UTC),
         draft=False,
         prerelease=False,
         assets=(
             GitHubReleaseAsset(
-                name="MediaMop-win-Setup.exe",
-                api_url="https://api.github.com/repos/jampat000/MediaMop/releases/assets/1",
-                browser_download_url=f"https://github.com/jampat000/MediaMop/releases/download/v{version}/MediaMop-win-Setup.exe",
+                name="Weir-win-Setup.exe",
+                api_url="https://api.github.com/repos/jampat000/weir/releases/assets/1",
+                browser_download_url=f"https://github.com/jampat000/weir/releases/download/v{version}/Weir-win-Setup.exe",
                 size_bytes=123456789,
                 content_type="application/octet-stream",
             ),
@@ -35,11 +35,11 @@ def _release_record(version: str = "2.0.8") -> GitHubReleaseRecord:
 
 def test_build_suite_update_status_returns_update_available(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         lambda **_kwargs: _release_record("2.0.8"),
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "2.0.7")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "2.0.7")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
 
     status = update_service.build_suite_update_status()
 
@@ -49,17 +49,17 @@ def test_build_suite_update_status_returns_update_available(monkeypatch: pytest.
     assert status.install_type == "windows"
     assert status.in_app_upgrade_supported is True
     assert status.windows_installer_url == (
-        "https://github.com/jampat000/MediaMop/releases/download/v2.0.8/MediaMop-win-Setup.exe"
+        "https://github.com/jampat000/weir/releases/download/v2.0.8/Weir-win-Setup.exe"
     )
 
 
 def test_build_suite_update_status_returns_up_to_date(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         lambda **_kwargs: _release_record("2.1.4"),
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "2.1.4")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "2.1.4")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
 
     status = update_service.build_suite_update_status()
 
@@ -69,25 +69,25 @@ def test_build_suite_update_status_returns_up_to_date(monkeypatch: pytest.Monkey
 
 def test_build_suite_update_status_windows_shows_velopack_summary(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         lambda **_kwargs: _release_record("2.0.8"),
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "2.0.7")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "2.0.7")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
 
     status = update_service.build_suite_update_status()
 
     assert status.in_app_upgrade_supported is True
-    assert status.in_app_upgrade_summary == "Updates are managed by the MediaMop desktop app via Velopack."
+    assert status.in_app_upgrade_summary == "Updates are managed by the Weir desktop app via Velopack."
 
 
 def test_build_suite_update_status_docker_includes_update_command(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         lambda **_kwargs: _release_record("2.0.8"),
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "2.0.7")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "docker")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "2.0.7")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service._detect_install_type", lambda: "docker")
 
     status = update_service.build_suite_update_status()
 
@@ -102,11 +102,11 @@ def test_build_suite_update_status_docker_includes_update_command(monkeypatch: p
 
 def test_build_suite_update_status_source_has_no_upgrade_support(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        "weir.platform.suite_settings.update_service.fetch_latest_release_record",
         lambda **_kwargs: _release_record("2.0.8"),
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "2.0.7")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "source")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service.__version__", "2.0.7")
+    monkeypatch.setattr("weir.platform.suite_settings.update_service._detect_install_type", lambda: "source")
 
     status = update_service.build_suite_update_status()
 
@@ -118,7 +118,7 @@ def _settings_for(tmp_path: object) -> object:
     """A settings object carrying only what the update-settings helpers read."""
 
     class _Stub:
-        mediamop_home = str(tmp_path)
+        weir_home = str(tmp_path)
 
     return _Stub()
 

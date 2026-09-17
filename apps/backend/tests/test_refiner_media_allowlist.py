@@ -11,11 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.refiner.refiner_remux_rules import (
+from weir.refiner.refiner_remux_rules import (
     is_refiner_media_candidate,
     refiner_media_extensions_sorted,
 )
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
     iter_watched_folder_media_candidates,
 )
 

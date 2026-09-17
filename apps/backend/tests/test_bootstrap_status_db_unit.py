@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.exc import InvalidRequestError, OperationalError, ProgrammingError
 
-from mediamop.platform.auth.bootstrap_status_db import (
+from weir.platform.auth.bootstrap_status_db import (
     raise_http_for_bootstrap_status_db,
     raise_http_for_bootstrap_status_sqlalchemy,
 )

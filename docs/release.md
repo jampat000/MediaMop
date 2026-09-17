@@ -1,6 +1,6 @@
-# MediaMop releases
+# Weir releases
 
-MediaMop now ships three release deliverables from a tagged release:
+Weir now ships three release deliverables from a tagged release:
 
 1. a GitHub Release for the tagged source snapshot
 2. a Windows desktop package (Velopack installer + delta update files)
@@ -8,14 +8,14 @@ MediaMop now ships three release deliverables from a tagged release:
 
 The Windows artifact is a desktop app with a .NET tray host and Velopack for delta updates. It is not a Windows service.
 
-MediaMop is released under AGPL-3.0-or-later. Release artifacts are built from the tagged source tree and remain subject to that license.
+Weir is released under AGPL-3.0-or-later. Release artifacts are built from the tagged source tree and remain subject to that license.
 
 ## Contract
 
 1. Update the version in both files in a normal PR:
    - `apps/backend/pyproject.toml`
    - `apps/web/package.json`
-2. Merge to `main` after `Test / mediamop` passes.
+2. Merge to `main` after `Test / weir` passes.
 3. Create user-facing release notes for the target tag before pushing it:
 
    - Create `docs/release-notes/vX.Y.Z.md` using `docs/release-notes/TEMPLATE.md`.
@@ -27,7 +27,7 @@ MediaMop is released under AGPL-3.0-or-later. Release artifacts are built from t
    git fetch origin
    git checkout main
    git pull origin main
-   git tag -a vX.Y.Z -m "MediaMop vX.Y.Z"
+   git tag -a vX.Y.Z -m "Weir vX.Y.Z"
    git push origin vX.Y.Z
    ```
 
@@ -46,7 +46,7 @@ The `Release` workflow:
 - reruns web build and unit tests on Linux
 - reruns the E2E auth smoke on Linux
 - builds the Velopack Windows package on `windows-latest`
-- publishes `mediamop-web-dist.zip`
+- publishes `weir-web-dist.zip`
 - builds a local, unpushed Docker release candidate
 - runs the complete packaged browser/API audit against that candidate, including
   a mounted disposable Refiner file that must pass through byte-identically into
@@ -78,8 +78,8 @@ The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` an
 | Deliverable | Meaning |
 |-------------|---------|
 | `Tag + source tree` | Canonical source snapshot for the release. |
-| `mediamop-web-dist.zip` | Static production build of `apps/web/dist`. Backend still required. |
-| `MediaMop-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
+| `weir-web-dist.zip` | Static production build of `apps/web/dist`. Backend still required. |
+| `Weir-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
 | `ghcr.io/<owner>/<repo>:vX.Y.Z` | Versioned all-in-one container image. |
 | `ghcr.io/<owner>/<repo>:latest` | Latest stable container image. |
 
@@ -96,12 +96,12 @@ powershell -ExecutionPolicy Bypass -File packaging/windows/build-velopack.ps1
 
 After installing:
 
-1. Launch `MediaMop` from the Start Menu or desktop shortcut.
-2. MediaMop starts in the user session, not as a Windows service.
+1. Launch `Weir` from the Start Menu or desktop shortcut.
+2. Weir starts in the user session, not as a Windows service.
 3. The .NET tray app launches the Python backend server as a child process.
-4. The tray icon opens the local app in the browser and exposes `Open MediaMop`, `Open Data Folder`, `Check for updates`, and `Quit`.
-5. Application binaries install under `%LocalAppData%\MediaMop` (per-user, no admin required).
-6. The local runtime root is created under `C:\ProgramData\MediaMop`.
+4. The tray icon opens the local app in the browser and exposes `Open Weir`, `Open Data Folder`, `Check for updates`, and `Quit`.
+5. Application binaries install under `%LocalAppData%\Weir` (per-user, no admin required).
+6. The local runtime root is created under `C:\ProgramData\Weir`.
 
 Updates are handled automatically by the .NET tray app via Velopack. Delta updates keep downloads small and rollback is automatic on failure. No separate updater service is needed.
 
@@ -128,11 +128,11 @@ The Docker image build and Docker smoke test run on GitHub infrastructure.
 Pull and run:
 
 ```bash
-docker pull ghcr.io/jampat000/mediamop:latest
+docker pull ghcr.io/jampat000/weir:latest
 docker run --rm \
   -p 8788:8788 \
-  -v mediamop-data:/data/mediamop \
-  ghcr.io/jampat000/mediamop:latest
+  -v weir-data:/data/weir \
+  ghcr.io/jampat000/weir:latest
 ```
 
 Or use the root `compose.yaml`:
@@ -142,7 +142,7 @@ docker compose pull
 docker compose up -d
 ```
 
-No env file is required for the default all-in-one container path. Create `.env.mediamop`
+No env file is required for the default all-in-one container path. Create `.env.weir`
 only if you want to override defaults such as the image tag or runtime home.
 
 ## Not shipped

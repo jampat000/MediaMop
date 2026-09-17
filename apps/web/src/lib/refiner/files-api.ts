@@ -32,7 +32,7 @@ export const REFINER_FILE_STATUS_LABELS: Record<RefinerFileStatus, string> = {
 /** Whether one device the operator owns will play the file without the media server converting it. */
 export type RefinerDirectPlayVerdict = "yes" | "no" | "maybe" | "unknown";
 
-/** Information only: this never changes what MediaMop does to a file. */
+/** Information only: this never changes what Weir does to a file. */
 export interface RefinerDirectPlay {
   device_id: string;
   device_name: string;
@@ -74,7 +74,7 @@ export interface RefinerFile {
   /** When an on-hold file becomes eligible. Null when the wait is on a writer, not the clock. */
   hold_until: string | null;
   size_changed_at: string | null;
-  /** When MediaMop first added this file to the workbench. */
+  /** When Weir first added this file to the workbench. */
   created_at: string;
   /** When this workbench row last changed state or detail. */
   updated_at: string;

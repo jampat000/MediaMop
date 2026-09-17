@@ -89,7 +89,7 @@ export function RefinerProcessSettingsSection() {
         </p>
         <p className="mt-1">
           {isLikelyNetworkFailure(q.error)
-            ? "Check that the MediaMop API is running."
+            ? "Check that the Weir API is running."
             : isHttpErrorFromApi(q.error)
               ? "Sign in, then try again."
               : "Request failed."}
@@ -328,8 +328,8 @@ export function RefinerProcessSettingsSection() {
                 Records and cleanup
               </h3>
               <p className="mt-1 text-xs leading-5 text-[var(--mm-text3)]">
-                Choose how much diagnostic history to keep and how MediaMop
-                treats its own temporary data after work finishes or fails.
+                Choose how much diagnostic history to keep and how Weir treats
+                its own temporary data after work finishes or fails.
               </p>
             </div>
             <div className="grid gap-4 lg:grid-cols-3">
@@ -342,7 +342,7 @@ export function RefinerProcessSettingsSection() {
               <div className="space-y-3 lg:col-span-2">
                 {toggleField(
                   "Reclaim stale temporary files",
-                  "Safely removes old files from MediaMop's private work area. Recommended and enabled by default.",
+                  "Safely removes old files from Weir's private work area. Recommended and enabled by default.",
                   workTempStaleSweepEnabled,
                   setWorkTempStaleSweepEnabled,
                 )}

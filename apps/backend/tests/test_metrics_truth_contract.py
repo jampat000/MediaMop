@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.platform.observability.metrics_truth import finalized_success_total, require_non_negative_metric_counts
+from weir.platform.observability.metrics_truth import finalized_success_total, require_non_negative_metric_counts
 
 
 def test_finalized_success_total_is_component_derived() -> None:

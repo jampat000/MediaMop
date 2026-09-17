@@ -20,7 +20,7 @@ failed is something a policy can act on rather than a sentence to substring-matc
 ``refiner_operator_settings`` — the three sweeps stop being undocumented environment
 variables:
 
-    ``work_temp_stale_sweep_enabled`` defaults **on**. It reclaims MediaMop's own stale
+    ``work_temp_stale_sweep_enabled`` defaults **on**. It reclaims Weir's own stale
     working files; a default install never doing that is the bug.
 
     ``failure_cleanup_enabled`` defaults **off**, deliberately. This sweep deletes source

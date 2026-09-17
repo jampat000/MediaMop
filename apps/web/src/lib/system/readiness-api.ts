@@ -15,7 +15,7 @@ export async function fetchSystemReadiness(): Promise<SystemReadiness> {
     await requireOk(
       systemReadinessPath,
       response,
-      "Could not read whether MediaMop is running",
+      "Could not read whether Weir is running",
     );
   }
   return readJson<SystemReadiness>(response);

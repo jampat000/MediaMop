@@ -1,7 +1,7 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
 
-/** A media manager MediaMop talks to. The kind selects the payload dialect, nothing more. */
+/** A media manager Weir talks to. The kind selects the payload dialect, nothing more. */
 export type MediaManagerKind = "radarr" | "sonarr" | "deluno" | "native";
 
 export type SearchLane = "missing" | "upgrade";

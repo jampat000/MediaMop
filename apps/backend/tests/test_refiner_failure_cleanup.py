@@ -11,18 +11,18 @@ from unittest.mock import patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.refiner.jobs_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.refiner.refiner_failure_cleanup import run_refiner_failure_cleanup_sweep_for_scope
-from mediamop.refiner.refiner_failure_cleanup_enqueue import enqueue_refiner_failure_cleanup_sweep_job
-from mediamop.refiner.refiner_failure_cleanup_handlers import make_refiner_failure_cleanup_handler
-from mediamop.refiner.worker_loop import RefinerJobWorkContext
+import weir.refiner.jobs_model  # noqa: F401
 from tests.manager_signal_helpers import reported
 from tests.refiner_library_fixtures import seed_refiner_libraries
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.platform.activity.models import ActivityEvent
+from weir.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from weir.refiner.refiner_failure_cleanup import run_refiner_failure_cleanup_sweep_for_scope
+from weir.refiner.refiner_failure_cleanup_enqueue import enqueue_refiner_failure_cleanup_sweep_job
+from weir.refiner.refiner_failure_cleanup_handlers import make_refiner_failure_cleanup_handler
+from weir.refiner.worker_loop import RefinerJobWorkContext
 
 
 def _session(tmp_path: Path) -> Session:
@@ -32,8 +32,8 @@ def _session(tmp_path: Path) -> Session:
     return fac()
 
 
-def _settings() -> MediaMopSettings:
-    return replace(MediaMopSettings.load())
+def _settings() -> WeirSettings:
+    return replace(WeirSettings.load())
 
 
 def _seed_paths(session: Session, *, mw: Path, mo: Path, tw: Path, to: Path) -> None:
@@ -99,7 +99,7 @@ def test_failed_movie_older_than_grace_cleans_source_output_and_temp(tmp_path: P
     settings = replace(_settings(), refiner_movie_failure_cleanup_grace_period_seconds=300)
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([]),),
         ),
     ):
@@ -129,7 +129,7 @@ def test_failed_movie_still_held_by_a_manager_skips(tmp_path: Path) -> None:
     settings = replace(_settings(), refiner_movie_failure_cleanup_grace_period_seconds=300)
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([{"outputPath": str(src.resolve())}], name="4K"),),
         ),
     ):
@@ -170,7 +170,7 @@ def test_tv_cleanup_skips_when_any_direct_child_episode_still_in_queue(tmp_path:
     _add_failed(session, rel=rel, scope="tv")
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([{"outputPath": str(ep2.resolve())}], scope="tv", kind="sonarr"),),
         ),
     ):
@@ -211,7 +211,7 @@ def test_failed_movie_radarr_unreachable_skips(tmp_path: Path) -> None:
     _seed_paths(session, mw=root / "mw", mo=root / "mo", tw=root / "tw", to=root / "to")
     _add_failed(session, rel="Title/Film.mkv", scope="movie")
     with patch(
-        "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+        "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
         return_value=(),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
@@ -233,7 +233,7 @@ def test_failed_movie_root_bounds_prevent_root_delete(tmp_path: Path) -> None:
     _add_failed(session, rel="Film.mkv", scope="movie")
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([]),),
         ),
     ):
@@ -259,7 +259,7 @@ def test_tv_pending_or_leased_job_blocks_season_delete(tmp_path: Path) -> None:
     _add_pending(session, rel="Show/Season 1/S01E02.mkv", scope="tv")
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([], scope="tv", kind="sonarr"),),
         ),
     ):
@@ -284,7 +284,7 @@ def test_tv_season_delete_requires_terminal_failed_for_every_direct_child_episod
     _add_failed(session, rel="Show/Season 1/S01E01.mkv", scope="tv")
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([], scope="tv", kind="sonarr"),),
         ),
     ):
@@ -316,7 +316,7 @@ def test_movies_scope_does_not_process_tv_failed_rows(tmp_path: Path) -> None:
     _add_failed(session, rel="Show/Season 1/S01E01.mkv", scope="tv")
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([]),),
         ),
     ):
@@ -333,7 +333,7 @@ def test_tv_scope_does_not_process_movie_failed_rows(tmp_path: Path) -> None:
     _add_failed(session, rel="Title/Film.mkv", scope="movie")
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([], scope="tv", kind="sonarr"),),
         ),
     ):
@@ -357,10 +357,10 @@ def test_lock_failures_non_fatal(tmp_path: Path) -> None:
     _add_failed(session, rel=rel, scope="movie")
     with (
         patch(
-            "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+            "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
             return_value=(reported([]),),
         ),
-        patch("mediamop.refiner.refiner_failure_cleanup.shutil.rmtree", side_effect=PermissionError("locked")),
+        patch("weir.refiner.refiner_failure_cleanup.shutil.rmtree", side_effect=PermissionError("locked")),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
@@ -386,7 +386,7 @@ def test_per_scope_grace_settings_are_independent(tmp_path: Path) -> None:
         refiner_tv_failure_cleanup_grace_period_seconds=1200,
     )
     with patch(
-        "mediamop.refiner.refiner_failure_cleanup.collect_queue_signals",
+        "weir.refiner.refiner_failure_cleanup.collect_queue_signals",
         return_value=(reported([]),),
     ):
         movie_res = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="movie")

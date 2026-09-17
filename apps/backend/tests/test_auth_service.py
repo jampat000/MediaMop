@@ -5,9 +5,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from mediamop.platform.auth import bootstrap as bootstrap_service
-from mediamop.platform.auth import service
-from mediamop.platform.auth.password import DUMMY_PASSWORD_HASH
+from weir.platform.auth import bootstrap as bootstrap_service
+from weir.platform.auth import service
+from weir.platform.auth.password import DUMMY_PASSWORD_HASH
 
 
 class _ScalarResult:

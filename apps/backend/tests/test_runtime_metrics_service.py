@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mediamop.platform.metrics.service import (
+from weir.platform.metrics.service import (
     build_runtime_metrics_summary,
     record_http_request,
     record_log_record,
@@ -26,12 +26,12 @@ def test_runtime_metrics_summary_and_prometheus_include_module_job_metrics() -> 
 
     output = render_prometheus_metrics()
 
-    assert 'mediamop_module_jobs_total{module="refiner",event="started"} 1' in output
-    assert 'mediamop_module_jobs_total{module="refiner",event="completed"} 1' in output
-    assert 'mediamop_module_jobs_total{module="other",event="failed"} 1' in output
-    assert 'mediamop_module_queue_depth{module="refiner"} 3' in output
-    assert 'mediamop_module_queue_depth{module="other"} 1' in output
-    assert "mediamop_http_requests_total 2" in output
+    assert 'weir_module_jobs_total{module="refiner",event="started"} 1' in output
+    assert 'weir_module_jobs_total{module="refiner",event="completed"} 1' in output
+    assert 'weir_module_jobs_total{module="other",event="failed"} 1' in output
+    assert 'weir_module_queue_depth{module="refiner"} 3' in output
+    assert 'weir_module_queue_depth{module="other"} 1' in output
+    assert "weir_http_requests_total 2" in output
 
 
 def test_record_module_savings_increments_correctly() -> None:
@@ -74,10 +74,10 @@ def test_render_prometheus_includes_savings_metric() -> None:
 
     output = render_prometheus_metrics()
 
-    assert "# HELP mediamop_module_savings_bytes_total" in output
-    assert "# TYPE mediamop_module_savings_bytes_total counter" in output
-    assert 'mediamop_module_savings_bytes_total{module="refiner"} 12345678' in output
-    assert 'mediamop_module_savings_bytes_total{module="other"} 9876543' in output
+    assert "# HELP weir_module_savings_bytes_total" in output
+    assert "# TYPE weir_module_savings_bytes_total counter" in output
+    assert 'weir_module_savings_bytes_total{module="refiner"} 12345678' in output
+    assert 'weir_module_savings_bytes_total{module="other"} 9876543' in output
 
 
 def test_render_prometheus_omits_savings_section_when_empty() -> None:
@@ -85,4 +85,4 @@ def test_render_prometheus_omits_savings_section_when_empty() -> None:
 
     output = render_prometheus_metrics()
 
-    assert "mediamop_module_savings_bytes_total" not in output
+    assert "weir_module_savings_bytes_total" not in output

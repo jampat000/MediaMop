@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # All-in-one: FastAPI + SQLite + bundled Vite production UI (same origin /api/v1).
-# Build: docker build -t mediamop:local .
-# Run:  docker run --rm -e MEDIAMOP_SESSION_SECRET=... -p 8788:8788 -v mediamop-data:/data/mediamop mediamop:local
+# Build: docker build -t weir:local .
+# Run:  docker run --rm -e WEIR_SESSION_SECRET=... -p 8788:8788 -v weir-data:/data/weir weir:local
 
 FROM node:24-bookworm-slim AS web
 WORKDIR /src/apps/web
@@ -26,28 +26,28 @@ RUN apt-get update \
     gosu \
   && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/mediamop
-RUN groupadd --system --gid 1000 mediamop \
-  && useradd --system --uid 1000 --gid 1000 --create-home --home-dir /home/mediamop --shell /usr/sbin/nologin mediamop \
-  && mkdir -p /data/mediamop /opt/mediamop/apps/backend /opt/mediamop/web-dist \
-  && chown -R mediamop:mediamop /data/mediamop /opt/mediamop /home/mediamop
-COPY --chown=mediamop:mediamop apps/backend /opt/mediamop/apps/backend
-RUN python -m venv /opt/mediamop/.venv \
-  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --prefer-binary --require-hashes -r /opt/mediamop/apps/backend/requirements-runtime.lock \
-  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --no-deps --no-build-isolation -e "/opt/mediamop/apps/backend"
+WORKDIR /opt/weir
+RUN groupadd --system --gid 1000 weir \
+  && useradd --system --uid 1000 --gid 1000 --create-home --home-dir /home/weir --shell /usr/sbin/nologin weir \
+  && mkdir -p /data/weir /opt/weir/apps/backend /opt/weir/web-dist \
+  && chown -R weir:weir /data/weir /opt/weir /home/weir
+COPY --chown=weir:weir apps/backend /opt/weir/apps/backend
+RUN python -m venv /opt/weir/.venv \
+  && /opt/weir/.venv/bin/pip install --no-cache-dir --prefer-binary --require-hashes -r /opt/weir/apps/backend/requirements-runtime.lock \
+  && /opt/weir/.venv/bin/pip install --no-cache-dir --no-deps --no-build-isolation -e "/opt/weir/apps/backend"
 
-COPY --from=web --chown=mediamop:mediamop /src/apps/web/dist /opt/mediamop/web-dist
+COPY --from=web --chown=weir:weir /src/apps/web/dist /opt/weir/web-dist
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENV PYTHONPATH=/opt/mediamop/apps/backend/src
-ENV PATH=/opt/mediamop/.venv/bin:$PATH
-ENV MEDIAMOP_WEB_DIST=/opt/mediamop/web-dist
-ENV MEDIAMOP_ENV=production
+ENV PYTHONPATH=/opt/weir/apps/backend/src
+ENV PATH=/opt/weir/.venv/bin:$PATH
+ENV WEIR_WEB_DIST=/opt/weir/web-dist
+ENV WEIR_ENV=production
 # The sign-in cookie is marked HTTPS-only automatically when a request actually arrives over
-# HTTPS (directly, or via a proxy listed in MEDIAMOP_TRUSTED_PROXY_IPS). Forcing it on here
+# HTTPS (directly, or via a proxy listed in WEIR_TRUSTED_PROXY_IPS). Forcing it on here
 # would discard the cookie on a plain-HTTP LAN install and lock the operator out for nothing,
-# so the default is left as `auto`. Set MEDIAMOP_SESSION_COOKIE_SECURE=true to force it.
+# so the default is left as `auto`. Set WEIR_SESSION_COOKIE_SECURE=true to force it.
 
 EXPOSE 8788
 

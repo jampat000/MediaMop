@@ -1,4 +1,4 @@
-# Runs MediaMop Docker validation on GitHub-hosted runners instead of requiring
+# Runs Weir Docker validation on GitHub-hosted runners instead of requiring
 # Docker Desktop on this workstation.
 param(
     [string] $Ref,

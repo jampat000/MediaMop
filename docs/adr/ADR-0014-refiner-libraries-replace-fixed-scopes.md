@@ -44,7 +44,7 @@ two connections could serve the same one.
 
 **The manager already knows the answer.** Deluno publishes
 `GET /api/integrations/external/manifest` whose documented purpose is to say which
-libraries exist and which roots are configured. MediaMop asks the operator to retype it,
+libraries exist and which roots are configured. Weir asks the operator to retype it,
 and can only accept two of them.
 
 ## Decision
@@ -136,7 +136,7 @@ answerable to, not a nice-to-have.
 work to probe depth and observability, and requires a follow-up ADR for anything beyond.
 Nothing here is preflight depth — this is configuration ownership and storage — so its
 boundary neither constrains this decision nor is loosened by it. `probe_size_mb` and
-`analyze_duration_seconds` stay on `MediaMopSettings` per ADR-0008.
+`analyze_duration_seconds` stay on `WeirSettings` per ADR-0008.
 
 **ADR-0013 (a media manager is a kind) is completed, not changed.** That ADR made a
 connection a row with a kind and stated the principle that callers want *the manager that
@@ -168,11 +168,11 @@ prefix, or a queue. Everything stays on `refiner_jobs` under `refiner.*`.
 ## Related
 
 - [ADR-0007](ADR-0007-module-owned-worker-lanes.md) — module-owned worker lanes
-- [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md) — settings aggregate
+- [ADR-0008](ADR-0008-weir-settings-aggregate-runtime-config.md) — settings aggregate
 - [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) — suite-wide timing isolation
 - [ADR-0012](ADR-0012-refiner-preflight-parity-boundary.md) — preflight parity boundary
 - [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) — a media manager is a kind
 - Execution plan: [`docs/exec-plans/completed/refiner-library-model.md`](../exec-plans/completed/refiner-library-model.md)
 
-[#350]: https://github.com/jampat000/MediaMop/issues/350
-[#351]: https://github.com/jampat000/MediaMop/issues/351
+[#350]: https://github.com/jampat000/weir/issues/350
+[#351]: https://github.com/jampat000/weir/issues/351

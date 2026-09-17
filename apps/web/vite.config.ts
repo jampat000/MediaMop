@@ -34,7 +34,7 @@ const dev = devPorts.development;
 
 /** ``run-dev-stack.mjs`` may bump the port when the default from ``dev-ports.json`` is busy. */
 const devWebPort = (() => {
-  const raw = (process.env.MEDIAMOP_DEV_WEB_PORT || "").trim();
+  const raw = (process.env.WEIR_DEV_WEB_PORT || "").trim();
   if (raw) {
     const n = Number(raw);
     if (Number.isFinite(n) && n >= 1 && n <= 65535) {
@@ -46,16 +46,14 @@ const devWebPort = (() => {
 
 function apiProxyTarget(mode: string, envDir: string): string {
   // Takes precedence over .env* (loadEnv) so automation can pin /api to a known backend.
-  const forced = (
-    process.env.MEDIAMOP_SCREENSHOT_API_PROXY_TARGET || ""
-  ).trim();
+  const forced = (process.env.WEIR_SCREENSHOT_API_PROXY_TARGET || "").trim();
   if (forced) {
     return forced;
   }
   // ``run-dev-stack.mjs`` sets this when the default API port holds an outdated build but a
   // fresh uvicorn is started on another port (see the stale-route probes).
   const devStackProxy = (
-    process.env.MEDIAMOP_DEV_STACK_API_PROXY_TARGET || ""
+    process.env.WEIR_DEV_STACK_API_PROXY_TARGET || ""
   ).trim();
   if (devStackProxy) {
     return devStackProxy;
@@ -96,7 +94,7 @@ export default defineConfig(({ mode }) => {
       // Source maps are opt-in for local diagnostics. Production artifacts do not expose
       // source paths or ship multi-megabyte maps by default.
       sourcemap:
-        process.env.MEDIAMOP_BUILD_SOURCEMAPS === "true" ? "hidden" : false,
+        process.env.WEIR_BUILD_SOURCEMAPS === "true" ? "hidden" : false,
     },
     server: {
       // ``true`` = listen on all interfaces (0.0.0.0). Required so **http://localhost:<port>**

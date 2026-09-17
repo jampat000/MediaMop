@@ -1,4 +1,4 @@
-from mediamop.platform.observability.failure_messages import classify_exception, operator_failure_from_exception
+from weir.platform.observability.failure_messages import classify_exception, operator_failure_from_exception
 
 
 def test_failure_message_maps_credentials_to_actionable_guidance() -> None:

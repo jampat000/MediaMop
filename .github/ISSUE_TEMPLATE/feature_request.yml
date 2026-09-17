@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a practical MediaMop improvement or workflow change.
+description: Suggest a practical Weir improvement or workflow change.
 title: "[Feature]: "
 labels:
   - type: enhancement
@@ -10,7 +10,7 @@ body:
     attributes:
       label: Problem this solves
       description: Describe the real workflow problem, not just the proposed UI.
-      placeholder: I need MediaMop to...
+      placeholder: I need Weir to...
     validations:
       required: true
   - type: textarea

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Spawns the MediaMop API like `scripts/dev-backend.ps1` (cwd apps/backend, PYTHONPATH=src,
+ * Spawns the Weir API like `scripts/dev-backend.ps1` (cwd apps/backend, PYTHONPATH=src,
  * host/port from scripts/dev-ports.json). Used by `npm run dev` so Vite and uvicorn start together.
  */
 import { spawn, spawnSync } from "node:child_process";
@@ -51,20 +51,20 @@ function resolvePythonCmd() {
 }
 
 const { apiHost, apiPort: portFromFile } = readPorts();
-const apiPort = process.env.MEDIAMOP_DEV_API_PORT?.trim()
-  ? Number(process.env.MEDIAMOP_DEV_API_PORT.trim())
+const apiPort = process.env.WEIR_DEV_API_PORT?.trim()
+  ? Number(process.env.WEIR_DEV_API_PORT.trim())
   : Number(portFromFile);
 
 const pythonCmd = resolvePythonCmd();
 const childEnv = {
   ...process.env,
   PYTHONPATH: "src",
-  MEDIAMOP_HOME: (process.env.MEDIAMOP_HOME || "").trim() || defaultDevHome,
-  MEDIAMOP_SESSION_SECRET:
-    (process.env.MEDIAMOP_SESSION_SECRET || "").trim() || defaultDevSessionSecret,
+  WEIR_HOME: (process.env.WEIR_HOME || "").trim() || defaultDevHome,
+  WEIR_SESSION_SECRET:
+    (process.env.WEIR_SESSION_SECRET || "").trim() || defaultDevSessionSecret,
 };
 
-/** Keep ``npm run dev:quick`` self-contained for a fresh MEDIAMOP_HOME. */
+/** Keep ``npm run dev:quick`` self-contained for a fresh WEIR_HOME. */
 const migration = spawnSync(
   pythonCmd.command,
   [...pythonCmd.prefixArgs, "-m", "alembic", "upgrade", "head"],
@@ -87,7 +87,7 @@ const uvicornArgs = [
   ...pythonCmd.prefixArgs,
   "-m",
   "uvicorn",
-  "mediamop.api.main:app",
+  "weir.api.main:app",
   "--host",
   apiHost,
   "--port",

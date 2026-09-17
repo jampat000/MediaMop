@@ -4,7 +4,7 @@ The load-bearing claim of this feature is that events and scans share **one** ad
 implementation. That is tested directly: an event produces the same job kind the timer
 produces, and every decision about a file stays in the handler that already owned it.
 
-The second claim is that a watcher which cannot start is a slower MediaMop rather than a
+The second claim is that a watcher which cannot start is a slower Weir rather than a
 broken one. Docker bind mounts, SMB and NFS frequently deliver no events at all, so that
 path is not an edge case here — it is the compatibility story (#336).
 """
@@ -19,26 +19,26 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.media_managers.connection_model  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
-import mediamop.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.refiner.refiner_library_model  # noqa: F401
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import Base
-from mediamop.refiner.jobs_model import RefinerJob
-from mediamop.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.media_managers.connection_model  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
+import weir.refiner.refiner_file_state_model  # noqa: F401
+import weir.refiner.refiner_library_model  # noqa: F401
+from weir.core.config import WeirSettings
+from weir.core.db import Base
+from weir.refiner.jobs_model import RefinerJob
+from weir.refiner.refiner_library_model import RefinerLibraryRow
+from weir.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
-from mediamop.refiner.refiner_watched_folder_watcher import (
+from weir.refiner.refiner_watched_folder_watcher import (
     PendingChanges,
     _run_refiner_watched_folder_watcher,
     disabled_watch_reports,
     enqueue_scan_for_library,
     libraries_to_watch,
 )
-from mediamop.refiner.refiner_watcher_state import (
+from weir.refiner.refiner_watcher_state import (
     WatcherStatus,
     clear_watcher_state,
     watcher_reports,
@@ -84,9 +84,9 @@ def _library(session_factory, *, watch: Path, out: Path, **overrides) -> Refiner
         return row
 
 
-def _settings(monkeypatch: pytest.MonkeyPatch) -> MediaMopSettings:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHER_DEBOUNCE_SECONDS", "1")
-    return MediaMopSettings.load()
+def _settings(monkeypatch: pytest.MonkeyPatch) -> WeirSettings:
+    monkeypatch.setenv("WEIR_REFINER_WATCHER_DEBOUNCE_SECONDS", "1")
+    return WeirSettings.load()
 
 
 def _scan_jobs(session_factory) -> list[RefinerJob]:
@@ -267,7 +267,7 @@ def test_an_unavailable_watcher_falls_back_to_polling_and_logs_once(
 ) -> None:
     """The Docker bind mount / SMB share case, which is common rather than exotic.
 
-    MediaMop must keep finding work on the scan interval, say so once, and not fail
+    Weir must keep finding work on the scan interval, say so once, and not fail
     readiness over a slower path to the same result.
     """
 
@@ -279,7 +279,7 @@ def test_an_unavailable_watcher_falls_back_to_polling_and_logs_once(
     settings = _settings(monkeypatch)
 
     monkeypatch.setattr(
-        "mediamop.refiner.refiner_watched_folder_watcher._watchdog_modules",
+        "weir.refiner.refiner_watched_folder_watcher._watchdog_modules",
         lambda: None,
     )
     # Record what the module logs by standing in for its logger. Handler- and
@@ -300,7 +300,7 @@ def test_an_unavailable_watcher_falls_back_to_polling_and_logs_once(
         def exception(self, *args: object, **kwargs: object) -> None:
             pass
 
-    monkeypatch.setattr("mediamop.refiner.refiner_watched_folder_watcher.logger", _RecordingLogger())
+    monkeypatch.setattr("weir.refiner.refiner_watched_folder_watcher.logger", _RecordingLogger())
 
     async def _drive_and_capture() -> tuple:
         stop = asyncio.Event()

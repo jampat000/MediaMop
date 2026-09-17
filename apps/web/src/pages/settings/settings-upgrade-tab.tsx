@@ -107,7 +107,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
           Check the installed version and see the latest release. Windows
-          desktop updates are handled automatically by the MediaMop tray app.
+          desktop updates are handled automatically by the Weir tray app.
         </p>
       </div>
 
@@ -124,8 +124,8 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
             Upgrade
           </h3>
           <p className="mt-1 text-sm text-[var(--mm-text2)]">
-            Check the running MediaMop version and see the latest release for
-            this install type.
+            Check the running Weir version and see the latest release for this
+            install type.
           </p>
         </div>
 
@@ -176,8 +176,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                       : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--mm-text3)]">
-                    The update has been downloaded. Restart MediaMop to apply
-                    it.
+                    The update has been downloaded. Restart Weir to apply it.
                   </p>
                   {applyUpdate.isError && (
                     <p className="mt-1 text-xs text-red-300" role="alert">
@@ -248,7 +247,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                   Update mode
                 </h4>
                 <p className="text-sm text-[var(--mm-text2)]">
-                  Choose how the MediaMop tray app handles available updates.
+                  Choose how the Weir tray app handles available updates.
                 </p>
                 {updateSettingsQ.isPending ? (
                   <p className="text-sm text-[var(--mm-text3)]">
@@ -400,9 +399,9 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     {updateStatusQ.data.docker_update_command}
                   </p>
                   <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                    Keep the same MEDIAMOP_HOME volume and
-                    MEDIAMOP_SESSION_SECRET value across upgrades so browser
-                    sessions and setup state continue cleanly.
+                    Keep the same WEIR_HOME volume and WEIR_SESSION_SECRET value
+                    across upgrades so browser sessions and setup state continue
+                    cleanly.
                   </p>
                 </div>
               </div>

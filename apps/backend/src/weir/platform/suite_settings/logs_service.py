@@ -1,0 +1,168 @@
+"""Read and prune structured Weir runtime logs."""
+
+from __future__ import annotations
+
+import json
+import logging
+from collections import deque
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from sqlalchemy.orm import Session
+
+from weir.core.config import WeirSettings
+from weir.core.logging import log_file_lock, prune_active_log_file
+from weir.platform.suite_settings.service import ensure_suite_settings_row
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ParsedLogEntry:
+    timestamp: str
+    level: str
+    component: str
+    message: str
+    detail: str | None
+    traceback: str | None
+    source: str | None
+    logger: str
+    correlation_id: str | None
+    job_id: str | None
+
+
+def read_suite_logs(
+    settings: WeirSettings,
+    *,
+    level: str | None = None,
+    search: str | None = None,
+    has_exception: bool | None = None,
+    limit: int = 100,
+) -> tuple[list[ParsedLogEntry], int, dict[str, int]]:
+    path = _log_file_path(settings)
+    if not path.is_file():
+        return ([], 0, {"ERROR": 0, "WARNING": 0, "INFO": 0})
+
+    requested_level = (level or "").strip().upper() or None
+    search_term = (search or "").strip().lower()
+    rows: deque[ParsedLogEntry] = deque(maxlen=max(1, min(limit, 250)))
+    counts = {"ERROR": 0, "WARNING": 0, "INFO": 0}
+    total = 0
+
+    with log_file_lock():
+        try:
+            handle = path.open("r", encoding="utf-8")
+        except OSError:
+            logger.warning("Suite log read skipped because the active log could not be opened.")
+            return ([], 0, counts)
+
+        with handle:
+            for raw in handle:
+                entry = _parse_log_line(raw)
+                if entry is None:
+                    continue
+                if _skip_low_value_noise(entry):
+                    continue
+                total += 1
+                counts[_count_bucket(entry.level)] += 1
+                if requested_level and entry.level != requested_level:
+                    continue
+                if has_exception is True and not entry.traceback:
+                    continue
+                if has_exception is False and entry.traceback:
+                    continue
+                if search_term:
+                    haystack = " ".join(
+                        part
+                        for part in (
+                            entry.message,
+                            entry.detail or "",
+                            entry.traceback or "",
+                            entry.logger,
+                            entry.source or "",
+                            entry.component,
+                            entry.correlation_id or "",
+                            entry.job_id or "",
+                        )
+                        if part
+                    ).lower()
+                    if search_term not in haystack:
+                        continue
+                rows.append(entry)
+
+    return list(reversed(rows)), total, counts
+
+
+def prune_logs_for_retention(session: Session, settings: WeirSettings) -> None:
+    keep_days = max(1, int(ensure_suite_settings_row(session).log_retention_days))
+    prune_log_file(settings, keep_days=keep_days)
+
+
+def prune_log_file(settings: WeirSettings, *, keep_days: int) -> None:
+    path = _log_file_path(settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    prune_active_log_file(path, keep_days=keep_days)
+
+
+def _log_file_path(settings: WeirSettings) -> Path:
+    return Path(settings.log_dir) / "weir.log"
+
+
+def _parse_log_line(raw: str) -> ParsedLogEntry | None:
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    timestamp = str(payload.get("timestamp") or "").strip()
+    level = str(payload.get("level") or "INFO").strip().upper() or "INFO"
+    logger = str(payload.get("logger") or "weir").strip() or "weir"
+    message = str(payload.get("message") or "").strip()
+    if not timestamp or not message:
+        return None
+    return ParsedLogEntry(
+        timestamp=timestamp,
+        level=level,
+        component=_component_label(logger=logger, source=payload.get("source")),
+        message=message,
+        detail=_clean_optional_str(payload.get("detail")),
+        traceback=_clean_optional_str(payload.get("traceback")),
+        source=_clean_optional_str(payload.get("source")),
+        logger=logger,
+        correlation_id=_clean_optional_str(payload.get("correlation_id")),
+        job_id=_clean_optional_str(payload.get("job_id")),
+    )
+
+
+def _component_label(*, logger: str, source: object) -> str:
+    haystack = f"{logger} {source or ''}".lower()
+    if "weir.refiner" in haystack:
+        return "Refiner"
+    if "platform.auth" in haystack:
+        return "Authentication"
+    if "platform.activity" in haystack:
+        return "Activity"
+    return "System"
+
+
+def _clean_optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _count_bucket(level: str) -> str:
+    if level in {"ERROR", "CRITICAL"}:
+        return "ERROR"
+    if level == "WARNING":
+        return "WARNING"
+    return "INFO"
+
+
+def _skip_low_value_noise(entry: ParsedLogEntry) -> bool:
+    if entry.level in {"ERROR", "WARNING", "CRITICAL"}:
+        return False
+    return not entry.logger.startswith("weir")

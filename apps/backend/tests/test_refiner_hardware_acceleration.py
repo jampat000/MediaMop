@@ -13,7 +13,7 @@ from __future__ import annotations
 import subprocess
 from unittest.mock import patch
 
-from mediamop.refiner.refiner_hardware_acceleration import (
+from weir.refiner.refiner_hardware_acceleration import (
     DEFAULT_STRICTNESS,
     STRICTNESS_LEVELS,
     VENDOR_METHODS,
@@ -90,7 +90,7 @@ def test_a_timeout_reports_nothing_rather_than_raising() -> None:
 
 
 def test_off_is_the_default_and_passes_no_flags() -> None:
-    """Exactly what MediaMop does today by not passing the flags at all."""
+    """Exactly what Weir does today by not passing the flags at all."""
 
     decision = decide_acceleration(settings=HardwareSettings(), report=_report("cuda"))
 
@@ -172,7 +172,7 @@ def test_a_device_mode_with_no_device_named_falls_back() -> None:
 def test_ffmpeg_being_unavailable_entirely_falls_back() -> None:
     decision = decide_acceleration(
         settings=HardwareSettings(mode="auto"),
-        report=AccelerationReport(detected=False, detail="MediaMop could not ask ffmpeg."),
+        report=AccelerationReport(detected=False, detail="Weir could not ask ffmpeg."),
     )
 
     assert decision.fell_back_to_software is True

@@ -12,18 +12,18 @@ import pytest
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from starlette.testclient import TestClient
 
-from mediamop.api.deps import get_db_session
-from mediamop.api.factory import create_app
-from mediamop.platform.auth import bootstrap as bootstrap_service
+from weir.api.deps import get_db_session
+from weir.api.factory import create_app
+from weir.platform.auth import bootstrap as bootstrap_service
 
 
 @pytest.fixture
 def client_bootstrap_status(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setattr(
-        "mediamop.core.config._load_backend_dotenv_if_present",
+        "weir.core.config._load_backend_dotenv_if_present",
         lambda: None,
     )
-    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    monkeypatch.setenv("WEIR_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     app = create_app()
 
     mock_session = MagicMock()

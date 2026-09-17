@@ -1,13 +1,13 @@
-"""End-to-end audit for a packaged MediaMop server.
+"""End-to-end audit for a packaged Weir server.
 
 This is intentionally separate from the developer E2E fixture.  It does not
 start a source-tree server or Vite; it drives the browser against the URL
-provided in ``MEDIAMOP_LIVE_BASE_URL``.  The target must be a controlled
+provided in ``WEIR_LIVE_BASE_URL``.  The target must be a controlled
 packaged instance with a deliberate data/runtime boundary.
 
 Usage (from the repository root)::
 
-    MEDIAMOP_LIVE_BASE_URL=http://app-server:8791 \
+    WEIR_LIVE_BASE_URL=http://app-server:8791 \
       apps/backend/.venv/Scripts/python.exe scripts/live-packaged-e2e.py
 
 The audit covers the authenticated routes, every visible module/settings tab,
@@ -43,28 +43,28 @@ from playwright.sync_api import (
     TimeoutError as PlaywrightTimeoutError,
 )
 
-BASE_URL = os.environ.get("MEDIAMOP_LIVE_BASE_URL", "").strip().rstrip("/")
-AUDIT_USER = os.environ.get("MEDIAMOP_LIVE_E2E_USER", "live-audit-admin").strip()
+BASE_URL = os.environ.get("WEIR_LIVE_BASE_URL", "").strip().rstrip("/")
+AUDIT_USER = os.environ.get("WEIR_LIVE_E2E_USER", "live-audit-admin").strip()
 AUDIT_PASSWORD = os.environ.get(
-    "MEDIAMOP_LIVE_E2E_PASSWORD", "live-audit-pass-20260831"
+    "WEIR_LIVE_E2E_PASSWORD", "live-audit-pass-20260831"
 )
 ARTIFACT_DIR = Path(
-    os.environ.get("MEDIAMOP_LIVE_E2E_ARTIFACTS", "artifacts/live-packaged-e2e")
+    os.environ.get("WEIR_LIVE_E2E_ARTIFACTS", "artifacts/live-packaged-e2e")
 )
 FIXTURE_HOST_ROOT_RAW = os.environ.get(
-    "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT", ""
+    "WEIR_LIVE_E2E_FIXTURE_HOST_ROOT", ""
 ).strip()
 FIXTURE_SERVER_ROOT = os.environ.get(
-    "MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT", ""
+    "WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT", ""
 ).strip()
-FIXTURE_FFMPEG = os.environ.get("MEDIAMOP_LIVE_E2E_FFMPEG", "ffmpeg").strip()
+FIXTURE_FFMPEG = os.environ.get("WEIR_LIVE_E2E_FFMPEG", "ffmpeg").strip()
 TIMEOUT_MS = 30_000
 
 
 def project_version() -> str:
     """Resolve the expected packaged version without hard-coding a release."""
 
-    explicit = os.environ.get("MEDIAMOP_LIVE_EXPECTED_VERSION", "").strip()
+    explicit = os.environ.get("WEIR_LIVE_EXPECTED_VERSION", "").strip()
     if explicit:
         return explicit
     project_file = Path(__file__).resolve().parents[1] / "apps/backend/pyproject.toml"
@@ -1265,9 +1265,9 @@ def run(playwright: Playwright) -> dict[str, Any]:
 
 def main() -> int:
     if not BASE_URL:
-        print("MEDIAMOP_LIVE_BASE_URL is required", file=sys.stderr)
+        print("WEIR_LIVE_BASE_URL is required", file=sys.stderr)
         return 2
-    print(f"Auditing packaged MediaMop at {BASE_URL}")
+    print(f"Auditing packaged Weir at {BASE_URL}")
     try:
         with sync_playwright() as playwright:
             report = run(playwright)

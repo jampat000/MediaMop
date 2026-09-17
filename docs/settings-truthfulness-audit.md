@@ -1,6 +1,6 @@
 # Settings truthfulness audit
 
-MediaMop settings must describe runtime behaviour as shipped, not intended behaviour.
+Weir settings must describe runtime behaviour as shipped, not intended behaviour.
 
 ## Global settings
 
@@ -18,5 +18,5 @@ MediaMop settings must describe runtime behaviour as shipped, not intended behav
 - Rule sets: audio and subtitle handling is a named object a library points at, so two libraries can share one. Deleting a rule set a library still references is refused rather than silently stripping that handling.
 - Processing settings: files-at-once and age/size guardrails are database-backed operator settings used by active Refiner worker gating and new watched-folder scans.
 - Runtime settings endpoint: read-only startup configuration. Any value requiring environment changes and restart must remain labelled as restart-required.
-- Watched-folder scan schedule: whether a library is scanned, and how often, is **per library on the Libraries tab**, saved in the database and applied without a restart. There is no environment variable for it. `MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED` and `..._SCHEDULE_INTERVAL_SECONDS` were removed in #329: the scheduler never read either, while the runtime-settings endpoint reported the flag as live configuration — so an operator could read `false` while scheduled scans ran.
-- Worker count: `MEDIAMOP_REFINER_WORKER_COUNT` is an internal startup slot cap (default 8), not the number of files processed at once. The operator-facing "Files at once" value is the effective limit and needs no restart.
+- Watched-folder scan schedule: whether a library is scanned, and how often, is **per library on the Libraries tab**, saved in the database and applied without a restart. There is no environment variable for it. `WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED` and `..._SCHEDULE_INTERVAL_SECONDS` were removed in #329: the scheduler never read either, while the runtime-settings endpoint reported the flag as live configuration — so an operator could read `false` while scheduled scans ran.
+- Worker count: `WEIR_REFINER_WORKER_COUNT` is an internal startup slot cap (default 8), not the number of files processed at once. The operator-facing "Files at once" value is the effective limit and needs no restart.

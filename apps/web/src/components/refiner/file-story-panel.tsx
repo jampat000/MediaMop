@@ -84,9 +84,9 @@ export function FileStoryPanel({
 
   const retention =
     log && log.retention_days > 0
-      ? `MediaMop keeps these records for ${log.retention_days} days.`
+      ? `Weir keeps these records for ${log.retention_days} days.`
       : log
-        ? "MediaMop keeps these records until you remove them."
+        ? "Weir keeps these records until you remove them."
         : null;
 
   return (
@@ -141,8 +141,8 @@ export function FileStoryPanel({
             </p>
           ) : !log || log.entries.length === 0 ? (
             <p className="mm-story-panel__note">
-              MediaMop has not worked on this file yet, so there is nothing to
-              tell. Its story starts the first time it is processed.
+              Weir has not worked on this file yet, so there is nothing to tell.
+              Its story starts the first time it is processed.
             </p>
           ) : (
             log.entries.map((entry) => (

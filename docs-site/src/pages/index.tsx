@@ -11,7 +11,7 @@ const features = [
     title: 'Refiner',
     description:
       'Remux media files into cleaner, more consistent outputs with configurable worker lanes.',
-    screenshot: '/MediaMop/img/refiner.png',
+    screenshot: '/Weir/img/refiner.png',
   },
 ];
 
@@ -28,7 +28,7 @@ function Hero(): ReactNode {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            to="https://github.com/jampat000/MediaMop">
+            to="https://github.com/jampat000/weir">
             GitHub
           </Link>
         </div>
@@ -85,8 +85,8 @@ function DashboardPreview(): ReactNode {
           one place.
         </p>
         <img
-          src="/MediaMop/img/dashboard.png"
-          alt="MediaMop Dashboard"
+          src="/Weir/img/dashboard.png"
+          alt="Weir Dashboard"
           className={styles.dashboardImage}
         />
       </div>

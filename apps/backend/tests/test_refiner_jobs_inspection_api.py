@@ -10,14 +10,10 @@ from alembic.config import Config
 from sqlalchemy import delete
 from starlette.testclient import TestClient
 
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-import mediamop.refiner.jobs_model  # noqa: F401
+import weir.platform.activity.models  # noqa: F401
+import weir.platform.auth.models  # noqa: F401
+import weir.refiner.jobs_model  # noqa: F401
 from alembic import command
-from mediamop.api.factory import create_app
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
@@ -25,6 +21,10 @@ from tests.integration_app_runtime_quiesce import (
 )
 from tests.integration_helpers import auth_post, seed_admin_user, seed_viewer_user
 from tests.integration_helpers import csrf as fetch_csrf
+from weir.api.factory import create_app
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 
 @pytest.fixture(autouse=True)
@@ -32,9 +32,9 @@ def _isolated_refiner_jobs_inspection_runtime(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Use a per-test MEDIAMOP_HOME so jobs rows cannot race with other tests/apps."""
+    """Use a per-test WEIR_HOME so jobs rows cannot race with other tests/apps."""
 
-    integration_test_set_home(tmp_path, monkeypatch, "mediamop_home")
+    integration_test_set_home(tmp_path, monkeypatch, "weir_home")
     integration_test_quiesce_in_process_workers(monkeypatch)
     # Keep all periodic enqueue loops off in this file to ensure deterministic inspection slices.
     integration_test_quiesce_periodic_enqueue(monkeypatch)
@@ -61,7 +61,7 @@ def client_with_viewer() -> TestClient:
 
 
 def _fac():
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     eng = create_db_engine(settings)
     return create_session_factory(eng)
 

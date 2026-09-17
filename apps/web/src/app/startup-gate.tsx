@@ -39,7 +39,7 @@ async function fetchReadiness(signal: AbortSignal): Promise<ReadyPayload> {
 export function StartupGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StartupState>({
     kind: "starting",
-    message: "Starting MediaMop...",
+    message: "Starting Weir...",
     steps: [],
     elapsedMs: 0,
   });
@@ -65,14 +65,14 @@ export function StartupGate({ children }: { children: ReactNode }) {
           setState({
             kind: "failed",
             message:
-              "MediaMop did not become ready in time. Check that the MediaMop server is still running, then refresh.",
+              "Weir did not become ready in time. Check that the Weir server is still running, then refresh.",
             steps: payload.steps ?? [],
           });
           return;
         }
         setState({
           kind: "starting",
-          message: "Starting MediaMop...",
+          message: "Starting Weir...",
           steps: payload.steps ?? [],
           elapsedMs,
         });
@@ -86,19 +86,19 @@ export function StartupGate({ children }: { children: ReactNode }) {
           setState({
             kind: "failed",
             message:
-              "MediaMop did not respond in time. Check that the MediaMop server is running, then refresh.",
+              "Weir did not respond in time. Check that the Weir server is running, then refresh.",
             steps: [],
           });
           return;
         }
         setState({
           kind: "starting",
-          message: "Starting MediaMop...",
+          message: "Starting Weir...",
           steps: [
             {
               name: "server",
               status: "starting",
-              detail: "Waiting for the MediaMop server to answer.",
+              detail: "Waiting for the Weir server to answer.",
             },
           ],
           elapsedMs,
@@ -124,7 +124,7 @@ export function StartupGate({ children }: { children: ReactNode }) {
     <main className="min-h-screen bg-[var(--mm-bg)] px-6 py-10 text-[var(--mm-text)]">
       <div className="mx-auto flex min-h-[70vh] max-w-xl flex-col justify-center">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--mm-accent)]">
-          MediaMop
+          Weir
         </p>
         <h1 className="mt-4 text-3xl font-semibold">{state.message}</h1>
         <p className="mt-3 text-sm leading-6 text-[var(--mm-text3)]">
@@ -150,7 +150,7 @@ export function StartupGate({ children }: { children: ReactNode }) {
                   {
                     name: "server",
                     status: "starting",
-                    detail: "Waiting for MediaMop to start.",
+                    detail: "Waiting for Weir to start.",
                   },
                 ]
             ).map((step) => (

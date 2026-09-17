@@ -75,7 +75,7 @@ updates:
   # and the test project's xunit packages were unmonitored. One directory each: Dependabot
   # resolves NuGet per project file, and there is no .sln to cover both.
   - package-ecosystem: nuget
-    directory: /apps/tray/MediaMop.Tray
+    directory: /apps/tray/Weir.Tray
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
@@ -85,7 +85,7 @@ updates:
           - "*"
 
   - package-ecosystem: nuget
-    directory: /apps/tray/MediaMop.Tray.Tests
+    directory: /apps/tray/Weir.Tray.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 5

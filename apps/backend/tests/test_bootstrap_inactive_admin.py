@@ -12,19 +12,19 @@ import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.auth.bootstrap import (
+from weir.core.config import WeirSettings
+from weir.core.db import create_db_engine, create_session_factory
+from weir.platform.auth.bootstrap import (
     any_admin_user_exists,
     bootstrap_allowed,
     create_initial_admin,
 )
-from mediamop.platform.auth.models import User, UserRole
+from weir.platform.auth.models import User, UserRole
 
 
 @pytest.fixture
 def db_session() -> Iterator[Session]:
-    settings = MediaMopSettings.load()
+    settings = WeirSettings.load()
     engine = create_db_engine(settings)
     factory = create_session_factory(engine)
     with factory() as session:

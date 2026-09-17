@@ -57,7 +57,7 @@ it("lists each device with its note and source, and saves the chosen ids", async
 
   expect(
     await screen.findByText(
-      "Shows which of your devices can play each file without your media server converting it. Information only — MediaMop never changes a file because of this.",
+      "Shows which of your devices can play each file without your media server converting it. Information only — Weir never changes a file because of this.",
     ),
   ).toBeInTheDocument();
   expect(screen.getByText("Apple's built-in player.")).toBeInTheDocument();

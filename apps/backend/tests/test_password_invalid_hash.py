@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.platform.auth.password import verify_password
+from weir.platform.auth.password import verify_password
 
 
 def test_verify_password_empty_hash() -> None:

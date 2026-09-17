@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const siteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const roots = [path.join(siteRoot, "docs"), path.join(siteRoot, "static")];
 const blocked = new Set([".icns", ".jxl", ".heic", ".heif"]);
-const allowUnsafe = process.env.MEDIAMOP_ALLOW_UNSAFE_DOC_IMAGES === "true";
+const allowUnsafe = process.env.WEIR_ALLOW_UNSAFE_DOC_IMAGES === "true";
 
 function walk(root) {
   if (!existsSync(root)) return [];
@@ -22,7 +22,7 @@ const matches = roots.flatMap(walk).filter((file) => blocked.has(path.extname(fi
 if (matches.length && !allowUnsafe) {
   console.error("[docs-images] Unsupported image formats found:");
   for (const file of matches) console.error(`- ${path.relative(siteRoot, file)}`);
-  console.error("Convert these files to PNG, WebP, or SVG before the docs build. Set MEDIAMOP_ALLOW_UNSAFE_DOC_IMAGES=true only after the dependency exception is removed.");
+  console.error("Convert these files to PNG, WebP, or SVG before the docs build. Set WEIR_ALLOW_UNSAFE_DOC_IMAGES=true only after the dependency exception is removed.");
   process.exit(1);
 }
 

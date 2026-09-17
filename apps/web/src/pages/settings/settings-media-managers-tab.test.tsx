@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe("SettingsMediaManagersTab", () => {
-  it("says plainly when nothing is configured, because nothing will reach MediaMop", async () => {
+  it("says plainly when nothing is configured, because nothing will reach Weir", async () => {
     vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([]);
     render(<SettingsMediaManagersTab />, { wrapper });
 
@@ -113,7 +113,7 @@ describe("SettingsMediaManagersTab", () => {
       connection({
         last_test_ok: true,
         last_test_at: "2026-08-26T10:00:00Z",
-        last_test_detail: "Connected. MediaMop can reach Deluno.",
+        last_test_detail: "Connected. Weir can reach Deluno.",
       }),
     ]);
     render(<SettingsMediaManagersTab />, { wrapper });
@@ -122,7 +122,7 @@ describe("SettingsMediaManagersTab", () => {
     expect(status).toHaveTextContent("Connected");
     // The headline already says it. Repeating the backend's sentence underneath
     // would be the same fact twice.
-    expect(status).not.toHaveTextContent("MediaMop can reach");
+    expect(status).not.toHaveTextContent("Weir can reach");
   });
 
   it("shows why a failed test failed, because that is the actionable part", async () => {
@@ -131,7 +131,7 @@ describe("SettingsMediaManagersTab", () => {
         last_test_ok: false,
         last_test_at: "2026-08-26T10:00:00Z",
         last_test_detail:
-          "MediaMop reached Deluno, but the API key was refused. Check the key and save it again.",
+          "Weir reached Deluno, but the API key was refused. Check the key and save it again.",
       }),
     ]);
     render(<SettingsMediaManagersTab />, { wrapper });

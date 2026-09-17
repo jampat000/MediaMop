@@ -5,27 +5,27 @@ title: Reverse Proxy
 
 # Reverse Proxy Configuration
 
-MediaMop is designed for a single-process, single-instance deployment. Production deployments should expose one canonical HTTPS origin.
+Weir is designed for a single-process, single-instance deployment. Production deployments should expose one canonical HTTPS origin.
 
 ## Trusted proxies
 
-MediaMop ignores `X-Forwarded-For` unless `MEDIAMOP_TRUSTED_PROXY_IPS` is configured:
+Weir ignores `X-Forwarded-For` unless `WEIR_TRUSTED_PROXY_IPS` is configured:
 
 ```
-MEDIAMOP_TRUSTED_PROXY_IPS=172.18.0.1,10.0.0.0/24
+WEIR_TRUSTED_PROXY_IPS=172.18.0.1,10.0.0.0/24
 ```
 
-When the immediate peer is trusted, MediaMop uses the right-most untrusted address in `X-Forwarded-For` as the client key. Forwarded headers from untrusted peers are ignored.
+When the immediate peer is trusted, Weir uses the right-most untrusted address in `X-Forwarded-For` as the client key. Forwarded headers from untrusted peers are ignored.
 
 ## CORS
 
-Credentialed browser requests require explicit origins. Setting `MEDIAMOP_CORS_ORIGINS=*` is rejected at startup.
+Credentialed browser requests require explicit origins. Setting `WEIR_CORS_ORIGINS=*` is rejected at startup.
 
 For split-origin deployments (static site and API on different origins):
 
 - Use HTTPS everywhere
-- Set `MEDIAMOP_CORS_ORIGINS` to the real web origin
-- Set `MEDIAMOP_TRUSTED_BROWSER_ORIGINS` if stricter POST checks are needed
+- Set `WEIR_CORS_ORIGINS` to the real web origin
+- Set `WEIR_TRUSTED_BROWSER_ORIGINS` if stricter POST checks are needed
 - Session cookies need `SameSite=None; Secure` for credentialed cross-origin fetch
 
 ## Rate limiting

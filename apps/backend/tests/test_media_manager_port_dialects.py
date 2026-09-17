@@ -6,18 +6,18 @@ from typing import Any
 
 import pytest
 
-from mediamop.platform.media_managers.manager_dialects import (
+from weir.platform.media_managers.manager_dialects import (
     capabilities_for_kind,
     kinds_serving_scope,
     port_for_kind,
 )
-from mediamop.platform.media_managers.manager_http import (
+from weir.platform.media_managers.manager_http import (
     MediaManagerHttpError,
     MediaManagerRateLimitedError,
 )
-from mediamop.platform.media_managers.manager_port import ManagerConnection, label_for_connection
+from weir.platform.media_managers.manager_port import ManagerConnection, label_for_connection
 
-_DIALECTS = "mediamop.platform.media_managers.manager_dialects"
+_DIALECTS = "weir.platform.media_managers.manager_dialects"
 
 
 def _connection(kind: str = "radarr", name: str = "Main") -> ManagerConnection:
@@ -119,7 +119,7 @@ def test_a_refused_key_says_which_key_to_go_and_fix(monkeypatch: pytest.MonkeyPa
     signal = port.queue_rows(_connection(name="4K"))
     assert signal.status == "unreachable"
     assert signal.detail is not None
-    assert "refused MediaMop's API key" in signal.detail
+    assert "refused Weir's API key" in signal.detail
 
 
 def test_rate_limited_manager_backs_off_rather_than_retrying(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -137,7 +137,7 @@ def test_rate_limited_manager_backs_off_rather_than_retrying(monkeypatch: pytest
     signal = port.queue_rows(_connection(kind="deluno", name="Main"))
     assert signal.status == "unreachable"
     assert signal.detail is not None
-    assert "rate limiting MediaMop" in signal.detail
+    assert "rate limiting Weir" in signal.detail
     assert "about 30s" in signal.detail
     assert "backed off rather than retrying straight away" in signal.detail
 
@@ -183,7 +183,7 @@ def test_deluno_queue_covers_jobs_and_recent_dispatches(monkeypatch: pytest.Monk
         ("queued", "downloading"),
         ("importing", "importpending"),
         ("failed", "failed"),
-        ("something MediaMop has never heard of", "downloading"),
+        ("something Weir has never heard of", "downloading"),
     ],
 )
 def test_an_unrecognised_deluno_state_reads_as_still_in_progress(
@@ -255,7 +255,7 @@ def test_describe_degrades_to_the_static_profile_when_the_manager_is_down(
     assert "Deluno (Main)" in described.detail
 
 
-def test_native_speaks_mediamops_own_payload_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_native_speaks_weirs_own_payload_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_client(
         monkeypatch,
         {

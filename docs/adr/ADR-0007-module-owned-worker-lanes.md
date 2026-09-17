@@ -10,16 +10,16 @@ Accepted — **three module lanes** are live at head: ``refiner_jobs``, ``pruner
 >
 > **Update (2026-09-17): one application, one lane (#459).** With Pruner gone, Refiner is the only thing left that owns durable work, so the module layer is removed and this ADR no longer describes a live boundary. There is one jobs table (``refiner_jobs``) and one worker pool. What this ADR decided about module-to-module separation is superseded; two parts survive:
 >
-> - **Retired prefixes are still refused.** ``trimmer.``, ``subber.`` and ``pruner.`` (plus the two retired ``refiner.*`` families) are refused at enqueue and at claim, so a stale row from an older install is failed rather than run. That guard moved from ``mediamop/modules/queue_worker/job_kind_boundaries.py`` to ``apps/backend/src/mediamop/refiner/job_kind_guard.py``.
-> - **The admission predicate is unchanged.** Schedules, the pause switch and blocked libraries still narrow which row a claim may take (``apps/backend/src/mediamop/refiner/jobs_ops.py``), and crash recovery is unchanged.
+> - **Retired prefixes are still refused.** ``trimmer.``, ``subber.`` and ``pruner.`` (plus the two retired ``refiner.*`` families) are refused at enqueue and at claim, so a stale row from an older install is failed rather than run. That guard moved from ``weir/modules/queue_worker/job_kind_boundaries.py`` to ``apps/backend/src/weir/refiner/job_kind_guard.py``.
+> - **The admission predicate is unchanged.** Schedules, the pause switch and blocked libraries still narrow which row a claim may take (``apps/backend/src/weir/refiner/jobs_ops.py``), and crash recovery is unchanged.
 >
-> Paths below that start ``modules/refiner/`` now live under ``apps/backend/src/mediamop/refiner/``. Job-kind strings and table names stored in the database are not renamed.
+> Paths below that start ``modules/refiner/`` now live under ``apps/backend/src/weir/refiner/``. Job-kind strings and table names stored in the database are not renamed.
 
 Reserved non-lane ``job_kind`` prefixes (see ``job_kind_boundaries.py``) must never be enqueued on Refiner, Pruner, or Subber tables.
 
 ## Context
 
-MediaMop is **SQLite-first**: one writer per database. Durable background work must be **sharded by module-owned tables** and **in-process worker pools**, not multiplexed through a single hidden global queue. Job kinds name **function** inside a module; table + env + ops name **module ownership**.
+Weir is **SQLite-first**: one writer per database. Durable background work must be **sharded by module-owned tables** and **in-process worker pools**, not multiplexed through a single hidden global queue. Job kinds name **function** inside a module; table + env + ops name **module ownership**.
 
 ## Decision
 
@@ -29,7 +29,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 2. **`job_kind` is `"{namespace}.{function}.{variant}"`** where `namespace` is the **lane prefix** tied to the owning module (see below).
 3. **No shared “jobs” table** partitioned only by `job_kind` as the long-term shape.
 4. **Enqueue / claim / worker startup** for a module stay in that module’s package (composition root may wire lifespan only).
-5. **Cross-lane prefixes are rejected** at enqueue and at worker claim boundaries (see `mediamop.modules.queue_worker.job_kind_boundaries`).
+5. **Cross-lane prefixes are rejected** at enqueue and at worker claim boundaries (see `weir.modules.queue_worker.job_kind_boundaries`).
 
 ### Refiner lane (implemented substrate)
 
@@ -41,10 +41,10 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Enqueue | `refiner_enqueue_or_get_job` |
 | Claim | `claim_next_eligible_refiner_job` |
 | Worker entry | `start_refiner_worker_background_tasks` |
-| Worker count env | `MEDIAMOP_REFINER_WORKER_COUNT` |
+| Worker count env | `WEIR_REFINER_WORKER_COUNT` |
 | Reserved `job_kind` prefix (new durable Refiner work) | **`refiner.`** |
 
-**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs`` (including ``refiner.file.remux_pass.v1`` for per-file ffprobe + remux planning / optional ffmpeg, and ``refiner.watched_folder.remux_scan_dispatch.v1`` for a watched-folder scan that classifies media candidates and may enqueue per-file remux jobs — manual POST plus optional Refiner-only periodic enqueue driven by ``MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` env at process start). Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test. Per-file remux enqueue: ``POST /api/v1/refiner/jobs/file-remux-pass/enqueue``; watched-folder scan enqueue: ``POST /api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue``; persisted-queue inspection (read lifecycle from ``refiner_jobs``): ``GET /api/v1/refiner/jobs/inspection``; optional pending-only abandon: ``POST /api/v1/refiner/jobs/{id}/cancel-pending`` (operators; CSRF); watched/work/output roots: persisted Refiner path settings (``GET/PUT /api/v1/refiner/path-settings`` on singleton ``refiner_path_settings``). Read-only worker snapshot for operators: ``GET /api/v1/refiner/runtime-settings`` (maps ``MEDIAMOP_REFINER_WORKER_COUNT`` after clamp; Refiner-only; not a cross-lane control).
+**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs`` (including ``refiner.file.remux_pass.v1`` for per-file ffprobe + remux planning / optional ffmpeg, and ``refiner.watched_folder.remux_scan_dispatch.v1`` for a watched-folder scan that classifies media candidates and may enqueue per-file remux jobs — manual POST plus optional Refiner-only periodic enqueue driven by ``WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` env at process start). Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test. Per-file remux enqueue: ``POST /api/v1/refiner/jobs/file-remux-pass/enqueue``; watched-folder scan enqueue: ``POST /api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue``; persisted-queue inspection (read lifecycle from ``refiner_jobs``): ``GET /api/v1/refiner/jobs/inspection``; optional pending-only abandon: ``POST /api/v1/refiner/jobs/{id}/cancel-pending`` (operators; CSRF); watched/work/output roots: persisted Refiner path settings (``GET/PUT /api/v1/refiner/path-settings`` on singleton ``refiner_path_settings``). Read-only worker snapshot for operators: ``GET /api/v1/refiner/runtime-settings`` (maps ``WEIR_REFINER_WORKER_COUNT`` after clamp; Refiner-only; not a cross-lane control).
 
 **Suggested file map (Refiner)**
 
@@ -70,12 +70,12 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Enqueue | `pruner_enqueue_or_get_job` |
 | Claim | `claim_next_eligible_pruner_job` |
 | Worker starter | `start_pruner_worker_background_tasks` |
-| Worker count env | **`MEDIAMOP_PRUNER_WORKER_COUNT`** |
+| Worker count env | **`WEIR_PRUNER_WORKER_COUNT`** |
 | `job_kind` prefix | **`pruner.`** |
 
 **Phase 1:** durable queue + workers + cross-lane guards only. **No** shipped Pruner `job_kind` families or product HTTP enqueue routes yet (removal-focused work lands in later phases). The historical ``trimmer_jobs`` table from revision ``0009_trimmer_jobs`` is dropped at head by ``0025_pruner_jobs_drop_trimmer_jobs``; the string prefix ``trimmer.`` is reserved as **legacy/forbidden** on all lanes (see `job_kind_boundaries.py`).
 
-**Package directory:** `apps/backend/src/mediamop/modules/pruner/` (`pruner_jobs_model.py`, `pruner_jobs_ops.py`, `worker_loop.py`, `pruner_job_handlers.py`, …).
+**Package directory:** `apps/backend/src/weir/modules/pruner/` (`pruner_jobs_model.py`, `pruner_jobs_ops.py`, `worker_loop.py`, `pruner_job_handlers.py`, …).
 
 **Lifespan:** `start_pruner_worker_background_tasks` runs **independently** of other module worker counts (no shared timing tables).
 
@@ -93,12 +93,12 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Enqueue | `subber_enqueue_or_get_job` |
 | Claim | `claim_next_eligible_subber_job` |
 | Worker starter | `start_subber_worker_background_tasks` |
-| Worker count env | **`MEDIAMOP_SUBBER_WORKER_COUNT`** |
+| Worker count env | **`WEIR_SUBBER_WORKER_COUNT`** |
 | `job_kind` prefix | **`subber.`** |
 
 **Shipped durable families (Subber v1):** `subber.subtitle_search.{tv,movies}.v1`, `subber.library_scan.{tv,movies}.v1`, `subber.webhook_import.{tv,movies}.v1` — OpenSubtitles-backed SRT download and *arr webhook import; TV and Movies are independent job streams and DB state. HTTP surface: `/api/v1/subber/*` (see module router).
 
-**Package directory:** `apps/backend/src/mediamop/modules/subber/`
+**Package directory:** `apps/backend/src/weir/modules/subber/`
 
 **Lifespan:** `start_subber_worker_background_tasks` runs **independently** of other module worker counts.
 
@@ -117,4 +117,4 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 
 ## References
 
-- `apps/backend/src/mediamop/modules/queue_worker/job_kind_boundaries.py`
+- `apps/backend/src/weir/modules/queue_worker/job_kind_boundaries.py`

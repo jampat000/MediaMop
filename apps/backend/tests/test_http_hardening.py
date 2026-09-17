@@ -11,16 +11,16 @@ from starlette.routing import Route
 from starlette.staticfiles import StaticFiles
 from starlette.testclient import TestClient
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.platform.http.compressed_assets import CompressedStaticAssetsMiddleware
-from mediamop.platform.http.trusted_proxy import TrustedProxySchemeMiddleware
+from weir.core.config import WeirSettings
+from weir.platform.http.compressed_assets import CompressedStaticAssetsMiddleware
+from weir.platform.http.trusted_proxy import TrustedProxySchemeMiddleware
 
 
 def test_trusted_proxy_applies_one_forwarded_scheme_only_for_trusted_peer() -> None:
     async def endpoint(request):
         return PlainTextResponse(request.url.scheme)
 
-    settings = replace(MediaMopSettings.load(), trusted_proxy_ips=("127.0.0.1/32",))
+    settings = replace(WeirSettings.load(), trusted_proxy_ips=("127.0.0.1/32",))
     app = Starlette(routes=[Route("/", endpoint)])
     app.add_middleware(TrustedProxySchemeMiddleware, settings=settings)
 

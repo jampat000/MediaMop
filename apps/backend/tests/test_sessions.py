@@ -5,8 +5,8 @@ from __future__ import annotations
 import uuid
 from datetime import timedelta
 
-from mediamop.platform.auth.models import UserSession
-from mediamop.platform.auth.sessions import (
+from weir.platform.auth.models import UserSession
+from weir.platform.auth.sessions import (
     compute_absolute_expiry,
     hash_session_token,
     is_idle_expired,

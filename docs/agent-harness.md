@@ -1,6 +1,6 @@
 # Agent Harness Operating Model
 
-MediaMop should be easy for coding agents to inspect, modify, validate, and repair without relying on hidden context.
+Weir should be easy for coding agents to inspect, modify, validate, and repair without relying on hidden context.
 
 This document adapts the harness-engineering model to this repository: humans steer priorities and acceptance criteria; agents execute changes through repo-local tools, tests, docs, and pull requests.
 
