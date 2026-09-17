@@ -210,6 +210,56 @@ public sealed class RemuxOutputValidationTests
         RemuxOutputValidation.ValidateAgainstPlan(output, plan, null, 100.0, sourceWarnings, outputWarnings);
     }
 
+    [Fact]
+    public void An_ffmpeg_context_address_has_no_0x_prefix_and_is_still_not_a_new_warning()
+    {
+        // Captured from the bundled ffprobe against a Matroska file carrying a font attachment: the context
+        // pointer is printed bare, and the stream index moves when the remux drops tracks. Before the address
+        // pattern learned this form, the letters in the pointer survived normalising (000002a22ac49500 ->
+        // #a#ac#), so the same warning from two process runs never matched and every such file failed #500.
+        var plan = MakePlan([0], [Track(1, "eng", @default: true)], []);
+        var output = Probe(
+            """{"format":{"duration":"100.0"},"streams":[{"codec_type":"video"},{"codec_type":"audio","disposition":{"default":1},"tags":{"language":"eng"}}]}""");
+        string[] sourceWarnings =
+        [
+            "[matroska,webm @ 000002a22ac49500] Could not find codec parameters for stream 6 (Attachment: none): unknown codec",
+            "Unsupported codec with id 0 for input stream 6",
+        ];
+        string[] outputWarnings =
+        [
+            "[matroska,webm @ 00000279c313f6c0] Could not find codec parameters for stream 3 (Attachment: none): unknown codec",
+            "Unsupported codec with id 0 for input stream 3",
+        ];
+
+        RemuxOutputValidation.ValidateAgainstPlan(output, plan, null, 100.0, sourceWarnings, outputWarnings);
+    }
+
+    [Fact]
+    public void A_bare_address_does_not_swallow_a_genuinely_new_warning()
+    {
+        var plan = MakePlan([0], [Track(1, "eng", @default: true)], []);
+        var output = Probe(
+            """{"format":{"duration":"100.0"},"streams":[{"codec_type":"video"},{"codec_type":"audio","disposition":{"default":1},"tags":{"language":"eng"}}]}""");
+        string[] sourceWarnings = ["[matroska,webm @ 000002a22ac49500] Could not find codec parameters for stream 6 (Attachment: none): unknown codec"];
+        string[] outputWarnings = ["[matroska,webm @ 00000279c313f6c0] Non-monotonic DTS in output stream 0:1"];
+
+        var error = Assert.Throws<MediaToolException>(
+            () => RemuxOutputValidation.ValidateAgainstPlan(output, plan, null, 100.0, sourceWarnings, outputWarnings));
+
+        Assert.Contains("Non-monotonic DTS", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // Only an address in ffmpeg's "@ " context position is treated as one, so hex-looking words in prose are
+    // left alone and cannot make two different warnings look alike. The address collapses to "#x#" because the
+    // number pass that follows rewrites the "0" of the "0x#" placeholder too; what matters is that it is the
+    // same for every run.
+    [InlineData("[matroska,webm @ 000002a22ac49500] x", "[matroska,webm @ #x#] x")]
+    [InlineData("[h264 @ 0x55d1c4] y", "[h# @ #x#] y")]
+    [InlineData("deadbeef is not an address here", "deadbeef is not an address here")]
+    public void Only_the_context_pointer_is_treated_as_an_address(string line, string expected) =>
+        Assert.Equal(expected, RemuxOutputValidation.NormalizeWarning(line));
+
     // --- metadata ------------------------------------------------------------------------------
 
     [Fact]
