@@ -65,6 +65,9 @@ def test_refiner_activity_card_shows_before_after_processing_details(
 
             expect(page.get_by_role("heading", name="Example.Movie.2024.mkv was processed successfully")).to_be_visible()
             page.get_by_role("button", name="Apply filters", exact=True).click()
+            # Rows are compact; the before/after detail opens from the row's Details toggle.
+            row = page.get_by_test_id("activity-row").filter(has_text="Example.Movie.2024.mkv")
+            row.get_by_text("Details", exact=True).click()
             detail_card = page.get_by_test_id("refiner-remux-activity-detail")
             expect(detail_card).to_be_visible()
             expect(detail_card.locator(".mm-activity-remux-detail__tile-label").filter(has_text="Original size")).to_be_visible()

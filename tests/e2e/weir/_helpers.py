@@ -49,7 +49,7 @@ def ensure_signed_in(page: Page, base_url: str) -> None:
             return
 
         if "/setup-wizard" in page.url and page.get_by_test_id("setup-wizard-skip").count() > 0:
-            expect(page.get_by_text("Setup wizard", exact=False)).to_be_visible()
+            expect(page.get_by_role("heading", name="Set up Weir")).to_be_visible()
             page.get_by_test_id("setup-wizard-skip").click()
             # Wait for navigation away from setup-wizard.  The skip handler batches
             # multiple mutations (suite + refiner) that can take 1-3 s when
