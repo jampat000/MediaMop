@@ -104,4 +104,4 @@ Horizontal scaling is not supported. Worker counts control in-process job slots 
 - Server APIs expose typed contracts at boundaries, described in the committed OpenAPI document
 - Frontend pages use typed API/query helpers from `src/lib`
 - Rules with no side effects belong in `Weir.Core`; anything that touches disk, database or processes belongs in `Weir.Infrastructure`
-- File lifecycle changes must preserve the [safety contract](../guides/file-lifecycle)
+- File lifecycle changes must preserve the [safety contract](https://github.com/jampat000/Weir/blob/main/docs/file-lifecycle-contract.md)
