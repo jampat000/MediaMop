@@ -1,4 +1,5 @@
-using System.Text;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace Weir.Api.Http;
 
@@ -19,10 +20,18 @@ public static class HttpLogSanitizer
     private const char LineSeparator = (char)0x2028;
     private const char ParagraphSeparator = (char)0x2029;
     private const char NextLine = (char)0x0085;
-    private const char Delete = (char)0x007f;
+
+    // The C0/C1 control range (\p{Cc}: 0x00-0x1F and 0x7F-0x9F, so this already covers DEL and NEL) plus the
+    // two Unicode line-breaking separators that are not themselves "Cc". A single Regex.Replace over this,
+    // rather than a hand-rolled character loop, is also what lets static analysis (CodeQL's cs/log-forging
+    // barrier recognition included) see this as removing the dangerous characters rather than just another
+    // pass-through of tainted input.
+    private static readonly Regex ControlCharacterPattern = new(
+        "[\\p{Cc}" + LineSeparator + ParagraphSeparator + "]",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
-    /// <paramref name="value"/> with every C0 control character, DEL, and the Unicode line/paragraph
+    /// <paramref name="value"/> with every C0/C1 control character, and the Unicode line/paragraph
     /// separators some consoles and log viewers treat as newlines, replaced by a printable escape
     /// (<c>\r</c>, <c>\n</c>, <c>\t</c> or <c>\xHH</c> / <c>\uHHHH</c>). Everything else passes through
     /// unchanged, including non-ASCII text.
@@ -30,34 +39,21 @@ public static class HttpLogSanitizer
     public static string Sanitize(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
-
-        StringBuilder? builder = null;
-        for (var i = 0; i < value.Length; i++)
-        {
-            var c = value[i];
-            var escape = Escape(c);
-            if (escape is null)
-            {
-                builder?.Append(c);
-                continue;
-            }
-
-            builder ??= new StringBuilder(value.Length + 8).Append(value, 0, i);
-            builder.Append(escape);
-        }
-
-        return builder?.ToString() ?? value;
+        return ControlCharacterPattern.Replace(value, EscapeMatch);
     }
 
-    private static string? Escape(char c) => c switch
+    private static string EscapeMatch(Match match)
     {
-        '\r' => "\\r",
-        '\n' => "\\n",
-        '\t' => "\\t",
-        LineSeparator => "\\u2028",
-        ParagraphSeparator => "\\u2029",
-        NextLine => "\\u0085",
-        < ' ' or Delete => "\\x" + ((int)c).ToString("x2", System.Globalization.CultureInfo.InvariantCulture),
-        _ => null,
-    };
+        var c = match.Value[0];
+        return c switch
+        {
+            '\r' => "\\r",
+            '\n' => "\\n",
+            '\t' => "\\t",
+            LineSeparator => "\\u2028",
+            ParagraphSeparator => "\\u2029",
+            NextLine => "\\u0085",
+            _ => "\\x" + ((int)c).ToString("x2", CultureInfo.InvariantCulture),
+        };
+    }
 }
