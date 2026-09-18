@@ -132,7 +132,7 @@ Pull and run:
 ```bash
 docker pull ghcr.io/jampat000/weir:latest
 docker run --rm \
-  -p 8788:8788 \
+  -p 9347:9347 \
   -v weir-data:/data/weir \
   ghcr.io/jampat000/weir:latest
 ```

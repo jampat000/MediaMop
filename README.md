@@ -131,7 +131,7 @@ Current release outputs include:
 - `Weir-win-Setup.exe`
 - Docker images on GHCR such as `ghcr.io/jampat000/weir:latest`
 
-On Windows, `Weir-win-Setup.exe` installs the per-user .NET tray app under `%LocalAppData%\Weir`; it does not require administrator rights or a separate updater service. The tray app manages automatic Velopack updates, and upgrades can also be started from Settings.
+On Windows, `Weir-win-Setup.exe` installs the per-user .NET tray app under `%LocalAppData%\Weir`; it does not require administrator rights or a separate updater service. The first time Weir starts it asks which port to use — the default is 9347 — and remembers the answer; **Change port** in the tray menu moves it later. Installing without a desktop (WinRM, scripts)? Pass the port instead, with `Weir-win-Setup.exe -- --port 9400` or `Weir.exe --port 9400`, and no window is shown. See [the Windows install guide](docs-site/docs/deployment/windows.md#choosing-the-port). The tray app manages automatic Velopack updates, and upgrades can also be started from Settings.
 
 If you are upgrading from v2.2.x or earlier, uninstall the legacy Weir application first, then run the current installer. Runtime data under `C:\ProgramData\Weir` is preserved, and the tray app removes the legacy updater service on first launch. See [`docs/release.md`](docs/release.md) for the current packaging and upgrade contract.
 
@@ -141,7 +141,7 @@ Quick start:
 
 ```bash
 docker pull ghcr.io/jampat000/weir:latest
-docker run --rm -p 8788:8788 -v weir-data:/data/weir ghcr.io/jampat000/weir:latest
+docker run --rm -p 9347:9347 -v weir-data:/data/weir ghcr.io/jampat000/weir:latest
 ```
 
 Or from a repo clone:
@@ -150,6 +150,10 @@ Or from a repo clone:
 docker compose pull
 docker compose up -d
 ```
+
+Weir listens on port **9347** (W-E-I-R on a phone keypad). To use a different port on your host,
+change the left side of the mapping: `-p 8080:9347` puts Weir at `http://<host>:8080/`. Setting
+`PORT` changes the port inside the container, if you need that too.
 
 No env file is required for the default Docker path. The container will generate and persist
 its own session secret if you do not provide one.

@@ -1,11 +1,14 @@
 """Verify a freshly installed Weir end to end over HTTP, so a release is ready to sign off on the
-moment it lands on a machine this box has no other access to.
+moment it lands on another machine.
 
-Written for the situation where the target is a separate Windows PC on the network: there is no
-remote shell into it (WinRM is reachable there but refuses authentication, and pursuing that further
-was ruled out), so every check here goes through the same HTTP interface a browser on that network
-would use. That is also the better test -- it exercises the artefact that actually ships, not a
-remoting stack.
+Every check here goes through the same HTTP interface a browser on that network would use, so it
+needs nothing on the target but a running Weir -- no remote shell. It was first written for a target
+that had none (on 10.1.1.196, WinRM answered but refused authentication); other targets, such as
+10.1.1.51, do accept WinRM, and this script works the same either way. HTTP is also the better test:
+it exercises the artefact that actually ships, not a remoting stack.
+
+Weir listens on 9347 unless its installer was told otherwise (the Windows tray asks on first run, or
+takes --port / WEIR_PORT; Docker maps it with -p), so the base URL is usually http://<host>:9347.
 
 Never types a password into a sign-in form, and never asks for one. Bootstrap only works on a fresh
 install with no admin user yet, so this script always creates its own throwaway admin over the API
@@ -38,10 +41,10 @@ Usage (from the repository root, this machine, against the target's own address)
 
     python -m pip install --require-hashes -r tests/requirements.txt
     python -m playwright install chromium   # once
-    python scripts/verify-install.py http://<target-host>:<port>
+    python scripts/verify-install.py http://<target-host>:9347
 
     # Opt into check 7 once folders exist on the target and it can see a sample file:
-    python scripts/verify-install.py http://<target-host>:<port> \\
+    python scripts/verify-install.py http://<target-host>:9347 \\
         --watched-folder "D:\\Media\\Incoming\\Movies" \\
         --output-folder "D:\\Media\\Library\\Movies" \\
         --sample-file "Some Movie (2024)/Some Movie.mkv"
@@ -533,7 +536,7 @@ def build_parser() -> argparse.ArgumentParser:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("base_url", help="The running Weir server's base URL, e.g. http://192.168.1.50:5000")
+    parser.add_argument("base_url", help="The running Weir server's base URL, e.g. http://192.168.1.50:9347")
     parser.add_argument(
         "--screenshots-dir",
         type=Path,

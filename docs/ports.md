@@ -8,7 +8,7 @@ Vite reads it from [`apps/web/vite.config.ts`](../apps/web/vite.config.ts). Powe
 | Role | Host | Port | URL example |
 |------|------|------|-------------|
 | Web shell (Vite **dev** and **preview**) | all interfaces (`host: true` in `vite.config.ts`) | **8782** | `http://127.0.0.1:8782` or `http://localhost:8782` |
-| API (the .NET server, `dotnet watch run` per `scripts/dev-backend.ps1`) | `127.0.0.1` (from `dev-ports.json`) | **8788** | `http://127.0.0.1:8788` |
+| API (the .NET server, `dotnet watch run` per `scripts/dev-backend.ps1`) | `127.0.0.1` (from `dev-ports.json`) | **9347** | `http://127.0.0.1:9347` |
 
 The browser should use the **web** URL. `/api` is proxied to the API origin above (same-origin cookies).
 
@@ -28,7 +28,7 @@ There is **no fixed “production port” in application code**. Deployments use
 - **Clients** talk to **`https://<your-domain>` on port 443** (standard TLS).
 - The API is usually **the same origin** (`https://<your-domain>/api/...` behind a reverse proxy) or a **separate hostname**, still on **443**.
 
-For **containers** (Docker/Kubernetes), the API process bind port is an implementation detail. The shipped Weir image listens on **8788**. `dev-ports.json` includes **`production.containerApiBindPort`** as a documented convention for examples only—set the real port in your orchestration layer and reverse proxy.
+For **containers** (Docker/Kubernetes), the API process bind port is an implementation detail. The shipped Weir image listens on **9347**. `dev-ports.json` includes **`production.containerApiBindPort`** as a documented convention for examples only—set the real port in your orchestration layer and reverse proxy.
 
 ## Database (local dev)
 
@@ -36,4 +36,4 @@ The Weir server (**`apps/server`**) uses **file-backed SQLite** under **`WEIR_HO
 
 ## CI / E2E
 
-Automated tests pick **ephemeral loopback ports** (see `tests/e2e/weir/conftest.py`) so they do not depend on 8782/8788 being free.
+Automated tests pick **ephemeral loopback ports** (see `tests/e2e/weir/conftest.py`) so they do not depend on 8782/9347 being free.

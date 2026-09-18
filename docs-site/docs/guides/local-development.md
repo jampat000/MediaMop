@@ -54,14 +54,14 @@ numbered SQL migrations, every time it starts.
 
 This loads the repository-root `.env`, sets `WEIR_HOME` to `.local-dev-home` in the repository
 unless you set it yourself, and runs the server with `dotnet watch run` on the API address from
-`scripts/dev-ports.json` (`127.0.0.1:8788`).
+`scripts/dev-ports.json` (`127.0.0.1:9347`).
 
 Or manually:
 
 ```powershell
 $env:WEIR_SESSION_SECRET = "<long random>"
 $env:WEIR_WEB_DIST = "apps/web/dist"   # optional: also serve a built web app
-dotnet run --project apps/server/src/Weir.Host -- --host 127.0.0.1 --port 8788
+dotnet run --project apps/server/src/Weir.Host -- --host 127.0.0.1 --port 9347
 ```
 
 When run manually the server reads only `WEIR_*` environment variables; it does not load `.env` by itself.
@@ -158,7 +158,7 @@ E2E starts the server with `dotnet run --project apps/server/src/Weir.Host --no-
 | SDK version error from `global.json` | Install the SDK version named in `apps/server/global.json` |
 | `npm run dev` fails | Install Node.js 24 and open a new terminal |
 | Login/setup broken | Use the Vite proxy (same origin); don't set `VITE_API_BASE_URL` |
-| "Cannot reach the API" | Check `GET /health` on port 8788 and look at the server output for startup errors |
+| "Cannot reach the API" | Check `GET /health` on port 9347 and look at the server output for startup errors |
 | SQLite or migration errors at startup | Read the server output; check `WEIR_HOME` / `WEIR_DB_PATH` point at a writable folder |
 | Port already in use | Another server is still running; `npm run dev` stops it, or see `scripts/dev-ports.json` for defaults |
 | Forgot the dev admin password | Run `.\scripts\dev-reset-auth.ps1 --yes` (see above) |

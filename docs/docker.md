@@ -4,7 +4,7 @@ Full Docker instructions live in [`docker/README.md`](../docker/README.md).
 
 Short summary:
 
-- one container: the .NET server + SQLite + bundled web UI on port `8788`
+- one container: the .NET server + SQLite + bundled web UI on port `9347`
 - images for `linux/amd64` and `linux/arm64`, running as the `weir` user (UID/GID 1000, remapped with `WEIR_PUID` / `WEIR_PGID`)
 - data volume `/data/weir`; the server creates or updates its database on start, and a generated session secret is kept at `$WEIR_HOME/session.secret`
 - `WEIR_CHOWN_*` / `WEIR_DIR_MODE_*` are validated but not applied

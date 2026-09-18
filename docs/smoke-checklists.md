@@ -46,10 +46,10 @@ drops the `v`, so `ghcr.io/jampat000/weir:3.0.0` is the image for tag `v3.0.0`.
 2. Start with a fresh named volume:
 
    ```bash
-   docker run --rm -p 8788:8788 -v weir-smoke:/data/weir ghcr.io/jampat000/weir:X.Y.Z
+   docker run --rm -p 9347:9347 -v weir-smoke:/data/weir ghcr.io/jampat000/weir:X.Y.Z
    ```
 
-3. Open `http://localhost:8788/`.
+3. Open `http://localhost:9347/`.
 4. Confirm first-run user creation appears.
 5. Confirm the release-candidate audit artifact includes `pass-through-proof.json`
    showing completed, byte-identical delivery and watched-source cleanup through a

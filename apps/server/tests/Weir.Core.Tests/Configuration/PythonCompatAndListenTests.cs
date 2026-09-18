@@ -67,9 +67,9 @@ public sealed class PythonCompatAndListenTests
     }
 
     [Fact]
-    public void Listen_defaults_to_every_interface_on_8788()
+    public void Listen_defaults_to_every_interface_on_9347()
     {
-        Assert.Equal(new ServerListenOptions("0.0.0.0", 8788), ServerListenOptions.Parse([], TestRuntime.With()));
+        Assert.Equal(new ServerListenOptions("0.0.0.0", 9347), ServerListenOptions.Parse([], TestRuntime.With()));
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public sealed class PythonCompatAndListenTests
     {
         Assert.Equal(9000, ServerListenOptions.Parse([], TestRuntime.With(("PORT", "9000"))).Port);
         Assert.Equal(9100, ServerListenOptions.Parse(["--serve", "--port", "9100"], TestRuntime.With(("PORT", "9000"))).Port);
-        Assert.Equal(new ServerListenOptions("127.0.0.1", 8788), ServerListenOptions.Parse(["--host", "127.0.0.1"], TestRuntime.With(("PORT", " "))));
+        Assert.Equal(new ServerListenOptions("127.0.0.1", 9347), ServerListenOptions.Parse(["--host", "127.0.0.1"], TestRuntime.With(("PORT", " "))));
     }
 
     [Fact]

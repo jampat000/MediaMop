@@ -18,12 +18,42 @@ The stable image tags are published by the release workflow:
 ```bash
 docker pull ghcr.io/jampat000/weir:latest
 docker run --rm \
-  -p 8788:8788 \
+  -p 9347:9347 \
   -v weir-data:/data/weir \
   ghcr.io/jampat000/weir:latest
 ```
 
-Open `http://localhost:8788/`.
+Open `http://localhost:9347/`.
+
+## Port
+
+Weir listens on **9347** inside the container — Weir's own default, which spells W-E-I-R on a phone
+keypad. (Before 3.0.0 it was 8788, inherited from MediaMop.)
+
+Choose the port on your host with `-p <host port>:9347`, as with any container. To reach Weir at
+`http://<host>:8080/` instead:
+
+```bash
+docker run --rm \
+  -p 8080:9347 \
+  -v weir-data:/data/weir \
+  ghcr.io/jampat000/weir:latest
+```
+
+In `compose.yaml`, change the left-hand side of `"9347:9347"` the same way.
+
+You rarely need to change the port *inside* the container, but you can: set `PORT`, and publish that
+port instead. The server reads `PORT` at startup, and the image's health check follows it.
+
+```bash
+docker run --rm \
+  -e PORT=9400 \
+  -p 9400:9400 \
+  -v weir-data:/data/weir \
+  ghcr.io/jampat000/weir:latest
+```
+
+With `network_mode: host` there is no `-p` mapping, so `PORT` is how you move Weir off 9347.
 
 ## Compose
 
@@ -36,7 +66,7 @@ From the repository root:
    docker compose up -d
    ```
 
-2. Open `http://localhost:8788/`.
+2. Open `http://localhost:9347/`.
 
 If you want to override defaults later, copy `docker/.env.example` to `.env.weir`
 and run `docker compose --env-file .env.weir up -d`.
@@ -66,7 +96,7 @@ work and output folders:
 
 ```bash
 docker run --rm \
-  -p 8788:8788 \
+  -p 9347:9347 \
   -v weir-data:/data/weir \
   -e WEIR_PUID=1001 \
   -e WEIR_PGID=1001 \

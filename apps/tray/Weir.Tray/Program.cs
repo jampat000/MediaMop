@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -14,8 +13,6 @@ namespace Weir.Tray;
 static class Program
 {
     private const string MutexName = @"Local\WeirTrayHostSingleton";
-    internal const int PreferredPort = 8788;
-    internal const int PortScanRange = 20;
     internal const int HealthTimeoutSeconds = 60;
     internal const int ServerStopTimeoutMs = 10_000;
     internal const double BrowserDebounceCooldownMs = 1250;
@@ -29,13 +26,13 @@ static class Program
             .OnAfterInstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: after install v{v}");
-                KillRunningProcesses();
+                KillRunningProcesses($"Velopack after install v{v}");
                 RegisterStartup();
             })
             .OnBeforeUninstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: before uninstall v{v}");
-                KillRunningProcesses();
+                KillRunningProcesses($"Velopack before uninstall v{v}");
                 DeregisterStartup();
             })
             .OnBeforeUpdateFastCallback((v) =>
@@ -63,6 +60,8 @@ static class Program
         if (!createdNew)
         {
             AppendFallbackLog("Tray host launch skipped: an existing Weir tray instance is already running.");
+            if (PortChoice.SuppliedPort(args, Environment.GetEnvironmentVariable) is { } ignored)
+                AppendFallbackLog($"Ignoring {ignored.Source} {ignored.Text}: Weir is already running. Use \"Change port\" from its tray menu, or quit it and start it again with the new port.");
             if (!noBrowser)
                 OpenExistingInstanceBrowser();
             return 0;
@@ -70,7 +69,16 @@ static class Program
 
         try
         {
-            var app = new TrayApp(openBrowserOnReady: !noBrowser);
+            // Before any window, including the port dialog.
+            ApplicationConfiguration.Initialize();
+
+            var runtimeHome = RuntimeHome();
+            Directory.CreateDirectory(runtimeHome);
+            var port = ResolvePort(args, runtimeHome);
+            if (port is null)
+                return 1;
+
+            var app = new TrayApp(port.Value, openBrowserOnReady: !noBrowser);
             app.Run();
             return 0;
         }
@@ -79,6 +87,67 @@ static class Program
             AppendFallbackLog($"Fatal startup error:\n{ex}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// The port to run on: supplied on the command line or in WEIR_PORT, else saved by an
+    /// earlier run, else chosen now — by the person if there is one, by the default if not.
+    /// Null means do not start; the reason is in tray-host.log.
+    /// </summary>
+    private static int? ResolvePort(string[] args, string runtimeHome)
+    {
+        var supplied = PortChoice.SuppliedPort(args, Environment.GetEnvironmentVariable);
+        var saved = PortChoice.LoadSaved(runtimeHome);
+        var interactive = PortChoice.HasInteractiveDesktop();
+
+        // A server left behind by a tray that crashed still holds our port, and would make
+        // the saved port look taken by "another program". This tray holds the session's
+        // singleton mutex, so any WeirServer.exe from this install in this session is an orphan.
+        StopOrphanedServers();
+
+        var decision = PortChoice.Decide(
+            supplied,
+            saved,
+            interactive,
+            PortChoice.IsInUse,
+            prompt => PortDialog.Ask(prompt, PortChoice.IsInUse, LoadAppIcon()));
+
+        AppendFallbackLog($"Port: {decision.Reason} (interactive desktop: {(interactive ? "yes" : "no")})");
+        if (decision.Port is { } port && decision.Save)
+        {
+            PortChoice.Save(runtimeHome, port);
+            AppendFallbackLog($"Saved port {port} to {Path.Combine(runtimeHome, PortChoice.SavedPortFileName)}.");
+        }
+        return decision.Port;
+    }
+
+    private static void StopOrphanedServers() =>
+        InstallProcesses.StopOwn(InstallProcesses.Root(), sameSessionOnly: true, AppendFallbackLog, "Startup (orphaned server check)");
+
+    internal static Icon LoadAppIcon()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("weir-tray-icon.ico", StringComparison.OrdinalIgnoreCase));
+
+        if (resourceName is not null)
+        {
+            using var stream = assembly.GetManifestResourceStream(resourceName)!;
+            return new Icon(stream);
+        }
+
+        var fileCandidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "weir-tray-icon.ico"),
+            Path.Combine(AppContext.BaseDirectory, "assets", "weir-tray-icon.ico"),
+        };
+        foreach (var path in fileCandidates)
+        {
+            if (File.Exists(path))
+                return new Icon(path);
+        }
+
+        return SystemIcons.Application;
     }
 
     private static void OpenExistingInstanceBrowser()
@@ -94,27 +163,10 @@ static class Program
         catch { }
     }
 
-    private static void KillRunningProcesses()
-    {
-        int currentId = Environment.ProcessId;
-        foreach (var name in new[] { "Weir", "WeirServer" })
-        {
-            foreach (var proc in Process.GetProcessesByName(name))
-            {
-                if (proc.Id == currentId) continue;
-                try
-                {
-                    proc.Kill(entireProcessTree: true);
-                    proc.WaitForExit(5_000);
-                    AppendFallbackLog($"Killed running process: {name} (pid {proc.Id})");
-                }
-                catch (Exception ex)
-                {
-                    AppendFallbackLog($"Could not kill {name} (pid {proc.Id}): {ex.Message}");
-                }
-            }
-        }
-    }
+    // Velopack's install and uninstall hooks: stop this install's own tray and server so their
+    // files can be replaced or removed. Only this install's — see InstallProcesses.
+    private static void KillRunningProcesses(string why) =>
+        InstallProcesses.StopOwn(InstallProcesses.Root(), sameSessionOnly: false, AppendFallbackLog, why);
 
     private static void RegisterStartup()
     {
@@ -395,21 +447,25 @@ sealed class TrayApp : IDisposable
 {
     private readonly string _runtimeHome;
     private readonly string _installRoot;
-    private readonly int _port;
+    private volatile int _port;
     private readonly bool _openBrowserOnReady;
     private readonly string _logPath;
     private readonly object _logLock = new();
     private readonly object _browserLock = new();
+    // Held while the server is being replaced, by the watchdog or by a port change, so the
+    // two never start a server at the same time.
+    private readonly object _serverLock = new();
 
     private NotifyIcon? _notifyIcon;
     private ToolStripMenuItem? _updateMenuItem;
+    private ToolStripMenuItem? _portMenuItem;
     private volatile Process? _serverProcess;
     private double _lastBrowserOpenTicks;
     private CancellationTokenSource? _cts;
     private UpdateService? _updateService;
     private UpdateSettings _updateSettings;
 
-    public TrayApp(bool openBrowserOnReady)
+    public TrayApp(int port, bool openBrowserOnReady)
     {
         _installRoot = AppContext.BaseDirectory;
         _runtimeHome = Program.RuntimeHome();
@@ -417,7 +473,7 @@ sealed class TrayApp : IDisposable
 
         Directory.CreateDirectory(_runtimeHome);
         _logPath = Path.Combine(_runtimeHome, "tray-host.log");
-        _port = FindFreePort(Program.PreferredPort);
+        _port = port;
         _updateSettings = UpdateSettings.Load(_runtimeHome);
 
         Log($"Starting tray host. installRoot={_installRoot} runtimeHome={_runtimeHome}");
@@ -443,12 +499,12 @@ sealed class TrayApp : IDisposable
         StartWatchdog();
         InitUpdateService();
 
-        ApplicationConfiguration.Initialize();
         _notifyIcon = CreateNotifyIcon();
         _notifyIcon.Visible = true;
 
         Log("Starting tray icon event loop");
         Application.Run();
+        Log("Tray icon event loop ended.");
     }
 
     // -- Environment setup --------------------------------------------------
@@ -486,6 +542,8 @@ sealed class TrayApp : IDisposable
         return token;
     }
 
+    // The port the server is listening on right now, for the second-launch "open in browser"
+    // path in Program.OpenExistingInstanceBrowser. The saved choice is port.txt (PortChoice).
     private void WritePortFile()
     {
         File.WriteAllText(Path.Combine(_runtimeHome, "current-port.txt"), _port.ToString());
@@ -564,6 +622,8 @@ sealed class TrayApp : IDisposable
         throw new TimeoutException("Weir did not start listening on localhost in time.");
     }
 
+    private Thread? _watchdog;
+
     private void StartWatchdog()
     {
         var ct = _cts!.Token;
@@ -578,9 +638,13 @@ sealed class TrayApp : IDisposable
                 Thread.Sleep(3000);
                 if (ct.IsCancellationRequested) return;
 
-                var proc = _serverProcess;
-                if (proc is null) return;
-                if (!proc.HasExited) continue;
+                Process? proc;
+                lock (_serverLock)
+                {
+                    proc = _serverProcess;
+                    if (proc is null) return;
+                    if (!proc.HasExited) continue;
+                }
 
                 Log($"Bundled server host exited unexpectedly with code {proc.ExitCode} (restart {restartCount + 1}/{maxRestarts})");
 
@@ -603,17 +667,22 @@ sealed class TrayApp : IDisposable
                 Thread.Sleep(delay);
                 if (ct.IsCancellationRequested) return;
 
-                try
+                lock (_serverLock)
                 {
-                    StartServerProcess();
-                    WaitForHealth();
-                    Log($"Server restarted successfully (attempt {restartCount + 1}).");
-                    restartCount = 0;
-                }
-                catch (Exception ex)
-                {
-                    Log($"Server restart attempt {restartCount + 1} failed: {ex.Message}");
-                    restartCount++;
+                    // A port change may have replaced the server while this thread waited.
+                    if (!ReferenceEquals(_serverProcess, proc)) continue;
+                    try
+                    {
+                        StartServerProcess();
+                        WaitForHealth();
+                        Log($"Server restarted successfully (attempt {restartCount + 1}).");
+                        restartCount = 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"Server restart attempt {restartCount + 1} failed: {ex.Message}");
+                        restartCount++;
+                    }
                 }
             }
         })
@@ -621,6 +690,7 @@ sealed class TrayApp : IDisposable
             IsBackground = true,
             Name = "weir-server-watchdog",
         };
+        _watchdog = thread;
         thread.Start();
     }
 
@@ -884,7 +954,7 @@ sealed class TrayApp : IDisposable
 
     private NotifyIcon CreateNotifyIcon()
     {
-        var icon = LoadIcon();
+        var icon = Program.LoadAppIcon();
         var menu = new ContextMenuStrip();
 
         var openItem = menu.Items.Add("Open Weir");
@@ -899,6 +969,10 @@ sealed class TrayApp : IDisposable
                 UseShellExecute = true,
             });
         };
+
+        _portMenuItem = new ToolStripMenuItem($"Change port ({_port})...");
+        _portMenuItem.Click += (_, _) => OnChangePortClick();
+        menu.Items.Add(_portMenuItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
@@ -940,30 +1014,93 @@ sealed class TrayApp : IDisposable
         return notifyIcon;
     }
 
-    private Icon LoadIcon()
+    // -- Port -------------------------------------------------------------
+
+    private void OnChangePortClick()
     {
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("weir-tray-icon.ico", StringComparison.OrdinalIgnoreCase));
-
-        if (resourceName is not null)
+        var current = _port;
+        var chosen = PortDialog.Ask(
+            new PortPrompt(PortPromptReason.Change, current, CurrentPortInUse: false, Suggested: current),
+            PortChoice.IsInUse,
+            _notifyIcon?.Icon);
+        if (chosen is not { } port || port == current)
         {
-            using var stream = assembly.GetManifestResourceStream(resourceName)!;
-            return new Icon(stream);
+            Log("Change port: closed without a new port.");
+            return;
         }
 
-        var fileCandidates = new[]
+        if (_portMenuItem is not null)
         {
-            Path.Combine(_installRoot, "weir-tray-icon.ico"),
-            Path.Combine(_installRoot, "assets", "weir-tray-icon.ico"),
-        };
-        foreach (var path in fileCandidates)
-        {
-            if (File.Exists(path))
-                return new Icon(path);
+            _portMenuItem.Enabled = false;
+            _portMenuItem.Text = $"Moving to port {port}...";
         }
 
-        return SystemIcons.Application;
+        // Restarting waits up to a minute for the new server; keep the menu responsive.
+        var ui = SynchronizationContext.Current;
+        Task.Run(() => MoveToPort(current, port)).ContinueWith(_ =>
+        {
+            void Reset()
+            {
+                if (_portMenuItem is null) return;
+                _portMenuItem.Enabled = true;
+                _portMenuItem.Text = $"Change port ({_port})...";
+            }
+            if (ui is null) Reset();
+            else ui.Post(_ => Reset(), null);
+        });
+    }
+
+    private void MoveToPort(int from, int to)
+    {
+        lock (_serverLock)
+        {
+            Log($"Change port: restarting the server on port {to} (was {from}).");
+            StopServerProcess();
+            try
+            {
+                _port = to;
+                StartServerProcess();
+                WaitForHealth();
+                PortChoice.Save(_runtimeHome, to);
+                WritePortFile();
+                Log($"Change port: Weir is healthy on http://127.0.0.1:{to}/ and port {to} is saved.");
+                _notifyIcon?.ShowBalloonTip(8000, "Weir", $"Weir is now at http://localhost:{to}/", ToolTipIcon.Info);
+                RestartWatchdogIfStopped();
+                OpenBrowserDebounced("port-change");
+            }
+            catch (Exception ex)
+            {
+                // Put things back as they were rather than leave Weir down: the old port was
+                // working a moment ago, and it is still the saved one.
+                Log($"Change port: the server did not start on port {to} ({ex.Message}); going back to port {from}.");
+                StopServerProcess();
+                _port = from;
+                try
+                {
+                    StartServerProcess();
+                    WaitForHealth();
+                    WritePortFile();
+                    RestartWatchdogIfStopped();
+                }
+                catch (Exception back)
+                {
+                    Log($"Change port: could not restart on port {from} either: {back.Message}");
+                }
+                _notifyIcon?.ShowBalloonTip(
+                    8000, "Weir",
+                    $"Weir could not start on port {to}, so it is still at port {from}. See tray-host.log in the data folder.",
+                    ToolTipIcon.Warning);
+            }
+        }
+    }
+
+    // The watchdog treats a cleared _serverProcess as shutdown and exits. A port change stops
+    // and starts under _serverLock, so the watchdog should never see the gap; this guards the
+    // case where it saw it anyway.
+    private void RestartWatchdogIfStopped()
+    {
+        if (_watchdog is { IsAlive: true }) return;
+        StartWatchdog();
     }
 
     // -- Browser ------------------------------------------------------------
@@ -997,23 +1134,6 @@ sealed class TrayApp : IDisposable
             }
             catch { }
         }
-    }
-
-    // -- Utilities ----------------------------------------------------------
-
-    private static int FindFreePort(int preferred)
-    {
-        for (int port = preferred; port < preferred + Program.PortScanRange; port++)
-        {
-            try
-            {
-                using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, port));
-                return port;
-            }
-            catch (SocketException) { }
-        }
-        throw new InvalidOperationException("Could not find a free localhost port for Weir.");
     }
 
     public void Dispose()

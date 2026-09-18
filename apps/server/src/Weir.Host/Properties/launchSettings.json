@@ -3,7 +3,7 @@
   "profiles": {
     "Weir": {
       "commandName": "Project",
-      "commandLineArgs": "--host 127.0.0.1 --port 8788",
+      "commandLineArgs": "--host 127.0.0.1 --port 9347",
       "launchBrowser": false
     }
   }
