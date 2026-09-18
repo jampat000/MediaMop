@@ -17,7 +17,8 @@ Weir is released under AGPL-3.0-or-later. Release artifacts are built from the t
    - `version` in `apps/web/package.json`
 
    The release workflow checks that the tag `vX.Y.Z` matches both and stops if either differs.
-2. Merge to `main` after `Test / weir` passes.
+2. Merge to `main` after `Test / weir` passes. The tag's commit must then pass `Test` on `main`
+   as well: the release checks for that run instead of re-running the tests itself (below).
 3. Create user-facing release notes for the target tag before pushing it:
 
    - Create `docs/release-notes/vX.Y.Z.md` using `docs/release-notes/TEMPLATE.md`.
@@ -44,9 +45,23 @@ Actions runners.
 
 The `Release` workflow:
 
-- reruns the .NET server build and tests on Linux
-- reruns web build and unit tests on Linux
-- reruns the E2E auth smoke on Linux
+- **`ci-passed`**: confirms that `.github/workflows/ci.yml` passed on the exact tagged commit
+  (`scripts/verify-ci-for-release.mjs`), instead of running those tests a second time. It accepts
+  only a `push` run on `main` or a manual run, judged by its latest attempt, in which the server
+  build and tests (Linux and Windows), the web checks and every required contract area actually
+  ran and passed; a job the path filter skipped does not count. If that run is still going, it
+  waits for it (up to 45 minutes). If no run proves the commit (the tag is on a commit that never
+  ran CI, CI failed or was cancelled, or a push to `main` skipped the tests because nothing they
+  cover changed), it fails with the fix: run the full CI on the tag, then re-run the release's
+  failed jobs:
+
+  ```bash
+  gh workflow run ci.yml --ref vX.Y.Z
+  ```
+
+- **`validate`**: what CI cannot have checked. The release notes file exists, the release gate
+  ordering holds, a NuGet vulnerability scan as of today, the E2E smoke, and the production web
+  build published as `weir-web-dist.zip`
 - builds the Velopack Windows package on `windows-latest`
 - publishes `weir-web-dist.zip`
 - builds a local, unpushed Docker release candidate
@@ -61,8 +76,11 @@ The `Release` workflow:
 - runs the published Docker image and waits for `/health`
 - creates the GitHub Release
 
-The registry login and Docker push occur only after the unpushed candidate passes
-the complete live audit. A failed screen, API check, browser console error, page
+All of those run at the same time. Only `publish` holds registry credentials and write
+permissions, and it needs every other job, so the registry login and Docker push occur only
+after the CI proof, the release checks, the Windows package and the unpushed candidate's
+complete live audit have all passed (`scripts/check-release-workflow-gates.mjs` enforces this).
+The published image is rebuilt from the candidate jobs' cached layers. A failed screen, API check, browser console error, page
 error, failed request, bad response, changed pass-through output, or incomplete
 source cleanup therefore stops the release before either the versioned image or
 `latest` is published. The Windows package smoke runs the same real pass-through

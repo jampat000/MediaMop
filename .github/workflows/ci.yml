@@ -5,7 +5,9 @@
 # tested on its pull request) only the build and unit test steps run, and the packaging smokes only
 # when packaging, app or workflow files changed.
 # GitHub shows the job as "Test / weir".
-# Keep this step sequence aligned with .github/workflows/release.yml.
+# The release does not re-run these tests: scripts/verify-ci-for-release.mjs makes a tagged release
+# prove that this workflow passed on the tagged commit, by the job and step names it lists. Renaming a
+# job or step it names means updating that list; scripts/check-release-workflow-gates.mjs enforces it.
 name: Test
 
 on:
@@ -44,9 +46,18 @@ jobs:
       packaging: ${{ steps.filter.outputs.packaging }}
       docker: ${{ steps.filter.outputs.docker }}
       workflows: ${{ steps.filter.outputs.workflows }}
+      contract_areas: ${{ steps.areas.outputs.required }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        if: github.event_name != 'workflow_dispatch'
+
+      # The contract suite runs one area per runner. The list is read from areas.json rather than
+      # written out here, so an area added there gets its own leg without anyone editing this file.
+      - name: Required contract areas
+        id: areas
+        run: |
+          areas="$(jq -c '[.areas[] | select((.required // []) | index("dotnet")) | .name]' tests/contract/areas.json)"
+          echo "Required on dotnet: $areas"
+          echo "required=$areas" >> "$GITHUB_OUTPUT"
 
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
@@ -139,7 +150,9 @@ jobs:
         run: node scripts/check-github-action-pins.mjs
 
       - name: Release publication gate ordering
-        run: node scripts/check-release-workflow-gates.mjs
+        run: |
+          node scripts/check-release-workflow-gates.mjs
+          node --test scripts/verify-ci-for-release.test.mjs
 
       - name: Weir web - install, lint, format, build, unit tests
         if: env.RUN_WEB == 'true'
@@ -204,18 +217,22 @@ jobs:
         run: dotnet test apps/server/Weir.slnx --no-build
 
   # Language-neutral contract suite (#516): starts the .NET server as a separate process and talks to
-  # it only over HTTP (tests/contract/README.md). areas.json requires every area on dotnet.
-  contract:
+  # it only over HTTP (tests/contract/README.md). One leg per area areas.json requires on dotnet (every
+  # area, today), all at once: run one after another they took about 18.5 minutes on a single runner.
+  contract-area:
+    name: contract (${{ matrix.area }})
     needs: changes
-    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.changes.result != 'success' || needs.changes.outputs.contract == 'true' || needs.changes.outputs.workflows == 'true') }}
+    # Needs the area list from `changes`, so unlike the jobs above it cannot run when change detection
+    # failed. The `contract` job below then fails rather than passes, which is the safe way round.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.contract == 'true' || needs.changes.outputs.workflows == 'true') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        backend: [dotnet]
+        area: ${{ fromJSON(needs.changes.outputs.contract_areas) }}
     env:
-      WEIR_CONTRACT_SERVER: ${{ matrix.backend }}
+      WEIR_CONTRACT_SERVER: dotnet
       WEIR_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-ci-session-secret-32chars-min
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -235,8 +252,12 @@ jobs:
         with:
           global-json-file: apps/server/global.json
 
+      # Each leg builds for itself. The build takes under a minute; handing seven runners one build
+      # through an artifact costs about as long in upload and download, and adds a job every leg must
+      # wait for. Only the host is built, because the suite runs `dotnet run --no-build` on it
+      # (tests/contract/support/launcher.py); the `weir` job builds the whole solution, warnings as errors.
       - name: Build Weir server (the server under test)
-        run: dotnet build apps/server/Weir.slnx
+        run: dotnet build apps/server/src/Weir.Host
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -255,10 +276,15 @@ jobs:
           ruff check tests/contract
           ruff format --check tests/contract
 
-      # Every area areas.json marks required for this server must pass (for dotnet: all of them).
-      - name: Contract suite, required areas (${{ matrix.backend }})
+      # --contract-required-only on top of --contract-area: a leg for an area that is not required
+      # selects nothing, which pytest reports as a failure (exit 5), never as a pass.
+      - name: Contract suite, required area (${{ matrix.area }})
         id: contract
-        run: python -m pytest tests/contract -q --tb=short -p no:cacheprovider --contract-required-only
+        env:
+          # The suite reaps servers an earlier run left behind through this ledger file; one per leg.
+          WEIR_CONTRACT_LEDGER: ${{ runner.temp }}/weir-contract-servers-${{ matrix.area }}.json
+          CONTRACT_AREA: ${{ matrix.area }}
+        run: python -m pytest tests/contract -q --tb=short -p no:cacheprovider --contract-required-only --contract-area "$CONTRACT_AREA"
 
       # #586: the suite already writes one log per server it starts (ServerUnderTest.logs_dir,
       # tests/contract/support/launcher.py), but they land in pytest's basetemp under the runner's
@@ -278,9 +304,39 @@ jobs:
         if: ${{ !cancelled() && steps.contract.outcome == 'failure' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: weir-contract-logs-${{ matrix.backend }}
+          name: weir-contract-logs-${{ matrix.area }}
           if-no-files-found: warn
           path: artifacts/contract-logs/*
+
+  # The contract suite's single verdict, "every required area passed", and the check to require on
+  # main: a leg's name follows areas.json, this one never changes. `always()` so that it reports rather
+  # than being skipped, because GitHub counts a skipped required check as passing.
+  contract:
+    needs: [changes, contract-area]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RUN_CONTRACT: ${{ github.event_name == 'workflow_dispatch' || needs.changes.result != 'success' || needs.changes.outputs.contract == 'true' || needs.changes.outputs.workflows == 'true' }}
+      LEGS: ${{ needs.contract-area.result }}
+      AREAS: ${{ needs.changes.outputs.contract_areas }}
+    steps:
+      - name: Every required contract area passed
+        run: |
+          if [ "$RUN_CONTRACT" = "true" ]; then
+            if [ "$LEGS" = "success" ]; then
+              echo "Every required contract area passed: $AREAS"
+              exit 0
+            fi
+            echo "::error::The contract suite had to run, and its areas ended '$LEGS' (areas: ${AREAS:-unknown}). Every required area must pass."
+            exit 1
+          fi
+          if [ "$LEGS" = "skipped" ]; then
+            echo "No contract, server or workflow files changed, so the contract suite did not need to run."
+            exit 0
+          fi
+          echo "::error::The contract suite was not due to run, yet its areas ended '$LEGS'."
+          exit 1
 
   docker-smoke:
     needs: changes

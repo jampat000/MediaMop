@@ -74,7 +74,10 @@ def test_files_lists_passed_through_and_rejected_rows(...): ...
   the new test, so both the workaround and the fix are visible until the marker comes off.
 
 Areas are listed in [`areas.json`](areas.json). Each has a `required` list of server kinds that must
-pass it; CI's `contract` job runs exactly those (`--contract-required-only`). Every area requires `dotnet`.
+pass it. CI runs each required area as its own job, `contract (<area>)`, in parallel
+(`--contract-required-only --contract-area <area>`), and the `contract` job fails unless every one of
+them passed. Every area requires `dotnet`. The leg list is read from `areas.json`, so a new area gets
+its own job without a workflow change.
 
 ## How it works
 

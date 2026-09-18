@@ -106,11 +106,13 @@ The **`Test`** workflow (`.github/workflows/ci.yml`), path-aware:
 
 1. **`weir`** (required): **`dotnet build -warnaserror`**, **`dotnet test`** and a NuGet vulnerability scan for **`apps/server`**; **`npm ci`**, **`api:types:check`**, lint, format, build and unit tests in **`apps/web`**; the dead-code guard; then **E2E** with **`WEIR_E2E=1`**, **`WEIR_HOME`** on a temp dir, the .NET server serving the built web app (**`WEIR_WEB_DIST`**, as the packages do) + Playwright (from repo-root **`tests/e2e/weir/`**, same as local optional E2E below).
 2. **`weir-server (windows-latest)`**: the server build and tests on Windows.
-3. **`contract (dotnet)`**: the contract suite against the .NET server, every area required.
+3. **`contract (<area>)`** and **`contract`**: the contract suite against the .NET server, one job per
+   area in [`tests/contract/areas.json`](../tests/contract/areas.json), in parallel; **`contract`**
+   passes only when every required area did.
 4. **`docker-smoke`** (required): builds the image, runs it and the live packaged audit; builds the linux/arm64 image too when the Docker files change.
 5. **`windows-package-smoke`** (required): tray tests, the Velopack build and **`scripts/smoke-windows-package.ps1`**.
 
-Pushing a semver tag **`v*`** runs the **`Release`** workflow, which repeats these stages before publishing a GitHub Release — see **[`docs/release.md`](release.md)**.
+Pushing a semver tag **`v*`** runs the **`Release`** workflow. It does not repeat these tests: it refuses to publish unless this workflow already passed on the tagged commit, then builds, tests and publishes the release artefacts — see **[`docs/release.md`](release.md)**.
 
 ## Contract suite and E2E (local)
 

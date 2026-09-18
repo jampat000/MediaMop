@@ -12,6 +12,8 @@ This is the canonical governance checklist for keeping Weir releases controlled 
   - `weir`
   - `docker-smoke`
   - `windows-package-smoke`
+- `contract` (the contract suite's aggregate verdict: every required area passed) is not a required
+  check yet. It is the name to add; the per-area `contract (<area>)` jobs follow `areas.json`.
 - The repo Wiki is disabled. Public docs live in the repository.
 - Issues are enabled and use structured templates.
 - Releases are tag-driven from `v*` tags.
@@ -33,7 +35,7 @@ This is the canonical governance checklist for keeping Weir releases controlled 
 3. Confirm the published release body is plain-language and matches the approved `docs/release-notes/vX.Y.Z.md` content.
 4. Confirm the release notes/install guidance names the attached `Weir-win-Setup.exe` installer and explains any one-time upgrade requirement for older installs.
 5. Confirm the GHCR image exists for both `vX.Y.Z` and `latest`.
-6. Confirm the release workflow completed `weir`, Docker publish, Docker smoke, and Windows package jobs.
+6. Confirm the release workflow completed `ci-passed`, `validate`, `windows-smoke`, `docker-candidate`, `docker-arm64` and `publish`.
 7. Download `weir-docker-release-candidate-audit` and confirm its summary has
    no console warnings, console errors, page errors, failed requests, or bad responses;
    confirm `pass-through-proof.json` reports a completed job, byte-identical output,
