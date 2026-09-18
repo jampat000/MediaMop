@@ -28,7 +28,7 @@
     carries the same number, and the release workflow refuses a tag that does not match both.
   -->
   <PropertyGroup>
-    <WeirVersion>2.6.6</WeirVersion>
+    <WeirVersion>3.0.0</WeirVersion>
     <Version>$(WeirVersion)</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
