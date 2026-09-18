@@ -245,7 +245,7 @@ export function LoginPage() {
             <label className="flex items-start gap-3 py-1 text-sm text-[var(--mm-text2)]">
               <input
                 type="checkbox"
-                className="mt-0.5 h-4 w-4"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
                 aria-label="Trust this device"
                 checked={trustedDevice}
                 onChange={(e) => setTrustedDevice(e.target.checked)}

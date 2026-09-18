@@ -152,7 +152,7 @@ export function ProcessingDirectPlaySection() {
                 <input
                   id={`direct-play-device-${device.id}`}
                   type="checkbox"
-                  className="mt-1"
+                  className="mt-1 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
                   checked={selected.has(device.id)}
                   disabled={!editable || save.isPending}
                   onChange={() => toggle(device.id)}
