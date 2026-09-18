@@ -5,7 +5,9 @@ title: Local Development
 
 # Local Development
 
-This guide covers server and web development setup for Weir.
+This guide is for developers building Weir from source. If you just want to run Weir, see the
+[Quickstart](../quickstart) for Docker or the Windows installer instead — you don't need any of
+this to use the app.
 
 ## Prerequisites
 
@@ -15,18 +17,50 @@ This guide covers server and web development setup for Weir.
 The server uses file-backed SQLite under `WEIR_HOME`. No PostgreSQL required. Python is only
 needed if you want to run the contract suite or the E2E tests (see below).
 
+## Clone and run
+
+```bash
+git clone https://github.com/jampat000/Weir.git
+cd Weir
+```
+
+Copy `.env.example` to `.env` in the repository root and set:
+
+- **`WEIR_SESSION_SECRET`** — a long random string (required for auth)
+- **`WEIR_CREDENTIALS_SECRET`** — a separate long random value (required before saving provider credentials)
+
+Then:
+
+```bash
+cd apps/web
+npm ci
+npm run dev
+```
+
+`npm run dev` starts the .NET server (with `dotnet watch`) and the Vite dev server together. If
+you prefer two terminals, run `.\scripts\dev-backend.ps1` in one and `.\scripts\dev-web.ps1` in
+the other.
+
+There is no separate migration step. The server creates its SQLite database, or brings an
+existing one up to date, when it starts.
+
+Open **http://localhost:8782/** in your browser. You'll be guided through first-run setup.
+
+| Component | URL | Port |
+|-----------|-----|------|
+| Web UI (Vite dev server) | http://localhost:8782 | 8782 |
+| API (the .NET server) | http://127.0.0.1:18788 | 18788 |
+
+The Vite dev server proxies `/api` requests to the server automatically — no CORS configuration needed for local development.
+
 ## Server setup
 
 The server lives in `apps/server` (solution `apps/server/Weir.slnx`).
 
 ### Environment file
 
-Copy `.env.example` to `.env` in the repository root. Required variables:
-
-| Variable | Purpose |
-|----------|---------|
-| `WEIR_SESSION_SECRET` | Signs sessions and CSRF tokens |
-| `WEIR_CREDENTIALS_SECRET` | Encrypts saved provider credentials |
+`WEIR_SESSION_SECRET` signs sessions and CSRF tokens; `WEIR_CREDENTIALS_SECRET` encrypts saved
+provider credentials (see [Clone and run](#clone-and-run) above for setting them).
 
 Optional path overrides (defaults are under `WEIR_HOME`):
 
@@ -74,13 +108,9 @@ To check that the local setup is healthy (build, `.env`, `/health`, `/ready`, bo
 
 ## Web app
 
-```powershell
-cd apps/web
-npm ci
-npm run dev
-```
-
-`npm run dev` clears processes on the default dev ports, then starts the .NET server (with `dotnet watch`) and Vite together.
+`npm run dev` (see [Clone and run](#clone-and-run) above) clears processes on the default dev
+ports, then starts the .NET server (with `dotnet watch`) and Vite together. The web app itself
+lives in `apps/web`.
 
 ### OpenAPI type generation
 

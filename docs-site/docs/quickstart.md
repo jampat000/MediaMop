@@ -5,54 +5,98 @@ title: Quickstart
 
 # Quickstart
 
-Get Weir running locally in under five minutes.
+Get Weir running and clean your first file in a few minutes.
 
-## Prerequisites
+Weir is a self-hosted app: it watches a folder for new movie and TV files, removes the audio
+tracks and subtitles you don't want, and puts the result in an output folder. Everything it
+needs — including ffmpeg and MKVToolNix — comes bundled with it. There's nothing else to
+install.
 
-- **.NET 10 SDK** (`dotnet` on `PATH`; the exact version is pinned in `apps/server/global.json`)
-- **Node.js 24** (npm on `PATH`)
+## 1. Install Weir
 
-Python is not needed to run Weir.
+Pick whichever fits where you run it.
 
-## 1. Clone the repository
+### Docker (Synology, Unraid, TrueNAS, Raspberry Pi, Linux servers)
 
-```powershell
-git clone https://github.com/jampat000/Weir.git
-cd Weir
+Make a folder, save this as `compose.yaml` inside it:
+
+```yaml
+services:
+  weir:
+    image: ghcr.io/jampat000/weir:latest
+    container_name: weir
+    ports:
+      - "9347:9347"
+    volumes:
+      - ./weir-data:/data/weir
+    restart: unless-stopped
 ```
 
-## 2. Configure environment
+Then run:
 
-Copy `.env.example` to `.env` in the repository root and set:
-
-- **`WEIR_SESSION_SECRET`** — a long random string (required for auth)
-- **`WEIR_CREDENTIALS_SECRET`** — a separate long random value (required before saving provider credentials)
-
-## 3. Start the dev stack
-
-```powershell
-cd apps/web
-npm ci
-npm run dev
+```bash
+docker compose up -d
 ```
 
-This starts the .NET server (with `dotnet watch`) and the Vite dev server together. If you prefer two terminals, run `.\scripts\dev-backend.ps1` in one and `.\scripts\dev-web.ps1` in the other.
+This gets you a working Weir you can sign in to. It doesn't yet have your media folders — add
+those once you're ready; see [Docker deployment](deployment/docker) for the compose recipe that
+mounts them, plus the recipe for running Weir alongside Sonarr, Radarr and a download client.
 
-There is no separate migration step. The server creates its SQLite database, or brings an existing one up to date, when it starts.
+### Windows
 
-Open **http://localhost:8782/** in your browser. You'll be guided through first-run setup.
+1. Download `Weir-win-Setup.exe` from the [latest release](https://github.com/jampat000/Weir/releases/latest).
+2. Run it. You don't need admin rights.
+3. Weir asks which port to use the first time it starts. Keep **9347** unless something else uses it.
+4. Your browser opens Weir.
 
-## What's running
+See the [Windows installer guide](deployment/windows) for what gets installed, how updates work,
+and unattended installs.
 
-| Component | URL | Port |
-|-----------|-----|------|
-| Web UI (Vite dev server) | http://localhost:8782 | 8782 |
-| API (the .NET server) | http://127.0.0.1:9347 | 9347 |
+## 2. Create your account
 
-The Vite dev server proxies `/api` requests to the server automatically — no CORS configuration needed for local development.
+The first time you open Weir, it asks for a username and password. This creates the admin
+account — there's no separate sign-up step.
+
+## 3. Follow the setup wizard
+
+The setup wizard has two parts:
+
+- **Basics** — your time zone, and how compact you want the interface.
+- **Libraries** — a **Watched folder** and an **Output folder** for Movies, and the same for TV.
+  - **Watched folder**: where your downloads finish. Weir cleans whatever lands here.
+  - **Output folder**: where Weir puts each cleaned file.
+
+You can skip the wizard and set these later on the **Processing** page.
+
+## 4. Choose what to keep
+
+On **Processing**, set each library's audio and subtitle rules — for example, keep English and
+Japanese audio, keep English subtitles, and drop commentary tracks.
+
+## 5. Try it with a real file
+
+Put a video file in a watched folder. Weir usually notices within seconds. On network shares and
+in Docker it can take up to five minutes, because Weir falls back to checking on a timer instead
+of relying on filesystem notifications.
+
+- The file shows up on **Home** while Weir works on it.
+- Once it's done, it shows up in **Activity**, and the cleaned copy is in the output folder.
+
+Already have a library you want to clean up? Open **Processing → Library**, pick the library and
+press **Scan now**. Weir shows you what it would remove and how much space that frees before it
+changes anything.
+
+## If nothing happens
+
+| Problem | Try this |
+| --- | --- |
+| Files sit in the watched folder and nothing happens | In Docker, check the path in Weir is the path **inside the container**, not the path on the host. Weir can take up to five minutes to notice a file. |
+| "Permission denied" in Activity | Set `WEIR_PUID` / `WEIR_PGID` to the user that owns your media folders. See [Docker deployment](deployment/docker). |
+| Can't open Weir | Check the container is running and you're using the right port. Weir's health check is at `http://your-server-ip:9347/health`. |
 
 ## Next steps
 
-- [Docker deployment](deployment/docker) — run Weir in a container
-- [Windows installer](deployment/windows) — install as a desktop app
-- [Architecture overview](architecture/overview) — understand how Weir is structured
+- [Connecting Deluno, Sonarr and Radarr](guides/media-managers) — hand off files automatically
+- [Docker deployment](deployment/docker) — media folders, file ownership, running alongside other apps
+- [Windows installer](deployment/windows) — ports, updates, unattended installs
+- [Building from source](guides/local-development) — for developers who want to run Weir from a clone
