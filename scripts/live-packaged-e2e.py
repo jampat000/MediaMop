@@ -613,12 +613,39 @@ class LiveAudit:
                     "Processing Movies schedule controls missing",
                 )
             elif tab == "Files":
+                # The lead band replaced the old "All (N)" pill row: every state is a
+                # segment, and clicking one filters the list while clicking it again
+                # clears it.  The band only draws when Weir is holding files, because a
+                # row of zeroes on a fresh install is the thing the content language
+                # forbids -- so this asserts whichever of the two states is real, and
+                # never that the tab rendered nothing at all.  Decided here, while the
+                # panel is settled: every filter change re-keys the files query, which
+                # remounts the panel through its loading state.
+                band = self.page.get_by_test_id("processing-files-buckets")
+                if band.count():
+                    self.visible(band, "Processing files state band")
+                    segment = self.page.get_by_test_id(
+                        "processing-files-bucket-unprocessed"
+                    )
+                    self.click(segment, "filter Processing files by state")
+                    self.visible(
+                        self.page.get_by_test_id("processing-files-flow-caption"),
+                        "Processing files band caption",
+                    )
+                    self.click(segment, "clear the Processing files state filter")
+                else:
+                    self.require(
+                        self.page.get_by_text("No files match", exact=False).count()
+                        > 0,
+                        "Processing files tab showed neither a state band nor its "
+                        "empty state",
+                    )
                 self.page.get_by_placeholder("part of a file or folder name").fill(
                     "audit"
                 )
-                self.click(
-                    self.page.get_by_role("button", name=re.compile(r"All \(")),
-                    "filter Processing files",
+                self.visible(
+                    self.page.get_by_test_id("processing-files-section"),
+                    "Processing files list after the path filter",
                 )
             elif tab == "Maintenance":
                 self.require(
