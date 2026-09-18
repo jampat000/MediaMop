@@ -2878,18 +2878,31 @@ select.mm-input::-ms-expand {
     min-height: 100dvh;
   }
 
+  /* Closed, the panel was only pushed off-screen, which hides it from the eye and from nothing
+     else: its four links and the Sign out button kept `visibility: visible`, so they stayed in
+     the tab order and the accessibility tree. A keyboard or screen-reader user on a phone went
+     through the whole invisible menu — Sign out included — before reaching the Menu button that
+     opens it. `visibility` takes them out of both, and nothing here changes what is drawn.
+     The 180ms delay lets the slide-out finish before the panel goes; opening flips it at once. */
   .mm-sidebar {
     position: fixed;
     inset: 0 auto 0 0;
     width: min(19rem, 88vw);
     height: 100dvh;
     transform: translateX(-105%);
-    transition: transform 180ms ease;
+    visibility: hidden;
+    transition:
+      transform 180ms ease,
+      visibility 0s linear 180ms;
     box-shadow: 18px 0 44px rgba(0, 0, 0, 0.28);
   }
 
   .mm-sidebar.mm-sidebar--open {
     transform: translateX(0);
+    visibility: visible;
+    transition:
+      transform 180ms ease,
+      visibility 0s;
   }
 
   .mm-sidebar--collapsed {

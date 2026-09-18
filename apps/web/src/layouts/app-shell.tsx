@@ -56,7 +56,10 @@ export function AppShell() {
       <aside
         id="mm-primary-sidebar"
         className={`mm-sidebar${sidebarOpen ? " mm-sidebar--open" : ""}${sidebarCollapsed ? " mm-sidebar--collapsed" : ""}`}
-        aria-label="Product"
+        // Named for the app it belongs to. It used to be "Product", from when the sidebar listed
+        // the separate products of a suite; there is one product now and a landmark announced as
+        // "Product, complementary" told a screen-reader user nothing about where they were.
+        aria-label={productTitle}
       >
         <div className="mm-sidebar-inner">
           <BrandHeaderLink to="/" productTitle={productTitle} />
