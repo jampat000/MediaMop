@@ -249,8 +249,11 @@ silently drop them, and do not point two segments at the same filter.
 | `.mm-figure__foot-value`  | `span`   | One of those numbers                                                |
 | `.mm-figure__foot-label`  | `span`   | Its uppercase label                                                 |
 
-At ≤1280px the hero spans the full width with the supporters in two columns beneath;
-at ≤720px everything stacks. That happens by itself — do not add breakpoints.
+At ≤1280px the hero spans the full width with its supporters in one row beneath (two
+or three across, however many there are); at ≤720px everything stacks. A row with
+three supporters also reserves two lines for each supporter's label, because one that
+wraps would otherwise drop its number below the others. All of that happens by
+itself — do not add breakpoints.
 
 ### Rule 3 — the quiet body
 
