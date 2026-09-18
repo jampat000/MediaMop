@@ -16,9 +16,9 @@ Use the Velopack setup exe from the release being validated.
 8. Create the first user with a valid password.
 9. Confirm the setup wizard opens after first-user creation.
 10. Confirm `Skip for now` exits the wizard and can be reopened from Settings.
-11. Confirm `Finish setup` saves timezone, display density, backup schedule, and starter module settings.
+11. Confirm `Finish setup` saves timezone, display density, and the configuration backup schedule. (There are no "starter module settings" — the wizard saves those three things and nothing else.)
 12. In Settings, confirm the reopened setup wizard renders correctly as borderless sections (it lost its card in #592; do not expect card chrome there), and that the timezone, log retention, and display density cards in Settings General render correctly.
-13. Confirm Backup and Restore controls sit consistently at the bottom of their cards.
+13. Confirm Backup and Restore controls sit consistently at the bottom of their cards. (Still card-shaped after the content-language pass on Settings in #599, which applied the redesign sparingly there and left the action cards in Backup and restore alone. Re-verified against `apps/web/src/pages/settings/settings-backup-tab.tsx`, which still uses `mm-card-action-body` / `mm-card-action-footer`.)
 14. Create a configuration backup.
 15. Restore that backup and confirm the app remains usable.
 16. Confirm Upgrade shows a meaningful status, even when no update is available.
@@ -34,18 +34,19 @@ Use the Velopack setup exe from the release being validated.
 
 ## Docker smoke
 
-Use the published release image, not a locally built image.
+Use the published release image, not a locally built image. The Git tag is `vX.Y.Z`; the image tag
+drops the `v`, so `ghcr.io/jampat000/weir:3.0.0` is the image for tag `v3.0.0`.
 
 1. Pull the versioned image:
 
    ```bash
-   docker pull ghcr.io/jampat000/weir:vX.Y.Z
+   docker pull ghcr.io/jampat000/weir:X.Y.Z
    ```
 
 2. Start with a fresh named volume:
 
    ```bash
-   docker run --rm -p 8788:8788 -v weir-smoke:/data/weir ghcr.io/jampat000/weir:vX.Y.Z
+   docker run --rm -p 8788:8788 -v weir-smoke:/data/weir ghcr.io/jampat000/weir:X.Y.Z
    ```
 
 3. Open `http://localhost:8788/`.
@@ -53,20 +54,20 @@ Use the published release image, not a locally built image.
 5. Confirm the release-candidate audit artifact includes `pass-through-proof.json`
    showing completed, byte-identical delivery and watched-source cleanup through a
    mounted Docker path.
-5. Attempt a password shorter than 8 characters and confirm it is blocked.
-6. Create the first user with a valid password.
-7. Confirm the setup wizard opens.
-8. Complete or skip the setup wizard and confirm Settings can reopen it.
-9. Confirm `/health` returns healthy while the container is running.
-10. Confirm Activity updates without manual page reload when a module action is triggered.
-11. Confirm Logs show application/runtime events, not developer build noise.
-12. Confirm Backup and Restore work against the mounted volume.
-13. Stop and restart the container with the same volume.
-14. Confirm the user, settings, and runtime state persist.
-15. Pull and run `latest` and confirm it resolves to the expected release digest.
-16. Upgrade from the previous release tag to the new release tag using the same volume.
-17. Confirm Docker path wording is clear: paths inside the container may differ from host/NAS paths.
-18. Remove the smoke volume only after validation is complete.
+6. Attempt a password shorter than 8 characters and confirm it is blocked.
+7. Create the first user with a valid password.
+8. Confirm the setup wizard opens.
+9. Complete or skip the setup wizard and confirm Settings can reopen it.
+10. Confirm `/health` returns healthy while the container is running.
+11. Confirm Activity updates without manual page reload when a Processing action is triggered.
+12. Confirm Logs show application/runtime events, not developer build noise.
+13. Confirm Backup and Restore work against the mounted volume.
+14. Stop and restart the container with the same volume.
+15. Confirm the user, settings, and runtime state persist.
+16. Pull and run `latest` and confirm it resolves to the expected release digest.
+17. Upgrade from the previous release tag to the new release tag using the same volume.
+18. Confirm Docker path wording is clear: paths inside the container may differ from host/NAS paths.
+19. Remove the smoke volume only after validation is complete.
 
 ## Failure handling
 

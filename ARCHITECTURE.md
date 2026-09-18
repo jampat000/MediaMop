@@ -35,7 +35,9 @@ Weir is a self-hosted media operations app:
   [ADR-0017](docs/adr/ADR-0017-backend-on-dotnet.md).
 - Frontend: React + Vite under `apps/web/src`, served by the server from `WEIR_WEB_DIST`.
 - Packaging: a Docker image (linux/amd64 and linux/arm64) and a Windows Velopack installer whose
-  .NET tray app (`apps/tray`) starts and watches the server.
+  .NET tray app (`apps/tray`) starts and watches the server. Both carry ffmpeg and mkvmerge
+  (MKVToolNix) — the Docker image installs them from Debian packages, the Windows package vendors
+  checksum-verified builds. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 - Runtime data: `WEIR_HOME`.
 
 ```mermaid
@@ -55,7 +57,7 @@ Solution `apps/server/Weir.slnx`; details in [`apps/server/README.md`](apps/serv
 
 - `src/Weir.Host`: the process — configuration, logging, database startup, Kestrel, Windows Service and systemd support. Builds `Weir` / `Weir.exe`.
 - `src/Weir.Api`: endpoints and HTTP behaviour — auth and CSRF, security headers, request ids, the OpenAPI document, serving the web app.
-- `src/Weir.Infrastructure`: SQLite (connections, stores, numbered migrations in `Migrations/`), the durable job queue and workers, the remux pass, ffmpeg/ffprobe processes, media manager clients, the filesystem and log files.
+- `src/Weir.Infrastructure`: SQLite (connections, stores, numbered migrations in `Migrations/`), the durable job queue and workers, the remux pass, the remux writers (ffmpeg/ffprobe and the mkvmerge writer added in #548), media manager clients, the filesystem and log files.
 - `src/Weir.Core`: records and rules with no IO — the Processing rules engine, job rules, media manager rules, settings and security primitives.
 - `tests/*`: xUnit tests per project. The language-neutral contract suite (`tests/contract`) and the E2E smoke (`tests/e2e/weir`) judge a running server from outside.
 - `apps/tray/Weir.Tray`: the Windows tray app shipped in the installer.

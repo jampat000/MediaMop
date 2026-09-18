@@ -1,6 +1,6 @@
 # Supported deployment model
 
-Weir 1.x is designed for a simple, explicit runtime:
+Weir is designed for a simple, explicit runtime:
 
 - one application process
 - one host or one container instance
@@ -11,7 +11,7 @@ Horizontal scaling and multiple Weir server processes are not supported unless a
 
 ## Workers
 
-Module worker settings such as the Processing worker count control in-process job slots inside the single application process. They do not make Weir multi-node safe.
+The Processing worker count controls in-process job slots inside the single application process. It does not make Weir multi-node safe. (Weir has one jobs table and one worker pool since #459 removed the module layer — the "module worker settings", plural, that this section used to describe no longer exist.)
 
 Docker and Windows packaged runtimes start one .NET server process. Do not start a second server process or run multiple Weir containers against the same SQLite database.
 

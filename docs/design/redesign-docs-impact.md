@@ -10,6 +10,13 @@ worded correctly until a still-converting screen settles.
 image below is unchanged; only prose was edited, and only where a sentence was wrong
 independent of how an in-flight screen finishes.
 
+> **Update (2026-09-18): every conversion in the table below has now merged**, and the items this
+> document deferred to "once a shipped screen settles" have been worked through — see
+> [Deferred](#deferred--needs-a-shipped-screen-to-word-correctly) and
+> [Needs verification](#needs-verification-not-guessed), both now closed out with what was found. The
+> screenshot refresh in §4 is the one part still outstanding; it is in flight separately, so §1 and §4
+> are left exactly as written.
+
 As of this writing, against `origin/main`:
 
 | Screen | Status |
@@ -18,11 +25,11 @@ As of this writing, against `origin/main`:
 | Setup wizard | Converted, merged (#592) |
 | In hand | Converted, merged (#593) |
 | Route error screen | Restyled, merged (#590) — not part of the content language, not covered below |
-| Activity | Converted, **open PR #596**, not yet merged |
-| Processing Library (Overview/Files/Codecs/Languages/Problems) | Uncommitted work in progress, no PR yet (worktree `weir-library-tab`, branch `design/processing-library-tab`) |
-| Processing Libraries / Audio & subtitles / Schedules | Uncommitted work in progress, no PR yet (worktree `wt-processing-config`, branch `design/processing-config-tabs`) |
-| Processing Files / Jobs / Maintenance | Uncommitted work in progress, no PR yet (worktree `wt-processing-data`, branch `design/processing-data-tabs`) |
-| Settings (all tabs) | Uncommitted work in progress, no PR yet (worktree `wt-settings-content`, branch `design/settings-content`) |
+| Activity | Converted, ~~open PR #596~~ **merged (#596)** |
+| Processing Library (Overview/Files/Codecs/Languages/Problems) | ~~Uncommitted work in progress~~ **Converted, merged (#597)** |
+| Processing Libraries / Audio & subtitles / Schedules | ~~Uncommitted work in progress~~ **Converted, merged (#601)** |
+| Processing Files / Jobs / Maintenance | ~~Uncommitted work in progress~~ **Converted, merged (#600)** |
+| Settings (all tabs) | ~~Uncommitted work in progress~~ **Converted, merged (#599)** — applied sparingly; the action cards in Backup and restore were deliberately left alone |
 
 Separately, a recent PR changed the sidebar's product blurb from "Cleans every download
 before your media manager imports it" to "Cleans new downloads, and files already in
@@ -158,40 +165,51 @@ I looked for, and did not change, anything under `apps/`.
 
 ## Deferred — needs a shipped screen to word correctly
 
-- `docs/smoke-checklists.md:21` (Backup and Restore "cards") — reword once
-  `design/settings-content` ships and the actual Settings → Backup and restore shape
-  is known.
-- `docs/visual-identity.md:8` ("Sidebar, cards, surfaces") — re-audit which surfaces
-  still use the Slate card treatment once every page in the table in §0 has
-  converted; today's answer is a moving target.
-- `README.md`'s screenshot gallery captions (`Existing library` → `Library`, and
-  whatever remaining pages need renaming) — fold into the screenshot refresh in §4,
-  not a standalone text edit, so the caption and the pixels change together.
-- `docs/ux-polish.md:30` ("Bubbles, badges, and pills should use the same shape
-  language across In hand, Activity, Settings, and Processing.") — this is currently
-  *unfulfilled* rather than *false*: In hand already uses the new
-  `.mm-quiet-badge`/`.mm-quiet-state` shapes; Activity, Settings and most of
-  Processing still use the old ones. The rule itself (aspirational consistency)
-  remains correct and needs no rewrite, but is worth re-checking once every page in
-  §0 has converted, in case the shapes chosen along the way actually diverged rather
-  than merely lagging.
+**All four resolved (2026-09-18), now that every conversion in §0 has merged.** What each turned out to be:
+
+- `docs/smoke-checklists.md:21` (Backup and Restore "cards") — **still true, no reword needed.**
+  #599 applied the content language to Settings sparingly and left the action cards in Backup and
+  restore alone; `apps/web/src/pages/settings/settings-backup-tab.tsx` still renders them with
+  `mm-card-action-body` / `mm-card-action-footer`, so the controls do sit at the bottom of their
+  cards. The checklist step now says so, and says why, rather than reading as an unreviewed leftover.
+- `docs/visual-identity.md:8` ("Sidebar, cards, surfaces") — **re-audited, and the whole page needed
+  more than that one row.** Every hex in the palette table was from the pre-Tailrace one-pager and
+  none of them matched `weir-tokens.css` after #570 re-themed the app (charcoal-and-warm-gold →
+  cool slate and teal-cyan), and the "dedicated WebP mark with a 20 KiB budget" delivery rule
+  predated #581/#582/#587 replacing the image with an inline SVG. Both are corrected, with Slate's
+  narrowed scope written down as this item asked.
+- `README.md`'s screenshot gallery captions — **still deferred, deliberately.** Unchanged for the
+  reason originally given: the caption and the pixels have to move together, and the screenshot
+  refresh is in flight separately.
+- `docs/ux-polish.md:30` (badge shape language) — **diverged, not merely lagging.** There are three
+  shape families on `main` now: `mm-inhand-row__state` (In hand), `mm-activity-chip` /
+  `mm-status-badge` (Activity), and `mm-quiet-badge` / `mm-quiet-state` (Processing and Settings).
+  In hand did *not* end up on the new shapes as this document expected. The rule is left as the
+  target and annotated with the real state, since closing it is now a consolidation someone has to
+  choose to do.
 
 ## Needs verification, not guessed
 
 Per the constraint against inventing product behaviour, these are flagged rather than
 answered:
 
-- Whether `docs/ux-polish.md:37` ("Processing activity can show before/after file
-  details, size savings, languages, subtitles, and removals in an expandable
-  layout.") still holds once Processing → Files converts (`wt-processing-config` /
-  `wt-processing-data`). The expandable-row behavior it describes is exactly what
-  `processing-detail.png` shows today, mid-conversion; I did not change the running
-  code, so I can't confirm what the expandable layout will look like once that PR
-  lands.
-- Whether any other `apps/web` copy still says "Refiner" outside the one screenshot
-  found in §1. A `grep -ri refiner apps/web/src` after `wt-processing-data` merges
-  would confirm; I did not do a full-repo sweep beyond the file the stale screenshot
-  points at, since re-auditing all of `apps/` is out of scope for a docs-only PR.
+**Both answered (2026-09-18), against merged `main`.**
+
+- `docs/ux-polish.md:37` ("Processing activity can show before/after file details, size savings,
+  languages, subtitles, and removals in an expandable layout") — **still holds after #600.** The
+  detail survived the conversion as the expandable **Processing record** entry in a file's history in
+  `processing-files-section.tsx`, which labels source and output file and size, space saved, net
+  space saved, the processing plan, output validation, source cleanup and duration, with the raw
+  payload behind a nested `<details>`. It is an expandable row rather than a card now; the behaviour
+  the bullet asks for is unchanged. The bullet is annotated rather than rewritten.
+- Whether any other `apps/web` copy still says "Refiner" — **no.** A full-repo
+  `grep -ri refiner` finds it in exactly three kinds of place, none of them user-visible:
+  historical SQL migration *filenames* in `SchemaMigrator.cs` (identifiers of migrations that already
+  ran, which cannot be renamed without breaking upgrades), the migration tests that exercise those
+  old table names, and two comments in `router.tsx` and `processing-page.test.tsx` that exist
+  precisely to keep the name from coming back. `processing-page.test.tsx` asserts no rendered text
+  matches `/Refiner/`. The only remaining live appearance is the one baked into
+  `screenshots/processing-detail.png`, as §1 says.
 
 ---
 

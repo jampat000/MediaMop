@@ -15,14 +15,24 @@ If it happens to fit the way you manage your library too, use it, improve it, an
 
 ## What Weir is
 
-Weir is a self-hosted media operations app for people who want more control over how their library is processed and maintained.
+Weir is a self-hosted media operations app. It cleans new downloads, and files already in your library.
 
-It brings a few focused tools together in one place:
+It is one application rather than a suite of modules: Processing is the product, and the other screens
+exist to show you what it is doing and to configure it.
 
-- **Processing** cleans up media files by remuxing them into a cleaner, more consistent result, library by library, and can also clean files already sitting in an existing library.
-- **In hand, Activity, and Settings** give you a live view of what Weir is holding, recent work, logs, and core app configuration.
+- **Processing** remuxes media into a cleaner, more consistent result — keep the audio and subtitle
+  tracks you want, drop the rest. It is configured as any number of **libraries**, each carrying its own
+  folders, admission rules, schedule, guardrails and media manager connections. A library takes files a
+  media manager hands over, and can also work through files already sitting in an existing library.
+- **Media managers** — Radarr, Sonarr, Deluno, or anything posting Weir's own payload — hand files over,
+  and are asked back what they are importing before Weir removes anything. "Could not ask" is treated as a
+  different answer from "nothing is importing", and only the second one clears a delete.
+- **In hand** is the main screen: the files Weir is holding right now, and anything that needs a person.
+- **Activity** and **Settings** carry history, logs, backups, upgrades, security posture and configuration.
 
-The app ships as a C# / .NET 10 server with SQLite and a React + Vite web UI.
+The app is a C# / .NET 10 server with SQLite and a React + Vite web UI. Packaged builds ship ffmpeg and
+mkvmerge (MKVToolNix) with it: mkvmerge writes Matroska output and ffmpeg writes everything else, and each
+library can be set to use ffmpeg for everything instead.
 
 ## Screenshots
 
@@ -89,7 +99,7 @@ You can use, study, modify, and redistribute it under the license terms. If you 
 
 Weir is free to use. Support is optional.
 
-If Weir saves you time or keeps your downloads clean, you can support ongoing development.
+If Weir saves you time or keeps your library clean, you can support ongoing development.
 
 Set `VITE_SUPPORT_URL` in `apps/web/.env` or your deployment environment to show the in-app support button.
 

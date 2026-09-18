@@ -36,8 +36,8 @@ This document adapts the harness-engineering model to this repository: humans st
 ## Feedback Loops To Prefer
 
 - Backend unit tests for service logic, schema behavior, file lifecycle, and worker decisions.
-- Frontend unit tests for query states, dashboard summaries, settings flows, and user-facing text.
-- E2E smoke tests for login, app shell navigation, dashboard refresh, and module entry points.
+- Frontend unit tests for query states, In hand and Processing Overview summaries, settings flows, and user-facing text.
+- E2E smoke tests for login, app shell navigation, and In hand refresh. (There is no Dashboard page and no module entry points: #459 folded the Dashboard into In hand, and 3.0.0 dropped the `/dashboard` redirect.)
 - Windows package smoke for installer, tray, startup, and upgrade behavior.
 - Docker smoke for container startup and health.
 - GitHub issues for backlog items that should survive beyond the current PR.

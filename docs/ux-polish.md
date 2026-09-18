@@ -17,8 +17,11 @@ converted. Its rule 3 forbids a card, panel, box or tile anywhere below a page's
 band and figure row — the three "card" bullets below describe the pre-redesign layout
 and apply only to what content-language.md's chrome-freeze leaves alone (the sidebar,
 top bar, page header and tab row) and to dialogs, not to a converted page's body.
-Until every page listed in that document has converted, some page bodies below still
-match the old bullets; treat content-language.md as the tie-breaker, not this file.
+Every page listed in `design/redesign-docs-impact.md` has now converted (#588, #592,
+#593, #596, #597, #599, #600, #601), so the card bullets no longer describe any page's
+default body. The exception is Settings, where #599 applied the redesign sparingly and
+deliberately left the action cards in place — Backup and restore in particular. Treat
+content-language.md as the tie-breaker, not this file.
 
 - Cards in the same section should use consistent spacing, action placement, and visual weight.
 - Primary card actions should sit at the bottom of the card unless the control needs to remain inline for usability.
@@ -37,13 +40,19 @@ match the old bullets; treat content-language.md as the tie-breaker, not this fi
   - failed or blocked: red
   - informational or queued: blue/neutral
 - Bubbles, badges, and pills should use the same shape language across In hand, Activity, Settings, and Processing.
+  **Unfulfilled, and it has diverged rather than merely lagged.** Now that every page in
+  [`design/redesign-docs-impact.md`](design/redesign-docs-impact.md) has converted, there are three
+  shape families, not one: In hand grew its own `mm-inhand-row__state`, Activity kept
+  `mm-activity-chip` / `mm-status-badge`, and Processing and Settings use the redesign's
+  `mm-quiet-badge` / `mm-quiet-state`. The rule stays as written — it is the target — but closing it
+  is now a deliberate consolidation, not something the remaining conversions will deliver on their own.
 - Font sizing should stay consistent across headings, labels, body text, and compact metadata.
 
 ## Screen-specific baseline
 
 - In hand shows useful operational status, not just navigation.
 - Activity is live, user-friendly, filterable, searchable, color-coded, and readable at scale.
-- Processing activity can show before/after file details, size savings, languages, subtitles, and removals in an expandable layout.
+- Processing activity can show before/after file details, size savings, languages, subtitles, and removals in an expandable layout. Still true after Files converted in #600: the detail lives in the expandable **Processing record** entry in a file's history, which labels source and output file and size, space saved, the processing plan, output validation, source cleanup and duration, with the raw payload behind a further `<details>`. It is an expandable row rather than a card now; the behaviour this bullet asks for is unchanged.
 - Settings General groups setup wizard, timezone, log retention, and display density cleanly.
 - Backup/Restore and Upgrade belong together as operational safety controls.
 - Folder path inputs that need user-selected paths should support browsing where technically possible and allow manual local, Docker, and UNC-style paths.

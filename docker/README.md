@@ -138,10 +138,6 @@ that is present but wrong.
 
 ## Filesystem events on bind mounts
 
-> **Not in the .NET server yet.** The filesystem watcher has not been ported: the server
-> currently finds new files with the periodic watched-folder scan only, and readiness reports
-> no watched libraries. The rest of this section describes the watcher's intended behaviour.
-
 Processing watches its watched folders so a new file becomes a candidate within seconds, and
 runs its periodic scan as a backstop. **Bind mounts frequently deliver no inotify events**,
 and neither do most SMB and NFS shares — the events happen on the host, and nothing
@@ -151,7 +147,7 @@ This is expected and handled. When the watcher cannot start, Weir:
 
 - falls back to the periodic scan, which finds every file exactly as it did before;
 - logs the reason **once**, not once per tick;
-- reports it on `GET /readiness` under the `filesystem_watcher` step.
+- reports it on `GET /ready` (and `GET /api/v1/system/readiness`) under the `filesystem_watcher` step.
 
 That step stays `ready`. Falling back is slower, not broken, and failing readiness would
 take a working instance out of a load balancer over a delay.
