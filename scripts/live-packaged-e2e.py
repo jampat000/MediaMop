@@ -556,7 +556,7 @@ class LiveAudit:
             "Activity active filter state",
         )
         self.click(
-            self.page.get_by_role("button", name="Clear", exact=True),
+            self.page.get_by_role("button", name="Clear →", exact=True),
             "clear Activity filters",
         )
         self.page.wait_for_timeout(500)

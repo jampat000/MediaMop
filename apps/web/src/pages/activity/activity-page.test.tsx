@@ -323,7 +323,7 @@ describe("ActivityPage", () => {
     mocks.useActivityRecentQuery.mockReturnValue(recentResult([]));
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Last night" }));
+    fireEvent.click(screen.getByRole("button", { name: "Last night →" }));
 
     const filters = lastQueryFilters();
     const from = new Date(String(filters.date_from));
@@ -447,7 +447,7 @@ describe("ActivityPage", () => {
       target: { value: "scheduled" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
-    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV →" }));
 
     await waitFor(() => expect(click).toHaveBeenCalled());
     expect(mocks.fetchActivityExport).toHaveBeenCalledWith(
@@ -458,7 +458,7 @@ describe("ActivityPage", () => {
       "limit",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Export JSON" }));
+    fireEvent.click(screen.getByRole("button", { name: "Export JSON →" }));
     await waitFor(() =>
       expect(mocks.fetchActivityExport).toHaveBeenCalledWith(
         "json",
@@ -542,7 +542,9 @@ describe("ActivityPage", () => {
     });
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear all history" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Clear all history →" }),
+    );
     const dialog = await screen.findByTestId(
       "activity-clear-all-history-dialog",
     );
@@ -587,7 +589,7 @@ describe("ActivityPage", () => {
       screen.queryByRole("button", { name: "Remove this file's history" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Clear all history" }),
+      screen.queryByRole("button", { name: "Clear all history →" }),
     ).not.toBeInTheDocument();
   });
 

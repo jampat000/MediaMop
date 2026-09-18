@@ -1019,6 +1019,14 @@ export function ActivityPage() {
   const libraryNameFor = (ev: ActivityEventItem) =>
     ev.library_id != null ? libraryNameById.get(ev.library_id) : undefined;
 
+  // How many matching entries are not on screen yet. `total` is a real count of
+  // everything the filters match, so this is honest however far the reader has paged.
+  const notLoaded = Math.max(0, matchingTotal - visibleItems.length);
+  // Rule 3's interrupt: what is broken, as sentences above the lead.
+  const blockers: { key: string; text: string }[] = [];
+  if (actionError) blockers.push({ key: "action", text: actionError });
+  if (olderError) blockers.push({ key: "older", text: olderError });
+
   return (
     <div className="mm-page">
       <header className="mm-page__intro">
@@ -1044,413 +1052,467 @@ export function ActivityPage() {
         ) : null}
       </header>
 
-      <section
-        className="mm-activity-filters"
-        aria-label="Filter activity"
-        data-testid="activity-filters"
-        data-expanded={moreFilters}
-      >
-        <div className="mm-activity-filters__grid">
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__search`}>
-            Search
-            <input
-              className="mm-input"
-              type="search"
-              value={filters.search}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, search: e.target.value }))
-              }
-              onKeyDown={(e) => {
-                if (e.key === "Enter") applyFilters(filters);
-              }}
-              placeholder="Search titles and details"
-            />
-          </label>
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
-            Event
-            <select
-              className="mm-input"
-              value={filters.eventType}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, eventType: e.target.value }))
-              }
-            >
-              <option value="">All events</option>
-              {eventOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+      <div className="mm-quiet-stack">
+        <div className="mm-lead">
+          {blockers.length > 0 ? (
+            <ul className="mm-interrupt" data-testid="activity-problems">
+              {blockers.map((item) => (
+                <li key={item.key} className="mm-interrupt__item">
+                  <span className="mm-interrupt__text" role="alert">
+                    {item.text}
+                  </span>
+                </li>
               ))}
-            </select>
-          </label>
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
-            Result
-            <select
-              className="mm-input"
-              value={filters.result}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, result: e.target.value }))
-              }
-            >
-              <option value="">Any result</option>
-              {Object.entries(ACTIVITY_RESULT_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
-            Why it happened
-            <select
-              className="mm-input"
-              value={filters.trigger}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, trigger: e.target.value }))
-              }
-            >
-              <option value="">Any reason</option>
-              {Object.entries(ACTIVITY_TRIGGER_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
-            Library
-            <select
-              className="mm-input"
-              value={filters.libraryId}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, libraryId: e.target.value }))
-              }
-            >
-              <option value="">All libraries</option>
-              {(libraries.data ?? []).map((library) => (
-                <option key={library.id} value={String(library.id)}>
-                  {library.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
-            File
-            <input
-              className="mm-input"
-              value={filters.file}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, file: e.target.value }))
-              }
-              placeholder="Part of a file path"
-            />
-          </label>
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
-            From
-            <input
-              type="datetime-local"
-              className="mm-input"
-              value={filters.from}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, from: e.target.value }))
-              }
-            />
-          </label>
-          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
-            To
-            <input
-              type="datetime-local"
-              className="mm-input"
-              value={filters.to}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, to: e.target.value }))
-              }
-            />
-          </label>
-        </div>
-        <div className="mm-activity-filters__actions">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary" })}
-            onClick={() => applyFilters(filters)}
-          >
-            Apply filters
-          </button>
-          <button
-            type="button"
-            className={`${mmActionButtonClass({ variant: "tertiary" })} mm-activity-filters__toggle`}
-            aria-expanded={moreFilters}
-            onClick={() => setMoreFilters((open) => !open)}
-          >
-            {moreFilters
-              ? "Fewer filters"
-              : extraFiltersActive > 0
-                ? `More filters (${extraFiltersActive})`
-                : "More filters"}
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({
-              variant: "tertiary",
-              disabled: !filtersActive,
-            })}
-            disabled={!filtersActive}
-            onClick={() => applyFilters(EMPTY_FILTERS)}
-          >
-            Clear
-          </button>
-          <span className="mm-activity-filters__divider" aria-hidden="true" />
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary" })}
-            title="Yesterday 18:00 to today 08:00"
-            onClick={() =>
-              applyFilters({ ...filters, ...lastNightRange(new Date()) })
-            }
-          >
-            Last night
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary" })}
-            onClick={() =>
-              applyFilters({ ...filters, ...last24HoursRange(new Date()) })
-            }
-          >
-            Last 24 hours
-          </button>
-        </div>
-        {actionError ? (
-          <p
-            className="mt-3 text-sm text-[var(--mm-status-failed-text)]"
-            role="alert"
-          >
-            {actionError}
-          </p>
-        ) : null}
-        {notice ? (
-          <p
-            className="mt-3 rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2 text-sm text-[var(--mm-text1)]"
-            role="status"
-          >
-            {notice}
-          </p>
-        ) : null}
-      </section>
-
-      <div className="mm-activity-summary" data-testid="activity-summary">
-        <p className="mm-activity-summary__text">
-          <span className="mm-activity-summary__live" aria-hidden="true" />
-          <span>
-            Showing {visibleItems.length} of {matchingTotal}{" "}
-            {matchingTotal === 1 ? "event" : "events"}
-            {filtersActive ? " matching your filters" : ""} · live
-          </span>
-        </p>
-        {hasMore ? (
-          <button
-            type="button"
-            className={mmActionButtonClass({
-              variant: "tertiary",
-              disabled: loadingOlder,
-            })}
-            disabled={loadingOlder}
-            onClick={() => void loadOlderActivity()}
-          >
-            {loadingOlder ? "Loading older…" : "Load older activity"}
-          </button>
-        ) : null}
-        {olderError ? (
-          <span
-            className="text-sm text-[var(--mm-status-failed-text)]"
-            role="alert"
-          >
-            {olderError}
-          </span>
-        ) : null}
-        <span className="mm-activity-summary__tools">
-          <button
-            type="button"
-            className={mmActionButtonClass({
-              variant: "tertiary",
-              disabled: exporting !== null,
-            })}
-            disabled={exporting !== null}
-            onClick={() => void exportHistory("csv")}
-          >
-            {exporting === "csv" ? "Exporting…" : "Export CSV"}
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({
-              variant: "tertiary",
-              disabled: exporting !== null,
-            })}
-            disabled={exporting !== null}
-            onClick={() => void exportHistory("json")}
-          >
-            {exporting === "json" ? "Exporting…" : "Export JSON"}
-          </button>
-          {canRemove ? (
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "tertiary" })}
-              onClick={() => void startClearAll()}
-            >
-              Clear all history
-            </button>
+            </ul>
           ) : null}
-        </span>
-      </div>
 
-      {applied.file.trim() ? (
+          <p
+            className="mm-quiet-note inline-flex flex-wrap items-center gap-2"
+            data-testid="activity-summary"
+          >
+            <span className="mm-activity-summary__live" aria-hidden="true" />
+            <span>
+              Showing {visibleItems.length} of {matchingTotal}{" "}
+              {matchingTotal === 1 ? "event" : "events"}
+              {filtersActive ? " matching your filters" : ""} · live
+            </span>
+          </p>
+
+          <p className="mm-lead-caption">
+            <span>Filters apply to this list and to both exports.</span>
+            <span>
+              {notLoaded > 0
+                ? `${notLoaded.toLocaleString()} older ${notLoaded === 1 ? "entry is" : "entries are"} not loaded yet.`
+                : "Everything that matches is loaded."}
+            </span>
+          </p>
+
+          {notice ? (
+            <p className="mm-quiet-note" role="status">
+              {notice}
+            </p>
+          ) : null}
+        </div>
+
         <section
-          className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text2)]"
-          data-testid="activity-file-view"
+          className="mm-quiet-section mm-activity-filters"
+          aria-labelledby="activity-filters-heading"
+          data-testid="activity-filters"
+          data-expanded={moreFilters}
         >
-          <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
-            {singleFileTarget
-              ? `Everything Weir recorded about ${singleFileTarget.relative_path}, newest first.`
-              : `Everything Weir recorded about files matching “${applied.file.trim()}”, newest first.`}
-          </span>
-          {singleFileTarget && canRemove ? (
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "tertiary" })}
-              onClick={() => void startRemoval(singleFileTarget)}
+          <div className="mm-quiet-section__head">
+            <h2
+              id="activity-filters-heading"
+              className="mm-quiet-section__title"
             >
-              Remove this file&apos;s history
-            </button>
-          ) : null}
-        </section>
-      ) : null}
-
-      <section
-        ref={feedRef}
-        className="mm-activity-list"
-        data-testid="activity-feed"
-      >
-        {pendingCount > 0 ? (
-          <div className="sticky top-2 z-10 flex justify-center">
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "primary" })}
-              onClick={showNewEntries}
-            >
-              {`${pendingCount} new ${pendingCount === 1 ? "entry" : "entries"} — show`}
-            </button>
-          </div>
-        ) : null}
-        {visibleItems.length === 0 ? (
-          <div className="mm-activity-list__empty">
-            No activity matched the current filters.
-          </div>
-        ) : (
-          groupActivityFeed(visibleItems).map((group) => {
-            if (group.kind === "run") {
-              const summary = summarizeRun(group.events);
-              return (
-                <details
-                  key={group.key}
-                  className="mm-activity-cluster mm-activity-cluster--run"
-                  data-testid="activity-run"
+              Filter activity
+            </h2>
+            <div className="mm-quiet-section__aside">
+              <button
+                type="button"
+                className="mm-quiet-link"
+                title="Yesterday 18:00 to today 08:00"
+                onClick={() =>
+                  applyFilters({ ...filters, ...lastNightRange(new Date()) })
+                }
+              >
+                Last night →
+              </button>
+              <button
+                type="button"
+                className="mm-quiet-link"
+                onClick={() =>
+                  applyFilters({ ...filters, ...last24HoursRange(new Date()) })
+                }
+              >
+                Last 24 hours →
+              </button>
+              {filtersActive ? (
+                <button
+                  type="button"
+                  className="mm-quiet-link"
+                  onClick={() => applyFilters(EMPTY_FILTERS)}
                 >
-                  <summary className="mm-activity-cluster__summary">
-                    <span
-                      className={`mm-activity-event-icon${summary.failed > 0 ? " mm-activity-event-icon--error" : ""}`}
-                      aria-hidden="true"
-                    >
-                      {summary.failed > 0 ? "!" : "✓"}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <strong>{summary.headline}</strong>
-                      <small>
-                        {plural(group.events.length, "entry", "entries")} ·
-                        first {fmt(group.events.at(-1)?.created_at ?? "")} ·
-                        latest {fmt(group.events[0].created_at)}
-                      </small>
-                    </span>
-                    {summary.failed > 0 ? (
-                      <span className="mm-status-badge mm-status-badge--failed">
-                        {summary.failed} failed
-                      </span>
-                    ) : null}
-                  </summary>
-                  <div className="mm-activity-cluster__events">
-                    {group.events.map((ev) => (
+                  Clear →
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="mm-quiet-section__body">
+            <div className="mm-activity-filters__grid">
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__search`}
+              >
+                Search
+                <input
+                  className="mm-input"
+                  type="search"
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, search: e.target.value }))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") applyFilters(filters);
+                  }}
+                  placeholder="Search titles and details"
+                />
+              </label>
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}
+              >
+                Event
+                <select
+                  className="mm-input"
+                  value={filters.eventType}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      eventType: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">All events</option>
+                  {eventOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}
+              >
+                Result
+                <select
+                  className="mm-input"
+                  value={filters.result}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, result: e.target.value }))
+                  }
+                >
+                  <option value="">Any result</option>
+                  {Object.entries(ACTIVITY_RESULT_LABELS).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}
+              >
+                Why it happened
+                <select
+                  className="mm-input"
+                  value={filters.trigger}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, trigger: e.target.value }))
+                  }
+                >
+                  <option value="">Any reason</option>
+                  {Object.entries(ACTIVITY_TRIGGER_LABELS).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}
+              >
+                Library
+                <select
+                  className="mm-input"
+                  value={filters.libraryId}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      libraryId: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">All libraries</option>
+                  {(libraries.data ?? []).map((library) => (
+                    <option key={library.id} value={String(library.id)}>
+                      {library.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}
+              >
+                File
+                <input
+                  className="mm-input"
+                  value={filters.file}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, file: e.target.value }))
+                  }
+                  placeholder="Part of a file path"
+                />
+              </label>
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}
+              >
+                From
+                <input
+                  type="datetime-local"
+                  className="mm-input"
+                  value={filters.from}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, from: e.target.value }))
+                  }
+                />
+              </label>
+              <label
+                className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}
+              >
+                To
+                <input
+                  type="datetime-local"
+                  className="mm-input"
+                  value={filters.to}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, to: e.target.value }))
+                  }
+                />
+              </label>
+            </div>
+            <div className="mm-activity-filters__actions">
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "primary" })}
+                onClick={() => applyFilters(filters)}
+              >
+                Apply filters
+              </button>
+              <button
+                type="button"
+                className="mm-quiet-link mm-activity-filters__toggle"
+                aria-expanded={moreFilters}
+                onClick={() => setMoreFilters((open) => !open)}
+              >
+                {moreFilters
+                  ? "Fewer filters"
+                  : extraFiltersActive > 0
+                    ? `More filters (${extraFiltersActive})`
+                    : "More filters"}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="mm-quiet-section"
+          aria-labelledby="activity-history-heading"
+        >
+          <div className="mm-quiet-section__head">
+            <h2
+              id="activity-history-heading"
+              className="mm-quiet-section__title"
+            >
+              History
+            </h2>
+            <div className="mm-quiet-section__aside">
+              <button
+                type="button"
+                className="mm-quiet-link"
+                disabled={exporting !== null}
+                onClick={() => void exportHistory("csv")}
+              >
+                {exporting === "csv" ? "Exporting…" : "Export CSV →"}
+              </button>
+              <button
+                type="button"
+                className="mm-quiet-link"
+                disabled={exporting !== null}
+                onClick={() => void exportHistory("json")}
+              >
+                {exporting === "json" ? "Exporting…" : "Export JSON →"}
+              </button>
+              {canRemove ? (
+                <button
+                  type="button"
+                  className="mm-quiet-link"
+                  onClick={() => void startClearAll()}
+                >
+                  Clear all history →
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="mm-quiet-section__body">
+            {applied.file.trim() ? (
+              <p className="mm-quiet-note" data-testid="activity-file-view">
+                <span className="[overflow-wrap:anywhere]">
+                  {singleFileTarget
+                    ? `Everything Weir recorded about ${singleFileTarget.relative_path}, newest first.`
+                    : `Everything Weir recorded about files matching “${applied.file.trim()}”, newest first.`}
+                </span>{" "}
+                {singleFileTarget && canRemove ? (
+                  <button
+                    type="button"
+                    className="mm-quiet-link"
+                    onClick={() => void startRemoval(singleFileTarget)}
+                  >
+                    Remove this file&apos;s history →
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
+
+            <section
+              ref={feedRef}
+              className="mm-activity-list"
+              data-testid="activity-feed"
+            >
+              {pendingCount > 0 ? (
+                <div className="sticky top-2 z-10 flex justify-center">
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({ variant: "primary" })}
+                    onClick={showNewEntries}
+                  >
+                    {`${pendingCount} new ${pendingCount === 1 ? "entry" : "entries"} — show`}
+                  </button>
+                </div>
+              ) : null}
+              {visibleItems.length === 0 ? (
+                <div className="mm-activity-list__empty">
+                  No activity matched the current filters.
+                </div>
+              ) : (
+                groupActivityFeed(visibleItems).map((group) => {
+                  if (group.kind === "run") {
+                    const summary = summarizeRun(group.events);
+                    return (
+                      <details
+                        key={group.key}
+                        className="mm-activity-cluster mm-activity-cluster--run"
+                        data-testid="activity-run"
+                      >
+                        <summary className="mm-activity-cluster__summary">
+                          <span
+                            className={`mm-activity-event-icon${summary.failed > 0 ? " mm-activity-event-icon--error" : ""}`}
+                            aria-hidden="true"
+                          >
+                            {summary.failed > 0 ? "!" : "✓"}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <strong>{summary.headline}</strong>
+                            <small>
+                              {plural(group.events.length, "entry", "entries")}{" "}
+                              · first{" "}
+                              {fmt(group.events.at(-1)?.created_at ?? "")} ·
+                              latest {fmt(group.events[0].created_at)}
+                            </small>
+                          </span>
+                          {summary.failed > 0 ? (
+                            <span className="mm-status-badge mm-status-badge--failed">
+                              {summary.failed} failed
+                            </span>
+                          ) : null}
+                        </summary>
+                        <div className="mm-activity-cluster__events">
+                          {group.events.map((ev) => (
+                            <ActivityEventRow
+                              key={ev.id}
+                              ev={ev}
+                              compact
+                              libraryName={libraryNameFor(ev)}
+                              {...rowProps}
+                            />
+                          ))}
+                        </div>
+                      </details>
+                    );
+                  }
+                  if (group.kind === "repeat") {
+                    return (
                       <ActivityEventRow
-                        key={ev.id}
-                        ev={ev}
-                        compact
-                        libraryName={libraryNameFor(ev)}
+                        key={group.key}
+                        ev={group.events[0]}
+                        repeats={
+                          group.events.length > 1 ? group.events : undefined
+                        }
+                        libraryName={libraryNameFor(group.events[0])}
                         {...rowProps}
                       />
-                    ))}
-                  </div>
-                </details>
-              );
-            }
-            if (group.kind === "repeat") {
-              return (
-                <ActivityEventRow
-                  key={group.key}
-                  ev={group.events[0]}
-                  repeats={group.events.length > 1 ? group.events : undefined}
-                  libraryName={libraryNameFor(group.events[0])}
-                  {...rowProps}
-                />
-              );
-            }
-            return group.events.length > 1 ? (
-              <details
-                key={group.key}
-                className="mm-activity-cluster"
-                data-testid="activity-cluster"
-              >
-                <summary className="mm-activity-cluster__summary">
-                  <span
-                    className="mm-activity-event-icon mm-activity-event-icon--error"
-                    aria-hidden="true"
-                  >
-                    !
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <strong>{group.events.length} repeated failures</strong>
-                    <small>
-                      {compactActivityTitle(
-                        eventDisplay(group.events[0]).title,
-                      )}{" "}
-                      · first {fmt(group.events.at(-1)?.created_at ?? "")} ·
-                      latest {fmt(group.events[0].created_at)}
-                    </small>
-                  </span>
-                  <span className="mm-status-badge mm-status-badge--failed">
-                    Review
-                  </span>
-                </summary>
-                <div className="mm-activity-cluster__events">
-                  {group.events.map((ev) => (
+                    );
+                  }
+                  return group.events.length > 1 ? (
+                    <details
+                      key={group.key}
+                      className="mm-activity-cluster"
+                      data-testid="activity-cluster"
+                    >
+                      <summary className="mm-activity-cluster__summary">
+                        <span
+                          className="mm-activity-event-icon mm-activity-event-icon--error"
+                          aria-hidden="true"
+                        >
+                          !
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <strong>
+                            {group.events.length} repeated failures
+                          </strong>
+                          <small>
+                            {compactActivityTitle(
+                              eventDisplay(group.events[0]).title,
+                            )}{" "}
+                            · first {fmt(group.events.at(-1)?.created_at ?? "")}{" "}
+                            · latest {fmt(group.events[0].created_at)}
+                          </small>
+                        </span>
+                        <span className="mm-status-badge mm-status-badge--failed">
+                          Review
+                        </span>
+                      </summary>
+                      <div className="mm-activity-cluster__events">
+                        {group.events.map((ev) => (
+                          <ActivityEventRow
+                            key={ev.id}
+                            ev={ev}
+                            compact
+                            libraryName={libraryNameFor(ev)}
+                            {...rowProps}
+                          />
+                        ))}
+                      </div>
+                    </details>
+                  ) : (
                     <ActivityEventRow
-                      key={ev.id}
-                      ev={ev}
-                      compact
-                      libraryName={libraryNameFor(ev)}
+                      key={group.events[0].id}
+                      ev={group.events[0]}
+                      libraryName={libraryNameFor(group.events[0])}
                       {...rowProps}
                     />
-                  ))}
-                </div>
-              </details>
-            ) : (
-              <ActivityEventRow
-                key={group.events[0].id}
-                ev={group.events[0]}
-                libraryName={libraryNameFor(group.events[0])}
-                {...rowProps}
-              />
-            );
-          })
-        )}
-      </section>
+                  );
+                })
+              )}
+            </section>
+
+            {hasMore ? (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  className="mm-quiet-link"
+                  disabled={loadingOlder}
+                  onClick={() => void loadOlderActivity()}
+                >
+                  {loadingOlder ? "Loading older…" : "Load older activity →"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      </div>
 
       {removal ? (
         <RemoveFileHistoryDialog
