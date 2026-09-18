@@ -97,7 +97,7 @@ ensure_runtime_home_ownership() {
   chown -R weir:weir "$WEIR_HOME" /opt/weir /home/weir
 }
 
-warn_unported_refiner_permissions() {
+warn_unported_processing_permissions() {
   # As of #555, Weir.Host applies WEIR_CHOWN_OUTPUT/WEIR_FILE_MODE_OUTPUT/WEIR_DIR_MODE_OUTPUT
   # itself, directly, right after it writes or creates each output file or folder (see
   # apps/server/README.md, "Output ownership (#555)") — this script's job for those three is
@@ -108,9 +108,9 @@ warn_unported_refiner_permissions() {
   if bool_enabled "$WEIR_CHOWN_WATCHED" || [ -n "$WEIR_DIR_MODE_WATCHED" ] ||
      bool_enabled "$WEIR_CHOWN_TEMP" || [ -n "$WEIR_DIR_MODE_TEMP" ] ||
      bool_enabled "$WEIR_CHOWN_OUTPUT" || [ -n "$WEIR_DIR_MODE_OUTPUT" ]; then
-    # The old policy read folders from refiner_path_settings, a table removed when folders moved
+    # The old policy read folders from processing_path_settings, a table removed when folders moved
     # onto libraries (#363), so it had already stopped changing anything. See docker/README.md.
-    log_info "WEIR_CHOWN_*/WEIR_DIR_MODE_* are set, but this image does not apply the Refiner" \
+    log_info "WEIR_CHOWN_*/WEIR_DIR_MODE_* are set, but this image does not apply the Processing" \
       "folder ownership policy (see docker/README.md). Ignoring them."
   fi
 }
@@ -129,7 +129,7 @@ validate_dir_mode "$WEIR_DIR_MODE_WATCHED" "WEIR_DIR_MODE_WATCHED"
 validate_dir_mode "$WEIR_DIR_MODE_TEMP" "WEIR_DIR_MODE_TEMP"
 validate_dir_mode "$WEIR_DIR_MODE_OUTPUT" "WEIR_DIR_MODE_OUTPUT"
 mkdir -p "$WEIR_HOME"
-warn_unported_refiner_permissions
+warn_unported_processing_permissions
 
 generate_secret() {
   # No Python interpreter in this image. 48 random bytes, base64url-encoded without padding —

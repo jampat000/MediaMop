@@ -1,7 +1,7 @@
 """Black-box processing: what happens when a file cannot be processed.
 
-Covers behaviour the backend tested from the inside in test_refiner_pass_through.py,
-test_refiner_reject.py and test_refiner_retry_and_requeue.py: retries, handing the original back,
+Covers behaviour the backend tested from the inside in test_processing_pass_through.py,
+test_processing_reject.py and test_processing_retry_and_requeue.py: retries, handing the original back,
 holding after repeated failures, and rejecting a bad release through Deluno or a Radarr queue.
 """
 
@@ -113,7 +113,7 @@ def test_content_rejection_under_reject_policy_reports_rejected_to_deluno_and_re
 ) -> None:
     # This scenario never runs a scan before the hand-off, so today's #532 bug (a rejection with no
     # prior scan writes no Files row) applies here too — this test just never looks at
-    # GET /refiner/files to notice. The correct behaviour is asserted in
+    # GET /processing/files to notice. The correct behaviour is asserted in
     # tests/contract/processing/test_reject_without_prior_scan.py.
     _server, admin = _signed_in_working_server(server_factory, client_factory, fake_ffmpeg)
     folders = h.Folders.make(tmp_path)
@@ -149,7 +149,7 @@ def test_content_rejection_under_reject_policy_reports_rejected_to_deluno_and_re
     wait_until(lambda: not source.exists(), timeout_s=30, what="the rejected download to be removed")
     assert fake_ffmpeg.calls(tool="ffmpeg", step="remux") == []
     assert [j for j in h.jobs(admin, kind=h.REJECT_KIND) if j["status"] == "completed"]
-    rejected = h.activity(admin, "refiner.file_rejected")
+    rejected = h.activity(admin, "processing.file_rejected")
     assert len(rejected) == 1
     assert rejected[0]["title"] == "film.mkv was rejected so a different release can be found"
     assert "accepted that this release is bad" in rejected[0]["detail"]
@@ -181,7 +181,7 @@ def test_content_rejection_under_reject_policy_removes_and_blocklists_the_radarr
     )
 
     r = admin.post_csrf(
-        "/api/v1/refiner/jobs/file-remux-pass/enqueue",
+        "/api/v1/processing/jobs/file-remux-pass/enqueue",
         {"relative_media_path": "Bad.Movie.2019.1080p/Bad.Movie.2019.1080p.mkv", "library_id": library["id"]},
     )
     assert r.status_code == 200, r.text
@@ -197,6 +197,6 @@ def test_content_rejection_under_reject_policy_removes_and_blocklists_the_radarr
     )
     # The download client removes the data; Weir deletes nothing itself on this route.
     assert source.is_file()
-    rejected = h.activity(admin, "refiner.file_rejected")
+    rejected = h.activity(admin, "processing.file_rejected")
     assert len(rejected) == 1
     assert "blocklisted the release" in rejected[0]["detail"]

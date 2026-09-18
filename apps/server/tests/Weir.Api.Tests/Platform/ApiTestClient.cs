@@ -27,7 +27,7 @@ internal sealed class ApiTestClient
 
     /// <summary>A server with a session secret and no background workers.</summary>
     public static Task<WeirTestServer> StartServerAsync(params (string Name, string Value)[] variables) =>
-        WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_REFINER_WORKER_COUNT", "0"), .. variables]);
+        WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), .. variables]);
 
     public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? json = null, IReadOnlyDictionary<string, string>? headers = null, HttpContent? content = null)
     {

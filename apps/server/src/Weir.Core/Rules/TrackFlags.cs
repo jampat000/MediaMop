@@ -26,7 +26,7 @@ public readonly record struct TrackFlag(bool Value, TrackFlagSource Source)
 }
 
 /// <summary>
-/// What a track is, beyond its codec and language (issue #495, <c>refiner_track_flags.py</c>):
+/// What a track is, beyond its codec and language (issue #495, <c>processing_track_flags.py</c>):
 /// hearing-impaired (SDH/CC), forced/signs, dub, audio description and commentary.
 /// </summary>
 public sealed record TrackFlags

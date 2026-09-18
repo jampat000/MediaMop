@@ -37,7 +37,7 @@ public sealed class LibraryViewStoreTests : IDisposable
     {
         _libraryId = Convert.ToInt64(
             await _store.WithUnitOfWork(uow => uow.ExecuteScalarWriteAsync(
-                "INSERT INTO refiner_libraries (name, media_type, watched_folder, output_folder, work_folder, display_order) " +
+                "INSERT INTO libraries (name, media_type, watched_folder, output_folder, work_folder, display_order) " +
                 // The schema seeds default libraries; this one needs a name of its own (the column is unique).
                 "VALUES ('Library view tests', 'movie', '/in', '/out', '/work', 1) RETURNING id")),
             CultureInfo.InvariantCulture);
@@ -50,8 +50,8 @@ public sealed class LibraryViewStoreTests : IDisposable
         {
             var jobId = Convert.ToInt64(
                 await uow.ExecuteScalarWriteAsync(
-                    "INSERT INTO refiner_jobs (dedupe_key, job_kind, payload_json, status, created_at, updated_at) " +
-                    "VALUES (@key, 'refiner.library.scan.v1', '{}', 'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id",
+                    "INSERT INTO jobs (dedupe_key, job_kind, payload_json, status, created_at, updated_at) " +
+                    "VALUES (@key, 'processing.library.scan.v1', '{}', 'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id",
                     ("@key", LibraryModeJobKinds.ScanDedupeKey(_libraryId))),
                 CultureInfo.InvariantCulture);
             await LibraryScanStore.RecordResultAsync(
@@ -303,7 +303,7 @@ public sealed class LibraryViewStoreTests : IDisposable
         await LibraryAsync();
         await RecordAsync(File("/lib/a.mkv", LibraryFileClassification.Matches, Probe("h264", 1080, ("audio", "aac", 2, "eng"))));
 
-        await _store.WithUnitOfWork(uow => uow.ExecuteAsync("DELETE FROM refiner_libraries WHERE id = @id", ("@id", _libraryId)));
+        await _store.WithUnitOfWork(uow => uow.ExecuteAsync("DELETE FROM libraries WHERE id = @id", ("@id", _libraryId)));
 
         Assert.Equal(0, await Read(uow => uow.CountAsync("SELECT COUNT(*) FROM library_file_facets")));
     }

@@ -24,7 +24,7 @@ public sealed record SuiteSettingsRecord
     public PyDateTime? ProcessingPausedUntil { get; init; }
     public bool ScanWhilePaused { get; init; } = true;
 
-    /// <summary>Refiner's optional metadata provider (<c>refiner_metadata_provider_api.py</c>). Empty means none configured.</summary>
+    /// <summary>Processing's optional metadata provider (<c>processing_metadata_provider_api.py</c>). Empty means none configured.</summary>
     public string MetadataProvider { get; init; } = string.Empty;
     public string MetadataProviderBaseUrl { get; init; } = string.Empty;
 

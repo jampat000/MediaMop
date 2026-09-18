@@ -16,7 +16,7 @@ import httpx
 
 from tests.contract.support.client import API, WeirClient
 
-REMUX_KIND = "refiner.file.remux_pass.v1"
+REMUX_KIND = "processing.file.remux_pass.v1"
 CALLBACK_PATH = "/api/integrations/processors/events"
 
 #: No instance-wide webhook secret, whatever the developer's shell holds.
@@ -62,7 +62,7 @@ def closed_port_url() -> str:
     return f"http://127.0.0.1:{port}"
 
 
-# --- Refiner libraries --------------------------------------------------------------------------
+# --- Processing libraries --------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -88,7 +88,7 @@ def create_library(
         "output_folder": str(folders.output),
         **overrides,
     }
-    r = client.post_csrf(f"{API}/refiner/libraries", body)
+    r = client.post_csrf(f"{API}/processing/libraries", body)
     assert r.status_code == 201, r.text
     return r.json()
 
@@ -146,7 +146,7 @@ def update_library(client: WeirClient, library: dict[str, Any], **changes: Any) 
 
     body = {key: library[key] for key in _WRITABLE_LIBRARY_FIELDS if key in library}
     body.update(changes)
-    r = client.put_csrf(f"{API}/refiner/libraries/{library['id']}", body)
+    r = client.put_csrf(f"{API}/processing/libraries/{library['id']}", body)
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -157,7 +157,7 @@ def ensure_library(
     """The library named ``name`` with these folders: a fresh install's seeded one is pointed at them."""
 
     wanted = {"watched_folder": str(folders.watched), "output_folder": str(folders.output), **overrides}
-    listed = client.get(f"{API}/refiner/libraries")
+    listed = client.get(f"{API}/processing/libraries")
     assert listed.status_code == 200, listed.text
     for row in listed.json():
         if row["name"] == name:
@@ -167,13 +167,13 @@ def ensure_library(
     return create_library(client, name=name, media_type=media_type, folders=folders, **overrides)
 
 
-# --- Refiner job rows ---------------------------------------------------------------------------
+# --- Processing job rows ---------------------------------------------------------------------------
 
 
 def remux_jobs(client: WeirClient) -> list[dict[str, Any]]:
     """Every persisted remux job row (workers are off, so intake's rows stay where they were put)."""
 
-    r = client.get(f"{API}/refiner/jobs/inspection", params={"limit": 100})
+    r = client.get(f"{API}/processing/jobs/inspection", params={"limit": 100})
     assert r.status_code == 200, r.text
     return [job for job in r.json()["jobs"] if job["job_kind"] == REMUX_KIND]
 

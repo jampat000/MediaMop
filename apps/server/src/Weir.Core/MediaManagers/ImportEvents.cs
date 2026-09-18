@@ -5,7 +5,7 @@ namespace Weir.Core.MediaManagers;
 
 /// <summary>
 /// A file a media manager wants Weir to act on (port of <c>import_events.MediaManagerImportEvent</c>).
-/// <c>imported</c> is accepted and ignored; <c>handoff</c> is Refiner's cue and the only kind with a callback.
+/// <c>imported</c> is accepted and ignored; <c>handoff</c> is Processing's cue and the only kind with a callback.
 /// </summary>
 public sealed record MediaManagerImportEvent
 {

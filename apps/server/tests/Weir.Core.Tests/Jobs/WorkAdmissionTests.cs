@@ -5,13 +5,13 @@ using Weir.Core.Time;
 namespace Weir.Core.Tests.Jobs;
 
 /// <summary>
-/// The pure half of <c>refiner_work_admission</c> (pause, library windows, per-library caps, runner budget),
+/// The pure half of <c>processing_work_admission</c> (pause, library windows, per-library caps, runner budget),
 /// the remux temp name patterns (#534) and activity classification.
 /// </summary>
 public sealed class WorkAdmissionTests
 {
-    private const string Remux = "refiner.file.remux_pass.v1";
-    private const string Scan = "refiner.watched_folder.remux_scan_dispatch.v1";
+    private const string Remux = "processing.file.remux_pass.v1";
+    private const string Scan = "processing.watched_folder.remux_scan_dispatch.v1";
     private static readonly DateTimeOffset Now = ScheduleGridTests.Now;
 
     [Fact]
@@ -166,16 +166,16 @@ public sealed class WorkAdmissionTests
     }
 
     [Theory]
-    [InlineData("Film.refiner.ab12_x9z.mkv", true)]
-    [InlineData("Film.2020.1080p.refiner.qwertyui.mp4", true)]
+    [InlineData("Film.processing.ab12_x9z.mkv", true)]
+    [InlineData("Film.2020.1080p.processing.qwertyui.mp4", true)]
     [InlineData("dry-run-ffmpeg-destination-placeholder.mkv", true)]
-    [InlineData("Film.refiner.notes.txt", false)]
-    [InlineData("Film.refiner.ABCDEFGH.mkv", false)]
-    [InlineData("Film.refiner.abcdefg.mkv", false)]
-    [InlineData("Film.refiner.abcdefghi.mkv", false)]
+    [InlineData("Film.processing.notes.txt", false)]
+    [InlineData("Film.processing.ABCDEFGH.mkv", false)]
+    [InlineData("Film.processing.abcdefg.mkv", false)]
+    [InlineData("Film.processing.abcdefghi.mkv", false)]
     [InlineData("Film.mkv", false)]
-    [InlineData(".refiner.abcdefgh.mkv", false)]
-    [InlineData("Film.refiner.abcdefgh", false)]
+    [InlineData(".processing.abcdefgh.mkv", false)]
+    [InlineData("Film.processing.abcdefgh", false)]
     [InlineData("planned-ffmpeg-destination-placeholder.mkv", false)]
     public void Only_names_weir_creates_count_as_remux_temp_output(string name, bool matches)
     {
@@ -186,13 +186,13 @@ public sealed class WorkAdmissionTests
     public void Temp_names_for_one_source_follow_mkstemp_with_the_source_stem_and_suffix()
     {
         var pattern = WeirTempFiles.RemuxTempNameFor("Movies/Film (2020)/Film (2020).mp4");
-        Assert.Matches(pattern, "Film (2020).refiner.a1b2c3d4.mp4");
-        Assert.DoesNotMatch(pattern, "Film (2020).refiner.a1b2c3d4.mkv");
-        Assert.DoesNotMatch(pattern, "Other.refiner.a1b2c3d4.mp4");
+        Assert.Matches(pattern, "Film (2020).processing.a1b2c3d4.mp4");
+        Assert.DoesNotMatch(pattern, "Film (2020).processing.a1b2c3d4.mkv");
+        Assert.DoesNotMatch(pattern, "Other.processing.a1b2c3d4.mp4");
         Assert.DoesNotMatch(pattern, "Film (2020).mp4");
 
         // No suffix: mkstemp was given ".mkv".
-        Assert.Matches(WeirTempFiles.RemuxTempNameFor(@"tv\Show\episode"), "episode.refiner.zzzzzzzz.mkv");
+        Assert.Matches(WeirTempFiles.RemuxTempNameFor(@"tv\Show\episode"), "episode.processing.zzzzzzzz.mkv");
         Assert.Equal(("archive.tar", ".gz"), WeirTempFiles.PythonStemAndSuffix("archive.tar.gz"));
         Assert.Equal((".hidden", string.Empty), WeirTempFiles.PythonStemAndSuffix(".hidden"));
     }

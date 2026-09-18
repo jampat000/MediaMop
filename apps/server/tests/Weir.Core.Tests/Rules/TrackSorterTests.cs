@@ -3,7 +3,7 @@ using Weir.Core.Rules;
 
 namespace Weir.Core.Tests.Rules;
 
-/// <summary>Ported from <c>apps/backend/tests/test_refiner_track_sorters.py</c>.</summary>
+/// <summary>Ported from <c>apps/backend/tests/test_processing_track_sorters.py</c>.</summary>
 public sealed class TrackSorterTests
 {
     /// <summary>The ranking exactly as it was before the sorter list, copied from the Python test.</summary>

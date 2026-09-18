@@ -6,7 +6,7 @@ This is the top-level map for agents and contributors. Deeper decisions live in 
 
 Weir is a self-hosted media operations app:
 
-- **Refiner** remuxes watched media into cleaner outputs. It is configured as any number
+- **Processing** remuxes watched media into cleaner outputs. It is configured as any number
   of **libraries** — each a row carrying its own paths, admission rules, schedule,
   guardrails and media manager connections — rather than one fixed movie scope and one
   fixed TV scope. A library's `media_type` (Movies or TV; named `media_scope` until #460)
@@ -14,7 +14,7 @@ Weir is a self-hosted media operations app:
   cleanup shape, which manager queue is asked when a library links none, and which library a
   job belongs to when its payload names none. A hand-off from a manager lands in the library
   whose watched folder holds the file. Adding a library is a POST. See
-  [ADR-0014](docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md). The singleton
+  [ADR-0014](docs/adr/ADR-0014-processing-libraries-replace-fixed-scopes.md). The singleton
   settings rows that libraries replaced were dropped in `0025`, and the scope-shaped
   `path-settings` and `remux-rules-settings` routes that outlived them were removed in #460.
 - **Media managers** are the products Weir accepts work from and reports back to.
@@ -42,11 +42,11 @@ Weir is a self-hosted media operations app:
 flowchart LR
   UI["Frontend (React/Vite)"] --> API["Weir.Api (ASP.NET Core endpoints)"]
   API --> Core["Core + Platform Services"]
-  Core --> Refiner["Refiner (the application)"]
+  Core --> Processing["Processing (the application)"]
   Core --> Activity["Activity"]
   Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
   Core --> DB["SQLite (numbered SQL migrations)"]
-  Refiner --> Jobs["Durable jobs (refiner_jobs) + workers"]
+  Processing --> Jobs["Durable jobs (jobs) + workers"]
 ```
 
 ## Server Map
@@ -56,7 +56,7 @@ Solution `apps/server/Weir.slnx`; details in [`apps/server/README.md`](apps/serv
 - `src/Weir.Host`: the process — configuration, logging, database startup, Kestrel, Windows Service and systemd support. Builds `Weir` / `Weir.exe`.
 - `src/Weir.Api`: endpoints and HTTP behaviour — auth and CSRF, security headers, request ids, the OpenAPI document, serving the web app.
 - `src/Weir.Infrastructure`: SQLite (connections, stores, numbered migrations in `Migrations/`), the durable job queue and workers, the remux pass, ffmpeg/ffprobe processes, media manager clients, the filesystem and log files.
-- `src/Weir.Core`: records and rules with no IO — the Refiner rules engine, job rules, media manager rules, settings and security primitives.
+- `src/Weir.Core`: records and rules with no IO — the Processing rules engine, job rules, media manager rules, settings and security primitives.
 - `tests/*`: xUnit tests per project. The language-neutral contract suite (`tests/contract`) and the E2E smoke (`tests/e2e/weir`) judge a running server from outside.
 - `apps/tray/Weir.Tray`: the Windows tray app shipped in the installer.
 
@@ -72,10 +72,10 @@ Solution `apps/server/Weir.slnx`; details in [`apps/server/README.md`](apps/serv
 
 ## Boundary Rules
 
-- Refiner code should keep destructive or irreversible behavior behind explicit services and tests.
+- Processing code should keep destructive or irreversible behavior behind explicit services and tests.
 - Backend APIs should expose typed schemas at boundaries instead of inferred shapes.
 - Frontend pages should use typed API/query helpers from `src/lib` rather than ad hoc fetch calls.
-- Cross-cutting runtime concerns belong in shared services (`Weir.Core` rules, `Weir.Infrastructure` platform services), not inside Refiner implementation details.
+- Cross-cutting runtime concerns belong in shared services (`Weir.Core` rules, `Weir.Infrastructure` platform services), not inside Processing implementation details.
 - `Weir.Core` stays free of IO; filesystem, database, process and HTTP work lives in `Weir.Infrastructure` behind seams tests can replace.
 - File lifecycle changes must preserve the safety contract in [`docs/file-lifecycle-contract.md`](docs/file-lifecycle-contract.md).
 
@@ -83,7 +83,7 @@ Solution `apps/server/Weir.slnx`; details in [`apps/server/README.md`](apps/serv
 
 ```mermaid
 flowchart LR
-  Enqueue["Enqueue request"] --> Jobs["refiner_jobs + workers"]
+  Enqueue["Enqueue request"] --> Jobs["jobs + workers"]
   Jobs --> Result["Job result (completed/failed/pending retry)"]
   Result --> Activity["Activity + logs"]
   Result --> Metrics["Runtime metrics / Prometheus"]

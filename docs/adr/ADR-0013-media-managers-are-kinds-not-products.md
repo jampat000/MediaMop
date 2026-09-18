@@ -54,14 +54,14 @@ Two event kinds, and they mean genuinely different things about who is waiting:
 - **`imported`** — the manager has finished and the file is in the library. Subber's
   cue to look for subtitles.
 - **`handoff`** — the manager has *not* finished. It wants the file cleaned first and
-  is holding its import open until it hears back. Refiner's cue.
+  is holding its import open until it hears back. Processing's cue.
 
 A manager that does both gets both from the same endpoint. This is the distinction
 that the vendor-named routes could not express.
 
 ### 4. A hand-off is a loan, so it must be reported back
 
-Refiner posts the outcome to the callback path the manager supplied, authenticated
+Processing posts the outcome to the callback path the manager supplied, authenticated
 with that connection's stored key. The origin rides on the job payload, so the report
 survives a restart without a second table.
 

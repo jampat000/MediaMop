@@ -96,7 +96,7 @@ def _jobs_for_handoff(client: WeirClient, handoff_id: str) -> list[dict]:
     return [job for job in remux_jobs(client) if job["dedupe_key"] == key]
 
 
-def test_deluno_handoff_enqueues_a_refiner_pass_with_a_relative_path(
+def test_deluno_handoff_enqueues_a_processing_pass_with_a_relative_path(
     with_watched_folders: WeirClient, watched: tuple[LibraryFolders, LibraryFolders]
 ) -> None:
     client = with_watched_folders
@@ -221,7 +221,7 @@ def test_native_imported_event_is_accepted_and_ignored(admin: WeirClient) -> Non
     assert len(remux_jobs(admin)) == before
 
 
-def test_native_handoff_event_enqueues_a_refiner_pass(
+def test_native_handoff_event_enqueues_a_processing_pass(
     with_watched_folders: WeirClient, watched: tuple[LibraryFolders, LibraryFolders]
 ) -> None:
     client = with_watched_folders

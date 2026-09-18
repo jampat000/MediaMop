@@ -4,7 +4,7 @@ namespace Weir.Core.Jobs;
 
 /// <summary>
 /// Immutable view passed to a job handler after a successful claim, outside the claim transaction
-/// (port of <c>RefinerJobWorkContext</c>).
+/// (port of <c>ProcessingJobWorkContext</c>).
 /// </summary>
 public sealed record JobWorkContext(
     long Id,
@@ -26,7 +26,7 @@ public sealed record JobWorkContext(
 /// </remarks>
 public interface IJobHandler
 {
-    /// <summary>The <c>refiner.*</c> job kind this handler runs.</summary>
+    /// <summary>The <c>processing.*</c> job kind this handler runs.</summary>
     string JobKind { get; }
 
     Task HandleAsync(JobWorkContext context, CancellationToken cancellationToken);

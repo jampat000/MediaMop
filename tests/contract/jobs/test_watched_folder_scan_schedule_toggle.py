@@ -1,16 +1,16 @@
 """Correct behaviour for #533: the switch to turn off periodic watched-folder scans must do so.
 
-On Python, ``WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED`` is documented and
+On Python, ``WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED`` is documented and
 present in settings, but nothing in ``WeirSettings`` even parses it (see ``core/config.py``) and
-``refiner_library_periodic_scan_enabled`` (``refiner_watched_folder_remux_scan_dispatch_periodic_enqueue.py``)
+``processing_library_periodic_scan_enabled`` (``processing_watched_folder_remux_scan_dispatch_periodic_enqueue.py``)
 only checks the library's own ``enabled`` flag. Its sibling,
-``WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS``, only stops *remux*
+``WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS``, only stops *remux*
 jobs from being queued off a scan's findings — the scan itself still runs and still enqueues its own
-``refiner.watched_folder.remux_scan_dispatch.v1`` job. See the comment on this in
+``processing.watched_folder.remux_scan_dispatch.v1`` job. See the comment on this in
 ``tests/contract/support/launcher.py``, which the whole suite works around by leaving the periodic
 timer alone and only counting the jobs a test itself caused.
 
-Fixed in the .NET port (RefinerWatchedFolderScanDispatchScheduleTask, apps/server/src/Weir.Infrastructure/
+Fixed in the .NET port (ProcessingWatchedFolderScanDispatchScheduleTask, apps/server/src/Weir.Infrastructure/
 Jobs): the environment variable is parsed into WeirOptions and read every tick as a global kill switch,
 alongside a second, independent per-scope check (the operator settings screen's Movies/TV periodic-scan
 switch, itself equally dead in Python). Not fixed in Python — the backend is being retired (ADR-0017).
@@ -19,11 +19,11 @@ No ``known_bug`` marker here: within the short window these tests can afford, Py
 periodic scan for this library either way (switch on or off) — its periodic loop appears not to have
 taken its first tick yet this soon after a restart, which this black-box timing test cannot tell apart
 from "correctly disabled". The dead code is still real (grep core/config.py and
-refiner_watched_folder_remux_scan_dispatch_periodic_enqueue.py: the switch is parsed nowhere and
-refiner_scope_periodic_scan_enabled is never called), but this particular test cannot demonstrate it
+processing_watched_folder_remux_scan_dispatch_periodic_enqueue.py: the switch is parsed nowhere and
+processing_scope_periodic_scan_enabled is never called), but this particular test cannot demonstrate it
 within a contract-suite time budget, so it is not marked as a reproduced known bug. The .NET fix is
 proven two ways: directly here (both tests pass against dotnet), and deterministically with a controlled
-clock in Weir.Infrastructure.Tests.Jobs.RefinerWatchedFolderScanDispatchScheduleTaskTests, which ticks the
+clock in Weir.Infrastructure.Tests.Jobs.ProcessingWatchedFolderScanDispatchScheduleTaskTests, which ticks the
 scheduler many times over simulated minutes without waiting in real time.
 """
 
@@ -38,14 +38,14 @@ from tests.contract.support.client import API, WeirClient
 from tests.contract.support.launcher import ServerUnderTest
 from tests.contract.support.polling import wait_until
 
-SCAN_KIND = "refiner.watched_folder.remux_scan_dispatch.v1"
-ENQUEUE = f"{API}/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue"
+SCAN_KIND = "processing.watched_folder.remux_scan_dispatch.v1"
+ENQUEUE = f"{API}/processing/jobs/watched-folder-remux-scan-dispatch/enqueue"
 # The scheduler clamps every library's cadence to at least 10s (_watched_folder_scan_interval_seconds).
 SHORT_INTERVAL_SECONDS = 10
 
 
 def _scan_job_count(admin: WeirClient) -> int:
-    r = admin.get(f"{API}/refiner/jobs/inspection", params={"limit": 100})
+    r = admin.get(f"{API}/processing/jobs/inspection", params={"limit": 100})
     assert r.status_code == 200, r.text
     return sum(1 for job in r.json()["jobs"] if job["job_kind"] == SCAN_KIND)
 
@@ -64,7 +64,7 @@ def test_disabling_the_periodic_scan_switch_stops_the_scan_timer(
     watched.mkdir()
     output = tmp_path / "output"
     output.mkdir()
-    sut: ServerUnderTest = server_factory(env={"WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED": "0"})
+    sut: ServerUnderTest = server_factory(env={"WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED": "0"})
     admin = client_factory(sut)
     admin.ensure_admin()
     movie = library_for_scope(admin, "movie")

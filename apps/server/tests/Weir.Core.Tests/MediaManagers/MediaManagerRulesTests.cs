@@ -332,8 +332,8 @@ public sealed class MediaManagerRulesTests
     public void Dedupe_keys_match_the_python_keys()
     {
         var baseKey = IntakeRules.BaseDedupeKey(Handoff("/w/x.mkv"), () => Guid.Empty);
-        Assert.Equal("refiner.file.remux_pass.v1:deluno:handoff:handoff-1", baseKey);
-        Assert.Equal("refiner.file.remux_pass.v1:00000000000000000000000000000000", IntakeRules.BaseDedupeKey(Handoff("/w/x.mkv", null), () => Guid.Empty));
+        Assert.Equal("processing.file.remux_pass.v1:deluno:handoff:handoff-1", baseKey);
+        Assert.Equal("processing.file.remux_pass.v1:00000000000000000000000000000000", IntakeRules.BaseDedupeKey(Handoff("/w/x.mkv", null), () => Guid.Empty));
         Assert.Equal(baseKey, IntakeRules.DedupeKeyFor(baseKey, ["Film/film.mkv"], "Film/film.mkv", "Film/film.mkv"));
         Assert.Equal(baseKey + ":Film/film.mkv", IntakeRules.DedupeKeyFor(baseKey, ["Film/film.mkv"], "Film/film.mkv", "Film"));
     }

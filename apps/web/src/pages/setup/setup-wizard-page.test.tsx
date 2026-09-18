@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { qk } from "../../lib/auth/queries";
-import type { RefinerLibrary } from "../../lib/refiner/libraries-api";
+import type { ProcessingLibrary } from "../../lib/processing/libraries-api";
 import { suiteSettingsQueryKey } from "../../lib/suite/queries";
 import { SetupWizardPage } from "./setup-wizard-page";
 
@@ -20,10 +20,10 @@ const {
   suiteMutateAsyncMock: vi.fn(),
   createLibraryMock: vi.fn(),
   updateLibraryMock: vi.fn(),
-  librariesState: { data: [] as RefinerLibrary[] },
+  librariesState: { data: [] as ProcessingLibrary[] },
 }));
 
-function existingLibrary(over: Partial<RefinerLibrary>): RefinerLibrary {
+function existingLibrary(over: Partial<ProcessingLibrary>): ProcessingLibrary {
   return {
     id: 7,
     name: "Films",
@@ -37,7 +37,7 @@ function existingLibrary(over: Partial<RefinerLibrary>): RefinerLibrary {
     rule_set_id: 3,
     manager_connection_ids: [2],
     ...over,
-  } as RefinerLibrary;
+  } as ProcessingLibrary;
 }
 
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -60,16 +60,16 @@ vi.mock("../../lib/suite/queries", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/refiner/libraries-queries", () => ({
-  useRefinerLibrariesQuery: () => ({
+vi.mock("../../lib/processing/libraries-queries", () => ({
+  useProcessingLibrariesQuery: () => ({
     isPending: false,
     data: librariesState.data,
   }),
-  useCreateRefinerLibrary: () => ({
+  useCreateProcessingLibrary: () => ({
     isPending: false,
     mutateAsync: createLibraryMock,
   }),
-  useUpdateRefinerLibrary: () => ({
+  useUpdateProcessingLibrary: () => ({
     isPending: false,
     mutateAsync: updateLibraryMock,
   }),

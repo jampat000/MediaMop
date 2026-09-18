@@ -7,7 +7,7 @@ using Weir.Infrastructure.LibraryMode;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Tests.Media;
 using Weir.Infrastructure.Tests.MediaManagers;
-using Weir.Infrastructure.Tests.Refiner.RemuxPass;
+using Weir.Infrastructure.Tests.Processing.RemuxPass;
 
 namespace Weir.Infrastructure.Tests.LibraryMode;
 
@@ -37,7 +37,7 @@ public sealed class LibraryScanHandlerTests : IDisposable
 
     private async Task<long> LibraryAsync() =>
         Convert.ToInt64(await _fixture.Db(uow => uow.ExecuteScalarWriteAsync(
-            "INSERT INTO refiner_libraries (name, media_type, watched_folder, output_folder, work_folder, display_order) " +
+            "INSERT INTO libraries (name, media_type, watched_folder, output_folder, work_folder, display_order) " +
             "VALUES ('Movies library', 'movie', '/downloads/watched', '/downloads/output', '/downloads/work', 1) RETURNING id")), CultureInfo.InvariantCulture);
 
     private Task<long> EnqueueScanAsync(long libraryId) =>

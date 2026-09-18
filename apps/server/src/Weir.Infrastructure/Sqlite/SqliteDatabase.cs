@@ -10,7 +10,7 @@ namespace Weir.Infrastructure.Sqlite;
 public sealed class SqliteDatabase
 {
     /// <summary>
-    /// Refiner writes progress in short transactions; a transient writer collision should wait for
+    /// Processing writes progress in short transactions; a transient writer collision should wait for
     /// that transaction rather than fail a completed media mutation.
     /// </summary>
     public const int BusyTimeoutMilliseconds = 30_000;

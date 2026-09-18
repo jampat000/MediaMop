@@ -183,7 +183,7 @@ public sealed class SuiteLogFilter
     {
         var sourceText = source is null || !source.IsTruthy ? string.Empty : PyConvert.Str(source);
         var haystack = $"{logger} {sourceText}".ToLowerInvariant();
-        if (haystack.Contains("weir.refiner", StringComparison.Ordinal))
+        if (haystack.Contains("weir.processing", StringComparison.Ordinal))
         {
             return "Processing";
         }

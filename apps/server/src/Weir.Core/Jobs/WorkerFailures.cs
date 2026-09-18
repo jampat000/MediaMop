@@ -75,17 +75,17 @@ public static class WorkerFailures
     public static string RefusedJobError(string module, string technicalReason, bool willRetry) =>
         StoredError(JobFailure(module, FailureMessages.RuntimeError(technicalReason), willRetry));
 
-    /// <summary>The worker's refusal of a retired kind, worded as <c>process_one_refiner_job</c> words it.</summary>
+    /// <summary>The worker's refusal of a retired kind, worded as <c>process_one_processing_job</c> words it.</summary>
     public static string RetiredKindReason(string jobKind, long jobId) =>
         "worker refused a retired job_kind: " +
         $"{PyStrings.Repr(jobKind)} (row id={jobId}); nothing runs this kind any more";
 
-    /// <summary>The worker's refusal of a kind without the <c>refiner.</c> prefix.</summary>
+    /// <summary>The worker's refusal of a kind without the <c>processing.</c> prefix.</summary>
     public static string UnprefixedKindReason(string jobKind, long jobId) =>
-        "worker refused job_kind missing required refiner.* prefix: " +
-        $"{PyStrings.Repr(jobKind)} (row id={jobId}); enqueue only refiner-owned kinds";
+        "worker refused job_kind missing required processing.* prefix: " +
+        $"{PyStrings.Repr(jobKind)} (row id={jobId}); enqueue only processing-owned kinds";
 
-    /// <summary><c>RefinerNoHandlerForJobKind</c> as a failure cause.</summary>
+    /// <summary><c>ProcessingNoHandlerForJobKind</c> as a failure cause.</summary>
     public static FailureSubject NoHandler(string jobKind) =>
-        new("RefinerNoHandlerForJobKind", $"no job handler registered for job_kind={PyStrings.Repr(jobKind)}", ExceptionCategory.Other);
+        new("ProcessingNoHandlerForJobKind", $"no job handler registered for job_kind={PyStrings.Repr(jobKind)}", ExceptionCategory.Other);
 }

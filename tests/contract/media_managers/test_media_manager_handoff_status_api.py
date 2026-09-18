@@ -119,7 +119,7 @@ def _seed(
         key = handoff_dedupe_key(handoff_id)
         if job_status is not None:
             changed = conn.execute(
-                "UPDATE refiner_jobs SET status = ? WHERE dedupe_key = ? OR dedupe_key LIKE ?",
+                "UPDATE jobs SET status = ? WHERE dedupe_key = ? OR dedupe_key LIKE ?",
                 (job_status, key, f"{key}:%"),
             ).rowcount
             assert changed, f"no job rows for {handoff_id}"
@@ -142,7 +142,7 @@ def _seed(
                 f"{name} = excluded.{name}" for name in columns if name not in ("library_id", "relative_path")
             )
             conn.execute(
-                f"INSERT INTO refiner_files ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)}) "
+                f"INSERT INTO files ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)}) "
                 f"ON CONFLICT (library_id, relative_path) DO UPDATE SET {updates}",
                 tuple(columns.values()),
             )
@@ -308,8 +308,8 @@ def test_a_finished_hand_off_still_answers_after_job_rows_are_pruned(
     # What job-row retention and "clear history" leave behind: no job row, no Files row.
     with seed.stopped(server) as conn:
         key = handoff_dedupe_key(hid)
-        assert conn.execute("DELETE FROM refiner_jobs WHERE dedupe_key = ?", (key,)).rowcount == 1
-        assert conn.execute("DELETE FROM refiner_files WHERE relative_path = ?", (f"{hid}/film.mkv",)).rowcount == 1
+        assert conn.execute("DELETE FROM jobs WHERE dedupe_key = ?", (key,)).rowcount == 1
+        assert conn.execute("DELETE FROM files WHERE relative_path = ?", (f"{hid}/film.mkv",)).rowcount == 1
 
     assert _status(server, hid)["state"] == "completed"
 
@@ -338,18 +338,18 @@ def _working_server(
 ) -> tuple[WorkingServer, Any]:
     """One worker, fake tools, a Movies library that takes a fresh file at once, and a fake Deluno."""
 
-    sut = server_factory({**SECRET_ENV, **fake_ffmpeg.env, "WEIR_REFINER_WORKER_COUNT": "1"})
+    sut = server_factory({**SECRET_ENV, **fake_ffmpeg.env, "WEIR_PROCESSING_WORKER_COUNT": "1"})
     admin = client_factory(sut)
     admin.ensure_admin()
     relaxed = admin.put_csrf(
-        f"{API}/refiner/operator-settings",
-        {"min_file_age_seconds": 0, "refiner_min_input_file_size_mb": 0, "minimum_free_disk_space_mb": 0},
+        f"{API}/processing/operator-settings",
+        {"min_file_age_seconds": 0, "min_input_file_size_mb": 0, "minimum_free_disk_space_mb": 0},
     )
     assert relaxed.status_code == 200, relaxed.text
     folders = LibraryFolders.make(root / "library")
     work = root / "library" / "work"
     work.mkdir(parents=True, exist_ok=True)
-    listed = admin.get(f"{API}/refiner/libraries").json()
+    listed = admin.get(f"{API}/processing/libraries").json()
     for row in listed:
         if row["media_type"] == "movie":
             update_library(
@@ -437,7 +437,7 @@ def test_a_queued_hand_off_can_be_cancelled(server: ServerUnderTest, movies: Lib
     admin = client_factory(server)
     admin.ensure_admin()
     assert _job_status(admin, hid) == "cancelled"
-    events = admin.get(f"{API}/activity/recent", params={"event_type": "refiner.handoff_cancelled", "limit": 100})
+    events = admin.get(f"{API}/activity/recent", params={"event_type": "processing.handoff_cancelled", "limit": 100})
     assert events.status_code == 200, events.text
     titles = [item["title"] for item in events.json()["items"]]
     assert any("film.mkv" in title for title in titles), titles

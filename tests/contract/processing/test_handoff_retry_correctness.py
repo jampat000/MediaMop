@@ -2,12 +2,12 @@
 the hand-off's origin when a scan requeues the file.
 
 Root causes, read from the source while writing these tests (both in
-``refiner_watched_folder_remux_scan_dispatch_handlers.py`` and friends):
+``processing_watched_folder_remux_scan_dispatch_handlers.py`` and friends):
 
 - Item 1: a hand-off's file has no recorded size until a scan sees it: ``record_failure``
-  (``refiner_requeue_service.py``) creates the Files row on the first execution failure but never
+  (``processing_requeue_service.py``) creates the Files row on the first execution failure but never
   sets ``size_bytes``, so it stays ``None``. The *first* scan afterwards
-  (``refiner_watched_folder_remux_scan_dispatch_handlers.py``) compares ``previous.size_bytes !=
+  (``processing_watched_folder_remux_scan_dispatch_handlers.py``) compares ``previous.size_bytes !=
   observed_size`` — ``None != <real size>`` — and resets ``failure_attempts`` to 0, exactly once,
   because that same scan pass also records the real size (so later scans see no change). The
   workaround (``tests/contract/processing/_helpers.py``'s ``detect_without_queueing``) runs a
@@ -15,7 +15,7 @@ Root causes, read from the source while writing these tests (both in
   the fingerprint and the reset directly, because a test that only waits for the eventual
   failure-attempts count would still reach it after the one-time reset and falsely pass.
 - Item 2: the payload a scan-driven retry builds (``payload_body`` in
-  ``refiner_watched_folder_remux_scan_dispatch_handlers.py``) never copies the job's ``origin``.
+  ``processing_watched_folder_remux_scan_dispatch_handlers.py``) never copies the job's ``origin``.
   ``completion_callback.report_handoff_completion`` reads ``origin`` from the payload and returns
   immediately when it is ``None`` — before posting anything *and* before recording the ledger's own
   ``output_path`` — so once a file has been retried even once, its eventual pass-through is reported
@@ -24,7 +24,7 @@ Root causes, read from the source while writing these tests (both in
   in ``test_failure_policies.py``: its ``all(report["status"] != "failed" ...)`` assertion is true
   today only because the callback list is empty, not because a real completion was reported.
 
-dotnet fixed item 2 too: ``RefinerWatchedFolderScanDispatchJobHandler.EnqueueRemuxPassAsync`` (the scan's
+dotnet fixed item 2 too: ``ProcessingWatchedFolderScanDispatchJobHandler.EnqueueRemuxPassAsync`` (the scan's
 own automatic retry path — the same method used for a fresh candidate) now looks up
 ``HandoffOriginCarry.FindAsync`` and copies ``origin`` onto the requeued job's payload, the same fix
 ``RequeueStore.RequeueFileAsync`` already applied to the manual-retry half (#531 item 2).

@@ -16,7 +16,7 @@ namespace Weir.Infrastructure.Tests.Jobs;
 [Collection(SerialTestGroup.Name)]
 public sealed class LeaseRenewalTests : IDisposable
 {
-    private const string Kind = "refiner.test.long_running.v1";
+    private const string Kind = "processing.test.long_running.v1";
     private readonly JobsTestDatabase _db = new();
 
     public void Dispose() => _db.Dispose();
@@ -35,22 +35,22 @@ public sealed class LeaseRenewalTests : IDisposable
         });
         var intruderHandler = new DelegateHandler(Kind, _ => Interlocked.Increment(ref intruderRuns));
 
-        var runningProcessor = new RefinerJobProcessor(
-            new RefinerJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System),
+        var runningProcessor = new ProcessingJobProcessor(
+            new ProcessingJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System),
             new JobHandlerRegistry([runningHandler]),
             new RecordingActivityWriter(),
             new NoUnhandledJobFailureRecorder(),
             new NoJobNotifications(),
             TimeProvider.System,
-            NullLogger<RefinerJobProcessor>.Instance);
-        var intruderProcessor = new RefinerJobProcessor(
-            new RefinerJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System),
+            NullLogger<ProcessingJobProcessor>.Instance);
+        var intruderProcessor = new ProcessingJobProcessor(
+            new ProcessingJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System),
             new JobHandlerRegistry([intruderHandler]),
             new RecordingActivityWriter(),
             new NoUnhandledJobFailureRecorder(),
             new NoJobNotifications(),
             TimeProvider.System,
-            NullLogger<RefinerJobProcessor>.Instance);
+            NullLogger<ProcessingJobProcessor>.Instance);
 
         // A one-second lease; the handler runs well past it, so only a working renewal keeps it safe.
         var runningTask = runningProcessor.ProcessOneAsync("worker-running", leaseSeconds: 1);
@@ -70,7 +70,7 @@ public sealed class LeaseRenewalTests : IDisposable
         Assert.Equal(1, runningWorkerRuns);
         Assert.Equal(0, intruderRuns);
         Assert.All(intruderOutcomes, o => Assert.Equal(JobProcessOutcome.Idle, o));
-        Assert.Equal(RefinerJobStatus.Completed, (await _db.Store.GetAsync(1))!.Status);
+        Assert.Equal(ProcessingJobStatus.Completed, (await _db.Store.GetAsync(1))!.Status);
     }
 
     [Fact]
@@ -84,15 +84,15 @@ public sealed class LeaseRenewalTests : IDisposable
             started.TrySetResult();
             await release.Task;
         });
-        var store = new RefinerJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System);
-        var processor = new RefinerJobProcessor(
+        var store = new ProcessingJobStore(new SqliteDatabase(_db.DbPath, pooling: false), TimeProvider.System);
+        var processor = new ProcessingJobProcessor(
             store,
             new JobHandlerRegistry([handler]),
             new RecordingActivityWriter(),
             new NoUnhandledJobFailureRecorder(),
             new NoJobNotifications(),
             TimeProvider.System,
-            NullLogger<RefinerJobProcessor>.Instance);
+            NullLogger<ProcessingJobProcessor>.Instance);
 
         var runTask = processor.ProcessOneAsync("worker", leaseSeconds: 1);
         await started.Task.WaitAsync(TimeSpan.FromSeconds(5));

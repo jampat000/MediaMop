@@ -26,11 +26,11 @@ internal sealed class JobsTestDatabase : IDisposable
         new SchemaMigrator(Database).EnsureAtHead();
         if (!keepSeedRows)
         {
-            Execute("DELETE FROM refiner_libraries; DELETE FROM suite_settings; DELETE FROM refiner_operator_settings;");
+            Execute("DELETE FROM libraries; DELETE FROM suite_settings; DELETE FROM operator_settings;");
         }
 
         Clock = new SettableTimeProvider(T0);
-        Store = new RefinerJobStore(Database, Clock);
+        Store = new ProcessingJobStore(Database, Clock);
     }
 
     public string DbPath { get; }
@@ -41,11 +41,11 @@ internal sealed class JobsTestDatabase : IDisposable
 
     public SettableTimeProvider Clock { get; }
 
-    public RefinerJobStore Store { get; }
+    public ProcessingJobStore Store { get; }
 
     public string Join(params string[] parts) => _directory.Join(parts);
 
-    public RefinerJobProcessor Processor(
+    public ProcessingJobProcessor Processor(
         IEnumerable<IJobHandler>? handlers = null,
         IUnhandledJobFailureRecorder? recorder = null,
         IJobNotifications? notifications = null,
@@ -57,7 +57,7 @@ internal sealed class JobsTestDatabase : IDisposable
             recorder ?? new NoUnhandledJobFailureRecorder(),
             notifications ?? new NoJobNotifications(),
             Clock,
-            NullLogger<RefinerJobProcessor>.Instance)
+            NullLogger<ProcessingJobProcessor>.Instance)
         {
             Kinds = claimAllKinds ? null : ClaimableKinds.For(new JobHandlerRegistry(handlers ?? [])),
         };
@@ -156,7 +156,7 @@ internal sealed class JobsTestDatabase : IDisposable
         using var connection = Database.Open();
         using var command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO refiner_libraries (name, enabled, media_type, watched_folder, work_folder, output_folder, schedule_enabled, schedule_grid, max_concurrent_files) " +
+            "INSERT INTO libraries (name, enabled, media_type, watched_folder, work_folder, output_folder, schedule_enabled, schedule_grid, max_concurrent_files) " +
             "VALUES (@name, @enabled, @media_type, '/srv/in', @work, @output, @schedule_enabled, @grid, @max) RETURNING id";
         command.Parameters.AddWithValue("@name", name);
         command.Parameters.AddWithValue("@enabled", enabled ? 1 : 0);
@@ -169,11 +169,11 @@ internal sealed class JobsTestDatabase : IDisposable
         return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
-    /// <summary>A raw row insert, bypassing the enqueue guard, as Python tests do with <c>session.add(RefinerJob(...))</c>.</summary>
-    public void InsertRawJob(string dedupeKey, string jobKind, string status = RefinerJobStatus.Pending, string? leaseOwner = null,
+    /// <summary>A raw row insert, bypassing the enqueue guard, as Python tests do with <c>session.add(ProcessingJob(...))</c>.</summary>
+    public void InsertRawJob(string dedupeKey, string jobKind, string status = ProcessingJobStatus.Pending, string? leaseOwner = null,
         string? leaseExpiresAt = null, int attemptCount = 0, int maxAttempts = 3, string? payloadJson = null) =>
         Execute(
-            "INSERT INTO refiner_jobs (dedupe_key, job_kind, status, lease_owner, lease_expires_at, attempt_count, max_attempts, payload_json) " +
+            "INSERT INTO jobs (dedupe_key, job_kind, status, lease_owner, lease_expires_at, attempt_count, max_attempts, payload_json) " +
             "VALUES (@d, @k, @s, @o, @e, @a, @m, @p)",
             ("@d", dedupeKey), ("@k", jobKind), ("@s", status), ("@o", leaseOwner), ("@e", leaseExpiresAt), ("@a", attemptCount), ("@m", maxAttempts), ("@p", payloadJson));
 

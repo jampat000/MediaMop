@@ -2,7 +2,7 @@ using Weir.Core.Json;
 
 namespace Weir.Core.Rules;
 
-/// <summary>What to strip (<c>refiner_metadata_rules.MetadataRules</c>). All off by default, so an upgrade changes nothing.</summary>
+/// <summary>What to strip (<c>processing_metadata_rules.MetadataRules</c>). All off by default, so an upgrade changes nothing.</summary>
 public sealed record MetadataRules
 {
     public bool RemoveImages { get; init; }
@@ -32,7 +32,7 @@ public sealed record MetadataRules
 }
 
 /// <summary>
-/// Embedded images, attachments and container metadata (<c>refiner_metadata_rules.py</c>).
+/// Embedded images, attachments and container metadata (<c>processing_metadata_rules.py</c>).
 /// An embedded poster is an mjpeg video stream, so the planner separates it from the picture.
 /// </summary>
 public static class MetadataStreams

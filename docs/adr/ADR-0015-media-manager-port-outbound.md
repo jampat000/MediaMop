@@ -1,4 +1,4 @@
-# ADR-0015: Refiner asks a port, and "no answer" is not "nothing"
+# ADR-0015: Processing asks a port, and "no answer" is not "nothing"
 
 ## Status
 
@@ -11,7 +11,7 @@ every gate that acts on the answer.
 with a `kind`, and made the **inbound** direction a dialect: a manager posts an event,
 the dialect unwraps it, everything downstream reads one neutral shape.
 
-The outbound direction never followed. Refiner resolved a single `(url, key)` pair from
+The outbound direction never followed. Processing resolved a single `(url, key)` pair from
 a hardcoded `{"movie": "radarr", "tv": "sonarr"}` map, and four cleanup modules skipped
 even that and built their own HTTP. Three things followed from that, and the third is
 the reason this ADR exists:
@@ -19,7 +19,7 @@ the reason this ADR exists:
 1. **A library could only ever be served by one manager.** Two Radarr instances — an
    ordinary 4K-plus-1080p setup — could not both be consulted, and neither could a
    manager running alongside another during a migration.
-2. **Product names crossed into module code.** Fourteen files under `modules/refiner/`
+2. **Product names crossed into module code.** Fourteen files under `modules/processing/`
    named Radarr or Sonarr, including the reasons shown to operators.
 3. **A manager with nothing to say looked exactly like a quiet one.** Every path
    returned a list of queue rows. An empty list meant "nothing is importing" — and it
@@ -28,7 +28,7 @@ the reason this ADR exists:
    reporting a clean pass: `should_block_for_upstream` could never fire, because the
    only queue dialect was arr-v3.
 
-The third one is a data-safety bug wearing the costume of a missing feature. Refiner
+The third one is a data-safety bug wearing the costume of a missing feature. Processing
 deletes folders on the strength of these answers.
 
 ## Decision
@@ -58,7 +58,7 @@ decide what to do about them, in code that a reader can check.
 ### 3. A scope resolves to N connections, and any one of them can block
 
 `connections_for_scope` returns every enabled, credentialed manager that looks after a
-media scope. Refiner asks all of them and blocks the file if **any** reports an
+media scope. Processing asks all of them and blocks the file if **any** reports an
 in-progress import. Scope coverage is a static property of the kind, so binding costs no
 requests; `describe()` is for the settings surface, not the scan loop.
 
@@ -96,7 +96,7 @@ answer. Retrying inside the call would spend the rest of the window on the retry
   detail rather than left to be inferred.
 - A queue state Weir does not recognise is treated as **still in progress**. A
   wrong "wait" costs one scan cycle; a wrong "proceed" costs a file.
-- `refiner.candidate_gate.v1` gained a fourth verdict, `no_upstream_signal`, and its
+- `processing.candidate_gate.v1` gained a fourth verdict, `no_upstream_signal`, and its
   manual-enqueue payload asks for a `media_scope` rather than a product `target`. This
   is a breaking change to a diagnostic lane with no UI, taken deliberately rather than
   keeping a vendor name in the v1 contract.
@@ -110,10 +110,10 @@ answer. Retrying inside the call would spend the rest of the window on the retry
 
 - Dropping `arr_library_operator_settings`. That is a schema change.
 - The node-graph/flow engine — explicitly out of scope for the epic this belongs to.
-- Refiner preflight probe depth, which [ADR-0012](ADR-0012-refiner-preflight-parity-boundary.md) bounds.
+- Processing preflight probe depth, which [ADR-0012](ADR-0012-processing-preflight-parity-boundary.md) bounds.
 
 ## Related
 
 - ADR-0013 — a media manager is a kind, not a product name (the inbound half)
-- ADR-0012 — Refiner preflight parity boundary
+- ADR-0012 — Processing preflight parity boundary
 - `docs/operator-messaging-standard.md` — the wording rules the reasons follow

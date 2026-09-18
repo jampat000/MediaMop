@@ -76,7 +76,7 @@ export function NavIconActivity({ className = "" }: { className?: string }) {
   );
 }
 
-export function NavIconRefiner({ className = "" }: { className?: string }) {
+export function NavIconProcessing({ className = "" }: { className?: string }) {
   return (
     <svg
       className={className}

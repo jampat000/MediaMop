@@ -5,13 +5,13 @@ using Weir.Core.Json;
 using Weir.Core.LibraryMode;
 using Weir.Core.Media;
 using Weir.Core.MediaManagers;
-using Weir.Core.Refiner;
+using Weir.Core.Processing;
 using Weir.Core.Rules;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.MediaManagers;
-using Weir.Infrastructure.Refiner;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing;
+using Weir.Infrastructure.Processing.RemuxPass;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.LibraryMode;
@@ -62,9 +62,9 @@ public sealed class LibraryScanHandler : IJobHandler
         var uow = await UnitOfWork.OpenAsync(_database, cancellationToken).ConfigureAwait(false);
         long libraryId;
         string trigger;
-        RefinerLibraryRecord? library;
+        ProcessingLibraryRecord? library;
         LibrarySettings settings;
-        RefinerRulesConfig rules;
+        ProcessingRulesConfig rules;
         IReadOnlyList<LibraryScanFileEntry> previousFiles;
         List<ManagerConnection> connections;
         await using (uow.ConfigureAwait(false))
@@ -144,7 +144,7 @@ public sealed class LibraryScanHandler : IJobHandler
 
     private async Task<LibraryScanFileEntry> ClassifyOneAsync(
         LibraryWalkedFile walked,
-        RefinerRulesConfig rules,
+        ProcessingRulesConfig rules,
         Dictionary<string, LibraryScanFileEntry> previousByPath,
         CancellationToken cancellationToken)
     {

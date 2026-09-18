@@ -7,8 +7,8 @@ function ev(
 ): ActivityEventItem {
   return {
     created_at: "2026-09-16T22:00:00Z",
-    event_type: "refiner.file_remux_pass_completed",
-    module: "refiner",
+    event_type: "processing.file_remux_pass_completed",
+    module: "processing",
     title: "t",
     ...overrides,
   };
@@ -42,8 +42,8 @@ describe("activity runs", () => {
   it("falls back to entry counts when no file is named", () => {
     expect(
       summarizeRun([
-        ev({ id: 2, event_type: "refiner.handoff_reported" }),
-        ev({ id: 1, event_type: "refiner.handoff_reported" }),
+        ev({ id: 2, event_type: "processing.handoff_reported" }),
+        ev({ id: 1, event_type: "processing.handoff_reported" }),
       ]).headline,
     ).toBe("Run · 2 entries");
   });

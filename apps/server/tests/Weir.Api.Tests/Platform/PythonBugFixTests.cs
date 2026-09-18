@@ -106,7 +106,7 @@ public sealed class PythonBugFixTests
     public async Task Issue_535_api_paths_never_fall_back_to_the_web_app()
     {
         await using var withDist = await WeirTestServer.StartAsync(
-            [("WEIR_SESSION_SECRET", Secret), ("WEIR_REFINER_WORKER_COUNT", "0"), ("WEIR_WEB_DIST", "{home}/web")],
+            [("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), ("WEIR_WEB_DIST", "{home}/web")],
             prepareHome: WeirTestServer.WriteWebDist);
         var client = new ApiTestClient(withDist);
         var html = new Dictionary<string, string> { ["Accept"] = "text/html,application/xhtml+xml" };

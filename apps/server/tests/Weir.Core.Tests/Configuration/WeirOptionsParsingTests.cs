@@ -119,8 +119,8 @@ public sealed class WeirOptionsParsingTests
     [Fact]
     public void Unparseable_booleans_keep_their_default()
     {
-        Assert.True(TestRuntime.Load(("WEIR_REFINER_WATCHER_ENABLED", "perhaps")).RefinerWatcherEnabled);
-        Assert.False(TestRuntime.Load(("WEIR_REFINER_WATCHER_ENABLED", "off")).RefinerWatcherEnabled);
+        Assert.True(TestRuntime.Load(("WEIR_PROCESSING_WATCHER_ENABLED", "perhaps")).ProcessingWatcherEnabled);
+        Assert.False(TestRuntime.Load(("WEIR_PROCESSING_WATCHER_ENABLED", "off")).ProcessingWatcherEnabled);
     }
 
     [Theory]
@@ -132,7 +132,7 @@ public sealed class WeirOptionsParsingTests
     [InlineData("", 10)]
     [InlineData("1__0", 10)]
     public void Integers_parse_like_python_int_and_fall_back_to_the_default(string raw, int expected) =>
-        Assert.Equal(expected, TestRuntime.Load(("WEIR_REFINER_PROBE_SIZE_MB", raw)).RefinerProbeSizeMb);
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_PROCESSING_PROBE_SIZE_MB", raw)).ProcessingProbeSizeMb);
 
     [Fact]
     public void Webhook_secret_prefers_the_new_name_then_the_legacy_one()
@@ -201,8 +201,8 @@ public sealed class WeirOptionsParsingTests
     [InlineData("0", 0)]
     [InlineData("5", 5)]
     [InlineData("99", 8)]
-    public void Refiner_worker_count_is_zero_to_eight_and_negative_means_one(string raw, int expected) =>
-        Assert.Equal(expected, TestRuntime.Load(("WEIR_REFINER_WORKER_COUNT", raw)).RefinerWorkerCount);
+    public void Processing_worker_count_is_zero_to_eight_and_negative_means_one(string raw, int expected) =>
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_PROCESSING_WORKER_COUNT", raw)).ProcessingWorkerCount);
 
     [Theory]
     [InlineData("1", 30)]
@@ -210,8 +210,8 @@ public sealed class WeirOptionsParsingTests
     [InlineData("-5", 30)]
     [InlineData("120", 120)]
     [InlineData("999999", 86_400)]
-    public void Refiner_job_lease_seconds_is_thirty_seconds_to_a_day(string raw, int expected) =>
-        Assert.Equal(expected, TestRuntime.Load(("WEIR_REFINER_JOB_LEASE_SECONDS", raw)).RefinerJobLeaseSeconds);
+    public void Processing_job_lease_seconds_is_thirty_seconds_to_a_day(string raw, int expected) =>
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_PROCESSING_JOB_LEASE_SECONDS", raw)).ProcessingJobLeaseSeconds);
 
     [Theory]
     [InlineData("0", 0.25)]
@@ -219,110 +219,110 @@ public sealed class WeirOptionsParsingTests
     [InlineData("1000", 300.0)]
     [InlineData("2.5", 3.0)]
     public void Watcher_debounce_is_a_whole_number_clamped_to_a_quarter_second_through_five_minutes(string raw, double expected) =>
-        Assert.Equal(expected, TestRuntime.Load(("WEIR_REFINER_WATCHER_DEBOUNCE_SECONDS", raw)).RefinerWatcherDebounceSeconds);
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_PROCESSING_WATCHER_DEBOUNCE_SECONDS", raw)).ProcessingWatcherDebounceSeconds);
 
     [Fact]
-    public void Refiner_ranges_are_clamped()
+    public void Processing_ranges_are_clamped()
     {
         var low = TestRuntime.Load(
-            ("WEIR_REFINER_PROBE_SIZE_MB", "0"),
-            ("WEIR_REFINER_ANALYZE_DURATION_SECONDS", "0"),
-            ("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "-1"),
-            ("WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "1"),
-            ("WEIR_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "1"),
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MIN_STALE_AGE_SECONDS", "1"),
-            ("WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "1"),
-            ("WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "1"),
-            ("WEIR_REFINER_MOVIE_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "1"),
-            ("WEIR_REFINER_TV_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "1"),
+            ("WEIR_PROCESSING_PROBE_SIZE_MB", "0"),
+            ("WEIR_PROCESSING_ANALYZE_DURATION_SECONDS", "0"),
+            ("WEIR_PROCESSING_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "-1"),
+            ("WEIR_PROCESSING_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "1"),
+            ("WEIR_PROCESSING_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "1"),
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MIN_STALE_AGE_SECONDS", "1"),
+            ("WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "1"),
+            ("WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "1"),
+            ("WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "1"),
+            ("WEIR_PROCESSING_TV_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "1"),
             ("WEIR_JOB_ROWS_RETENTION_DAYS", "0"),
             ("WEIR_JOB_ROWS_RETENTION_SCHEDULE_INTERVAL_SECONDS", "1"));
-        Assert.Equal(1, low.RefinerProbeSizeMb);
-        Assert.Equal(1, low.RefinerAnalyzeDurationSeconds);
-        Assert.Equal(0, low.RefinerWatchedFolderMinFileAgeSeconds);
-        Assert.Equal(3600, low.RefinerMovieOutputCleanupMinAgeSeconds);
-        Assert.Equal(3600, low.RefinerTvOutputCleanupMinAgeSeconds);
-        Assert.Equal(60, low.RefinerWorkTempStaleSweepMinStaleAgeSeconds);
-        Assert.Equal(60, low.RefinerMovieFailureCleanupScheduleIntervalSeconds);
-        Assert.Equal(60, low.RefinerTvFailureCleanupScheduleIntervalSeconds);
-        Assert.Equal(300, low.RefinerMovieFailureCleanupGracePeriodSeconds);
-        Assert.Equal(300, low.RefinerTvFailureCleanupGracePeriodSeconds);
+        Assert.Equal(1, low.ProcessingProbeSizeMb);
+        Assert.Equal(1, low.ProcessingAnalyzeDurationSeconds);
+        Assert.Equal(0, low.ProcessingWatchedFolderMinFileAgeSeconds);
+        Assert.Equal(3600, low.ProcessingMovieOutputCleanupMinAgeSeconds);
+        Assert.Equal(3600, low.ProcessingTvOutputCleanupMinAgeSeconds);
+        Assert.Equal(60, low.ProcessingWorkTempStaleSweepMinStaleAgeSeconds);
+        Assert.Equal(60, low.ProcessingMovieFailureCleanupScheduleIntervalSeconds);
+        Assert.Equal(60, low.ProcessingTvFailureCleanupScheduleIntervalSeconds);
+        Assert.Equal(300, low.ProcessingMovieFailureCleanupGracePeriodSeconds);
+        Assert.Equal(300, low.ProcessingTvFailureCleanupGracePeriodSeconds);
         Assert.Equal(1, low.JobRowsRetentionDays);
         Assert.Equal(60, low.JobRowsRetentionScheduleIntervalSeconds);
 
         var high = TestRuntime.Load(
-            ("WEIR_REFINER_PROBE_SIZE_MB", "99999"),
-            ("WEIR_REFINER_ANALYZE_DURATION_SECONDS", "99999"),
-            ("WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "99999999"),
-            ("WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "99999999"),
-            ("WEIR_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "99999999"),
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MIN_STALE_AGE_SECONDS", "99999999"),
-            ("WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "99999999"),
-            ("WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "99999999"),
-            ("WEIR_REFINER_MOVIE_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "99999999"),
-            ("WEIR_REFINER_TV_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_PROBE_SIZE_MB", "99999"),
+            ("WEIR_PROCESSING_ANALYZE_DURATION_SECONDS", "99999"),
+            ("WEIR_PROCESSING_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MIN_STALE_AGE_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "99999999"),
+            ("WEIR_PROCESSING_TV_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", "99999999"),
             ("WEIR_JOB_ROWS_RETENTION_DAYS", "99999"),
             ("WEIR_JOB_ROWS_RETENTION_SCHEDULE_INTERVAL_SECONDS", "99999999"));
-        Assert.Equal(1024, high.RefinerProbeSizeMb);
-        Assert.Equal(300, high.RefinerAnalyzeDurationSeconds);
-        Assert.Equal(7 * 24 * 3600, high.RefinerWatchedFolderMinFileAgeSeconds);
-        Assert.Equal(30 * 24 * 3600, high.RefinerMovieOutputCleanupMinAgeSeconds);
-        Assert.Equal(30 * 24 * 3600, high.RefinerTvOutputCleanupMinAgeSeconds);
-        Assert.Equal(30 * 24 * 3600, high.RefinerWorkTempStaleSweepMinStaleAgeSeconds);
-        Assert.Equal(7 * 24 * 3600, high.RefinerMovieFailureCleanupScheduleIntervalSeconds);
-        Assert.Equal(7 * 24 * 3600, high.RefinerTvFailureCleanupScheduleIntervalSeconds);
-        Assert.Equal(604800, high.RefinerMovieFailureCleanupGracePeriodSeconds);
-        Assert.Equal(604800, high.RefinerTvFailureCleanupGracePeriodSeconds);
+        Assert.Equal(1024, high.ProcessingProbeSizeMb);
+        Assert.Equal(300, high.ProcessingAnalyzeDurationSeconds);
+        Assert.Equal(7 * 24 * 3600, high.ProcessingWatchedFolderMinFileAgeSeconds);
+        Assert.Equal(30 * 24 * 3600, high.ProcessingMovieOutputCleanupMinAgeSeconds);
+        Assert.Equal(30 * 24 * 3600, high.ProcessingTvOutputCleanupMinAgeSeconds);
+        Assert.Equal(30 * 24 * 3600, high.ProcessingWorkTempStaleSweepMinStaleAgeSeconds);
+        Assert.Equal(7 * 24 * 3600, high.ProcessingMovieFailureCleanupScheduleIntervalSeconds);
+        Assert.Equal(7 * 24 * 3600, high.ProcessingTvFailureCleanupScheduleIntervalSeconds);
+        Assert.Equal(604800, high.ProcessingMovieFailureCleanupGracePeriodSeconds);
+        Assert.Equal(604800, high.ProcessingTvFailureCleanupGracePeriodSeconds);
         Assert.Equal(365, high.JobRowsRetentionDays);
         Assert.Equal(86400, high.JobRowsRetentionScheduleIntervalSeconds);
     }
 
     [Fact]
-    public void Refiner_toggles_are_read()
+    public void Processing_toggles_are_read()
     {
         var options = TestRuntime.Load(
-            ("WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", "false"),
-            ("WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS", "false"),
-            ("WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED", "true"),
-            ("WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED", "1"));
-        Assert.False(options.RefinerWatchedFolderRemuxScanDispatchScheduleEnabled);
-        Assert.False(options.RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs);
-        Assert.True(options.RefinerMovieFailureCleanupScheduleEnabled);
-        Assert.True(options.RefinerTvFailureCleanupScheduleEnabled);
+            ("WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", "false"),
+            ("WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS", "false"),
+            ("WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED", "true"),
+            ("WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED", "1"));
+        Assert.False(options.ProcessingWatchedFolderRemuxScanDispatchScheduleEnabled);
+        Assert.False(options.ProcessingWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs);
+        Assert.True(options.ProcessingMovieFailureCleanupScheduleEnabled);
+        Assert.True(options.ProcessingTvFailureCleanupScheduleEnabled);
     }
 
     [Fact]
     public void Temp_sweep_schedule_falls_back_to_the_legacy_shared_variables()
     {
         var legacy = TestRuntime.Load(
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED", "true"),
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS", "7200"));
-        Assert.True(legacy.RefinerWorkTempStaleSweepMovieScheduleEnabled);
-        Assert.True(legacy.RefinerWorkTempStaleSweepTvScheduleEnabled);
-        Assert.Equal(7200, legacy.RefinerWorkTempStaleSweepMovieScheduleIntervalSeconds);
-        Assert.Equal(7200, legacy.RefinerWorkTempStaleSweepTvScheduleIntervalSeconds);
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED", "true"),
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS", "7200"));
+        Assert.True(legacy.ProcessingWorkTempStaleSweepMovieScheduleEnabled);
+        Assert.True(legacy.ProcessingWorkTempStaleSweepTvScheduleEnabled);
+        Assert.Equal(7200, legacy.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds);
+        Assert.Equal(7200, legacy.ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds);
 
         var specific = TestRuntime.Load(
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED", "true"),
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS", "7200"),
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED", "true"),
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS", "7200"),
             // Present but empty still wins over the legacy variable, as `key in os.environ` does.
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED", ""),
-            ("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_INTERVAL_SECONDS", "30"));
-        Assert.False(specific.RefinerWorkTempStaleSweepMovieScheduleEnabled);
-        Assert.True(specific.RefinerWorkTempStaleSweepTvScheduleEnabled);
-        Assert.Equal(7200, specific.RefinerWorkTempStaleSweepMovieScheduleIntervalSeconds);
-        Assert.Equal(60, specific.RefinerWorkTempStaleSweepTvScheduleIntervalSeconds);
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED", ""),
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_INTERVAL_SECONDS", "30"));
+        Assert.False(specific.ProcessingWorkTempStaleSweepMovieScheduleEnabled);
+        Assert.True(specific.ProcessingWorkTempStaleSweepTvScheduleEnabled);
+        Assert.Equal(7200, specific.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds);
+        Assert.Equal(60, specific.ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds);
     }
 
     [Fact]
     public void Remux_media_root_is_expanded_and_normalized_but_not_resolved()
     {
-        var runtime = TestRuntime.With(("WEIR_REFINER_REMUX_MEDIA_ROOT", " ~/media//movies/ "));
+        var runtime = TestRuntime.With(("WEIR_PROCESSING_REMUX_MEDIA_ROOT", " ~/media//movies/ "));
         var expected = PythonCompat.NormalizeLexically(Path.Join(runtime.UserHomeDirectory, "media//movies/"), runtime);
-        Assert.Equal(expected, WeirOptionsLoader.Load(runtime).RefinerRemuxMediaRoot);
+        Assert.Equal(expected, WeirOptionsLoader.Load(runtime).ProcessingRemuxMediaRoot);
         Assert.Equal(
             PythonCompat.NormalizeLexically("relative/./media", runtime),
-            TestRuntime.Load(("WEIR_REFINER_REMUX_MEDIA_ROOT", "relative/./media")).RefinerRemuxMediaRoot);
+            TestRuntime.Load(("WEIR_PROCESSING_REMUX_MEDIA_ROOT", "relative/./media")).ProcessingRemuxMediaRoot);
     }
 
     [Fact]

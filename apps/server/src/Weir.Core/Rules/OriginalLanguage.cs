@@ -65,7 +65,7 @@ public sealed record OriginalLanguageOutcome
 public sealed record OriginalLanguageTrack(int Index, string Language);
 
 /// <summary>
-/// Original-language audio selection (<c>refiner_original_language.py</c>): the pure mapping and
+/// Original-language audio selection (<c>processing_original_language.py</c>): the pure mapping and
 /// selection. The lookup that feeds it calls a metadata provider over the network and belongs to
 /// a later port.
 /// </summary>

@@ -88,7 +88,7 @@ def test_real_ffmpeg_remuxes_a_handed_off_file_and_drops_the_unwanted_language(
     server = server_factory(
         env={
             **real_ffmpeg_env,
-            "WEIR_REFINER_WORKER_COUNT": "1",
+            "WEIR_PROCESSING_WORKER_COUNT": "1",
             "WEIR_MEDIA_MANAGER_WEBHOOK_SECRET": h.WEBHOOK_SECRET,
         }
     )

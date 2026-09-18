@@ -81,15 +81,16 @@ const router = createBrowserRouter([
                 errorElement: routeErrorElement,
               },
               {
-                // "Refiner" became the whole app, so its page is now Processing.
-                path: "refiner",
+                // "Processing" became the whole app, so its page is now Processing.
+                path: "processing",
                 element: <MovedTo path="/processing" />,
               },
               {
                 path: "processing",
                 lazy: async () => ({
-                  Component: (await import("../pages/refiner/refiner-page"))
-                    .RefinerPage,
+                  Component: (
+                    await import("../pages/processing/processing-page")
+                  ).ProcessingPage,
                 }),
                 errorElement: routeErrorElement,
               },

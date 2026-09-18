@@ -394,7 +394,7 @@ public static class SuiteEndpoints
     private static PyDict HistoryOut(string status, OperationalHistoryStore.ResetResult result) => new PyDict()
         .Set("status", status)
         .Set("activity_events_deleted", result.ActivityEventsDeleted)
-        .Set("refiner_jobs_deleted", result.RefinerJobsDeleted)
+        .Set("jobs_deleted", result.ProcessingJobsDeleted)
         .Set("total_deleted", result.TotalDeleted);
 
     private static async Task<ApiResult> GetLogsAsync(ApiRequest request)

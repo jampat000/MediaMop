@@ -18,30 +18,30 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-import { DirectPlayLine } from "../../components/refiner/direct-play-line";
-import { FileStoryPanel } from "../../components/refiner/file-story-panel";
+import { DirectPlayLine } from "../../components/processing/direct-play-line";
+import { FileStoryPanel } from "../../components/processing/file-story-panel";
 import { Link } from "react-router-dom";
 import { useActivityStreamInvalidations } from "../../lib/activity/use-activity-stream-invalidation";
 import { PageLoading } from "../../components/shared/page-loading";
 import { ApiEntryError } from "../../components/shared/api-entry-error";
 import {
-  REFINER_FILE_STATUS_LABELS,
-  type RefinerFile,
-} from "../../lib/refiner/files-api";
+  PROCESSING_FILE_STATUS_LABELS,
+  type ProcessingFile,
+} from "../../lib/processing/files-api";
 import {
-  refinerFilesKey,
-  useRefinerFileLog,
-  useRefinerFilesQuery,
-} from "../../lib/refiner/files-queries";
+  processingFilesKey,
+  useProcessingFileLog,
+  useProcessingFilesQuery,
+} from "../../lib/processing/files-queries";
 import {
-  refinerJobsInspectionQueryKey,
-  useRefinerJobsInspectionQuery,
-} from "../../lib/refiner/jobs-inspection/queries";
-import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
+  processingJobsInspectionQueryKey,
+  useProcessingJobsInspectionQuery,
+} from "../../lib/processing/jobs-inspection/queries";
+import { useProcessingLibrariesQuery } from "../../lib/processing/libraries-queries";
 import {
-  refinerOverviewStatsQueryKey,
-  useRefinerOverviewStatsQuery,
-} from "../../lib/refiner/queries";
+  processingOverviewStatsQueryKey,
+  useProcessingOverviewStatsQuery,
+} from "../../lib/processing/queries";
 import { useSystemReadinessQuery } from "../../lib/system/readiness-queries";
 
 /** Statuses that mean the file is Weir's responsibility right now. */
@@ -60,9 +60,9 @@ const FILES_QUERY = { limit: 200 } as const;
 const FAILED_JOBS_LIMIT = 100;
 // The screen moves as work does, so it follows the activity stream rather than a reload.
 const LIVE_KEYS = [
-  refinerFilesKey(FILES_QUERY),
-  [...refinerOverviewStatsQueryKey, 1],
-  refinerJobsInspectionQueryKey("failed", FAILED_JOBS_LIMIT),
+  processingFilesKey(FILES_QUERY),
+  [...processingOverviewStatsQueryKey, 1],
+  processingJobsInspectionQueryKey("failed", FAILED_JOBS_LIMIT),
 ] as const;
 
 type Notice = {
@@ -97,7 +97,7 @@ function formatEta(seconds: number | null): string | null {
 }
 
 /** What the file is, from the probe. Nulls mean "not probed yet" and are simply omitted. */
-function mediaFacts(file: RefinerFile): string {
+function mediaFacts(file: ProcessingFile): string {
   const bits: string[] = [];
   if (file.video_codec) {
     bits.push(
@@ -137,8 +137,8 @@ function FileRow({
   file,
   onOpen,
 }: {
-  file: RefinerFile;
-  onOpen: (file: RefinerFile) => void;
+  file: ProcessingFile;
+  onOpen: (file: ProcessingFile) => void;
 }): React.ReactElement {
   const name = file.relative_path.split(/[\\/]/).pop() || file.relative_path;
   const facts = mediaFacts(file);
@@ -167,7 +167,7 @@ function FileRow({
 
       <div className="mm-inhand-row__state">
         <span className={statusToneClass(file.status)}>
-          {REFINER_FILE_STATUS_LABELS[file.status] ?? file.status}
+          {PROCESSING_FILE_STATUS_LABELS[file.status] ?? file.status}
           {file.blocked_by_connection
             ? ` — ${file.blocked_by_connection} is importing it`
             : ""}
@@ -203,16 +203,19 @@ function FileRow({
 
 export function InHandPage(): React.ReactElement {
   useActivityStreamInvalidations(LIVE_KEYS, { exact: true, throttleMs: 1_500 });
-  const files = useRefinerFilesQuery(FILES_QUERY);
-  const today = useRefinerOverviewStatsQuery(1);
-  const libraries = useRefinerLibrariesQuery();
-  const failedJobs = useRefinerJobsInspectionQuery("failed", FAILED_JOBS_LIMIT);
+  const files = useProcessingFilesQuery(FILES_QUERY);
+  const today = useProcessingOverviewStatsQuery(1);
+  const libraries = useProcessingLibrariesQuery();
+  const failedJobs = useProcessingJobsInspectionQuery(
+    "failed",
+    FAILED_JOBS_LIMIT,
+  );
   const readiness = useSystemReadinessQuery();
-  const fileLog = useRefinerFileLog();
-  const [storyFile, setStoryFile] = useState<RefinerFile | null>(null);
+  const fileLog = useProcessingFileLog();
+  const [storyFile, setStoryFile] = useState<ProcessingFile | null>(null);
 
   const openStory = useCallback(
-    (file: RefinerFile) => {
+    (file: ProcessingFile) => {
       setStoryFile(file);
       fileLog.mutate(file.id);
     },
@@ -222,7 +225,7 @@ export function InHandPage(): React.ReactElement {
 
   const grouped = useMemo(() => {
     const rows = (files.data?.files ?? []).filter((f) => IN_HAND.has(f.status));
-    const byLibrary = new Map<string, RefinerFile[]>();
+    const byLibrary = new Map<string, ProcessingFile[]>();
     for (const row of rows) {
       const key = row.library_name || "Unknown library";
       const list = byLibrary.get(key);
@@ -232,7 +235,7 @@ export function InHandPage(): React.ReactElement {
     // Working files first inside each library — they are what an operator looks for.
     for (const list of byLibrary.values()) {
       list.sort((a, b) => {
-        const rank = (f: RefinerFile) => (f.status === "processing" ? 0 : 1);
+        const rank = (f: ProcessingFile) => (f.status === "processing" ? 0 : 1);
         return (
           rank(a) - rank(b) || a.relative_path.localeCompare(b.relative_path)
         );

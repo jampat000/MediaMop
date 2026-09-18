@@ -17,9 +17,9 @@ and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isola
 | [ADR-0007](ADR-0007-module-owned-worker-lanes.md) | Module-owned worker lanes (SQLite) — superseded in part by one lane (#459) |
 | [ADR-0008](ADR-0008-weir-settings-aggregate-runtime-config.md) | `WeirSettings` aggregate for runtime configuration |
 | [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) | Suite-wide timing isolation (durable work) |
-| [ADR-0012](ADR-0012-refiner-preflight-parity-boundary.md) | Refiner preflight parity boundary (FileFlows-aligned) |
+| [ADR-0012](ADR-0012-processing-preflight-parity-boundary.md) | Processing preflight parity boundary (FileFlows-aligned) |
 | [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) | A media manager is a kind, not a product name |
-| [ADR-0014](ADR-0014-refiner-libraries-replace-fixed-scopes.md) | A Refiner library is a row, not one of two fixed scopes |
-| [ADR-0015](ADR-0015-media-manager-port-outbound.md) | Refiner asks a port, and "no answer" is not "nothing" |
+| [ADR-0014](ADR-0014-processing-libraries-replace-fixed-scopes.md) | A Processing library is a row, not one of two fixed scopes |
+| [ADR-0015](ADR-0015-media-manager-port-outbound.md) | Processing asks a port, and "no answer" is not "nothing" |
 | [ADR-0016](ADR-0016-one-thing-that-never-strands-a-file.md) | One thing that never strands a file |
 | [ADR-0017](ADR-0017-backend-on-dotnet.md) | Weir's backend moves to C# on .NET 10 |

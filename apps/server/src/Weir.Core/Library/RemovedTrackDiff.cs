@@ -29,13 +29,13 @@ public static class RemovedTrackDiff
     /// <summary>
     /// The audio languages (or language variants) current rules prefer, normalized and de-duplicated, in the same
     /// order <c>RemuxRules.PlanRemux</c>'s private <c>OrderedPreferenceLangs</c> builds them from
-    /// <see cref="RefinerRulesConfig.PrimaryAudioLang"/>/<see cref="RefinerRulesConfig.SecondaryAudioLang"/>/
-    /// <see cref="RefinerRulesConfig.TertiaryAudioLang"/> (duplicated here rather than exposed from Rules
+    /// <see cref="ProcessingRulesConfig.PrimaryAudioLang"/>/<see cref="ProcessingRulesConfig.SecondaryAudioLang"/>/
+    /// <see cref="ProcessingRulesConfig.TertiaryAudioLang"/> (duplicated here rather than exposed from Rules
     /// because it is a three-line pure helper and Rules' internals stay private to the golden-tested engine).
     /// Normalized with <see cref="LanguageVariants.NormalizeLanguageOrVariant"/>, not <c>RemuxRules.NormalizeLang</c>,
     /// so a configured variant identifier ("fre-CA") survives rather than collapsing to its base ("fre").
     /// </summary>
-    private static HashSet<string> PreferredAudioLangs(RefinerRulesConfig rules)
+    private static HashSet<string> PreferredAudioLangs(ProcessingRulesConfig rules)
     {
         ArgumentNullException.ThrowIfNull(rules);
         var langs = new HashSet<string>(StringComparer.Ordinal);
@@ -52,7 +52,7 @@ public static class RemovedTrackDiff
     }
 
     /// <summary>The subtitle languages (or language variants) current rules would keep; empty when subtitle mode removes everything.</summary>
-    private static HashSet<string> KeptSubtitleLangs(RefinerRulesConfig rules)
+    private static HashSet<string> KeptSubtitleLangs(ProcessingRulesConfig rules)
     {
         ArgumentNullException.ThrowIfNull(rules);
         if (rules.SubtitleMode == RemuxRuleValues.SubtitleModeRemoveAll || rules.SubtitleLangs.Count == 0)
@@ -67,7 +67,7 @@ public static class RemovedTrackDiff
     /// Whether <paramref name="rules"/> would now keep <paramref name="removed"/> if the file still had it.
     /// See the type's remarks for the audio approximation and the variant comparison.
     /// </summary>
-    public static bool WouldNowBeKept(RefinerRulesConfig rules, RemovedTrackRecord removed)
+    public static bool WouldNowBeKept(ProcessingRulesConfig rules, RemovedTrackRecord removed)
     {
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(removed);
@@ -83,7 +83,7 @@ public static class RemovedTrackDiff
     }
 
     /// <summary>The removed tracks of one file that current rules would now keep, in their original order.</summary>
-    public static IReadOnlyList<RemovedTrackRecord> TracksNowWanted(RefinerRulesConfig rules, IReadOnlyList<RemovedTrackRecord> removedTracks)
+    public static IReadOnlyList<RemovedTrackRecord> TracksNowWanted(ProcessingRulesConfig rules, IReadOnlyList<RemovedTrackRecord> removedTracks)
     {
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(removedTracks);
@@ -95,7 +95,7 @@ public static class RemovedTrackDiff
     /// rules would now keep at least one removed track for, in the same order the store returned them.
     /// </summary>
     public static IReadOnlyList<RemovedTrackDiffResult> AffectedFiles(
-        RefinerRulesConfig rules,
+        ProcessingRulesConfig rules,
         IReadOnlyDictionary<RemovedTrackFileKey, IReadOnlyList<RemovedTrackRecord>> removedTracksByFile)
     {
         ArgumentNullException.ThrowIfNull(rules);

@@ -8,14 +8,14 @@ namespace Weir.Core.Jobs;
 /// </summary>
 /// <remarks>
 /// <list type="bullet">
-/// <item>Remux output: <c>tempfile.mkstemp(prefix=f"{src.stem}.refiner.", suffix=src.suffix or ".mkv", dir=work_dir)</c>,
-/// so <c>{stem}.refiner.{8 characters of [a-z0-9_]}{suffix}</c> in the library's work folder.</item>
+/// <item>Remux output: <c>tempfile.mkstemp(prefix=f"{src.stem}.processing.", suffix=src.suffix or ".mkv", dir=work_dir)</c>,
+/// so <c>{stem}.processing.{8 characters of [a-z0-9_]}{suffix}</c> in the library's work folder.</item>
 /// <item>The dry-run placeholder <c>dry-run-ffmpeg-destination-placeholder.mkv</c>.</item>
 /// <item>Atomic output writes: <c>mkstemp(prefix=f".{dst.name}.", suffix=".partial", dir=dst.parent)</c>,
 /// swept by the existing <c>.*.partial</c> glob.</item>
 /// </list>
-/// Python's periodic sweep matches any name containing <c>.refiner.</c>; this is deliberately the
-/// exact <c>mkstemp</c> shape instead, so an operator's own <c>Film.refiner.notes.txt</c> survives.
+/// Python's periodic sweep matches any name containing <c>.processing.</c>; this is deliberately the
+/// exact <c>mkstemp</c> shape instead, so an operator's own <c>Film.processing.notes.txt</c> survives.
 /// </remarks>
 public static partial class WeirTempFiles
 {
@@ -32,7 +32,7 @@ public static partial class WeirTempFiles
     }
 
     /// <summary>
-    /// The remux temp output names for one source file: <c>{stem}.refiner.XXXXXXXX{suffix}</c>, where
+    /// The remux temp output names for one source file: <c>{stem}.processing.XXXXXXXX{suffix}</c>, where
     /// stem and suffix follow Python's <c>PurePath.stem</c> and <c>PurePath.suffix</c>.
     /// </summary>
     public static Regex RemuxTempNameFor(string relativeMediaPath)
@@ -42,7 +42,7 @@ public static partial class WeirTempFiles
         var (stem, suffix) = PythonStemAndSuffix(name);
         var effectiveSuffix = suffix.Length == 0 ? ".mkv" : suffix;
         return new Regex(
-            "^" + Regex.Escape(stem) + @"\.refiner\." + RandomPart + Regex.Escape(effectiveSuffix) + "$",
+            "^" + Regex.Escape(stem) + @"\.processing\." + RandomPart + Regex.Escape(effectiveSuffix) + "$",
             RegexOptions.CultureInvariant,
             TimeSpan.FromSeconds(1));
     }
@@ -80,6 +80,6 @@ public static partial class WeirTempFiles
         return (name[..index], name[index..]);
     }
 
-    [GeneratedRegex(@"^.+\.refiner\.[a-z0-9_]{8}(\.[^.]+)$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^.+\.processing\.[a-z0-9_]{8}(\.[^.]+)$", RegexOptions.CultureInvariant)]
     private static partial Regex RemuxTempName();
 }

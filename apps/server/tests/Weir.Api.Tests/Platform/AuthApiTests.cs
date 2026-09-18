@@ -141,7 +141,7 @@ public sealed class AuthApiTests
             cookie = remote.Cookies["weir_session"];
         }
 
-        await using var second = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_REFINER_WORKER_COUNT", "0")], home: home);
+        await using var second = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0")], home: home);
         var client = new ApiTestClient(second);
         client.SetCookie("weir_session", cookie);
         using var me = await client.GetAsync("/api/v1/auth/me");

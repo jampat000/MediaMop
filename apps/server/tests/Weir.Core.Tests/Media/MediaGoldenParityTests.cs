@@ -75,11 +75,11 @@ public sealed class MediaGoldenParityTests
         }
 
         var constants = root.GetProperty("constants");
-        Assert.True(constants.GetProperty("REFINER_FFMPEG_TIMEOUT_S").GetInt32() == FfmpegCommands.FfmpegTimeoutSeconds, "REFINER_FFMPEG_TIMEOUT_S");
-        Assert.True(constants.GetProperty("REFINER_FFMPEG_SLOW_GRACE_S").GetInt32() == FfmpegCommands.FfmpegSlowGraceSeconds, "REFINER_FFMPEG_SLOW_GRACE_S");
-        Assert.True(constants.GetProperty("REFINER_FFMPEG_MAX_PROJECTED_REMAINING_S").GetInt32() == FfmpegCommands.FfmpegMaxProjectedRemainingSeconds, "REFINER_FFMPEG_MAX_PROJECTED_REMAINING_S");
-        Assert.True(constants.GetProperty("_REFINER_FFPROBE_LOG_MAX_CHARS").GetInt32() == FfmpegCommands.ProbeLogMaxChars, "_REFINER_FFPROBE_LOG_MAX_CHARS");
-        Assert.True(constants.GetProperty("_REFINER_FFMPEG_STDERR_TAIL_BYTES").GetInt32() == FfmpegCommands.FfmpegStderrTailBytes, "_REFINER_FFMPEG_STDERR_TAIL_BYTES");
+        Assert.True(constants.GetProperty("PROCESSING_FFMPEG_TIMEOUT_S").GetInt32() == FfmpegCommands.FfmpegTimeoutSeconds, "PROCESSING_FFMPEG_TIMEOUT_S");
+        Assert.True(constants.GetProperty("PROCESSING_FFMPEG_SLOW_GRACE_S").GetInt32() == FfmpegCommands.FfmpegSlowGraceSeconds, "PROCESSING_FFMPEG_SLOW_GRACE_S");
+        Assert.True(constants.GetProperty("PROCESSING_FFMPEG_MAX_PROJECTED_REMAINING_S").GetInt32() == FfmpegCommands.FfmpegMaxProjectedRemainingSeconds, "PROCESSING_FFMPEG_MAX_PROJECTED_REMAINING_S");
+        Assert.True(constants.GetProperty("_PROCESSING_FFPROBE_LOG_MAX_CHARS").GetInt32() == FfmpegCommands.ProbeLogMaxChars, "_PROCESSING_FFPROBE_LOG_MAX_CHARS");
+        Assert.True(constants.GetProperty("_PROCESSING_FFMPEG_STDERR_TAIL_BYTES").GetInt32() == FfmpegCommands.FfmpegStderrTailBytes, "_PROCESSING_FFMPEG_STDERR_TAIL_BYTES");
         Assert.Equal(Strings(constants.GetProperty("_UNREADABLE_MEDIA_MARKERS")), ProbeOutput.UnreadableMediaMarkers);
     }
 

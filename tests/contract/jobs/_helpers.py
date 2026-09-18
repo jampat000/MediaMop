@@ -14,7 +14,7 @@ VIEWER_PASSWORD = "viewer-password-here"
 
 ALL_STATUSES = ("pending", "leased", "completed", "failed", "handler_ok_finalize_failed", "cancelled")
 
-# ``RefinerLibraryOut`` fields that ``PUT /refiner/libraries/{id}`` does not accept (it forbids extras).
+# ``ProcessingLibraryOut`` fields that ``PUT /processing/libraries/{id}`` does not accept (it forbids extras).
 _LIBRARY_READ_ONLY = frozenset(
     {
         "id",
@@ -38,7 +38,7 @@ def insert_job(
     updated_at: datetime | None = None,
     **columns: Any,
 ) -> int:
-    """One ``refiner_jobs`` row. Extra columns (``attempt_count``, ``last_error``, ...) pass through."""
+    """One ``jobs`` row. Extra columns (``attempt_count``, ``last_error``, ...) pass through."""
 
     stamp = seed.utc_text(updated_at)
     values: dict[str, Any] = {
@@ -51,7 +51,7 @@ def insert_job(
     }
     names = ", ".join(values)
     marks = ", ".join("?" for _ in values)
-    cur = conn.execute(f"INSERT INTO refiner_jobs ({names}) VALUES ({marks})", tuple(values.values()))
+    cur = conn.execute(f"INSERT INTO jobs ({names}) VALUES ({marks})", tuple(values.values()))
     return int(cur.lastrowid or 0)
 
 
@@ -62,7 +62,7 @@ def ensure_viewer(conn: sqlite3.Connection) -> None:
 
 def inspection(client: WeirClient, *, statuses: tuple[str, ...] = (), limit: int = 100) -> dict[str, Any]:
     params: list[tuple[str, str | int]] = [("limit", limit), *(("status", s) for s in statuses)]
-    r = client.get(f"{API}/refiner/jobs/inspection", params=params)
+    r = client.get(f"{API}/processing/jobs/inspection", params=params)
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -80,7 +80,7 @@ def job_by_id(client: WeirClient, job_id: int) -> dict[str, Any]:
 def library_for_scope(client: WeirClient, media_type: str = "movie") -> dict[str, Any]:
     """The library scope-only work resolves to: first of that media type in display order."""
 
-    r = client.get(f"{API}/refiner/libraries")
+    r = client.get(f"{API}/processing/libraries")
     assert r.status_code == 200, r.text
     libraries = sorted(
         (lib for lib in r.json() if lib["media_type"] == media_type), key=lambda lib: (lib["display_order"], lib["id"])
@@ -92,11 +92,11 @@ def library_for_scope(client: WeirClient, media_type: str = "movie") -> dict[str
 def save_library(client: WeirClient, library_id: int, **changes: Any) -> dict[str, Any]:
     """Save one library whole, from its current values plus ``changes``."""
 
-    r = client.get(f"{API}/refiner/libraries/{library_id}")
+    r = client.get(f"{API}/processing/libraries/{library_id}")
     assert r.status_code == 200, r.text
     body = {key: value for key, value in r.json().items() if key not in _LIBRARY_READ_ONLY}
     body.update(changes)
-    saved = client.put_csrf(f"{API}/refiner/libraries/{library_id}", json=body)
+    saved = client.put_csrf(f"{API}/processing/libraries/{library_id}", json=body)
     assert saved.status_code == 200, saved.text
     return saved.json()
 

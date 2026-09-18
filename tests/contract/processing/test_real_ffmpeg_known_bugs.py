@@ -3,15 +3,15 @@
 The fake ffmpeg tool cannot reproduce these: it lets a scenario hand a classification straight to
 Weir (``probe_error=...``), so it never exercises the actual bug, which is in how Weir reads
 ffprobe's own stderr. Empirically checked against the bundled ffmpeg
-(``dist/windows/MediaMopServer/_internal/bin/ffmpeg``) while writing these tests:
+(``dist/windows/WeirServer/_internal/bin/ffmpeg``) while writing these tests:
 
-- ``ffprobe_json`` (``refiner_remux_mux.py``) runs ffprobe with ``-v quiet``. On a zero-filled
+- ``ffprobe_json`` (``processing_remux_mux.py``) runs ffprobe with ``-v quiet``. On a zero-filled
   ``.mkv``, real ffprobe exits 1 with **empty stderr** and stdout ``{\\n\\n}`` — the classification
   markers Weir looks for (``EBML header parsing failed``, etc.) never reach it with ``-v quiet``;
   they are present with ``-v error``. So ``MediaUnreadableError`` can never fire on a real unreadable
   file, and neither can the reject-policy path that depends on it (#539 item 1, #494). Fixed on dotnet:
   ffprobe runs with ``-v error`` (``FfmpegCommands.BuildFfprobeArgv``, #522 part 2) and the reject job
-  handler (``RefinerRejectHandler``, #522 part 4) reports the hand-off ``failed`` with
+  handler (``ProcessingRejectHandler``, #522 part 4) reports the hand-off ``failed`` with
   ``disposition: rejected`` end to end. The Python backend is being retired (ADR-0017) and keeps the bug.
 - ``validate_media_integrity`` runs the primary video through ``ffmpeg ... -f null -`` and only
   fails on a non-zero exit code. On a real MKV truncated after encoding, ffmpeg prints
@@ -57,7 +57,7 @@ def test_unreadable_zero_filled_media_is_classified_unreadable_and_rejected(
     server = server_factory(
         env={
             **real_ffmpeg_env,
-            "WEIR_REFINER_WORKER_COUNT": "1",
+            "WEIR_PROCESSING_WORKER_COUNT": "1",
             "WEIR_MEDIA_MANAGER_WEBHOOK_SECRET": h.WEBHOOK_SECRET,
         }
     )
@@ -79,8 +79,8 @@ def test_unreadable_zero_filled_media_is_classified_unreadable_and_rejected(
         "an unreadable file must never be reported completed with a copy of itself as output (#494)"
     )
 
-    # GET /refiner/files must not 500 after this (#494 item 3 / #530), and must show the rejection.
-    files_response = admin.get(f"{API}/refiner/files")
+    # GET /processing/files must not 500 after this (#494 item 3 / #530), and must show the rejection.
+    files_response = admin.get(f"{API}/processing/files")
     assert files_response.status_code == 200, files_response.text
     row = h.file_row(admin, library["id"], "Zero.Filled.494/film.mkv")
     assert row is not None, "the rejection must leave a Files row behind"
@@ -133,7 +133,7 @@ def test_a_truncated_mkv_never_completes_as_if_it_were_whole(
     server = server_factory(
         env={
             **real_ffmpeg_env,
-            "WEIR_REFINER_WORKER_COUNT": "1",
+            "WEIR_PROCESSING_WORKER_COUNT": "1",
             "WEIR_MEDIA_MANAGER_WEBHOOK_SECRET": h.WEBHOOK_SECRET,
         }
     )

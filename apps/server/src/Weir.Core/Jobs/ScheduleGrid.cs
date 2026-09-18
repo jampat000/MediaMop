@@ -22,7 +22,7 @@ public sealed class ScheduleGridException : Exception
 
 /// <summary>
 /// A 7x24 schedule at 15-minute resolution stored as 672 <c>0</c>/<c>1</c> characters (port of
-/// <c>weir.refiner.refiner_schedule_grid</c>). Day 0 is Monday. An empty grid means no restriction.
+/// <c>weir.processing.processing_schedule_grid</c>). Day 0 is Monday. An empty grid means no restriction.
 /// </summary>
 public static class ScheduleGrid
 {

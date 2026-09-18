@@ -32,8 +32,8 @@
       "required": ["dotnet"]
     },
     {
-      "name": "refiner",
-      "description": "Refiner libraries, rule sets, files, operator and runtime settings, overview stats, direct play, hardware and maintenance APIs.",
+      "name": "libraries",
+      "description": "Libraries, rule sets, files, operator and runtime settings, overview stats, direct play, hardware and maintenance APIs. Named for its dominant subject because \"processing\" is the behaviour area below.",
       "port_issue": 522,
       "required": ["dotnet"]
     },

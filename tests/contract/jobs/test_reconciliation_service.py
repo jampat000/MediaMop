@@ -68,7 +68,7 @@ def test_reconciliation_report_allows_admin(admin: WeirClient) -> None:
 
 TRUSTED = "http://127.0.0.1:9000"
 XRW = {"X-Requested-With": "XMLHttpRequest"}
-REPAIR_BODY = {"action": "remove_refiner_temp_artifact", "path": "/nowhere/.x.partial", "confirm": False}
+REPAIR_BODY = {"action": "remove_processing_temp_artifact", "path": "/nowhere/.x.partial", "confirm": False}
 
 
 def test_reconciliation_repair_requires_a_csrf_token(admin: WeirClient) -> None:

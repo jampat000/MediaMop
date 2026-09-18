@@ -59,7 +59,7 @@ public sealed class SystemEndpointsTests
     public async Task Health_is_unhealthy_when_the_database_cannot_be_reached()
     {
         // No workers, so only the periodic tasks hold the file open, and only briefly.
-        await using var server = await WeirTestServer.StartAsync([("WEIR_REFINER_WORKER_COUNT", "0")]);
+        await using var server = await WeirTestServer.StartAsync([("WEIR_PROCESSING_WORKER_COUNT", "0")]);
         await server.BreakDatabaseAsync();
 
         using var response = await server.Client.GetAsync("/health");
@@ -101,7 +101,7 @@ public sealed class SystemEndpointsTests
             "{\"name\":\"filesystem_watcher\",\"status\":\"ready\",\"detail\":\"No libraries are being watched for filesystem events.\"}]",
             root.GetProperty("steps").GetRawText());
         Assert.Equal(
-            "[{\"module\":\"refiner\",\"expected_workers\":8,\"active_workers\":8,\"stale_workers\":0,\"stopped_workers\":0,\"status\":\"healthy\"," +
+            "[{\"module\":\"processing\",\"expected_workers\":8,\"active_workers\":8,\"stale_workers\":0,\"stopped_workers\":0,\"status\":\"healthy\"," +
             "\"detail\":\"Weir worker heartbeats are current.\"}]",
             root.GetProperty("worker_health").GetRawText());
     }
@@ -117,14 +117,14 @@ public sealed class SystemEndpointsTests
             heartbeats = server.Services.GetRequiredService<WorkerHeartbeats>();
         }
 
-        var lane = Assert.Single(heartbeats.Snapshot([new KeyValuePair<string, int>("refiner", 8)]));
+        var lane = Assert.Single(heartbeats.Snapshot([new KeyValuePair<string, int>("processing", 8)]));
         Assert.Equal(("degraded", 0, 8), (lane.Status, lane.ActiveWorkers, lane.StoppedWorkers));
     }
 
     [Fact]
     public async Task Readiness_is_ready_when_workers_are_turned_off()
     {
-        await using var server = await WeirTestServer.StartAsync([("WEIR_REFINER_WORKER_COUNT", "0")], signedIn: true);
+        await using var server = await WeirTestServer.StartAsync([("WEIR_PROCESSING_WORKER_COUNT", "0")], signedIn: true);
 
         using var detailed = await server.Client.GetAsync("/api/v1/system/readiness");
         using var brief = await server.Client.GetAsync("/ready");

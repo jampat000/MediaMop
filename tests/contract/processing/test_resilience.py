@@ -1,7 +1,7 @@
 """Black-box processing: work that is interrupted, paused, or outside its schedule.
 
 Covers behaviour the backend tested from the inside in test_startup_crash_recovery.py and
-test_refiner_schedules_and_pause.py.
+test_processing_schedules_and_pause.py.
 """
 
 from __future__ import annotations

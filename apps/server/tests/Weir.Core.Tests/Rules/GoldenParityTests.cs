@@ -314,7 +314,7 @@ public sealed class GoldenParityTests
     // --- running a case ----------------------------------------------------------------
 
     /// <summary>The sequence <c>file_remux_pass/run.py</c> runs, as the generator records it.</summary>
-    private static void WritePlanOutcome(Utf8JsonWriter writer, ProbeResult probe, RefinerRulesConfig config)
+    private static void WritePlanOutcome(Utf8JsonWriter writer, ProbeResult probe, ProcessingRulesConfig config)
     {
         string json;
         try
@@ -333,7 +333,7 @@ public sealed class GoldenParityTests
         result.RootElement.WriteTo(writer);
     }
 
-    private static void WritePlanResult(Utf8JsonWriter writer, ProbeResult probe, RefinerRulesConfig config)
+    private static void WritePlanResult(Utf8JsonWriter writer, ProbeResult probe, ProcessingRulesConfig config)
     {
         var split = RemuxRules.SplitStreams(probe);
         var attachments = RemuxRules.AttachmentStreams(probe);
@@ -451,7 +451,7 @@ public sealed class GoldenParityTests
         writer.WriteEndObject();
     }
 
-    private static void WriteConfig(Utf8JsonWriter writer, RefinerRulesConfig config)
+    private static void WriteConfig(Utf8JsonWriter writer, ProcessingRulesConfig config)
     {
         writer.WriteStartObject();
         writer.WriteString("primary_audio_lang", config.PrimaryAudioLang);
@@ -474,10 +474,10 @@ public sealed class GoldenParityTests
         writer.WriteEndObject();
     }
 
-    private static RefinerRulesConfig ReadConfig(JsonElement json)
+    private static ProcessingRulesConfig ReadConfig(JsonElement json)
     {
         var metadata = json.GetProperty("metadata");
-        return new RefinerRulesConfig
+        return new ProcessingRulesConfig
         {
             PrimaryAudioLang = json.GetProperty("primary_audio_lang").GetString()!,
             SecondaryAudioLang = json.GetProperty("secondary_audio_lang").GetString()!,

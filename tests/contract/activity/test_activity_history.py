@@ -17,7 +17,7 @@ from tests.contract.support.polling import wait_until
 
 @pytest.fixture
 def seeded(server, admin, client_factory) -> WeirClient:
-    """The four Refiner results and two processing records; returns a fresh admin client."""
+    """The four Processing results and two processing records; returns a fresh admin client."""
 
     with seed.stopped(server) as conn:
         seed_history(conn)
@@ -27,8 +27,8 @@ def seeded(server, admin, client_factory) -> WeirClient:
 
 
 def _titles(client: WeirClient, **params: object) -> list[str]:
-    # Signing in records its own event; these tests are about the Refiner history they seeded.
-    r = client.get(f"{API}/activity/recent", params={"module": "refiner", **params})
+    # Signing in records its own event; these tests are about the Processing history they seeded.
+    r = client.get(f"{API}/activity/recent", params={"module": "processing", **params})
     assert r.status_code == 200, r.text
     return sorted(item["title"] for item in r.json()["items"])
 
@@ -42,7 +42,7 @@ def test_history_filters_on_why_how_where_and_which_file(seeded: WeirClient) -> 
 
 
 def test_the_page_is_told_how_far_back_history_goes(seeded: WeirClient) -> None:
-    r = seeded.get(f"{API}/activity/recent", params={"module": "refiner"})
+    r = seeded.get(f"{API}/activity/recent", params={"module": "processing"})
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["retention_days"] == 90
@@ -59,7 +59,7 @@ def test_a_filtered_range_exports_as_csv_and_json(seeded: WeirClient) -> None:
     assert sorted(r["title"] for r in rows) == ["Heat failed", "Heat was handed back"]
     assert {r["trigger"] for r in rows} == {"scheduled", "retry"}
 
-    as_json = client.get(f"{API}/activity/export", params={"format": "json", "trigger": "manual", "module": "refiner"})
+    as_json = client.get(f"{API}/activity/export", params={"format": "json", "trigger": "manual", "module": "processing"})
     assert as_json.status_code == 200
     assert [r["title"] for r in as_json.json()] == ["Alien processed"]
 
@@ -84,7 +84,7 @@ def test_removing_one_files_history_says_what_goes_then_removes_only_that(
 
     assert _titles(client) == ["Alien processed", "Show processed"]
     with seed.stopped(server) as conn:
-        remaining = seed.rows(conn, "SELECT relative_path FROM refiner_file_logs ORDER BY id")
+        remaining = seed.rows(conn, "SELECT relative_path FROM file_logs ORDER BY id")
     assert [r["relative_path"] for r in remaining] == ["Alien/alien.mkv"]
     assert media.read_bytes() == b"not touched"
 
@@ -144,19 +144,19 @@ def _put_activity_retention(client: WeirClient, days: int) -> None:
 def _insert_terminal_job(conn, *, dedupe_key: str, age: timedelta) -> None:
     stamp = seed.utc_text(datetime.now(UTC) - age)
     conn.execute(
-        "INSERT INTO refiner_jobs (dedupe_key, job_kind, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (dedupe_key, "refiner.work_temp_stale_sweep.v1", "completed", stamp, stamp),
+        "INSERT INTO jobs (dedupe_key, job_kind, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+        (dedupe_key, "processing.work_temp_stale_sweep.v1", "completed", stamp, stamp),
     )
 
 
-def _recent_refiner_titles(client: WeirClient) -> list[str]:
-    r = client.get(f"{API}/activity/recent", params={"module": "refiner", "limit": 100})
+def _recent_processing_titles(client: WeirClient) -> list[str]:
+    r = client.get(f"{API}/activity/recent", params={"module": "processing", "limit": 100})
     assert r.status_code == 200, r.text
     return sorted(item["title"] for item in r.json()["items"])
 
 
 def _job_keys(client: WeirClient) -> set[str]:
-    r = client.get(f"{API}/refiner/jobs/inspection", params={"status": "completed", "limit": 100})
+    r = client.get(f"{API}/processing/jobs/inspection", params={"status": "completed", "limit": 100})
     assert r.status_code == 200, r.text
     return {job["dedupe_key"] for job in r.json()["jobs"]}
 
@@ -169,14 +169,14 @@ def test_activity_older_than_the_horizon_is_pruned_and_zero_keeps_everything(ser
 
     now = datetime.now(UTC)
     with seed.stopped(sut) as conn:
-        insert_event(conn, event_type="a.old", module="refiner", title="old", created_at=now - timedelta(days=91))
-        insert_event(conn, event_type="a.new", module="refiner", title="new", created_at=now - timedelta(days=89))
+        insert_event(conn, event_type="a.old", module="processing", title="old", created_at=now - timedelta(days=91))
+        insert_event(conn, event_type="a.new", module="processing", title="new", created_at=now - timedelta(days=89))
         # A finished job past the job-row horizon: its removal shows the retention pass has run.
         _insert_terminal_job(conn, dedupe_key="marker-old-job", age=timedelta(days=200))
     client = client_factory(sut)
     client.login()
     wait_until(lambda: "marker-old-job" not in _job_keys(client), timeout_s=30, what="the retention pass to run")
-    assert _recent_refiner_titles(client) == ["new", "old"]
+    assert _recent_processing_titles(client) == ["new", "old"]
 
     _put_activity_retention(client, 90)
     with seed.stopped(sut) as conn:
@@ -185,7 +185,7 @@ def test_activity_older_than_the_horizon_is_pruned_and_zero_keeps_everything(ser
         _insert_terminal_job(conn, dedupe_key="job-89-days", age=timedelta(days=89))
     client = client_factory(sut)
     client.login()
-    wait_until(lambda: _recent_refiner_titles(client) == ["new"], timeout_s=30, what="the old event to be pruned")
+    wait_until(lambda: _recent_processing_titles(client) == ["new"], timeout_s=30, what="the old event to be pruned")
     keys = _job_keys(client)
     assert "job-91-days" not in keys
     assert "job-89-days" in keys

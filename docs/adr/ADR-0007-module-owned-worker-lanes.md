@@ -2,20 +2,20 @@
 
 ## Status
 
-Accepted — **three module lanes** are live at head: ``refiner_jobs``, ``pruner_jobs``, ``subber_jobs`` (see tables below).
+Accepted — **three module lanes** are live at head: ``jobs``, ``pruner_jobs``, ``subber_jobs`` (see tables below).
 
 > **Update (2026-08-28): Subber moved to Deluno.** This ADR is left as it was written — an ADR records the decision, not the current file list — but wherever it names Subber, read it as an example rather than as a lane that still exists. The ``subber_jobs`` table is dropped by migration ``0010_drop_subber_tables``, and ``subber.`` is now an abandoned prefix refused on every remaining lane, alongside ``trimmer.``.
 >
 > **Update (2026-09-17): Pruner moved to Deluno (#473).** Read Pruner here the same way as Subber: an example, not a lane that still exists. Its tables are dropped by migration ``0036_drop_pruner_tables``, and ``pruner.`` is now an abandoned prefix refused on every remaining lane.
 >
-> **Update (2026-09-17): one application, one lane (#459).** With Pruner gone, Refiner is the only thing left that owns durable work, so the module layer is removed and this ADR no longer describes a live boundary. There is one jobs table (``refiner_jobs``) and one worker pool. What this ADR decided about module-to-module separation is superseded; two parts survive:
+> **Update (2026-09-17): one application, one lane (#459).** With Pruner gone, Processing is the only thing left that owns durable work, so the module layer is removed and this ADR no longer describes a live boundary. There is one jobs table (``jobs``) and one worker pool. What this ADR decided about module-to-module separation is superseded; two parts survive:
 >
-> - **Retired prefixes are still refused.** ``trimmer.``, ``subber.`` and ``pruner.`` (plus the two retired ``refiner.*`` families) are refused at enqueue and at claim, so a stale row from an older install is failed rather than run. That guard moved from ``weir/modules/queue_worker/job_kind_boundaries.py`` to ``apps/backend/src/weir/refiner/job_kind_guard.py``.
-> - **The admission predicate is unchanged.** Schedules, the pause switch and blocked libraries still narrow which row a claim may take (``apps/backend/src/weir/refiner/jobs_ops.py``), and crash recovery is unchanged.
+> - **Retired prefixes are still refused.** ``trimmer.``, ``subber.`` and ``pruner.`` (plus the two retired ``processing.*`` families) are refused at enqueue and at claim, so a stale row from an older install is failed rather than run. That guard moved from ``weir/modules/queue_worker/job_kind_boundaries.py`` to ``apps/backend/src/weir/processing/job_kind_guard.py``.
+> - **The admission predicate is unchanged.** Schedules, the pause switch and blocked libraries still narrow which row a claim may take (``apps/backend/src/weir/processing/jobs_ops.py``), and crash recovery is unchanged.
 >
-> Paths below that start ``modules/refiner/`` now live under ``apps/backend/src/weir/refiner/``. Job-kind strings and table names stored in the database are not renamed.
+> Paths below that start ``modules/processing/`` now live under ``apps/backend/src/weir/processing/``. Job-kind strings and table names stored in the database are not renamed.
 
-Reserved non-lane ``job_kind`` prefixes (see ``job_kind_boundaries.py``) must never be enqueued on Refiner, Pruner, or Subber tables.
+Reserved non-lane ``job_kind`` prefixes (see ``job_kind_boundaries.py``) must never be enqueued on Processing, Pruner, or Subber tables.
 
 ## Context
 
@@ -31,32 +31,32 @@ Weir is **SQLite-first**: one writer per database. Durable background work must 
 4. **Enqueue / claim / worker startup** for a module stay in that module’s package (composition root may wire lifespan only).
 5. **Cross-lane prefixes are rejected** at enqueue and at worker claim boundaries (see `weir.modules.queue_worker.job_kind_boundaries`).
 
-### Refiner lane (implemented substrate)
+### Processing lane (implemented substrate)
 
 | Artifact | Name |
 |----------|------|
-| SQL table | `refiner_jobs` |
-| ORM model | `RefinerJob` |
-| Status enum | `RefinerJobStatus` |
-| Enqueue | `refiner_enqueue_or_get_job` |
-| Claim | `claim_next_eligible_refiner_job` |
-| Worker entry | `start_refiner_worker_background_tasks` |
-| Worker count env | `WEIR_REFINER_WORKER_COUNT` |
-| Reserved `job_kind` prefix (new durable Refiner work) | **`refiner.`** |
+| SQL table | `jobs` |
+| ORM model | `ProcessingJob` |
+| Status enum | `ProcessingJobStatus` |
+| Enqueue | `processing_enqueue_or_get_job` |
+| Claim | `claim_next_eligible_processing_job` |
+| Worker entry | `start_processing_worker_background_tasks` |
+| Worker count env | `WEIR_PROCESSING_WORKER_COUNT` |
+| Reserved `job_kind` prefix (new durable Processing work) | **`processing.`** |
 
-**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs`` (including ``refiner.file.remux_pass.v1`` for per-file ffprobe + remux planning / optional ffmpeg, and ``refiner.watched_folder.remux_scan_dispatch.v1`` for a watched-folder scan that classifies media candidates and may enqueue per-file remux jobs — manual POST plus optional Refiner-only periodic enqueue driven by ``WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` env at process start). Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test. Per-file remux enqueue: ``POST /api/v1/refiner/jobs/file-remux-pass/enqueue``; watched-folder scan enqueue: ``POST /api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue``; persisted-queue inspection (read lifecycle from ``refiner_jobs``): ``GET /api/v1/refiner/jobs/inspection``; optional pending-only abandon: ``POST /api/v1/refiner/jobs/{id}/cancel-pending`` (operators; CSRF); watched/work/output roots: persisted Refiner path settings (``GET/PUT /api/v1/refiner/path-settings`` on singleton ``refiner_path_settings``). Read-only worker snapshot for operators: ``GET /api/v1/refiner/runtime-settings`` (maps ``WEIR_REFINER_WORKER_COUNT`` after clamp; Refiner-only; not a cross-lane control).
+**Processing today:** shipped production durable kinds use **`processing.*`** only on ``jobs`` (including ``processing.file.remux_pass.v1`` for per-file ffprobe + remux planning / optional ffmpeg, and ``processing.watched_folder.remux_scan_dispatch.v1`` for a watched-folder scan that classifies media candidates and may enqueue per-file remux jobs — manual POST plus optional Processing-only periodic enqueue driven by ``WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` env at process start). Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test. Per-file remux enqueue: ``POST /api/v1/processing/jobs/file-remux-pass/enqueue``; watched-folder scan enqueue: ``POST /api/v1/processing/jobs/watched-folder-remux-scan-dispatch/enqueue``; persisted-queue inspection (read lifecycle from ``jobs``): ``GET /api/v1/processing/jobs/inspection``; optional pending-only abandon: ``POST /api/v1/processing/jobs/{id}/cancel-pending`` (operators; CSRF); watched/work/output roots: persisted Processing path settings (``GET/PUT /api/v1/processing/path-settings`` on singleton ``processing_path_settings``). Read-only worker snapshot for operators: ``GET /api/v1/processing/runtime-settings`` (maps ``WEIR_PROCESSING_WORKER_COUNT`` after clamp; Processing-only; not a cross-lane control).
 
-**Suggested file map (Refiner)**
+**Suggested file map (Processing)**
 
-- `modules/refiner/jobs_model.py`
-- `modules/refiner/jobs_ops.py`
-- `modules/refiner/worker_loop.py`
-- `modules/refiner/worker_limits.py`
-- `modules/refiner/inspection_service.py`
-- Refiner inspection/recovery HTTP schemas ship only when Refiner exposes operator APIs for `refiner_jobs`.
-- `modules/refiner/router.py` (Refiner-native HTTP only)
+- `modules/processing/jobs_model.py`
+- `modules/processing/jobs_ops.py`
+- `modules/processing/worker_loop.py`
+- `modules/processing/worker_limits.py`
+- `modules/processing/inspection_service.py`
+- Processing inspection/recovery HTTP schemas ship only when Processing exposes operator APIs for `jobs`.
+- `modules/processing/router.py` (Processing-native HTTP only)
 
-**Refiner must not own:** legacy or foreign queue prefixes (e.g. ``missing_search.``, ``upgrade_search.`` when not ``refiner.*``), ``pruner.*``, ``subber.*``, or legacy ``trimmer.*`` (enforced in code).
+**Processing must not own:** legacy or foreign queue prefixes (e.g. ``missing_search.``, ``upgrade_search.`` when not ``processing.*``), ``pruner.*``, ``subber.*``, or legacy ``trimmer.*`` (enforced in code).
 
 ---
 
@@ -112,7 +112,7 @@ Weir is **SQLite-first**: one writer per database. Durable background work must 
 
 ## Consequences
 
-- Adding a new **function** in Refiner, Pruner, or Subber is a new **`job_kind`** under that module’s reserved prefix — not a new table unless isolation is proven necessary.
+- Adding a new **function** in Processing, Pruner, or Subber is a new **`job_kind`** under that module’s reserved prefix — not a new table unless isolation is proven necessary.
 - **Cross-lane guards** in `job_kind_boundaries.py` must be extended when a new top-level module gains its own lane (add prefix to forbidden lists on sibling enqueue paths).
 
 ## References

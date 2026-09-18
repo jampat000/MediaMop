@@ -41,7 +41,7 @@ The **Weir** product in this monorepo includes the FastAPI backend and the Vite 
 ## Current implementation snapshot
 
 - **`weir.core.db`**: sync SQLite `Engine` + `sessionmaker`, PRAGMA hooks on connect.
-- ORM tables include **`users`**, **`user_sessions`**, **`activity_events`**, module-owned job tables (e.g. **`refiner_jobs`**, **`pruner_jobs`**, **`subber_jobs`**) via Alembic.
+- ORM tables include **`users`**, **`user_sessions`**, **`activity_events`**, module-owned job tables (e.g. **`jobs`**, **`pruner_jobs`**, **`subber_jobs`**) via Alembic.
 - **`weir.core.config`**: resolves paths and builds the SQLite SQLAlchemy URL.
 
 ## Historical note

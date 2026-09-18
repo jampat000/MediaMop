@@ -6,7 +6,7 @@
 
 ## Context
 
-Weir started as MediaMop, a Python (FastAPI, SQLAlchemy, Alembic) backend with a React + TypeScript web app. The product has since narrowed to one job: a processing stage between a media manager's completed downloads and its import, and soon also its library (library mode, #505). It is **Windows first**, with Linux and Docker as full targets.
+Weir started as Weir, a Python (FastAPI, SQLAlchemy, Alembic) backend with a React + TypeScript web app. The product has since narrowed to one job: a processing stage between a media manager's completed downloads and its import, and soon also its library (library mode, #505). It is **Windows first**, with Linux and Docker as full targets.
 
 The rename to Weir (#458) was already a reset: no installs, no compatibility promises. That made it the one cheap moment to ask whether the stack is the right one, independent of what exists.
 
@@ -80,5 +80,5 @@ The .NET server passed the full contract suite, E2E and the packaged Windows smo
 - `apps/backend` and every Python-only script, lock file and tool configuration are deleted. Python remains only as the interpreter for the outside test runners (`tests/contract`, `tests/e2e`, `scripts/live-packaged-e2e.py`), pinned in `tests/requirements.txt`; they judge the server over HTTP and never import it.
 - **The schema freeze is lifted.** The .NET migrations in `apps/server/src/Weir.Infrastructure/Migrations` are now the only source of the SQLite schema, and the next migration may diverge from the old Alembic head `0036_drop_pruner_tables`. The checked-in `alembic-head.sql` stays as a frozen reference for the baseline; nothing regenerates it. The golden rules and ffmpeg fixtures are likewise maintained by hand as .NET test fixtures now.
 - The product version moved from `apps/backend/pyproject.toml` to `WeirVersion` in `apps/server/Directory.Build.props`.
-- Not ported yet, and tracked separately: the filesystem watcher (new files are found by the periodic scan only) and Refiner library discovery/unlink (`OpenApiDocumentParityTests.KnownGaps`).
+- Not ported yet, and tracked separately: the filesystem watcher (new files are found by the periodic scan only) and Processing library discovery/unlink (`OpenApiDocumentParityTests.KnownGaps`).
 - Features that waited on the switch (library mode #505–#509, track rules #495–#498, #500–#503) are built in C# from here.

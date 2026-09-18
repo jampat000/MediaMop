@@ -59,31 +59,31 @@ public sealed class WeirOptionsDefaultsTests
     }
 
     [Fact]
-    public void Refiner()
+    public void Processing()
     {
-        Assert.Equal(8, Defaults.RefinerWorkerCount);
-        Assert.Equal(300, Defaults.RefinerJobLeaseSeconds);
-        Assert.True(Defaults.RefinerWatcherEnabled);
-        Assert.Equal(3.0, Defaults.RefinerWatcherDebounceSeconds);
-        Assert.True(Defaults.RefinerWatchedFolderRemuxScanDispatchScheduleEnabled);
-        Assert.True(Defaults.RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs);
-        Assert.Equal(10, Defaults.RefinerProbeSizeMb);
-        Assert.Equal(10, Defaults.RefinerAnalyzeDurationSeconds);
-        Assert.Equal(300, Defaults.RefinerWatchedFolderMinFileAgeSeconds);
-        Assert.Equal(48 * 3600, Defaults.RefinerMovieOutputCleanupMinAgeSeconds);
-        Assert.Equal(48 * 3600, Defaults.RefinerTvOutputCleanupMinAgeSeconds);
-        Assert.False(Defaults.RefinerWorkTempStaleSweepMovieScheduleEnabled);
-        Assert.Equal(3600, Defaults.RefinerWorkTempStaleSweepMovieScheduleIntervalSeconds);
-        Assert.False(Defaults.RefinerWorkTempStaleSweepTvScheduleEnabled);
-        Assert.Equal(3600, Defaults.RefinerWorkTempStaleSweepTvScheduleIntervalSeconds);
-        Assert.Equal(86_400, Defaults.RefinerWorkTempStaleSweepMinStaleAgeSeconds);
-        Assert.False(Defaults.RefinerMovieFailureCleanupScheduleEnabled);
-        Assert.Equal(3600, Defaults.RefinerMovieFailureCleanupScheduleIntervalSeconds);
-        Assert.False(Defaults.RefinerTvFailureCleanupScheduleEnabled);
-        Assert.Equal(3600, Defaults.RefinerTvFailureCleanupScheduleIntervalSeconds);
-        Assert.Equal(1800, Defaults.RefinerMovieFailureCleanupGracePeriodSeconds);
-        Assert.Equal(1800, Defaults.RefinerTvFailureCleanupGracePeriodSeconds);
-        Assert.Null(Defaults.RefinerRemuxMediaRoot);
+        Assert.Equal(8, Defaults.ProcessingWorkerCount);
+        Assert.Equal(300, Defaults.ProcessingJobLeaseSeconds);
+        Assert.True(Defaults.ProcessingWatcherEnabled);
+        Assert.Equal(3.0, Defaults.ProcessingWatcherDebounceSeconds);
+        Assert.True(Defaults.ProcessingWatchedFolderRemuxScanDispatchScheduleEnabled);
+        Assert.True(Defaults.ProcessingWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs);
+        Assert.Equal(10, Defaults.ProcessingProbeSizeMb);
+        Assert.Equal(10, Defaults.ProcessingAnalyzeDurationSeconds);
+        Assert.Equal(300, Defaults.ProcessingWatchedFolderMinFileAgeSeconds);
+        Assert.Equal(48 * 3600, Defaults.ProcessingMovieOutputCleanupMinAgeSeconds);
+        Assert.Equal(48 * 3600, Defaults.ProcessingTvOutputCleanupMinAgeSeconds);
+        Assert.False(Defaults.ProcessingWorkTempStaleSweepMovieScheduleEnabled);
+        Assert.Equal(3600, Defaults.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds);
+        Assert.False(Defaults.ProcessingWorkTempStaleSweepTvScheduleEnabled);
+        Assert.Equal(3600, Defaults.ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds);
+        Assert.Equal(86_400, Defaults.ProcessingWorkTempStaleSweepMinStaleAgeSeconds);
+        Assert.False(Defaults.ProcessingMovieFailureCleanupScheduleEnabled);
+        Assert.Equal(3600, Defaults.ProcessingMovieFailureCleanupScheduleIntervalSeconds);
+        Assert.False(Defaults.ProcessingTvFailureCleanupScheduleEnabled);
+        Assert.Equal(3600, Defaults.ProcessingTvFailureCleanupScheduleIntervalSeconds);
+        Assert.Equal(1800, Defaults.ProcessingMovieFailureCleanupGracePeriodSeconds);
+        Assert.Equal(1800, Defaults.ProcessingTvFailureCleanupGracePeriodSeconds);
+        Assert.Null(Defaults.ProcessingRemuxMediaRoot);
     }
 
     [Fact]

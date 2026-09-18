@@ -20,7 +20,7 @@ public sealed record HandoffLedgerRow(
     string? Message,
     DateTimeOffset? LastChangedAt);
 
-/// <summary>The <c>refiner_files</c> columns the ledger reads.</summary>
+/// <summary>The <c>files</c> columns the ledger reads.</summary>
 public sealed record HandoffFileRow(long Id, string RelativePath, string Status, string StatusReason, long FailureAttempts, DateTimeOffset? NextRetryAt, DateTimeOffset? UpdatedAt);
 
 /// <summary>
@@ -134,7 +134,7 @@ public sealed class HandoffLedgerStore
 
         var path = row.RelativePath.TrimEnd('/');
         var rows = await uow.QueryAsync(
-            "SELECT id, relative_path, status, status_reason, failure_attempts, next_retry_at, updated_at FROM refiner_files " +
+            "SELECT id, relative_path, status, status_reason, failure_attempts, next_retry_at, updated_at FROM files " +
             "WHERE library_id = $library",
             reader => new HandoffFileRow(
                 SqliteValues.GetInt64(reader, 0),
@@ -160,7 +160,7 @@ public sealed class HandoffLedgerStore
     /// comparison is still done in SQL (<c>substr(...) =</c>, SQLite's default <c>BINARY</c>/case-sensitive
     /// collation for <c>=</c>) since it can stay parameterised alongside this query's other conditions.
     /// </summary>
-    public static async Task<List<RefinerJob>> JobsForAsync(UnitOfWork uow, HandoffLedgerRow row)
+    public static async Task<List<ProcessingJob>> JobsForAsync(UnitOfWork uow, HandoffLedgerRow row)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(row);
@@ -191,29 +191,29 @@ public sealed class HandoffLedgerStore
             }
         }
 
-        parameters.Add(("$pending", RefinerJobStatus.Pending));
-        parameters.Add(("$leased", RefinerJobStatus.Leased));
-        parameters.Add(("$failed", RefinerJobStatus.Failed));
+        parameters.Add(("$pending", ProcessingJobStatus.Pending));
+        parameters.Add(("$leased", ProcessingJobStatus.Leased));
+        parameters.Add(("$failed", ProcessingJobStatus.Failed));
         parameters.Add(("$pass_kind", IntakeRules.PassThroughJobKind));
         parameters.Add(("$reject_kind", IntakeRules.RejectJobKind));
         // #545 item 3: a pass-through or reject job that exhausted its own retries drops out of pending/leased, but it
         // is still an undelivered outcome the manager needs to hear about (as failed, with the reason) rather than
         // silently vanishing from the ledger's view.
         return await uow.QueryAsync(
-            $"SELECT {JobColumns} FROM refiner_jobs WHERE ({string.Join(" OR ", conditions)}) AND " +
+            $"SELECT {JobColumns} FROM jobs WHERE ({string.Join(" OR ", conditions)}) AND " +
             "(status IN ($pending, $leased) OR (status = $failed AND job_kind IN ($pass_kind, $reject_kind)))",
             ReadJob,
             [.. parameters]).ConfigureAwait(false);
     }
 
     /// <summary><c>_queue_position</c>: pending jobs ahead of this one, plus one.</summary>
-    public static async Task<long> QueuePositionAsync(UnitOfWork uow, RefinerJob job)
+    public static async Task<long> QueuePositionAsync(UnitOfWork uow, ProcessingJob job)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(job);
         var ahead = await uow.CountAsync(
-            "SELECT count(id) FROM refiner_jobs WHERE status = $pending AND (priority > $priority OR (priority = $priority AND id < $id))",
-            ("$pending", RefinerJobStatus.Pending),
+            "SELECT count(id) FROM jobs WHERE status = $pending AND (priority > $priority OR (priority = $priority AND id < $id))",
+            ("$pending", ProcessingJobStatus.Pending),
             ("$priority", job.Priority),
             ("$id", job.Id)).ConfigureAwait(false);
         return ahead + 1;
@@ -252,14 +252,14 @@ public sealed class HandoffLedgerStore
                 // #545 item 3: a pass-through or reject job that exhausted its own retries is a final, undelivered
                 // outcome — report it as failed, with the reason the job itself recorded, rather than let it vanish
                 // once it drops out of pending/leased (JobsForAsync still returns it for exactly this reason).
-                if (job.Status == RefinerJobStatus.Failed)
+                if (job.Status == ProcessingJobStatus.Failed)
                 {
                     states.Add(HandoffLedgerRules.Failed);
                     message ??= string.IsNullOrEmpty(job.LastError) ? "Weir could not hand this file back to your media manager." : job.LastError;
                     continue;
                 }
 
-                if (job.Status == RefinerJobStatus.Leased)
+                if (job.Status == ProcessingJobStatus.Leased)
                 {
                     states.Add(HandoffLedgerRules.Working);
                     continue;
@@ -390,7 +390,7 @@ public sealed class HandoffLedgerStore
     /// <summary>
     /// <c>cancel_handoff</c>: drop a hand-off that has not started. Never touches a file and never stops running work.
     /// </summary>
-    public async Task<(bool Cancelled, string Sentence)> CancelAsync(UnitOfWork uow, RefinerJobStore jobs, HandoffLedgerRow row)
+    public async Task<(bool Cancelled, string Sentence)> CancelAsync(UnitOfWork uow, ProcessingJobStore jobs, HandoffLedgerRow row)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(jobs);
@@ -403,16 +403,16 @@ public sealed class HandoffLedgerStore
 
         foreach (var job in await JobsForAsync(uow, row).ConfigureAwait(false))
         {
-            if (job.Status != RefinerJobStatus.Pending)
+            if (job.Status != ProcessingJobStatus.Pending)
             {
                 continue;
             }
 
             await uow.ExecuteAsync(
-                "UPDATE refiner_jobs SET dedupe_key = $dedupe, status = $status, lease_owner = NULL, lease_expires_at = NULL, " +
+                "UPDATE jobs SET dedupe_key = $dedupe, status = $status, lease_owner = NULL, lease_expires_at = NULL, " +
                 "last_error = $error, updated_at = CURRENT_TIMESTAMP WHERE id = $id",
                 ("$dedupe", JobQueueRules.TombstoneCancelledDedupeKey(job.DedupeKey, job.Id)),
-                ("$status", RefinerJobStatus.Cancelled),
+                ("$status", ProcessingJobStatus.Cancelled),
                 ("$error", JobQueueRules.CancelledByOperatorError),
                 ("$id", job.Id)).ConfigureAwait(false);
         }
@@ -422,7 +422,7 @@ public sealed class HandoffLedgerStore
             if (file.NextRetryAt is not null)
             {
                 await uow.ExecuteAsync(
-                    "UPDATE refiner_files SET next_retry_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $id",
+                    "UPDATE files SET next_retry_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $id",
                     ("$id", file.Id)).ConfigureAwait(false);
             }
         }
@@ -475,7 +475,7 @@ public sealed class HandoffLedgerStore
         SqliteValues.GetStringOrNull(reader, 7),
         PythonTimestamps.Parse(reader.GetValue(8)));
 
-    internal static RefinerJob ReadJob(SqliteDataReader reader) => new(
+    internal static ProcessingJob ReadJob(SqliteDataReader reader) => new(
         reader.GetInt64(0),
         reader.GetString(1),
         reader.GetString(2),

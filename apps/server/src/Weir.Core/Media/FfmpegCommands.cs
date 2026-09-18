@@ -4,27 +4,27 @@ using Weir.Core.Rules;
 namespace Weir.Core.Media;
 
 /// <summary>
-/// The ffprobe and ffmpeg command lines from <c>refiner_remux_mux.py</c>, token for token. Paths are
+/// The ffprobe and ffmpeg command lines from <c>processing_remux_mux.py</c>, token for token. Paths are
 /// taken as the strings the caller already holds (the reference passes <c>str(path)</c>).
 /// </summary>
 public static class FfmpegCommands
 {
-    /// <summary><c>REFINER_FFMPEG_TIMEOUT_S</c>: the wall-clock limit for one ffmpeg run.</summary>
+    /// <summary><c>PROCESSING_FFMPEG_TIMEOUT_S</c>: the wall-clock limit for one ffmpeg run.</summary>
     public const int FfmpegTimeoutSeconds = 3600;
 
-    /// <summary><c>REFINER_FFMPEG_SLOW_GRACE_S</c>: projections are ignored for the first minute.</summary>
+    /// <summary><c>PROCESSING_FFMPEG_SLOW_GRACE_S</c>: projections are ignored for the first minute.</summary>
     public const int FfmpegSlowGraceSeconds = 60;
 
-    /// <summary><c>REFINER_FFMPEG_MAX_PROJECTED_REMAINING_S</c>: twelve hours.</summary>
+    /// <summary><c>PROCESSING_FFMPEG_MAX_PROJECTED_REMAINING_S</c>: twelve hours.</summary>
     public const int FfmpegMaxProjectedRemainingSeconds = 12 * 60 * 60;
 
     /// <summary>ffprobe's default time limit in <c>ffprobe_json</c>.</summary>
     public const int FfprobeTimeoutSeconds = 120;
 
-    /// <summary><c>_REFINER_FFPROBE_LOG_MAX_CHARS</c>.</summary>
+    /// <summary><c>_PROCESSING_FFPROBE_LOG_MAX_CHARS</c>.</summary>
     public const int ProbeLogMaxChars = 2000;
 
-    /// <summary><c>_REFINER_FFMPEG_STDERR_TAIL_BYTES</c>: how much of ffmpeg's stderr a failure message keeps.</summary>
+    /// <summary><c>_PROCESSING_FFMPEG_STDERR_TAIL_BYTES</c>: how much of ffmpeg's stderr a failure message keeps.</summary>
     public const int FfmpegStderrTailBytes = 32 * 1024;
 
     /// <summary>The ffmpeg wait after its progress stream closes (<c>proc.wait(timeout=5)</c>).</summary>
@@ -325,7 +325,7 @@ public static class FfmpegCommands
         return result;
     }
 
-    /// <summary><c>logger.debug("Refiner: ffmpeg %s", " ".join(argv[:8]) + " ...")</c>.</summary>
+    /// <summary><c>logger.debug("Processing: ffmpeg %s", " ".join(argv[:8]) + " ...")</c>.</summary>
     public static string DebugSummary(IReadOnlyList<string> argv)
     {
         ArgumentNullException.ThrowIfNull(argv);

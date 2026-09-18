@@ -38,7 +38,7 @@ def test_ensure_database_at_application_head_ok_on_migrated_db(server, client_fa
         assert _revision(conn) == before
 
 
-def test_head_schema_no_longer_carries_the_refiner_singleton_settings_tables(head_schema) -> None:
+def test_head_schema_no_longer_carries_the_processing_singleton_settings_tables(head_schema) -> None:
     """The libraries are the only store now (#363).
 
     Asserted rather than assumed, because the whole point of dropping them was to end the
@@ -46,18 +46,18 @@ def test_head_schema_no_longer_carries_the_refiner_singleton_settings_tables(hea
     it straight back.
     """
 
-    assert "refiner_path_settings" not in head_schema
-    assert "refiner_remux_rules_settings" not in head_schema
+    assert "processing_path_settings" not in head_schema
+    assert "processing_remux_rules_settings" not in head_schema
 
 
 def test_head_schema_carries_the_libraries_that_replaced_them(head_schema) -> None:
-    assert "refiner_libraries" in head_schema
-    library_columns = head_schema["refiner_libraries"]
+    assert "libraries" in head_schema
+    library_columns = head_schema["libraries"]
     for name in ("watched_folder", "work_folder", "output_folder", "scan_interval_seconds"):
         assert name in library_columns
 
-    assert "refiner_rule_sets" in head_schema
-    rule_set_columns = head_schema["refiner_rule_sets"]
+    assert "rule_sets" in head_schema
+    rule_set_columns = head_schema["rule_sets"]
     assert "primary_audio_lang" in rule_set_columns
     assert "subtitle_mode" in rule_set_columns
 

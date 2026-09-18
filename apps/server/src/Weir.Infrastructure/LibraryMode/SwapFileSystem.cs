@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using Microsoft.Win32.SafeHandles;
 using Weir.Core.LibraryMode;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing.RemuxPass;
 
 namespace Weir.Infrastructure.LibraryMode;
 

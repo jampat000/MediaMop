@@ -17,9 +17,9 @@ public static class ConfigurationBundleStore
 
     private const string SuiteTable = "suite_settings";
     private const string ArrTable = "arr_library_operator_settings";
-    private const string RefinerOperatorTable = "refiner_operator_settings";
-    private const string RuleSetsTable = "refiner_rule_sets";
-    private const string LibrariesTable = "refiner_libraries";
+    private const string ProcessingOperatorTable = "operator_settings";
+    private const string RuleSetsTable = "rule_sets";
+    private const string LibrariesTable = "libraries";
 
     private enum ColumnKind
     {
@@ -37,7 +37,7 @@ public static class ConfigurationBundleStore
         await SuiteSettingsStore.EnsureAsync(uow).ConfigureAwait(false);
         var suite = await ReadRowsAsync(uow, SuiteTable, "WHERE id = 1").ConfigureAwait(false);
         var arr = await ReadRowsAsync(uow, ArrTable, "WHERE id = 1").ConfigureAwait(false);
-        var refinerOperator = await ReadRowsAsync(uow, RefinerOperatorTable, "WHERE id = 1").ConfigureAwait(false);
+        var processingOperator = await ReadRowsAsync(uow, ProcessingOperatorTable, "WHERE id = 1").ConfigureAwait(false);
         var libraries = await ReadRowsAsync(uow, LibrariesTable, "ORDER BY id").ConfigureAwait(false);
         var ruleSets = await ReadRowsAsync(uow, RuleSetsTable, "ORDER BY id").ConfigureAwait(false);
         if (arr.Count == 0)
@@ -45,18 +45,18 @@ public static class ConfigurationBundleStore
             throw new PyValueErrorException("Missing required configuration row: arr_library_operator_settings");
         }
 
-        if (refinerOperator.Count == 0)
+        if (processingOperator.Count == 0)
         {
-            throw new PyValueErrorException("Missing required configuration row: refiner_operator_settings");
+            throw new PyValueErrorException("Missing required configuration row: operator_settings");
         }
 
         return new PyDict()
             .Set("format_version", FormatVersion)
             .Set("suite_settings", suite[0])
             .Set("arr_library_operator_settings", arr[0])
-            .Set("refiner_operator_settings", refinerOperator[0])
-            .Set("refiner_rule_sets", new PyList(ruleSets))
-            .Set("refiner_libraries", new PyList(libraries));
+            .Set("operator_settings", processingOperator[0])
+            .Set("rule_sets", new PyList(ruleSets))
+            .Set("libraries", new PyList(libraries));
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ public static class ConfigurationBundleStore
             throw new PyValueErrorException("Unsupported configuration bundle format_version (this build reads 3, 4).");
         }
 
-        foreach (var key in new[] { SuiteTable, ArrTable, RefinerOperatorTable })
+        foreach (var key in new[] { SuiteTable, ArrTable, ProcessingOperatorTable })
         {
             if (!bundle.ContainsKey(key))
             {
@@ -88,8 +88,8 @@ public static class ConfigurationBundleStore
 
         await ApplySuiteSettingsAsync(uow, bundle[SuiteTable], zones).ConfigureAwait(false);
         await ApplySingletonAsync(uow, ArrTable, bundle[ArrTable]).ConfigureAwait(false);
-        await ApplySingletonAsync(uow, RefinerOperatorTable, bundle[RefinerOperatorTable]).ConfigureAwait(false);
-        await RestoreRefinerLibrariesAsync(uow, bundle).ConfigureAwait(false);
+        await ApplySingletonAsync(uow, ProcessingOperatorTable, bundle[ProcessingOperatorTable]).ConfigureAwait(false);
+        await RestoreProcessingLibrariesAsync(uow, bundle).ConfigureAwait(false);
     }
 
     private static async Task ApplySuiteSettingsAsync(UnitOfWork uow, PyJson section, ITimeZoneResolver zones)
@@ -174,12 +174,12 @@ public static class ConfigurationBundleStore
         }
     }
 
-    private static async Task RestoreRefinerLibrariesAsync(UnitOfWork uow, PyDict bundle)
+    private static async Task RestoreProcessingLibrariesAsync(UnitOfWork uow, PyDict bundle)
     {
         if (bundle.ContainsKey(LibrariesTable))
         {
-            await uow.ExecuteAsync("DELETE FROM refiner_libraries").ConfigureAwait(false);
-            await uow.ExecuteAsync("DELETE FROM refiner_rule_sets").ConfigureAwait(false);
+            await uow.ExecuteAsync("DELETE FROM libraries").ConfigureAwait(false);
+            await uow.ExecuteAsync("DELETE FROM rule_sets").ConfigureAwait(false);
             var ruleColumns = await ColumnsAsync(uow, RuleSetsTable).ConfigureAwait(false);
             var libraryColumns = await ColumnsAsync(uow, LibrariesTable).ConfigureAwait(false);
             foreach (var row in Iterate(bundle.Get(RuleSetsTable) ?? new PyList()))
@@ -202,8 +202,8 @@ public static class ConfigurationBundleStore
             return;
         }
 
-        var legacyPaths = LegacySection(bundle, "refiner_path_settings");
-        var legacyRules = LegacySection(bundle, "refiner_remux_rules_settings");
+        var legacyPaths = LegacySection(bundle, "processing_path_settings");
+        var legacyRules = LegacySection(bundle, "processing_remux_rules_settings");
         if (legacyPaths.Count == 0 && legacyRules.Count == 0)
         {
             return;
@@ -212,7 +212,7 @@ public static class ConfigurationBundleStore
         foreach (var (scope, prefix) in new[] { ("movie", string.Empty), ("tv", "tv_") })
         {
             var library = await uow.QuerySingleAsync(
-                "SELECT id, watched_folder, work_folder, output_folder, scan_interval_seconds, rule_set_id FROM refiner_libraries " +
+                "SELECT id, watched_folder, work_folder, output_folder, scan_interval_seconds, rule_set_id FROM libraries " +
                 "WHERE media_type = $scope ORDER BY display_order, id LIMIT 1 OFFSET 0",
                 reader => new
                 {
@@ -246,9 +246,9 @@ public static class ConfigurationBundleStore
                 }
             }
 
-            SetText("watched_folder", legacyPaths.Get($"refiner_{prefix}watched_folder"), library.Watched);
-            SetText("work_folder", legacyPaths.Get($"refiner_{prefix}work_folder"), library.Work);
-            SetText("output_folder", legacyPaths.Get($"refiner_{prefix}output_folder"), library.Output);
+            SetText("watched_folder", legacyPaths.Get($"processing_{prefix}watched_folder"), library.Watched);
+            SetText("work_folder", legacyPaths.Get($"processing_{prefix}work_folder"), library.Work);
+            SetText("output_folder", legacyPaths.Get($"processing_{prefix}output_folder"), library.Output);
             if (legacyPaths.Get($"{(scope == "tv" ? "tv" : "movie")}_watched_folder_check_interval_seconds") is { } interval and not PyNull)
             {
                 var seconds = Saturate(PyConvert.ToInt(interval));
@@ -262,7 +262,7 @@ public static class ConfigurationBundleStore
             if (librarySets.Count > 0)
             {
                 librarySets.Add("updated_at=CURRENT_TIMESTAMP");
-                await uow.ExecuteAsync($"UPDATE refiner_libraries SET {string.Join(", ", librarySets)} WHERE id = $id", [.. libraryParameters]).ConfigureAwait(false);
+                await uow.ExecuteAsync($"UPDATE libraries SET {string.Join(", ", librarySets)} WHERE id = $id", [.. libraryParameters]).ConfigureAwait(false);
             }
 
             if (library.RuleSetId is not { } ruleSetId || ruleSetId == 0 || legacyRules.Count == 0)
@@ -308,7 +308,7 @@ public static class ConfigurationBundleStore
             if (sets.Count > 0)
             {
                 sets.Add("updated_at=CURRENT_TIMESTAMP");
-                await uow.ExecuteAsync($"UPDATE refiner_rule_sets SET {string.Join(", ", sets)} WHERE id = $id", [.. parameters]).ConfigureAwait(false);
+                await uow.ExecuteAsync($"UPDATE rule_sets SET {string.Join(", ", sets)} WHERE id = $id", [.. parameters]).ConfigureAwait(false);
             }
         }
     }

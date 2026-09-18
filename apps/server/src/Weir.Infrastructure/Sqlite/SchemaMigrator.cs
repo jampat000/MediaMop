@@ -103,6 +103,7 @@ public sealed class SchemaMigrator
         new(6, "0041_removed_tracks", "Weir.Infrastructure.Migrations.0006_removed_tracks.sql"),
         new(7, "0042_library_file_facets", "Weir.Infrastructure.Migrations.0007_library_file_facets.sql"),
         new(8, "0043_remux_writer", "Weir.Infrastructure.Migrations.0008_remux_writer.sql"),
+        new(9, "0044_drop_the_refiner_name", "Weir.Infrastructure.Migrations.0009_drop_the_refiner_name.sql"),
     ];
 
     /// <summary>
@@ -242,15 +243,46 @@ public sealed class SchemaMigrator
 
     private static void ApplyAll(SqliteConnection connection) => ApplyRange(connection, Migrations.OrderBy(m => m.Number), HeadRevision);
 
+    /// <summary>
+    /// Runs <paramref name="migrations"/> in one transaction and records <paramref name="revision"/>.
+    /// <para>
+    /// Foreign keys are turned off <b>before</b> the transaction opens, which is SQLite's documented
+    /// procedure for schema changes and is not the same thing as the <c>defer_foreign_keys</c> that used to
+    /// be set here. <c>PRAGMA foreign_keys</c> is a no-op inside a transaction, so the old setting could
+    /// only defer constraint <i>violations</i> to commit — it did nothing about <c>ON DELETE CASCADE</c>,
+    /// which fires immediately. Any migration that rebuilt a table by dropping it therefore deleted its
+    /// children's rows, transitively and silently. #578's table rename hit exactly that: dropping
+    /// <c>refiner_files</c> emptied <c>library_files</c>, which emptied <c>library_file_facets</c>.
+    /// Issue557MigrationTests and Issue568MigrationTests caught it.
+    /// </para>
+    /// <para>
+    /// A <c>foreign_key_check</c> runs before the commit so turning enforcement off cannot hide a migration
+    /// that genuinely left the database inconsistent.
+    /// </para>
+    /// </summary>
     private static void ApplyRange(SqliteConnection connection, IEnumerable<SchemaMigration> migrations, string revision)
     {
-        using var transaction = connection.BeginTransaction();
-        using (var deferForeignKeys = connection.CreateCommand())
+        Pragma(connection, "PRAGMA foreign_keys=off");
+        try
         {
-            deferForeignKeys.Transaction = transaction;
-            deferForeignKeys.CommandText = "PRAGMA defer_foreign_keys=ON";
-            deferForeignKeys.ExecuteNonQuery();
+            ApplyRangeCore(connection, migrations, revision);
         }
+        finally
+        {
+            Pragma(connection, "PRAGMA foreign_keys=on");
+        }
+    }
+
+    private static void Pragma(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
+    }
+
+    private static void ApplyRangeCore(SqliteConnection connection, IEnumerable<SchemaMigration> migrations, string revision)
+    {
+        using var transaction = connection.BeginTransaction();
 
         foreach (var migration in migrations)
         {
@@ -266,6 +298,18 @@ public sealed class SchemaMigrator
             record.CommandText = "DELETE FROM alembic_version; INSERT INTO alembic_version (version_num) VALUES ($revision);";
             record.Parameters.AddWithValue("$revision", revision);
             record.ExecuteNonQuery();
+        }
+
+        using (var check = connection.CreateCommand())
+        {
+            check.Transaction = transaction;
+            check.CommandText = "PRAGMA foreign_key_check";
+            using var violations = check.ExecuteReader();
+            if (violations.Read())
+            {
+                throw new InvalidOperationException(
+                    $"Migration to {revision} left a foreign key violation in table '{violations.GetValue(0)}'.");
+            }
         }
 
         transaction.Commit();

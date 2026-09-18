@@ -20,7 +20,7 @@ from tests.contract.support.fake_ffmpeg import fake_media_bytes, probe
 from tests.contract.support.polling import wait_until
 
 # Comfortably past the movie output-cleanup minimum age, which the server floors at one hour
-# regardless of configuration (WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS is clamped to
+# regardless of configuration (WEIR_PROCESSING_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS is clamped to
 # 3600s..30d). "pass_through_unchanged" forces the copy-without-remux path (a Windows hard link, or
 # a copy that preserves metadata), which carries the source's own modification time onto the
 # output, so backdating the source before enqueueing reaches that age immediately instead of
@@ -32,7 +32,7 @@ def _signed_in_working_server(server_factory, client_factory, fake_ffmpeg):
     # The default minimum age (48h) would make this test wait that long for real; the environment
     # variable is clamped to 3600s..30d, so this is as low as it can go.
     server = h.start_working_server(
-        server_factory, fake_ffmpeg, WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS="3600"
+        server_factory, fake_ffmpeg, WEIR_PROCESSING_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS="3600"
     )
     admin = client_factory(server)
     admin.ensure_admin()
@@ -41,14 +41,14 @@ def _signed_in_working_server(server_factory, client_factory, fake_ffmpeg):
 
 def _enqueue_pass_through_unchanged(admin, *, relative_media_path: str, library_id: int) -> None:
     r = admin.post_csrf(
-        "/api/v1/refiner/jobs/file-remux-pass/enqueue",
+        "/api/v1/processing/jobs/file-remux-pass/enqueue",
         {"relative_media_path": relative_media_path, "library_id": library_id, "pass_through_unchanged": True},
     )
     assert r.status_code == 200, r.text
 
 
 def _wait_for_the_pass_to_finish(admin) -> None:
-    # A manual enqueue with no prior scan leaves no Files row for GET /refiner/files to report on
+    # A manual enqueue with no prior scan leaves no Files row for GET /processing/files to report on
     # (mark_file_status is a no-op with nothing to update), so this watches the job itself — the
     # same reason the Radarr-queue scenario in test_failure_policies.py does the same.
     wait_until(

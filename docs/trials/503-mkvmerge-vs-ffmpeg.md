@@ -11,7 +11,7 @@ says so; ffmpeg keeps probing, validation and non-Matroska containers either way
 ## Method
 
 1. Generated a 15-file corpus locally with the bundled ffmpeg
-   (`dist/windows/MediaMopServer/_internal/bin/ffmpeg`, `N-126416-g9997fd0606`,
+   (`dist/windows/WeirServer/_internal/bin/ffmpeg`, `N-126416-g9997fd0606`,
    2026-09-05) using `-f lavfi` sources — script:
    `apps/server/tests/Trial503Harness/generate-corpus.sh`.
 2. For each file, built a representative plan (drop one audio track — the
@@ -304,7 +304,7 @@ long the follow-up takes.
    `codec_type == attachment` streams in `FfmpegCommands.BuildRemuxArgv`
    (`-map 0:t?` equivalent) so today's shipping path stops losing fonts. A
    few hours, including a golden-fixture update.
-3. **Writer abstraction** in `apps/server/src/Weir.Infrastructure/Refiner/RemuxPass`
+3. **Writer abstraction** in `apps/server/src/Weir.Infrastructure/Processing/RemuxPass`
    (`RemuxPassMedia.cs`/`RemuxPassHandler.cs` today call `MediaTools`
    directly): an `IRemuxWriter` seam with `FfmpegRemuxWriter` (existing) and
    `MkvmergeRemuxWriter` (new), selected by output extension (`.mkv`/`.webm`

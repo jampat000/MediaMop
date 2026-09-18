@@ -14,7 +14,7 @@ public sealed record InterruptedJob(long Id, string JobKind, string? PayloadJson
 
 /// <summary>
 /// Startup crash recovery: ports of <c>recover_incomplete_jobs_after_startup</c> and
-/// <c>cleanup_refiner_partial_output_files</c>, plus the #534 fix for remux temp output left in work folders.
+/// <c>cleanup_processing_partial_output_files</c>, plus the #534 fix for remux temp output left in work folders.
 /// </summary>
 /// <remarks>
 /// Startup is a hard process boundary for this single-node app: no worker is running yet, so a leased
@@ -31,7 +31,7 @@ public sealed record InterruptedJob(long Id, string JobKind, string? PayloadJson
 public static class StartupRecovery
 {
     public static async Task<StartupRecoveryReport> RunAsync(
-        RefinerJobStore queue,
+        ProcessingJobStore queue,
         string weirHome,
         DateTimeOffset now,
         ILogger logger,
@@ -43,7 +43,7 @@ public static class StartupRecovery
             (connection, transaction) =>
             {
                 var (jobs, rows) = RecoverIncompleteJobs(connection, transaction, now);
-                return (jobs, rows, RefinerLibraryFolders.List(connection, transaction));
+                return (jobs, rows, ProcessingLibraryFolders.List(connection, transaction));
             },
             cancellationToken).ConfigureAwait(false);
 
@@ -55,7 +55,7 @@ public static class StartupRecovery
         {
             logger.LogWarning(
                 "Weir startup recovered interrupted work recovered_jobs={RecoveredJobs} partial_outputs_removed={PartialOutputsRemoved} work_temp_files_removed={WorkTempFilesRemoved}",
-                $"{{'refiner_requeued': {result.RefinerRequeued}, 'refiner_failed': {result.RefinerFailed}}}",
+                $"{{'processing_requeued': {result.ProcessingRequeued}, 'processing_failed': {result.ProcessingFailed}}}",
                 partialRemoved,
                 tempRemoved);
         }
@@ -73,19 +73,19 @@ public static class StartupRecovery
         var requeued = 0;
         var failed = 0;
         var interrupted = new List<InterruptedJob>();
-        var rows = RefinerJobStore.Query(
+        var rows = ProcessingJobStore.Query(
             connection,
             transaction,
             "SELECT id, dedupe_key, job_kind, payload_json, status, lease_owner, lease_expires_at, attempt_count, max_attempts, " +
-            "last_error, not_before, runner_cost, priority, created_at, updated_at FROM refiner_jobs WHERE status = @leased",
-            ("@leased", RefinerJobStatus.Leased));
+            "last_error, not_before, runner_cost, priority, created_at, updated_at FROM jobs WHERE status = @leased",
+            ("@leased", ProcessingJobStatus.Leased));
         foreach (var row in rows)
         {
             var decision = StartupJobRecovery.Decide(row.AttemptCount, row.MaxAttempts, when);
-            RefinerJobStore.Execute(
+            ProcessingJobStore.Execute(
                 connection,
                 transaction,
-                "UPDATE refiner_jobs SET lease_owner = NULL, lease_expires_at = NULL, status = @status, last_error = @error, " +
+                "UPDATE jobs SET lease_owner = NULL, lease_expires_at = NULL, status = @status, last_error = @error, " +
                 "updated_at = CURRENT_TIMESTAMP WHERE id = @id",
                 ("@status", decision.Status),
                 ("@error", decision.LastError),
@@ -107,12 +107,12 @@ public static class StartupRecovery
 
     /// <summary>
     /// #534: remove the remux temp output of jobs that were in progress. The name is
-    /// <c>{stem}.refiner.XXXXXXXX{suffix}</c> of the job's <c>relative_media_path</c>, in its library's
+    /// <c>{stem}.processing.XXXXXXXX{suffix}</c> of the job's <c>relative_media_path</c>, in its library's
     /// effective work folder.
     /// </summary>
     public static int RemoveInterruptedRemuxTempFiles(
         IReadOnlyList<InterruptedJob> interrupted,
-        IReadOnlyList<RefinerLibraryFolderRow> libraries,
+        IReadOnlyList<ProcessingLibraryFolderRow> libraries,
         string weirHome,
         ILogger logger)
     {
@@ -129,12 +129,12 @@ public static class StartupRecovery
             }
 
             var scope = JobPayload.StringProperty(payload, "media_scope");
-            var library = RefinerLibraryFolders.Resolve(libraries, JobPayload.LooseInteger(payload, "library_id"), scope);
+            var library = ProcessingLibraryFolders.Resolve(libraries, JobPayload.LooseInteger(payload, "library_id"), scope);
             var workFolder = library is not null
-                ? RefinerLibraryFolders.EffectiveWorkFolder(library, weirHome)
-                : RefinerLibraryFolders.NormalizeMediaScope(scope) == "tv"
-                    ? RefinerLibraryFolders.DefaultTvWorkFolder(weirHome)
-                    : RefinerLibraryFolders.DefaultMovieWorkFolder(weirHome);
+                ? ProcessingLibraryFolders.EffectiveWorkFolder(library, weirHome)
+                : ProcessingLibraryFolders.NormalizeMediaScope(scope) == "tv"
+                    ? ProcessingLibraryFolders.DefaultTvWorkFolder(weirHome)
+                    : ProcessingLibraryFolders.DefaultMovieWorkFolder(weirHome);
             var pattern = WeirTempFiles.RemuxTempNameFor(relative);
             removed += DeleteMatching(workFolder, pattern.IsMatch, logger, job.Id);
         }
@@ -143,7 +143,7 @@ public static class StartupRecovery
     }
 
     /// <summary>#534: remove remux temp output left at the top of every library work folder and the default ones.</summary>
-    public static int SweepWorkFolderTempFiles(IReadOnlyList<RefinerLibraryFolderRow> libraries, string weirHome, ILogger logger)
+    public static int SweepWorkFolderTempFiles(IReadOnlyList<ProcessingLibraryFolderRow> libraries, string weirHome, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(libraries);
         var roots = WorkRoots(libraries, weirHome);
@@ -151,10 +151,10 @@ public static class StartupRecovery
     }
 
     /// <summary>
-    /// <c>cleanup_refiner_partial_output_files</c>: hidden <c>*.partial</c> files under every library output
-    /// folder and <c>WEIR_HOME/refiner-output</c>, searched recursively.
+    /// <c>cleanup_processing_partial_output_files</c>: hidden <c>*.partial</c> files under every library output
+    /// folder and <c>WEIR_HOME/processing-output</c>, searched recursively.
     /// </summary>
-    public static int CleanupPartialOutputFiles(IReadOnlyList<RefinerLibraryFolderRow> libraries, string weirHome)
+    public static int CleanupPartialOutputFiles(IReadOnlyList<ProcessingLibraryFolderRow> libraries, string weirHome)
     {
         ArgumentNullException.ThrowIfNull(libraries);
         var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -164,11 +164,11 @@ public static class StartupRecovery
             var text = library.OutputFolder.Trim();
             if (text.Length > 0)
             {
-                roots.Add(RefinerLibraryFolders.ExpandForFilesystem(text));
+                roots.Add(ProcessingLibraryFolders.ExpandForFilesystem(text));
             }
         }
 
-        roots.Add(RefinerLibraryFolders.ExpandForFilesystem(Path.Join(weirHome, "refiner-output")));
+        roots.Add(ProcessingLibraryFolders.ExpandForFilesystem(Path.Join(weirHome, "processing-output")));
 
         var removed = 0;
         foreach (var root in roots)
@@ -216,17 +216,17 @@ public static class StartupRecovery
         return removed;
     }
 
-    private static HashSet<string> WorkRoots(IReadOnlyList<RefinerLibraryFolderRow> libraries, string weirHome)
+    private static HashSet<string> WorkRoots(IReadOnlyList<ProcessingLibraryFolderRow> libraries, string weirHome)
     {
         var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         var roots = new HashSet<string>(comparer)
         {
-            RefinerLibraryFolders.DefaultMovieWorkFolder(weirHome),
-            RefinerLibraryFolders.DefaultTvWorkFolder(weirHome),
+            ProcessingLibraryFolders.DefaultMovieWorkFolder(weirHome),
+            ProcessingLibraryFolders.DefaultTvWorkFolder(weirHome),
         };
         foreach (var library in libraries)
         {
-            roots.Add(RefinerLibraryFolders.ExpandForFilesystem(RefinerLibraryFolders.EffectiveWorkFolder(library, weirHome)));
+            roots.Add(ProcessingLibraryFolders.ExpandForFilesystem(ProcessingLibraryFolders.EffectiveWorkFolder(library, weirHome)));
         }
 
         return roots;
@@ -237,7 +237,7 @@ public static class StartupRecovery
         string root;
         try
         {
-            root = RefinerLibraryFolders.ExpandForFilesystem(folder);
+            root = ProcessingLibraryFolders.ExpandForFilesystem(folder);
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
         {

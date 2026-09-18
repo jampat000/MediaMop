@@ -118,12 +118,12 @@ def test_record_activity_event_does_not_prune_history_using_log_retention(server
     )
     assert saved.status_code == 200, saved.text
 
-    title = "Old Refiner result that still backs overview history"
+    title = "Old Processing result that still backs overview history"
     with seed.stopped(sut) as conn:
         insert_event(
             conn,
-            event_type="refiner.file_remux_pass_completed",
-            module="refiner",
+            event_type="processing.file_remux_pass_completed",
+            module="processing",
             title=title,
             detail="{}",
             created_at=datetime.now(UTC) - timedelta(days=10),

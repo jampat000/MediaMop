@@ -1,4 +1,4 @@
-using Weir.Core.Refiner;
+using Weir.Core.Processing;
 
 namespace Weir.Infrastructure.LibraryMode;
 
@@ -13,7 +13,7 @@ public sealed record LibraryWalkedFile(string Path, long SizeBytes, long Modifie
 /// </summary>
 public static class LibraryFileWalker
 {
-    public static IReadOnlyList<LibraryWalkedFile> Walk(RefinerLibraryRecord library, IReadOnlyList<string> folders)
+    public static IReadOnlyList<LibraryWalkedFile> Walk(ProcessingLibraryRecord library, IReadOnlyList<string> folders)
     {
         ArgumentNullException.ThrowIfNull(library);
         ArgumentNullException.ThrowIfNull(folders);

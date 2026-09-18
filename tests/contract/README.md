@@ -62,7 +62,7 @@ still pending, add a **separate** test that asserts the *correct* behaviour and 
 
 ```python
 @pytest.mark.known_bug(issue=530)
-def test_refiner_files_lists_passed_through_and_rejected_rows(...): ...
+def test_files_lists_passed_through_and_rejected_rows(...): ...
 ```
 
 - `issue` is the GitHub issue number; `backends` (default: every server kind) lists which servers still

@@ -4,7 +4,7 @@ namespace Weir.Core.Tests.Rules;
 
 /// <summary>
 /// Tests for issue #501's <c>RemuxRules.ExplainTracks</c>: a stream-by-stream account of what the saved rules would
-/// do and why, used by <c>GET /refiner/files/{id}/tracks</c> so an operator can see the reasoning before overriding it.
+/// do and why, used by <c>GET /processing/files/{id}/tracks</c> so an operator can see the reasoning before overriding it.
 /// </summary>
 public sealed class RemuxTrackExplainTests
 {

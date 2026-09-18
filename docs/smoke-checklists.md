@@ -23,13 +23,13 @@ Use the Velopack setup exe from the release being validated.
 15. Restore that backup and confirm the app remains usable.
 16. Confirm Upgrade shows a meaningful status, even when no update is available.
 17. Right-click the tray icon and confirm `Check for updates` is present and reaches the current release status.
-18. Open Refiner path inputs and use Browse for a local folder.
+18. Open Processing path inputs and use Browse for a local folder.
 19. Enter a UNC-style path manually and confirm validation warns without blocking legitimate save paths by design.
 20. Quit Weir from the tray icon.
 21. Relaunch Weir and confirm the existing user, settings, and wizard completion state persist.
 22. Install the next version over the current version and confirm Velopack applies a delta update cleanly.
 23. Uninstall and reinstall only when intentionally testing clean-install behavior.
-24. Confirm the automated packaged smoke reports that Refiner placed a byte-identical
+24. Confirm the automated packaged smoke reports that Processing placed a byte-identical
     pass-through file in the processed tree before removing its watched source.
 
 ## Docker smoke

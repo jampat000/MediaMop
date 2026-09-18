@@ -18,7 +18,7 @@ public sealed class StartupRecoveryTests : IDisposable
     [Fact]
     public async Task Startup_recovery_requeues_leased_jobs_with_attempts_remaining()
     {
-        _db.InsertRawJob("refiner-recover", "refiner.test.v1", RefinerJobStatus.Leased, "dead-refiner", "2026-04-29 13:00:00+00:00", attemptCount: 1, maxAttempts: 3);
+        _db.InsertRawJob("processing-recover", "processing.test.v1", ProcessingJobStatus.Leased, "dead-processing", "2026-04-29 13:00:00+00:00", attemptCount: 1, maxAttempts: 3);
 
         var report = await RunAsync();
 
@@ -37,13 +37,13 @@ public sealed class StartupRecoveryTests : IDisposable
     [Fact]
     public async Task Startup_recovery_fails_leased_jobs_after_final_attempt()
     {
-        _db.InsertRawJob("refiner-final", "refiner.test.v1", RefinerJobStatus.Leased, "dead-refiner", "2026-04-29 13:00:00+00:00", attemptCount: 3, maxAttempts: 3);
+        _db.InsertRawJob("processing-final", "processing.test.v1", ProcessingJobStatus.Leased, "dead-processing", "2026-04-29 13:00:00+00:00", attemptCount: 3, maxAttempts: 3);
 
         var report = await RunAsync();
 
         Assert.Equal(new StartupJobRecoveryResult(0, 1), report.Jobs);
         var row = (await _db.Store.GetAsync(1))!;
-        Assert.Equal(RefinerJobStatus.Failed, row.Status);
+        Assert.Equal(ProcessingJobStatus.Failed, row.Status);
         Assert.Null(row.LeaseOwner);
         Assert.Null(row.LeaseExpiresAt);
         Assert.Contains("marked failed", row.LastError, StringComparison.Ordinal);
@@ -52,17 +52,17 @@ public sealed class StartupRecoveryTests : IDisposable
     [Fact]
     public async Task Startup_recovery_leaves_rows_that_were_not_leased_alone()
     {
-        _db.InsertRawJob("pending", "refiner.test.v1");
-        _db.InsertRawJob("done", "refiner.test.v1", RefinerJobStatus.Completed);
+        _db.InsertRawJob("pending", "processing.test.v1");
+        _db.InsertRawJob("done", "processing.test.v1", ProcessingJobStatus.Completed);
 
         var report = await RunAsync();
 
         Assert.Equal(0, report.Jobs.TotalRecovered);
-        Assert.Equal(0, _db.Count("SELECT count(*) FROM refiner_jobs WHERE last_error IS NOT NULL"));
+        Assert.Equal(0, _db.Count("SELECT count(*) FROM jobs WHERE last_error IS NOT NULL"));
     }
 
     [Fact]
-    public async Task Startup_refiner_recovery_removes_hidden_partial_outputs()
+    public async Task Startup_processing_recovery_removes_hidden_partial_outputs()
     {
         var output = _db.Join("output");
         var nested = Path.Join(output, "Movie");
@@ -86,7 +86,7 @@ public sealed class StartupRecoveryTests : IDisposable
     [Fact]
     public async Task Partial_outputs_under_the_default_output_root_are_removed_with_no_libraries()
     {
-        var root = Path.Join(_db.Home, "refiner-output", "x");
+        var root = Path.Join(_db.Home, "processing-output", "x");
         Directory.CreateDirectory(root);
         var partial = Path.Join(root, ".a.mkv.q1.partial");
         await File.WriteAllTextAsync(partial, "p");
@@ -102,21 +102,21 @@ public sealed class StartupRecoveryTests : IDisposable
         Directory.CreateDirectory(work);
         var library = _db.AddLibrary(workFolder: work, outputFolder: _db.Join("out"));
         _db.InsertRawJob(
-            "refiner.file.remux_pass:film",
-            "refiner.file.remux_pass.v1",
-            RefinerJobStatus.Leased,
+            "processing.file.remux_pass:film",
+            "processing.file.remux_pass.v1",
+            ProcessingJobStatus.Leased,
             "dead",
             "2026-04-29 13:00:00+00:00",
             attemptCount: 1,
             payloadJson: $"{{\"library_id\": {library}, \"media_scope\": \"movie\", \"relative_media_path\": \"Film (2020)/Film (2020).mkv\"}}");
-        var temp = Path.Join(work, "Film (2020).refiner.k3j_9x2a.mkv");
+        var temp = Path.Join(work, "Film (2020).processing.k3j_9x2a.mkv");
         await File.WriteAllTextAsync(temp, "half-written remux");
         string[] keep =
         [
             Path.Join(work, "Film (2020).mkv"),
-            Path.Join(work, "Film (2020).refiner.notes.txt"),
-            Path.Join(work, "Film (2020).refiner.ZZZZZZZZ.mkv"),
-            Path.Join(work, "Other.refiner.k3j_9x2a"),
+            Path.Join(work, "Film (2020).processing.notes.txt"),
+            Path.Join(work, "Film (2020).processing.ZZZZZZZZ.mkv"),
+            Path.Join(work, "Other.processing.k3j_9x2a"),
             Path.Join(work, "readme.txt"),
         ];
         foreach (var path in keep)
@@ -125,12 +125,12 @@ public sealed class StartupRecoveryTests : IDisposable
         }
 
         Directory.CreateDirectory(Path.Join(work, "nested"));
-        var nested = Path.Join(work, "nested", "Film (2020).refiner.k3j_9x2a.mkv");
+        var nested = Path.Join(work, "nested", "Film (2020).processing.k3j_9x2a.mkv");
         await File.WriteAllTextAsync(nested, "not where Weir writes temp output");
 
         var report = await RunAsync();
 
-        Assert.Equal(1, report.Jobs.RefinerRequeued);
+        Assert.Equal(1, report.Jobs.ProcessingRequeued);
         Assert.Equal(1, report.WorkTempFilesRemoved);
         Assert.False(File.Exists(temp));
         Assert.All(keep, path => Assert.True(File.Exists(path), path));
@@ -140,23 +140,23 @@ public sealed class StartupRecoveryTests : IDisposable
     [Fact]
     public async Task Interrupted_job_temp_output_is_found_in_the_default_work_folder_for_its_scope()
     {
-        // Seeded libraries with no work folder use WEIR_HOME/refiner/refiner-{movie,tv}-work.
-        var tvWork = Path.Join(_db.Home, "refiner", "refiner-tv-work");
+        // Seeded libraries with no work folder use WEIR_HOME/processing/processing-{movie,tv}-work.
+        var tvWork = Path.Join(_db.Home, "processing", "processing-tv-work");
         Directory.CreateDirectory(tvWork);
         _db.InsertRawJob(
             "tv",
-            "refiner.file.remux_pass.v1",
-            RefinerJobStatus.Leased,
+            "processing.file.remux_pass.v1",
+            ProcessingJobStatus.Leased,
             "dead",
             "2026-04-29 13:00:00+00:00",
             attemptCount: 3,
             payloadJson: "{\"media_scope\": \"tv\", \"relative_media_path\": \"Show/S01/Show.S01E01\"}");
-        var temp = Path.Join(tvWork, "Show.S01E01.refiner.abcdefgh.mkv");
+        var temp = Path.Join(tvWork, "Show.S01E01.processing.abcdefgh.mkv");
         await File.WriteAllTextAsync(temp, "x");
 
         var report = await RunAsync();
 
-        Assert.Equal(1, report.Jobs.RefinerFailed);
+        Assert.Equal(1, report.Jobs.ProcessingFailed);
         Assert.Equal(1, report.WorkTempFilesRemoved);
         Assert.False(File.Exists(temp));
     }
@@ -167,21 +167,21 @@ public sealed class StartupRecoveryTests : IDisposable
         var custom = _db.Join("custom-work");
         Directory.CreateDirectory(custom);
         _db.AddLibrary(name: "Custom", workFolder: custom);
-        var movieDefault = Path.Join(_db.Home, "refiner", "refiner-movie-work");
+        var movieDefault = Path.Join(_db.Home, "processing", "processing-movie-work");
         Directory.CreateDirectory(movieDefault);
         string[] weirTemps =
         [
-            Path.Join(custom, "a.refiner.aaaaaaaa.mkv"),
+            Path.Join(custom, "a.processing.aaaaaaaa.mkv"),
             Path.Join(custom, "dry-run-ffmpeg-destination-placeholder.mkv"),
-            Path.Join(movieDefault, "b.c.refiner.12345678.mp4"),
+            Path.Join(movieDefault, "b.c.processing.12345678.mp4"),
         ];
         string[] others =
         [
-            Path.Join(custom, "a.refiner.mkv"),
+            Path.Join(custom, "a.processing.mkv"),
             Path.Join(custom, "a.mkv"),
             Path.Join(custom, ".a.mkv.x.work-preflight"),
             Path.Join(movieDefault, "planned-ffmpeg-destination-placeholder.mkv"),
-            Path.Join(movieDefault, "b.refiner.1234567.mp4"),
+            Path.Join(movieDefault, "b.processing.1234567.mp4"),
         ];
         foreach (var path in weirTemps.Concat(others))
         {
@@ -208,11 +208,11 @@ public sealed class StartupRecoveryTests : IDisposable
     [Fact]
     public void A_legacy_default_work_folder_resolves_to_the_scope_default()
     {
-        var legacy = new RefinerLibraryFolderRow(1, "movie", 0, @"C:\ProgramData\Media\refiner-movie-work\", string.Empty);
+        var legacy = new ProcessingLibraryFolderRow(1, "movie", 0, @"C:\ProgramData\Media\processing-movie-work\", string.Empty);
 
-        Assert.Equal(RefinerLibraryFolders.DefaultMovieWorkFolder(_db.Home), RefinerLibraryFolders.EffectiveWorkFolder(legacy, _db.Home));
-        Assert.Equal(RefinerLibraryFolders.DefaultTvWorkFolder(_db.Home), RefinerLibraryFolders.EffectiveWorkFolder(legacy with { MediaType = "TV", WorkFolder = " " }, _db.Home));
-        Assert.Equal("/data/work", RefinerLibraryFolders.EffectiveWorkFolder(legacy with { WorkFolder = " /data/work " }, _db.Home));
+        Assert.Equal(ProcessingLibraryFolders.DefaultMovieWorkFolder(_db.Home), ProcessingLibraryFolders.EffectiveWorkFolder(legacy, _db.Home));
+        Assert.Equal(ProcessingLibraryFolders.DefaultTvWorkFolder(_db.Home), ProcessingLibraryFolders.EffectiveWorkFolder(legacy with { MediaType = "TV", WorkFolder = " " }, _db.Home));
+        Assert.Equal("/data/work", ProcessingLibraryFolders.EffectiveWorkFolder(legacy with { WorkFolder = " /data/work " }, _db.Home));
     }
 
     private Task<StartupRecoveryReport> RunAsync() => StartupRecovery.RunAsync(_db.Store, _db.Home, Now, NullLogger.Instance);

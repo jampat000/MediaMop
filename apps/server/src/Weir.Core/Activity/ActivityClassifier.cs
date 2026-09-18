@@ -72,7 +72,7 @@ public static class ActivityClassifier
         {
             var lowered = type.ToLowerInvariant();
             // #540 item 8: Python scans for the first word that occurs anywhere in the event type, so
-            // "refiner.failure_cleanup_sweep_completed" reads as "failed" because "failure" is checked
+            // "processing.failure_cleanup_sweep_completed" reads as "failed" because "failure" is checked
             // before "completed" ever gets a look in, even though "completed" is the type's actual
             // terminal verb. An event type's own name always ends in its terminal verb, so a suffix
             // match is checked first and wins; only when nothing is a suffix does the old substring

@@ -62,49 +62,49 @@ public sealed record WeirOptions
     public required string LogDir { get; init; }
     public required string TempDir { get; init; }
 
-    /// <summary>0 = no in-process Refiner workers; 1..8 worker slots otherwise.</summary>
-    public required int RefinerWorkerCount { get; init; }
+    /// <summary>0 = no in-process Processing workers; 1..8 worker slots otherwise.</summary>
+    public required int ProcessingWorkerCount { get; init; }
 
     /// <summary>
-    /// How long a worker's claim on a <c>refiner_jobs</c> row lasts before another worker may reclaim
-    /// it (<c>WEIR_REFINER_JOB_LEASE_SECONDS</c>, #540 item 1). A heartbeat renews it roughly every
+    /// How long a worker's claim on a <c>jobs</c> row lasts before another worker may reclaim
+    /// it (<c>WEIR_PROCESSING_JOB_LEASE_SECONDS</c>, #540 item 1). A heartbeat renews it roughly every
     /// third of this while a handler runs, so a job taking longer than this is still never claimed
     /// twice; this only bounds how long a crashed worker's row sits unclaimed before recovery.
     /// </summary>
-    public required int RefinerJobLeaseSeconds { get; init; }
-    public required bool RefinerWatcherEnabled { get; init; }
-    public required double RefinerWatcherDebounceSeconds { get; init; }
+    public required int ProcessingJobLeaseSeconds { get; init; }
+    public required bool ProcessingWatcherEnabled { get; init; }
+    public required double ProcessingWatcherDebounceSeconds { get; init; }
     /// <summary>
     /// #533: the global kill switch for the periodic watched-folder scan timer itself
-    /// (<c>WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED</c>, default on). Distinct
-    /// from <see cref="RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs"/>, which only
+    /// (<c>WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED</c>, default on). Distinct
+    /// from <see cref="ProcessingWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs"/>, which only
     /// controls whether a periodic scan that *does* run may queue remux work off what it finds — with
     /// this off, no periodic scan runs at all for any scope, regardless of that other setting or of a
     /// library's own <c>schedule_enabled</c>/<c>enabled</c> columns. A manual scan (the HTTP enqueue
     /// route) is unaffected: it is a one-off request, not the timer this switch stops.
     /// </summary>
-    public required bool RefinerWatchedFolderRemuxScanDispatchScheduleEnabled { get; init; }
+    public required bool ProcessingWatchedFolderRemuxScanDispatchScheduleEnabled { get; init; }
 
-    public required bool RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs { get; init; }
-    public required int RefinerProbeSizeMb { get; init; }
-    public required int RefinerAnalyzeDurationSeconds { get; init; }
-    public required int RefinerWatchedFolderMinFileAgeSeconds { get; init; }
-    public required int RefinerMovieOutputCleanupMinAgeSeconds { get; init; }
-    public required int RefinerTvOutputCleanupMinAgeSeconds { get; init; }
-    public required bool RefinerWorkTempStaleSweepMovieScheduleEnabled { get; init; }
-    public required int RefinerWorkTempStaleSweepMovieScheduleIntervalSeconds { get; init; }
-    public required bool RefinerWorkTempStaleSweepTvScheduleEnabled { get; init; }
-    public required int RefinerWorkTempStaleSweepTvScheduleIntervalSeconds { get; init; }
-    public required int RefinerWorkTempStaleSweepMinStaleAgeSeconds { get; init; }
-    public required bool RefinerMovieFailureCleanupScheduleEnabled { get; init; }
-    public required int RefinerMovieFailureCleanupScheduleIntervalSeconds { get; init; }
-    public required bool RefinerTvFailureCleanupScheduleEnabled { get; init; }
-    public required int RefinerTvFailureCleanupScheduleIntervalSeconds { get; init; }
-    public required int RefinerMovieFailureCleanupGracePeriodSeconds { get; init; }
-    public required int RefinerTvFailureCleanupGracePeriodSeconds { get; init; }
+    public required bool ProcessingWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs { get; init; }
+    public required int ProcessingProbeSizeMb { get; init; }
+    public required int ProcessingAnalyzeDurationSeconds { get; init; }
+    public required int ProcessingWatchedFolderMinFileAgeSeconds { get; init; }
+    public required int ProcessingMovieOutputCleanupMinAgeSeconds { get; init; }
+    public required int ProcessingTvOutputCleanupMinAgeSeconds { get; init; }
+    public required bool ProcessingWorkTempStaleSweepMovieScheduleEnabled { get; init; }
+    public required int ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds { get; init; }
+    public required bool ProcessingWorkTempStaleSweepTvScheduleEnabled { get; init; }
+    public required int ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds { get; init; }
+    public required int ProcessingWorkTempStaleSweepMinStaleAgeSeconds { get; init; }
+    public required bool ProcessingMovieFailureCleanupScheduleEnabled { get; init; }
+    public required int ProcessingMovieFailureCleanupScheduleIntervalSeconds { get; init; }
+    public required bool ProcessingTvFailureCleanupScheduleEnabled { get; init; }
+    public required int ProcessingTvFailureCleanupScheduleIntervalSeconds { get; init; }
+    public required int ProcessingMovieFailureCleanupGracePeriodSeconds { get; init; }
+    public required int ProcessingTvFailureCleanupGracePeriodSeconds { get; init; }
 
-    /// <summary>Legacy read only; remux paths come from saved Refiner settings.</summary>
-    public required string? RefinerRemuxMediaRoot { get; init; }
+    /// <summary>Legacy read only; remux paths come from saved Processing settings.</summary>
+    public required string? ProcessingRemuxMediaRoot { get; init; }
 
     public required int JobRowsRetentionDays { get; init; }
     public required int JobRowsRetentionScheduleIntervalSeconds { get; init; }

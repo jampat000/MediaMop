@@ -9,7 +9,7 @@ using Weir.Infrastructure.Processes;
 namespace Weir.Infrastructure.Media;
 
 /// <summary>
-/// ffprobe and ffmpeg execution (<c>refiner_remux_mux.py</c> and <c>detect_acceleration</c>): probing, output
+/// ffprobe and ffmpeg execution (<c>processing_remux_mux.py</c> and <c>detect_acceleration</c>): probing, output
 /// validation, the full-read integrity check, remuxing with progress, and hardware detection. Decisions live in
 /// <see cref="Weir.Core.Media"/>; this class runs the tools and hands their output over.
 /// </summary>
@@ -319,7 +319,7 @@ public sealed partial class MediaTools
         ArgumentNullException.ThrowIfNull(sourceWarnings);
         Directory.CreateDirectory(workDir);
         var suffix = MediaPathNames.Suffix(src, _windows);
-        var tmpPath = CreateTempFile(workDir, prefix: MediaPathNames.Stem(src, _windows) + ".refiner.", suffix: suffix.Length > 0 ? suffix : ".mkv");
+        var tmpPath = CreateTempFile(workDir, prefix: MediaPathNames.Stem(src, _windows) + ".processing.", suffix: suffix.Length > 0 ? suffix : ".mkv");
         try
         {
             var request = new RemuxWriteRequest(src, tmpPath, plan, sourceProbe, progressCallback, durationSeconds, acceleration);
@@ -774,16 +774,16 @@ public sealed partial class MediaTools
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "REFINER_FFPROBE_FILE_STATE: {Payload}")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "PROCESSING_FFPROBE_FILE_STATE: {Payload}")]
     private partial void LogFfprobeFileState(string payload);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "REFINER_FFPROBE_CALL: {Payload}")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "PROCESSING_FFPROBE_CALL: {Payload}")]
     private partial void LogFfprobeCall(string payload);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "REFINER_FFPROBE_RESULT: {Payload}")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "PROCESSING_FFPROBE_RESULT: {Payload}")]
     private partial void LogFfprobeResultDebug(string payload);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "REFINER_FFPROBE_RESULT: {Payload}")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "PROCESSING_FFPROBE_RESULT: {Payload}")]
     private partial void LogFfprobeResultWarning(string payload);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "{Summary}")]

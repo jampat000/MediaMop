@@ -12,11 +12,11 @@ Weir settings must describe runtime behaviour as shipped, not intended behaviour
 - Upgrade: reflects the running backend version and the latest public release known to the update service.
 - Security settings shown in the UI are database-backed. Server-only auth cookie, HTTPS, and rate-limit configuration is labelled as startup configuration, not editable UI state.
 
-## Refiner settings
+## Processing settings
 
 - Libraries: each library carries its own folders, file types, exclusions, schedule and guardrails, saved in the database and used by new scans and per-file work after save. Missing folders are warnings at runtime, not save blockers. Removing a library is refused while it still has queued or running work, because those jobs resolve their folders from it.
 - Rule sets: audio and subtitle handling is a named object a library points at, so two libraries can share one. Deleting a rule set a library still references is refused rather than silently stripping that handling.
-- Processing settings: files-at-once and age/size guardrails are database-backed operator settings used by active Refiner worker gating and new watched-folder scans.
+- Processing settings: files-at-once and age/size guardrails are database-backed operator settings used by active Processing worker gating and new watched-folder scans.
 - Runtime settings endpoint: read-only startup configuration. Any value requiring environment changes and restart must remain labelled as restart-required.
-- Watched-folder scan schedule: whether a library is scanned, and how often, is **per library on the Libraries tab**, saved in the database and applied without a restart. There is no environment variable for it. `WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED` and `..._SCHEDULE_INTERVAL_SECONDS` were removed in #329: the scheduler never read either, while the runtime-settings endpoint reported the flag as live configuration — so an operator could read `false` while scheduled scans ran.
-- Worker count: `WEIR_REFINER_WORKER_COUNT` is an internal startup slot cap (default 8), not the number of files processed at once. The operator-facing "Files at once" value is the effective limit and needs no restart.
+- Watched-folder scan schedule: whether a library is scanned, and how often, is **per library on the Libraries tab**, saved in the database and applied without a restart. There is no environment variable for it. `WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED` and `..._SCHEDULE_INTERVAL_SECONDS` were removed in #329: the scheduler never read either, while the runtime-settings endpoint reported the flag as live configuration — so an operator could read `false` while scheduled scans ran.
+- Worker count: `WEIR_PROCESSING_WORKER_COUNT` is an internal startup slot cap (default 8), not the number of files processed at once. The operator-facing "Files at once" value is the effective limit and needs no restart.

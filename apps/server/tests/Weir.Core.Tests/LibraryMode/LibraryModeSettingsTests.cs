@@ -1,11 +1,11 @@
 using Weir.Core.LibraryMode;
-using Weir.Core.Refiner;
+using Weir.Core.Processing;
 
 namespace Weir.Core.Tests.LibraryMode;
 
 public sealed class LibraryModeSettingsTests
 {
-    private static RefinerLibraryRecord Library() => new()
+    private static ProcessingLibraryRecord Library() => new()
     {
         Name = "Movies",
         WatchedFolder = "/data/watched",
@@ -63,7 +63,7 @@ public sealed class LibraryModeSettingsTests
     [Fact]
     public void Library_jobs_always_sort_behind_a_freshly_enqueued_download_job()
     {
-        // refiner_jobs is claimed ORDER BY priority DESC, id ASC, and a retried download job's priority is only ever
+        // jobs is claimed ORDER BY priority DESC, id ASC, and a retried download job's priority is only ever
         // bumped up (to max(pending) + 1), so this very low, fixed priority can never be overtaken from below.
         Assert.True(LibraryModePriority.Low < 0);
     }

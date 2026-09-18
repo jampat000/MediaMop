@@ -5,16 +5,16 @@ namespace Weir.Core.Tests.Readiness;
 
 public sealed class ReadinessTests
 {
-    private static readonly KeyValuePair<string, int>[] EightRefinerWorkers = [new("refiner", 8)];
+    private static readonly KeyValuePair<string, int>[] EightProcessingWorkers = [new("processing", 8)];
 
     [Fact]
     public void Workers_that_never_started_read_as_degraded()
     {
-        var lanes = new WorkerHeartbeats(new ManualTimeProvider()).Snapshot(EightRefinerWorkers);
+        var lanes = new WorkerHeartbeats(new ManualTimeProvider()).Snapshot(EightProcessingWorkers);
         var lane = Assert.Single(lanes);
         Assert.Equal(
             new WorkerLaneHealth(
-                "refiner", 8, 0, 8, 0, "degraded",
+                "processing", 8, 0, 8, 0, "degraded",
                 "Weir is not processing new work because 8 worker slot(s) stopped responding. Restart Weir; queued work remains safe."),
             lane);
     }
@@ -22,9 +22,9 @@ public sealed class ReadinessTests
     [Fact]
     public void Zero_expected_workers_read_as_disabled()
     {
-        var lane = Assert.Single(new WorkerHeartbeats(new ManualTimeProvider()).Snapshot([new("refiner", 0)]));
+        var lane = Assert.Single(new WorkerHeartbeats(new ManualTimeProvider()).Snapshot([new("processing", 0)]));
         Assert.Equal(
-            new WorkerLaneHealth("refiner", 0, 0, 0, 0, "disabled", "Weir is turned off in Settings, so no new background work will run."),
+            new WorkerLaneHealth("processing", 0, 0, 0, 0, "disabled", "Weir is turned off in Settings, so no new background work will run."),
             lane);
     }
 
@@ -33,29 +33,29 @@ public sealed class ReadinessTests
     {
         var time = new ManualTimeProvider();
         var heartbeats = new WorkerHeartbeats(time);
-        heartbeats.Started("refiner", 0);
-        heartbeats.Started("refiner", 1);
-        heartbeats.Started("refiner", 5); // outside the expected slots, ignored
+        heartbeats.Started("processing", 0);
+        heartbeats.Started("processing", 1);
+        heartbeats.Started("processing", 5); // outside the expected slots, ignored
 
         Assert.Equal(
-            new WorkerLaneHealth("refiner", 2, 2, 0, 0, "healthy", "Weir worker heartbeats are current."),
-            Assert.Single(heartbeats.Snapshot([new("refiner", 2)])));
+            new WorkerLaneHealth("processing", 2, 2, 0, 0, "healthy", "Weir worker heartbeats are current."),
+            Assert.Single(heartbeats.Snapshot([new("processing", 2)])));
 
         time.Advance(TimeSpan.FromSeconds(361));
-        heartbeats.Beat("refiner", 0);
-        var stale = Assert.Single(heartbeats.Snapshot([new("refiner", 2)]));
+        heartbeats.Beat("processing", 0);
+        var stale = Assert.Single(heartbeats.Snapshot([new("processing", 2)]));
         Assert.Equal((1, 1, 0, "degraded"), (stale.ActiveWorkers, stale.StaleWorkers, stale.StoppedWorkers, stale.Status));
 
-        heartbeats.Stopped("refiner", 1);
-        var stopped = Assert.Single(heartbeats.Snapshot([new("refiner", 2)]));
+        heartbeats.Stopped("processing", 1);
+        var stopped = Assert.Single(heartbeats.Snapshot([new("processing", 2)]));
         Assert.Equal((1, 0, 1, "degraded"), (stopped.ActiveWorkers, stopped.StaleWorkers, stopped.StoppedWorkers, stopped.Status));
         Assert.Contains("1 worker slot(s)", stopped.Detail, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData("refiner", "Refiner")]
+    [InlineData("processing", "Processing")]
     [InlineData("media_managers", "Media_Managers")]
-    [InlineData("REFINER", "Refiner")]
+    [InlineData("PROCESSING", "Processing")]
     public void Module_titles_follow_python_title(string module, string expected) =>
         Assert.Equal(expected, WorkerHeartbeats.TitleCase(module));
 
@@ -81,7 +81,7 @@ public sealed class ReadinessTests
     [Fact]
     public void Failed_after_startup_when_workers_are_degraded()
     {
-        var workers = new WorkerHeartbeats(new ManualTimeProvider()).Snapshot(EightRefinerWorkers);
+        var workers = new WorkerHeartbeats(new ManualTimeProvider()).Snapshot(EightProcessingWorkers);
         var report = ReadinessBuilder.Build(new ReadinessInputs(TimeSpan.Zero, true, true, workers, ReadinessBuilder.NoWatchedLibraries), "1.0.0");
         Assert.False(report.Ready);
         Assert.Equal("failed", report.Status);
@@ -121,5 +121,5 @@ public sealed class ReadinessTests
         Assert.False(HealthReport.FromDatabase(false).IsOk);
     }
 
-    private static WorkerLaneHealth Healthy() => new("refiner", 1, 1, 0, 0, "healthy", "Weir worker heartbeats are current.");
+    private static WorkerLaneHealth Healthy() => new("processing", 1, 1, 0, 0, "healthy", "Weir worker heartbeats are current.");
 }

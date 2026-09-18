@@ -128,7 +128,7 @@ def _ffprobe(tool_dir: Path, script: dict, argv: list[str]) -> int:
 
 
 def _is_fake_output(path: str) -> bool:
-    return ".refiner." in os.path.basename(path)
+    return ".processing." in os.path.basename(path)
 
 
 def _arg_after(argv: list[str], flag: str) -> str | None:

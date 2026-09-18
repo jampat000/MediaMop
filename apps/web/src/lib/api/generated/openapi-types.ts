@@ -539,7 +539,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/direct-play/devices": {
+  "/api/v1/processing/direct-play/devices": {
     parameters: {
       query?: never;
       header?: never;
@@ -550,12 +550,12 @@ export interface paths {
      * Get Direct Play Devices
      * @description The devices the badge can answer for, each with its source, and which ones you own.
      */
-    get: operations["get_direct_play_devices_api_v1_refiner_direct_play_devices_get"];
+    get: operations["get_direct_play_devices_api_v1_processing_direct_play_devices_get"];
     /**
      * Put Direct Play Devices
      * @description Save which devices you own. Changes only the badge, never how a file is processed.
      */
-    put: operations["put_direct_play_devices_api_v1_refiner_direct_play_devices_put"];
+    put: operations["put_direct_play_devices_api_v1_processing_direct_play_devices_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -563,7 +563,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files": {
+  "/api/v1/processing/files": {
     parameters: {
       query?: never;
       header?: never;
@@ -571,10 +571,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Files
+     * Get Processing Files
      * @description Files Weir has seen, with the reason it is or is not working on each.
      */
-    get: operations["get_refiner_files_api_v1_refiner_files_get"];
+    get: operations["get_files_api_v1_files_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -583,7 +583,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/requeue": {
+  "/api/v1/processing/files/requeue": {
     parameters: {
       query?: never;
       header?: never;
@@ -593,20 +593,20 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Requeue Refiner Files
+     * Requeue Processing Files
      * @description Try every file matching this filter again.
      *
      *     The filter is the same one the list uses, and ``limit`` is a ceiling rather than a
      *     page size: a mis-typed filter should not be able to queue a whole library.
      */
-    post: operations["requeue_refiner_files_api_v1_refiner_files_requeue_post"];
+    post: operations["requeue_files_api_v1_files_requeue_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}": {
+  "/api/v1/processing/files/{file_id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -617,16 +617,16 @@ export interface paths {
     put?: never;
     post?: never;
     /**
-     * Delete Refiner File
+     * Delete Processing File
      * @description Forget a file. Removes Weir's record of it, never the file on disk.
      */
-    delete: operations["delete_refiner_file_api_v1_refiner_files__file_id__delete"];
+    delete: operations["delete_processing_file_api_v1_files__file_id__delete"];
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}/log": {
+  "/api/v1/processing/files/{file_id}/log": {
     parameters: {
       query?: never;
       header?: never;
@@ -634,10 +634,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner File Log
+     * Get Processing File Log
      * @description Everything Weir retained about what it did to this file, newest first.
      */
-    get: operations["get_refiner_file_log_api_v1_refiner_files__file_id__log_get"];
+    get: operations["get_processing_file_log_api_v1_files__file_id__log_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -646,7 +646,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}/log/download": {
+  "/api/v1/processing/files/{file_id}/log/download": {
     parameters: {
       query?: never;
       header?: never;
@@ -654,13 +654,13 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Download Refiner File Log
+     * Download Processing File Log
      * @description The same record as plain text, for attaching to a bug report.
      *
      *     Text rather than raw JSON: the reason anyone downloads this is to send it to somebody
      *     else, and minified JSON is not something a person reads in a forum post.
      */
-    get: operations["download_refiner_file_log_api_v1_refiner_files__file_id__log_download_get"];
+    get: operations["download_processing_file_log_api_v1_files__file_id__log_download_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -669,7 +669,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}/manual-plan": {
+  "/api/v1/processing/files/{file_id}/manual-plan": {
     parameters: {
       query?: never;
       header?: never;
@@ -679,7 +679,7 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner File Manual Plan
+     * Post Processing File Manual Plan
      * @description Queue a remux pass built from an operator's hand-picked track choice (issue #501).
      *
      *     Validates at least one video and one audio track kept, every index against a fresh probe
@@ -687,14 +687,14 @@ export interface paths {
      *     before running: if the source changed, or a chosen track is missing or changed type, it
      *     fails asking the operator to choose again rather than guessing.
      */
-    post: operations["post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post"];
+    post: operations["post_processing_file_manual_plan_api_v1_files__file_id__manual_plan_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}/move-to-top": {
+  "/api/v1/processing/files/{file_id}/move-to-top": {
     parameters: {
       query?: never;
       header?: never;
@@ -704,20 +704,20 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Move Refiner File To Top
+     * Move Processing File To Top
      * @description Put this file's queued work ahead of everything else waiting.
      *
      *     Only affects work that has not started. A file already being processed cannot be
      *     started earlier, and saying so is more use than a button that appears to work.
      */
-    post: operations["move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post"];
+    post: operations["move_processing_file_to_top_api_v1_files__file_id__move_to_top_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}/requeue": {
+  "/api/v1/processing/files/{file_id}/requeue": {
     parameters: {
       query?: never;
       header?: never;
@@ -727,21 +727,21 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Requeue Refiner File
+     * Requeue Processing File
      * @description Try this file again now.
      *
      *     A manual requeue resets the attempt count and ignores the backoff: whoever asked has
      *     usually just fixed the thing that broke, so making them wait it out — or refusing
      *     because the automatic attempts are spent — would answer a question they did not ask.
      */
-    post: operations["requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post"];
+    post: operations["requeue_processing_file_api_v1_files__file_id__requeue_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}/tracks": {
+  "/api/v1/processing/files/{file_id}/tracks": {
     parameters: {
       query?: never;
       header?: never;
@@ -749,11 +749,11 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner File Tracks
+     * Get Processing File Tracks
      * @description A fresh ffprobe of a held file's source: every stream with its index, type, codec, language,
      *     title, channels and disposition, and what the saved rules would do with it and why (issue #501).
      */
-    get: operations["get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get"];
+    get: operations["get_processing_file_tracks_api_v1_files__file_id__tracks_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -762,7 +762,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/files/{file_id}/why-held": {
+  "/api/v1/processing/files/{file_id}/why-held": {
     parameters: {
       query?: never;
       header?: never;
@@ -770,14 +770,14 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner File Why Held
+     * Get Processing File Why Held
      * @description Ask every manager covering this file's library what it is doing with it, right now.
      *
      *     Deliberately live rather than cached: the question is only ever asked because the
      *     recorded state looks wrong or stale, and answering it from the same record would be
      *     no answer at all.
      */
-    get: operations["get_refiner_file_why_held_api_v1_refiner_files__file_id__why_held_get"];
+    get: operations["get_processing_file_why_held_api_v1_files__file_id__why_held_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -786,7 +786,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/hardware": {
+  "/api/v1/processing/hardware": {
     parameters: {
       query?: never;
       header?: never;
@@ -794,10 +794,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Hardware
+     * Get Processing Hardware
      * @description What ffmpeg on this machine reports it can do.
      */
-    get: operations["get_refiner_hardware_api_v1_refiner_hardware_get"];
+    get: operations["get_processing_hardware_api_v1_processing_hardware_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -806,7 +806,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/jobs/file-remux-pass/enqueue": {
+  "/api/v1/processing/jobs/file-remux-pass/enqueue": {
     parameters: {
       query?: never;
       header?: never;
@@ -816,17 +816,17 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner File Remux Pass Enqueue
+     * Post Processing File Remux Pass Enqueue
      * @description Enqueue one live ffprobe + remux-plan + optional ffmpeg pass.
      */
-    post: operations["post_refiner_file_remux_pass_enqueue_api_v1_refiner_jobs_file_remux_pass_enqueue_post"];
+    post: operations["post_processing_file_remux_pass_enqueue_api_v1_jobs_file_remux_pass_enqueue_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/jobs/inspection": {
+  "/api/v1/processing/jobs/inspection": {
     parameters: {
       query?: never;
       header?: never;
@@ -834,10 +834,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Jobs Inspection
-     * @description Read-only persisted ``refiner_jobs`` rows (all ``job_kind`` values on this lane).
+     * Get Processing Jobs Inspection
+     * @description Read-only persisted ``jobs`` rows (all ``job_kind`` values on this lane).
      */
-    get: operations["get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get"];
+    get: operations["get_jobs_inspection_api_v1_jobs_inspection_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -846,7 +846,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue": {
+  "/api/v1/processing/jobs/watched-folder-remux-scan-dispatch/enqueue": {
     parameters: {
       query?: never;
       header?: never;
@@ -856,17 +856,17 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Watched Folder Remux Scan Dispatch Enqueue
+     * Post Processing Watched Folder Remux Scan Dispatch Enqueue
      * @description Enqueue one scan of the saved watched folder (manual trigger).
      */
-    post: operations["post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post"];
+    post: operations["post_processing_watched_folder_remux_scan_dispatch_enqueue_api_v1_jobs_watched_folder_remux_scan_dispatch_enqueue_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/jobs/{job_id}/cancel-pending": {
+  "/api/v1/processing/jobs/{job_id}/cancel-pending": {
     parameters: {
       query?: never;
       header?: never;
@@ -876,17 +876,17 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Job Cancel Pending
+     * Post Processing Job Cancel Pending
      * @description Abandon a **pending** row only — refuses leased, completed, failed, or cancelled jobs.
      */
-    post: operations["post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post"];
+    post: operations["post_processing_job_cancel_pending_api_v1_jobs__job_id__cancel_pending_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/jobs/{job_id}/recover-finalize-failed": {
+  "/api/v1/processing/jobs/{job_id}/recover-finalize-failed": {
     parameters: {
       query?: never;
       header?: never;
@@ -896,17 +896,17 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Job Recover Finalize Failed
+     * Post Processing Job Recover Finalize Failed
      * @description Recover a completed media pass whose durable job finalization was interrupted.
      */
-    post: operations["post_refiner_job_recover_finalize_failed_api_v1_refiner_jobs__job_id__recover_finalize_failed_post"];
+    post: operations["post_processing_job_recover_finalize_failed_api_v1_jobs__job_id__recover_finalize_failed_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries": {
+  "/api/v1/processing/libraries": {
     parameters: {
       query?: never;
       header?: never;
@@ -914,23 +914,23 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Libraries
+     * Get Processing Libraries
      * @description Every configured library, in display order.
      */
-    get: operations["get_refiner_libraries_api_v1_refiner_libraries_get"];
+    get: operations["get_libraries_api_v1_libraries_get"];
     put?: never;
     /**
-     * Post Refiner Library
+     * Post Processing Library
      * @description Add a library.
      */
-    post: operations["post_refiner_library_api_v1_refiner_libraries_post"];
+    post: operations["post_processing_library_api_v1_libraries_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/discover/{connection_id}": {
+  "/api/v1/processing/libraries/discover/{connection_id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -938,10 +938,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Discoverable Libraries
+     * Get Processing Discoverable Libraries
      * @description What this manager says it looks after, and whether Weir already has it.
      */
-    get: operations["get_refiner_discoverable_libraries_api_v1_refiner_libraries_discover__connection_id__get"];
+    get: operations["get_processing_discoverable_libraries_api_v1_libraries_discover__connection_id__get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -950,7 +950,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/discover/{connection_id}/drift": {
+  "/api/v1/processing/libraries/discover/{connection_id}/drift": {
     parameters: {
       query?: never;
       header?: never;
@@ -958,10 +958,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Library Drift
+     * Get Processing Library Drift
      * @description Differences between the manager and Weir. Reported only — nothing is applied.
      */
-    get: operations["get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get"];
+    get: operations["get_processing_library_drift_api_v1_libraries_discover__connection_id__drift_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -970,7 +970,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/discover/{connection_id}/import": {
+  "/api/v1/processing/libraries/discover/{connection_id}/import": {
     parameters: {
       query?: never;
       header?: never;
@@ -980,17 +980,17 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Import Libraries
+     * Post Processing Import Libraries
      * @description Create a library per selected manager library.
      */
-    post: operations["post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post"];
+    post: operations["post_processing_import_libraries_api_v1_libraries_discover__connection_id__import_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/reorder": {
+  "/api/v1/processing/libraries/reorder": {
     parameters: {
       query?: never;
       header?: never;
@@ -1000,42 +1000,42 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Libraries Reorder
+     * Post Processing Libraries Reorder
      * @description Set display order. Order decides which library a scope-only payload resolves to.
      */
-    post: operations["post_refiner_libraries_reorder_api_v1_refiner_libraries_reorder_post"];
+    post: operations["post_libraries_reorder_api_v1_libraries_reorder_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}": {
+  "/api/v1/processing/libraries/{library_id}": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get Refiner Library */
-    get: operations["get_refiner_library_api_v1_refiner_libraries__library_id__get"];
+    /** Get Processing Library */
+    get: operations["get_processing_library_api_v1_libraries__library_id__get"];
     /**
-     * Put Refiner Library
+     * Put Processing Library
      * @description Save a library. Edited whole, so a partial save cannot half-apply.
      */
-    put: operations["put_refiner_library_api_v1_refiner_libraries__library_id__put"];
+    put: operations["put_processing_library_api_v1_libraries__library_id__put"];
     post?: never;
     /**
-     * Delete Refiner Library
+     * Delete Processing Library
      * @description Remove a library. Refused while it still has queued or running work.
      */
-    delete: operations["delete_refiner_library_api_v1_refiner_libraries__library_id__delete"];
+    delete: operations["delete_processing_library_api_v1_libraries__library_id__delete"];
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-files": {
+  "/api/v1/processing/libraries/{library_id}/library-files": {
     parameters: {
       query?: never;
       header?: never;
@@ -1055,7 +1055,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-files/clean": {
+  "/api/v1/processing/libraries/{library_id}/library-files/clean": {
     parameters: {
       query?: never;
       header?: never;
@@ -1075,7 +1075,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-overview": {
+  "/api/v1/processing/libraries/{library_id}/library-overview": {
     parameters: {
       query?: never;
       header?: never;
@@ -1095,7 +1095,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-problems": {
+  "/api/v1/processing/libraries/{library_id}/library-problems": {
     parameters: {
       query?: never;
       header?: never;
@@ -1115,7 +1115,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-redownloads": {
+  "/api/v1/processing/libraries/{library_id}/library-redownloads": {
     parameters: {
       query?: never;
       header?: never;
@@ -1139,7 +1139,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-scan": {
+  "/api/v1/processing/libraries/{library_id}/library-scan": {
     parameters: {
       query?: never;
       header?: never;
@@ -1159,7 +1159,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-schedule": {
+  "/api/v1/processing/libraries/{library_id}/library-schedule": {
     parameters: {
       query?: never;
       header?: never;
@@ -1179,7 +1179,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/library-settings": {
+  "/api/v1/processing/libraries/{library_id}/library-settings": {
     parameters: {
       query?: never;
       header?: never;
@@ -1203,7 +1203,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/preview": {
+  "/api/v1/processing/libraries/{library_id}/preview": {
     parameters: {
       query?: never;
       header?: never;
@@ -1213,17 +1213,17 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Library Preview
+     * Post Processing Library Preview
      * @description "Try on a file" (#502): probe a real file and run the rules engine against it — the library's saved rule set, or an unsaved one sent in ``rules`` — without queueing, processing or writing anything. ``relative_path`` must resolve under the library's watched or output folder; ``absolute_path`` goes through the same allow-list the local file picker uses. Refused with 409 while another preview is already running.
      */
-    post: operations["post_refiner_library_preview_api_v1_refiner_libraries__library_id__preview_post"];
+    post: operations["post_processing_library_preview_api_v1_libraries__library_id__preview_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/libraries/{library_id}/unlink": {
+  "/api/v1/processing/libraries/{library_id}/unlink": {
     parameters: {
       query?: never;
       header?: never;
@@ -1233,17 +1233,17 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Library Unlink
+     * Post Processing Library Unlink
      * @description Forget where a library came from. The library itself is untouched.
      */
-    post: operations["post_refiner_library_unlink_api_v1_refiner_libraries__library_id__unlink_post"];
+    post: operations["post_processing_library_unlink_api_v1_libraries__library_id__unlink_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/maintenance": {
+  "/api/v1/processing/maintenance": {
     parameters: {
       query?: never;
       header?: never;
@@ -1251,10 +1251,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Maintenance
+     * Get Processing Maintenance
      * @description What each maintenance family is doing, and whether its schedule is on.
      */
-    get: operations["get_refiner_maintenance_api_v1_refiner_maintenance_get"];
+    get: operations["get_processing_maintenance_api_v1_processing_maintenance_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1263,7 +1263,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/maintenance/run": {
+  "/api/v1/processing/maintenance/run": {
     parameters: {
       query?: never;
       header?: never;
@@ -1273,20 +1273,20 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Maintenance Run
+     * Post Processing Maintenance Run
      * @description Run one maintenance family now.
      *
      *     Ignores the schedule toggle on purpose: the toggle decides whether Weir runs this
      *     on its own, and somebody asking for it now has already decided.
      */
-    post: operations["post_refiner_maintenance_run_api_v1_refiner_maintenance_run_post"];
+    post: operations["post_processing_maintenance_run_api_v1_processing_maintenance_run_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/metadata-provider": {
+  "/api/v1/processing/metadata-provider": {
     parameters: {
       query?: never;
       header?: never;
@@ -1294,9 +1294,9 @@ export interface paths {
       cookie?: never;
     };
     /** Get Metadata Provider */
-    get: operations["get_metadata_provider_api_v1_refiner_metadata_provider_get"];
+    get: operations["get_metadata_provider_api_v1_processing_metadata_provider_get"];
     /** Put Metadata Provider */
-    put: operations["put_metadata_provider_api_v1_refiner_metadata_provider_put"];
+    put: operations["put_metadata_provider_api_v1_processing_metadata_provider_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -1304,7 +1304,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/metadata-provider/test": {
+  "/api/v1/processing/metadata-provider/test": {
     parameters: {
       query?: never;
       header?: never;
@@ -1317,24 +1317,24 @@ export interface paths {
      * Post Metadata Provider Test
      * @description Ask the provider a real question, so a saved connection is proven rather than assumed.
      */
-    post: operations["post_metadata_provider_test_api_v1_refiner_metadata_provider_test_post"];
+    post: operations["post_metadata_provider_test_api_v1_processing_metadata_provider_test_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/operator-settings": {
+  "/api/v1/processing/operator-settings": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get Refiner Operator Settings */
-    get: operations["get_refiner_operator_settings_api_v1_refiner_operator_settings_get"];
-    /** Put Refiner Operator Settings */
-    put: operations["put_refiner_operator_settings_api_v1_refiner_operator_settings_put"];
+    /** Get Processing Operator Settings */
+    get: operations["get_operator_settings_api_v1_operator_settings_get"];
+    /** Put Processing Operator Settings */
+    put: operations["put_operator_settings_api_v1_operator_settings_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -1342,15 +1342,15 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/overview-stats": {
+  "/api/v1/processing/overview-stats": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get Refiner Overview Stats */
-    get: operations["get_refiner_overview_stats_api_v1_refiner_overview_stats_get"];
+    /** Get Processing Overview Stats */
+    get: operations["get_processing_overview_stats_api_v1_processing_overview_stats_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1359,7 +1359,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/reject-support": {
+  "/api/v1/processing/reject-support": {
     parameters: {
       query?: never;
       header?: never;
@@ -1367,13 +1367,13 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Reject Support
+     * Get Processing Reject Support
      * @description Whether the Reject failure policy can be chosen for a library linked to these managers.
      *
      *     Asks Deluno or a native manager for its manifest, so it is called when the option is shown,
      *     not on every list.
      */
-    get: operations["get_refiner_reject_support_api_v1_refiner_reject_support_get"];
+    get: operations["get_processing_reject_support_api_v1_processing_reject_support_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1382,25 +1382,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/rule-sets": {
+  "/api/v1/processing/rule-sets": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get Refiner Rule Sets */
-    get: operations["get_refiner_rule_sets_api_v1_refiner_rule_sets_get"];
+    /** Get Processing Rule Sets */
+    get: operations["get_rule_sets_api_v1_rule_sets_get"];
     put?: never;
-    /** Post Refiner Rule Set */
-    post: operations["post_refiner_rule_set_api_v1_refiner_rule_sets_post"];
+    /** Post Processing Rule Set */
+    post: operations["post_processing_rule_set_api_v1_rule_sets_post"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/rule-sets/{rule_set_id}": {
+  "/api/v1/processing/rule-sets/{rule_set_id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -1408,20 +1408,20 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** Put Refiner Rule Set */
-    put: operations["put_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__put"];
+    /** Put Processing Rule Set */
+    put: operations["put_processing_rule_set_api_v1_rule_sets__rule_set_id__put"];
     post?: never;
     /**
-     * Delete Refiner Rule Set
+     * Delete Processing Rule Set
      * @description Remove a rule set. Refused while a library still points at it.
      */
-    delete: operations["delete_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__delete"];
+    delete: operations["delete_processing_rule_set_api_v1_rule_sets__rule_set_id__delete"];
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/runtime-settings": {
+  "/api/v1/processing/runtime-settings": {
     parameters: {
       query?: never;
       header?: never;
@@ -1429,10 +1429,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get Refiner Runtime Settings
+     * Get Processing Runtime Settings
      * @description Snapshot of configured in-process worker concurrency (env at process start).
      */
-    get: operations["get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get"];
+    get: operations["get_processing_runtime_settings_api_v1_processing_runtime_settings_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -3264,8 +3264,8 @@ export interface components {
        * @default [
        *       "job_completed",
        *       "job_failed",
-       *       "refiner_job_completed",
-       *       "refiner_job_failed"
+       *       "processing_job_completed",
+       *       "processing_job_failed"
        *     ]
        */
       supported_events: string[];
@@ -3434,16 +3434,16 @@ export interface components {
       /** Path */
       path?: string | null;
     };
-    /** RefinerFileForgetIn */
-    RefinerFileForgetIn: {
+    /** ProcessingFileForgetIn */
+    ProcessingFileForgetIn: {
       /** Csrf Token */
       csrf_token: string;
     };
     /**
-     * RefinerFileLogEntryOut
+     * ProcessingFileLogEntryOut
      * @description One completed pass over this file.
      */
-    RefinerFileLogEntryOut: {
+    ProcessingFileLogEntryOut: {
       /**
        * Detail
        * @description The whole pass payload: admission decisions, probe, plan, ffmpeg argv, cleanup gates, timings.
@@ -3466,14 +3466,14 @@ export interface components {
        * Story
        * @description The same pass told in plain language. Rebuilt from the stored record on every request, so improving the wording improves past entries too.
        */
-      story?: components["schemas"]["RefinerFileStoryStepOut"][];
+      story?: components["schemas"]["ProcessingFileStoryStepOut"][];
       /** Title */
       title: string;
     };
-    /** RefinerFileLogOut */
-    RefinerFileLogOut: {
+    /** ProcessingFileLogOut */
+    ProcessingFileLogOut: {
       /** Entries */
-      entries: components["schemas"]["RefinerFileLogEntryOut"][];
+      entries: components["schemas"]["ProcessingFileLogEntryOut"][];
       /** File Id */
       file_id: number;
       /** Relative Path */
@@ -3484,23 +3484,23 @@ export interface components {
        */
       retention_days: number;
     };
-    /** RefinerFileMoveToTopIn */
-    RefinerFileMoveToTopIn: {
+    /** ProcessingFileMoveToTopIn */
+    ProcessingFileMoveToTopIn: {
       /** Csrf Token */
       csrf_token: string;
     };
     /**
-     * RefinerFileMoveToTopOut
+     * ProcessingFileMoveToTopOut
      * @description What happened, said in words the screen can show unchanged.
      */
-    RefinerFileMoveToTopOut: {
+    ProcessingFileMoveToTopOut: {
       /** Detail */
       detail: string;
       /** Moved */
       moved: boolean;
     };
-    /** RefinerFileOut */
-    RefinerFileOut: {
+    /** ProcessingFileOut */
+    ProcessingFileOut: {
       /**
        * Audio Track Count
        * @description How many audio tracks the file carries.
@@ -3649,10 +3649,10 @@ export interface components {
       video_width?: number | null;
     };
     /**
-     * RefinerFileRemuxPassManualEnqueueIn
-     * @description Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved watched folder before this POST succeeds.
+     * ProcessingFileRemuxPassManualEnqueueIn
+     * @description Manual ``processing.file.remux_pass.v1`` enqueue — requires a saved watched folder before this POST succeeds.
      */
-    RefinerFileRemuxPassManualEnqueueIn: {
+    ProcessingFileRemuxPassManualEnqueueIn: {
       /** Csrf Token */
       csrf_token: string;
       /**
@@ -3679,8 +3679,8 @@ export interface components {
        */
       relative_media_path: string;
     };
-    /** RefinerFileRemuxPassManualEnqueueOut */
-    RefinerFileRemuxPassManualEnqueueOut: {
+    /** ProcessingFileRemuxPassManualEnqueueOut */
+    ProcessingFileRemuxPassManualEnqueueOut: {
       /** Dedupe Key */
       dedupe_key: string;
       /** Job Id */
@@ -3693,16 +3693,16 @@ export interface components {
        */
       ok: boolean;
     };
-    /** RefinerFileRequeueIn */
-    RefinerFileRequeueIn: {
+    /** ProcessingFileRequeueIn */
+    ProcessingFileRequeueIn: {
       /** Csrf Token */
       csrf_token: string;
     };
     /**
-     * RefinerFileStoryStepOut
+     * ProcessingFileStoryStepOut
      * @description One plain-language step in what happened to a file, built from the stored pass record.
      */
-    RefinerFileStoryStepOut: {
+    ProcessingFileStoryStepOut: {
       /** Heading */
       heading: string;
       /** Sentence */
@@ -3714,10 +3714,10 @@ export interface components {
       tone: string;
     };
     /**
-     * RefinerFileTrackOut
+     * ProcessingFileTrackOut
      * @description One ffprobe stream on a held file, with what the saved rules would do to it and why (issue #501).
      */
-    RefinerFileTrackOut: {
+    ProcessingFileTrackOut: {
       /** Channels */
       channels: number | null;
       /** Codec */
@@ -3749,25 +3749,25 @@ export interface components {
       type: string;
     };
     /**
-     * RefinerFileTracksOut
+     * ProcessingFileTracksOut
      * @description A fresh ffprobe of a held file's source, and what the saved rules would do with it (issue #501).
      */
-    RefinerFileTracksOut: {
+    ProcessingFileTracksOut: {
       /** File Id */
       file_id: number;
       /** Media Scope */
       media_scope: string;
       /** Relative Path */
       relative_path: string;
-      source_fingerprint: components["schemas"]["RefinerSourceFingerprintOut"];
+      source_fingerprint: components["schemas"]["ProcessingSourceFingerprintOut"];
       /** Streams */
-      streams: components["schemas"]["RefinerFileTrackOut"][];
+      streams: components["schemas"]["ProcessingFileTrackOut"][];
     };
     /**
-     * RefinerFilesBulkRequeueIn
+     * ProcessingFilesBulkRequeueIn
      * @description Requeue everything matching a filter, described the same way the list is filtered.
      */
-    RefinerFilesBulkRequeueIn: {
+    ProcessingFilesBulkRequeueIn: {
       /** Csrf Token */
       csrf_token: string;
       /** File Status */
@@ -3796,12 +3796,12 @@ export interface components {
       path_contains?: string | null;
     };
     /**
-     * RefinerFilesPageOut
+     * ProcessingFilesPageOut
      * @description A page of files plus the bucket counts shown above them.
      */
-    RefinerFilesPageOut: {
+    ProcessingFilesPageOut: {
       /** Files */
-      files: components["schemas"]["RefinerFileOut"][];
+      files: components["schemas"]["ProcessingFileOut"][];
       /** Limit */
       limit: number;
       /** Returned */
@@ -3811,8 +3811,8 @@ export interface components {
         [key: string]: number;
       };
     };
-    /** RefinerHardwareOut */
-    RefinerHardwareOut: {
+    /** ProcessingHardwareOut */
+    ProcessingHardwareOut: {
       /**
        * Available Methods
        * @description Acceleration methods this ffmpeg build was compiled with. Being listed does not prove a device is present or working — those are different facts.
@@ -3841,13 +3841,13 @@ export interface components {
        */
       vendors?: string[];
     };
-    /** RefinerJobCancelPendingIn */
-    RefinerJobCancelPendingIn: {
+    /** ProcessingJobCancelPendingIn */
+    ProcessingJobCancelPendingIn: {
       /** Csrf Token */
       csrf_token: string;
     };
-    /** RefinerJobCancelPendingOut */
-    RefinerJobCancelPendingOut: {
+    /** ProcessingJobCancelPendingOut */
+    ProcessingJobCancelPendingOut: {
       /** Job Id */
       job_id: number;
       /**
@@ -3862,10 +3862,10 @@ export interface components {
       status: string;
     };
     /**
-     * RefinerJobInspectionRow
-     * @description One persisted durable job row (lifecycle from ``refiner_jobs`` only).
+     * ProcessingJobInspectionRow
+     * @description One persisted durable job row (lifecycle from ``jobs`` only).
      */
-    RefinerJobInspectionRow: {
+    ProcessingJobInspectionRow: {
       /** Attempt Count */
       attempt_count: number;
       /**
@@ -3917,13 +3917,13 @@ export interface components {
        */
       updated_at: string;
     };
-    /** RefinerJobRecoverFinalizeFailedIn */
-    RefinerJobRecoverFinalizeFailedIn: {
+    /** ProcessingJobRecoverFinalizeFailedIn */
+    ProcessingJobRecoverFinalizeFailedIn: {
       /** Csrf Token */
       csrf_token: string;
     };
-    /** RefinerJobRecoverFinalizeFailedOut */
-    RefinerJobRecoverFinalizeFailedOut: {
+    /** ProcessingJobRecoverFinalizeFailedOut */
+    ProcessingJobRecoverFinalizeFailedOut: {
       /** Job Id */
       job_id: number;
       /**
@@ -3938,20 +3938,20 @@ export interface components {
       status: string;
     };
     /**
-     * RefinerJobsInspectionOut
-     * @description Bounded list of ``refiner_jobs`` rows, newest ``updated_at`` first.
+     * ProcessingJobsInspectionOut
+     * @description Bounded list of ``jobs`` rows, newest ``updated_at`` first.
      */
-    RefinerJobsInspectionOut: {
+    ProcessingJobsInspectionOut: {
       /**
        * Default Recent Slice
        * @description True when no ``status`` filter was applied: the newest rows across all statuses. False when one or more ``status`` query params narrowed the query.
        */
       default_recent_slice: boolean;
       /** Jobs */
-      jobs: components["schemas"]["RefinerJobInspectionRow"][];
+      jobs: components["schemas"]["ProcessingJobInspectionRow"][];
     };
-    /** RefinerLibraryCreateIn */
-    RefinerLibraryCreateIn: {
+    /** ProcessingLibraryCreateIn */
+    ProcessingLibraryCreateIn: {
       /**
        * Created After
        * @description Only admit files whose filesystem creation time is on or after this instant.
@@ -4215,13 +4215,13 @@ export interface components {
        */
       work_folder: string;
     };
-    /** RefinerLibraryDeleteIn */
-    RefinerLibraryDeleteIn: {
+    /** ProcessingLibraryDeleteIn */
+    ProcessingLibraryDeleteIn: {
       /** Csrf Token */
       csrf_token: string;
     };
-    /** RefinerLibraryImportIn */
-    RefinerLibraryImportIn: {
+    /** ProcessingLibraryImportIn */
+    ProcessingLibraryImportIn: {
       /** Csrf Token */
       csrf_token: string;
       /**
@@ -4230,8 +4230,8 @@ export interface components {
        */
       keys: string[];
     };
-    /** RefinerLibraryOut */
-    RefinerLibraryOut: {
+    /** ProcessingLibraryOut */
+    ProcessingLibraryOut: {
       /**
        * Active Job Count
        * @description Queued or running jobs for this library. Deletion is refused while this is non-zero.
@@ -4362,18 +4362,18 @@ export interface components {
       /** Work Folder */
       work_folder: string;
     };
-    /** RefinerLibraryReorderIn */
-    RefinerLibraryReorderIn: {
+    /** ProcessingLibraryReorderIn */
+    ProcessingLibraryReorderIn: {
       /** Csrf Token */
       csrf_token: string;
       /** Library Ids In Order */
       library_ids_in_order: number[];
     };
     /**
-     * RefinerLibraryUpdateIn
+     * ProcessingLibraryUpdateIn
      * @description Same shape as create. A library is edited whole, so a partial save cannot half-apply.
      */
-    RefinerLibraryUpdateIn: {
+    ProcessingLibraryUpdateIn: {
       /**
        * Created After
        * @description Only admit files whose filesystem creation time is on or after this instant.
@@ -4638,24 +4638,24 @@ export interface components {
       work_folder: string;
     };
     /**
-     * RefinerManualPlanIn
+     * ProcessingManualPlanIn
      * @description An operator's hand-picked track choice for a held file (issue #501). At least one video and one
      *     audio track must be kept, every index must exist on a fresh probe of the source, and at most one
      *     audio track and one subtitle track may be marked default. order must list every kept index exactly once.
      */
-    RefinerManualPlanIn: {
+    ProcessingManualPlanIn: {
       /** Csrf Token */
       csrf_token: string;
       /** Keep */
-      keep: components["schemas"]["RefinerManualPlanKeepIn"][];
+      keep: components["schemas"]["ProcessingManualPlanKeepIn"][];
       /** Order */
       order: number[];
     };
     /**
-     * RefinerManualPlanKeepIn
+     * ProcessingManualPlanKeepIn
      * @description One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.
      */
-    RefinerManualPlanKeepIn: {
+    ProcessingManualPlanKeepIn: {
       /**
        * Default
        * @default false
@@ -4669,8 +4669,8 @@ export interface components {
       /** Index */
       index: number;
     };
-    /** RefinerManualPlanOut */
-    RefinerManualPlanOut: {
+    /** ProcessingManualPlanOut */
+    ProcessingManualPlanOut: {
       /** Dedupe Key */
       dedupe_key: string;
       /** Job Id */
@@ -4680,8 +4680,8 @@ export interface components {
       /** Ok */
       ok: boolean;
     };
-    /** RefinerOperatorSettingsOut */
-    RefinerOperatorSettingsOut: {
+    /** ProcessingOperatorSettingsOut */
+    ProcessingOperatorSettingsOut: {
       /**
        * Failure Cleanup Enabled
        * @description Delete the source release folder after a file fails terminally. Off by default: this removes the original, so it stays off until you choose it.
@@ -4720,10 +4720,10 @@ export interface components {
       /** Movie Schedule Start */
       movie_schedule_start: string;
       /**
-       * Refiner Min Input File Size Mb
+       * Processing Min Input File Size Mb
        * @description Files smaller than this are skipped before Weir probes or writes them.
        */
-      refiner_min_input_file_size_mb: number;
+      min_input_file_size_mb: number;
       /**
        * Runner Capacity
        * @description Total processing capacity. Active files consume it according to their cost, and new work waits once it is fully occupied.
@@ -4771,10 +4771,10 @@ export interface components {
       work_temp_stale_sweep_enabled: boolean;
     };
     /**
-     * RefinerOperatorSettingsPutIn
+     * ProcessingOperatorSettingsPutIn
      * @description PUT body supports partial updates: omit a group to leave it unchanged on the server.
      */
-    RefinerOperatorSettingsPutIn: {
+    ProcessingOperatorSettingsPutIn: {
       /** Csrf Token */
       csrf_token: string;
       /** Failure Cleanup Enabled */
@@ -4799,8 +4799,8 @@ export interface components {
       movie_schedule_hours_limited?: boolean | null;
       /** Movie Schedule Start */
       movie_schedule_start?: string | null;
-      /** Refiner Min Input File Size Mb */
-      refiner_min_input_file_size_mb?: number | null;
+      /** Processing Min Input File Size Mb */
+      min_input_file_size_mb?: number | null;
       /** Runner Capacity */
       runner_capacity?: number | null;
       /** Runner Cost 1080P */
@@ -4828,8 +4828,8 @@ export interface components {
       /** Work Temp Stale Sweep Enabled */
       work_temp_stale_sweep_enabled?: boolean | null;
     };
-    /** RefinerOverviewStatsOut */
-    RefinerOverviewStatsOut: {
+    /** ProcessingOverviewStatsOut */
+    ProcessingOverviewStatsOut: {
       /**
        * Already Optimized Count
        * @description No-change rows where Weir copied the unchanged file to output and that output exists.
@@ -4837,7 +4837,7 @@ export interface components {
       already_optimized_count: number;
       /**
        * Files Failed
-       * @description Terminal-failure refiner.file.remux_pass.v1 jobs in the window (failed + finalize-failed).
+       * @description Terminal-failure processing.file.remux_pass.v1 jobs in the window (failed + finalize-failed).
        */
       files_failed: number;
       /**
@@ -4868,8 +4868,8 @@ export interface components {
        */
       window_days: number;
     };
-    /** RefinerRequeueOut */
-    RefinerRequeueOut: {
+    /** ProcessingRequeueOut */
+    ProcessingRequeueOut: {
       /** Detail */
       detail: string;
       /** Requeued */
@@ -4877,8 +4877,8 @@ export interface components {
       /** Skipped */
       skipped: number;
     };
-    /** RefinerRuleSetIn */
-    RefinerRuleSetIn: {
+    /** ProcessingRuleSetIn */
+    ProcessingRuleSetIn: {
       /**
        * Audio Keep Mode
        * @description Issue #497: "single" keeps today's one winning audio track; "per_language" keeps the best track (by the configured sorters) of each configured audio language slot that has one, never zero.
@@ -5063,8 +5063,8 @@ export interface components {
        */
       track_name_template: string;
     };
-    /** RefinerRuleSetOut */
-    RefinerRuleSetOut: {
+    /** ProcessingRuleSetOut */
+    ProcessingRuleSetOut: {
       /** Audio Keep Mode */
       audio_keep_mode: string;
       /** Audio Preference Mode */
@@ -5140,10 +5140,10 @@ export interface components {
       used_by_library_count: number;
     };
     /**
-     * RefinerRulesPreviewIn
+     * ProcessingRulesPreviewIn
      * @description "Try on a file" (#502). Exactly one of relative_path/absolute_path is required; the API answers 400 (not a field error) when neither or both are given.
      */
-    RefinerRulesPreviewIn: {
+    ProcessingRulesPreviewIn: {
       /**
        * Absolute Path
        * @description An absolute path anywhere the local file picker (GET /system/directories) could reach. Mutually exclusive with relative_path.
@@ -5156,11 +5156,11 @@ export interface components {
        * @description Path relative to the library's watched or output folder. Mutually exclusive with absolute_path.
        */
       relative_path?: string | null;
-      /** @description Unsaved rule-set edits to try, in the same shape PUT /refiner/rule-sets/{id} accepts (minus csrf_token). Omit to preview the library's saved rule set instead. */
-      rules?: components["schemas"]["RefinerRulesPreviewRulesIn"] | null;
+      /** @description Unsaved rule-set edits to try, in the same shape PUT /processing/rule-sets/{id} accepts (minus csrf_token). Omit to preview the library's saved rule set instead. */
+      rules?: components["schemas"]["ProcessingRulesPreviewRulesIn"] | null;
     };
-    /** RefinerRulesPreviewOriginalLanguageOut */
-    RefinerRulesPreviewOriginalLanguageOut: {
+    /** ProcessingRulesPreviewOriginalLanguageOut */
+    ProcessingRulesPreviewOriginalLanguageOut: {
       /** Lookup Detail */
       lookup_detail: string;
       /**
@@ -5173,8 +5173,8 @@ export interface components {
       /** Original Language */
       original_language: string | null;
     };
-    /** RefinerRulesPreviewOut */
-    RefinerRulesPreviewOut: {
+    /** ProcessingRulesPreviewOut */
+    ProcessingRulesPreviewOut: {
       /**
        * Estimated Size Reduction Bytes
        * @description Dropped streams' own reported bit rate × the file's duration. Null when no dropped stream reported a bit rate.
@@ -5203,17 +5203,18 @@ export interface components {
       notes: string[];
       /** @default null */
       original_language:
-        components["schemas"]["RefinerRulesPreviewOriginalLanguageOut"] | null;
+        | components["schemas"]["ProcessingRulesPreviewOriginalLanguageOut"]
+        | null;
       /** Remux Required */
       remux_required: boolean;
       /** Tracks */
-      tracks: components["schemas"]["RefinerRulesPreviewTrackOut"][];
+      tracks: components["schemas"]["ProcessingRulesPreviewTrackOut"][];
     };
     /**
-     * RefinerRulesPreviewRulesIn
-     * @description The same fields RefinerRuleSetIn accepts, minus csrf_token — validated exactly like a rule-set save, but never written to the database.
+     * ProcessingRulesPreviewRulesIn
+     * @description The same fields ProcessingRuleSetIn accepts, minus csrf_token — validated exactly like a rule-set save, but never written to the database.
      */
-    RefinerRulesPreviewRulesIn: {
+    ProcessingRulesPreviewRulesIn: {
       /**
        * Audio Keep Mode
        * @default single
@@ -5376,8 +5377,8 @@ export interface components {
        */
       track_name_template: string;
     };
-    /** RefinerRulesPreviewTrackOut */
-    RefinerRulesPreviewTrackOut: {
+    /** ProcessingRulesPreviewTrackOut */
+    ProcessingRulesPreviewTrackOut: {
       /**
        * Action
        * @enum {string}
@@ -5409,10 +5410,10 @@ export interface components {
       type: "video" | "audio" | "subtitle";
     };
     /**
-     * RefinerRuntimeSettingsOut
-     * @description What this API process was configured to run for ``refiner_jobs`` in-process workers only.
+     * ProcessingRuntimeSettingsOut
+     * @description What this API process was configured to run for ``jobs`` in-process workers only.
      */
-    RefinerRuntimeSettingsOut: {
+    ProcessingRuntimeSettingsOut: {
       /**
        * Configuration Note
        * @description How operators change the value (env + restart); not an in-app editor.
@@ -5424,10 +5425,10 @@ export interface components {
        */
       failure_cleanup_configuration_note: string;
       /**
-       * In Process Refiner Worker Count
-       * @description Mirrors WEIR_REFINER_WORKER_COUNT after clamping — the processing lane only.
+       * In Process Processing Worker Count
+       * @description Mirrors WEIR_PROCESSING_WORKER_COUNT after clamping — the processing lane only.
        */
-      in_process_refiner_worker_count: number;
+      in_process_processing_worker_count: number;
       /**
        * In Process Workers Disabled
        * @description True when worker count is 0 (no in-process worker tasks).
@@ -5444,95 +5445,95 @@ export interface components {
        */
       movie_output_cleanup_configuration_note: string;
       /**
-       * Refiner Analyze Duration Seconds
+       * Processing Analyze Duration Seconds
        * @description ffprobe analyze duration in seconds for preflight analysis.
        */
-      refiner_analyze_duration_seconds: number;
+      processing_analyze_duration_seconds: number;
       /**
-       * Refiner Media Extensions
+       * Processing Media Extensions
        * @description File types Weir will pick up in a watched folder. Anything else is ignored and counted.
        */
-      refiner_media_extensions: string[];
+      processing_media_extensions: string[];
       /**
-       * Refiner Movie Failure Cleanup Grace Period Seconds
-       * @description Failed remux age gate for Movies failure cleanup (uses refiner_jobs.updated_at).
+       * Processing Movie Failure Cleanup Grace Period Seconds
+       * @description Failed remux age gate for Movies failure cleanup (uses jobs.updated_at).
        */
-      refiner_movie_failure_cleanup_grace_period_seconds: number;
+      processing_movie_failure_cleanup_grace_period_seconds: number;
       /**
-       * Refiner Movie Failure Cleanup Schedule Enabled
-       * @description ``WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
+       * Processing Movie Failure Cleanup Schedule Enabled
+       * @description ``WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
        */
-      refiner_movie_failure_cleanup_schedule_enabled: boolean;
+      processing_movie_failure_cleanup_schedule_enabled: boolean;
       /**
-       * Refiner Movie Failure Cleanup Schedule Interval Seconds
+       * Processing Movie Failure Cleanup Schedule Interval Seconds
        * @description Seconds between Movies-only periodic failed-remux cleanup enqueue ticks.
        */
-      refiner_movie_failure_cleanup_schedule_interval_seconds: number;
+      processing_movie_failure_cleanup_schedule_interval_seconds: number;
       /**
-       * Refiner Movie Output Cleanup Min Age Seconds
+       * Processing Movie Output Cleanup Min Age Seconds
        * @description Minimum age (newest file mtime under the folder) before Pass 3a may delete a Movies output folder (1h..30d; default 48h).
        */
-      refiner_movie_output_cleanup_min_age_seconds: number;
+      processing_movie_output_cleanup_min_age_seconds: number;
       /**
-       * Refiner Probe Size Mb
+       * Processing Probe Size Mb
        * @description ffprobe probe size in MB for preflight analysis.
        */
-      refiner_probe_size_mb: number;
+      processing_probe_size_mb: number;
       /**
-       * Refiner Tv Failure Cleanup Grace Period Seconds
-       * @description Failed remux age gate for TV failure cleanup (uses refiner_jobs.updated_at).
+       * Processing Tv Failure Cleanup Grace Period Seconds
+       * @description Failed remux age gate for TV failure cleanup (uses jobs.updated_at).
        */
-      refiner_tv_failure_cleanup_grace_period_seconds: number;
+      processing_tv_failure_cleanup_grace_period_seconds: number;
       /**
-       * Refiner Tv Failure Cleanup Schedule Enabled
-       * @description ``WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
+       * Processing Tv Failure Cleanup Schedule Enabled
+       * @description ``WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
        */
-      refiner_tv_failure_cleanup_schedule_enabled: boolean;
+      processing_tv_failure_cleanup_schedule_enabled: boolean;
       /**
-       * Refiner Tv Failure Cleanup Schedule Interval Seconds
+       * Processing Tv Failure Cleanup Schedule Interval Seconds
        * @description Seconds between TV-only periodic failed-remux cleanup enqueue ticks.
        */
-      refiner_tv_failure_cleanup_schedule_interval_seconds: number;
+      processing_tv_failure_cleanup_schedule_interval_seconds: number;
       /**
-       * Refiner Tv Output Cleanup Min Age Seconds
+       * Processing Tv Output Cleanup Min Age Seconds
        * @description Minimum age (direct-child episode media newest mtime) before Pass 3b may delete a TV season output folder (1h..30d; default 48h).
        */
-      refiner_tv_output_cleanup_min_age_seconds: number;
+      processing_tv_output_cleanup_min_age_seconds: number;
       /**
-       * Refiner Watched Folder Min File Age Seconds
+       * Processing Watched Folder Min File Age Seconds
        * @description Minimum file age before watched-folder scan or one-file pass touches media.
        */
-      refiner_watched_folder_min_file_age_seconds: number;
+      processing_watched_folder_min_file_age_seconds: number;
       /**
-       * Refiner Watched Folder Remux Scan Dispatch Periodic Enqueue Remux Jobs
-       * @description When true, periodic scans may enqueue ``refiner.file.remux_pass.v1``.
+       * Processing Watched Folder Remux Scan Dispatch Periodic Enqueue Remux Jobs
+       * @description When true, periodic scans may enqueue ``processing.file.remux_pass.v1``.
        */
-      refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
+      processing_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
       /**
-       * Refiner Work Temp Stale Sweep Min Stale Age Seconds
+       * Processing Work Temp Stale Sweep Min Stale Age Seconds
        * @description Minimum file age before Weir removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).
        */
-      refiner_work_temp_stale_sweep_min_stale_age_seconds: number;
+      processing_work_temp_stale_sweep_min_stale_age_seconds: number;
       /**
-       * Refiner Work Temp Stale Sweep Movie Schedule Enabled
-       * @description ``WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.
+       * Processing Work Temp Stale Sweep Movie Schedule Enabled
+       * @description ``WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.
        */
-      refiner_work_temp_stale_sweep_movie_schedule_enabled: boolean;
+      processing_work_temp_stale_sweep_movie_schedule_enabled: boolean;
       /**
-       * Refiner Work Temp Stale Sweep Movie Schedule Interval Seconds
+       * Processing Work Temp Stale Sweep Movie Schedule Interval Seconds
        * @description Seconds between Movies-only periodic stale temp sweep enqueue ticks (clamped 60..7d).
        */
-      refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: number;
+      processing_work_temp_stale_sweep_movie_schedule_interval_seconds: number;
       /**
-       * Refiner Work Temp Stale Sweep Tv Schedule Enabled
-       * @description ``WEIR_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.
+       * Processing Work Temp Stale Sweep Tv Schedule Enabled
+       * @description ``WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.
        */
-      refiner_work_temp_stale_sweep_tv_schedule_enabled: boolean;
+      processing_work_temp_stale_sweep_tv_schedule_enabled: boolean;
       /**
-       * Refiner Work Temp Stale Sweep Tv Schedule Interval Seconds
+       * Processing Work Temp Stale Sweep Tv Schedule Interval Seconds
        * @description Seconds between TV-only periodic stale temp sweep enqueue ticks (clamped 60..7d).
        */
-      refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: number;
+      processing_work_temp_stale_sweep_tv_schedule_interval_seconds: number;
       /**
        * Sqlite Throughput Note
        * @description Honest caveat about SQLite single-writer behavior when count > 1.
@@ -5565,10 +5566,10 @@ export interface components {
       worker_mode_summary: string;
     };
     /**
-     * RefinerSourceFingerprintOut
+     * ProcessingSourceFingerprintOut
      * @description The source's identity and content state at the moment it was probed (issue #501): device, inode, size and modified time. Compared again when the pass runs, to detect a file that changed since the operator chose its tracks.
      */
-    RefinerSourceFingerprintOut: {
+    ProcessingSourceFingerprintOut: {
       /** Device */
       device: number;
       /** Inode */
@@ -5579,10 +5580,10 @@ export interface components {
       size_bytes: number;
     };
     /**
-     * RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn
+     * ProcessingWatchedFolderRemuxScanDispatchManualEnqueueIn
      * @description Queue one watched-folder scan.
      */
-    RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn: {
+    ProcessingWatchedFolderRemuxScanDispatchManualEnqueueIn: {
       /** Csrf Token */
       csrf_token: string;
       /**
@@ -5604,8 +5605,8 @@ export interface components {
        */
       media_scope: "movie" | "tv";
     };
-    /** RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut */
-    RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut: {
+    /** ProcessingWatchedFolderRemuxScanDispatchManualEnqueueOut */
+    ProcessingWatchedFolderRemuxScanDispatchManualEnqueueOut: {
       /** Dedupe Key */
       dedupe_key: string;
       /** Job Id */
@@ -5619,10 +5620,10 @@ export interface components {
       ok: boolean;
     };
     /**
-     * RefinerWhyHeldOut
+     * ProcessingWhyHeldOut
      * @description A live answer, alongside the recorded one, so a stale record is visible as stale.
      */
-    RefinerWhyHeldOut: {
+    ProcessingWhyHeldOut: {
       /**
        * Blocked By Connection
        * @description The connection holding this file, named the way Weir names connections.
@@ -5870,8 +5871,8 @@ export interface components {
     SuiteOperationalHistoryResetOut: {
       /** Activity Events Deleted */
       activity_events_deleted: number;
-      /** Refiner Jobs Deleted */
-      refiner_jobs_deleted: number;
+      /** Processing Jobs Deleted */
+      jobs_deleted: number;
       /** Status */
       status: string;
       /** Total Deleted */
@@ -7189,7 +7190,7 @@ export interface operations {
       };
     };
   };
-  get_direct_play_devices_api_v1_refiner_direct_play_devices_get: {
+  get_direct_play_devices_api_v1_processing_direct_play_devices_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7209,7 +7210,7 @@ export interface operations {
       };
     };
   };
-  put_direct_play_devices_api_v1_refiner_direct_play_devices_put: {
+  put_direct_play_devices_api_v1_processing_direct_play_devices_put: {
     parameters: {
       query?: never;
       header?: never;
@@ -7242,7 +7243,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_files_api_v1_refiner_files_get: {
+  get_files_api_v1_files_get: {
     parameters: {
       query?: {
         library_id?: number | null;
@@ -7275,7 +7276,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerFilesPageOut"];
+          "application/json": components["schemas"]["ProcessingFilesPageOut"];
         };
       };
       /** @description Validation Error */
@@ -7289,7 +7290,7 @@ export interface operations {
       };
     };
   };
-  requeue_refiner_files_api_v1_refiner_files_requeue_post: {
+  requeue_files_api_v1_files_requeue_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7298,7 +7299,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerFilesBulkRequeueIn"];
+        "application/json": components["schemas"]["ProcessingFilesBulkRequeueIn"];
       };
     };
     responses: {
@@ -7308,7 +7309,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerRequeueOut"];
+          "application/json": components["schemas"]["ProcessingRequeueOut"];
         };
       };
       /** @description Validation Error */
@@ -7322,7 +7323,7 @@ export interface operations {
       };
     };
   };
-  delete_refiner_file_api_v1_refiner_files__file_id__delete: {
+  delete_processing_file_api_v1_files__file_id__delete: {
     parameters: {
       query?: never;
       header?: never;
@@ -7333,7 +7334,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerFileForgetIn"];
+        "application/json": components["schemas"]["ProcessingFileForgetIn"];
       };
     };
     responses: {
@@ -7355,7 +7356,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_file_log_api_v1_refiner_files__file_id__log_get: {
+  get_processing_file_log_api_v1_files__file_id__log_get: {
     parameters: {
       query?: {
         limit?: number;
@@ -7374,7 +7375,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerFileLogOut"];
+          "application/json": components["schemas"]["ProcessingFileLogOut"];
         };
       };
       /** @description Validation Error */
@@ -7388,7 +7389,7 @@ export interface operations {
       };
     };
   };
-  download_refiner_file_log_api_v1_refiner_files__file_id__log_download_get: {
+  download_processing_file_log_api_v1_files__file_id__log_download_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7419,7 +7420,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post: {
+  post_processing_file_manual_plan_api_v1_files__file_id__manual_plan_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7430,7 +7431,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerManualPlanIn"];
+        "application/json": components["schemas"]["ProcessingManualPlanIn"];
       };
     };
     responses: {
@@ -7440,7 +7441,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerManualPlanOut"];
+          "application/json": components["schemas"]["ProcessingManualPlanOut"];
         };
       };
       /** @description Validation Error */
@@ -7454,7 +7455,7 @@ export interface operations {
       };
     };
   };
-  move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post: {
+  move_processing_file_to_top_api_v1_files__file_id__move_to_top_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7465,7 +7466,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerFileMoveToTopIn"];
+        "application/json": components["schemas"]["ProcessingFileMoveToTopIn"];
       };
     };
     responses: {
@@ -7475,7 +7476,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerFileMoveToTopOut"];
+          "application/json": components["schemas"]["ProcessingFileMoveToTopOut"];
         };
       };
       /** @description Validation Error */
@@ -7489,7 +7490,7 @@ export interface operations {
       };
     };
   };
-  requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post: {
+  requeue_processing_file_api_v1_files__file_id__requeue_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7500,7 +7501,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerFileRequeueIn"];
+        "application/json": components["schemas"]["ProcessingFileRequeueIn"];
       };
     };
     responses: {
@@ -7510,7 +7511,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerRequeueOut"];
+          "application/json": components["schemas"]["ProcessingRequeueOut"];
         };
       };
       /** @description Validation Error */
@@ -7524,7 +7525,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get: {
+  get_processing_file_tracks_api_v1_files__file_id__tracks_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7541,7 +7542,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerFileTracksOut"];
+          "application/json": components["schemas"]["ProcessingFileTracksOut"];
         };
       };
       /** @description Validation Error */
@@ -7555,7 +7556,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_file_why_held_api_v1_refiner_files__file_id__why_held_get: {
+  get_processing_file_why_held_api_v1_files__file_id__why_held_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7572,7 +7573,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerWhyHeldOut"];
+          "application/json": components["schemas"]["ProcessingWhyHeldOut"];
         };
       };
       /** @description Validation Error */
@@ -7586,7 +7587,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_hardware_api_v1_refiner_hardware_get: {
+  get_processing_hardware_api_v1_processing_hardware_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7601,12 +7602,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerHardwareOut"];
+          "application/json": components["schemas"]["ProcessingHardwareOut"];
         };
       };
     };
   };
-  post_refiner_file_remux_pass_enqueue_api_v1_refiner_jobs_file_remux_pass_enqueue_post: {
+  post_processing_file_remux_pass_enqueue_api_v1_jobs_file_remux_pass_enqueue_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7615,7 +7616,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerFileRemuxPassManualEnqueueIn"];
+        "application/json": components["schemas"]["ProcessingFileRemuxPassManualEnqueueIn"];
       };
     };
     responses: {
@@ -7625,7 +7626,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerFileRemuxPassManualEnqueueOut"];
+          "application/json": components["schemas"]["ProcessingFileRemuxPassManualEnqueueOut"];
         };
       };
       /** @description Validation Error */
@@ -7639,7 +7640,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get: {
+  get_jobs_inspection_api_v1_jobs_inspection_get: {
     parameters: {
       query?: {
         /** @description Max rows to return. */
@@ -7659,7 +7660,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerJobsInspectionOut"];
+          "application/json": components["schemas"]["ProcessingJobsInspectionOut"];
         };
       };
       /** @description Validation Error */
@@ -7673,7 +7674,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post: {
+  post_processing_watched_folder_remux_scan_dispatch_enqueue_api_v1_jobs_watched_folder_remux_scan_dispatch_enqueue_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7682,7 +7683,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn"];
+        "application/json": components["schemas"]["ProcessingWatchedFolderRemuxScanDispatchManualEnqueueIn"];
       };
     };
     responses: {
@@ -7692,7 +7693,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut"];
+          "application/json": components["schemas"]["ProcessingWatchedFolderRemuxScanDispatchManualEnqueueOut"];
         };
       };
       /** @description Validation Error */
@@ -7706,7 +7707,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post: {
+  post_processing_job_cancel_pending_api_v1_jobs__job_id__cancel_pending_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7717,7 +7718,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerJobCancelPendingIn"];
+        "application/json": components["schemas"]["ProcessingJobCancelPendingIn"];
       };
     };
     responses: {
@@ -7727,7 +7728,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerJobCancelPendingOut"];
+          "application/json": components["schemas"]["ProcessingJobCancelPendingOut"];
         };
       };
       /** @description Validation Error */
@@ -7741,7 +7742,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_job_recover_finalize_failed_api_v1_refiner_jobs__job_id__recover_finalize_failed_post: {
+  post_processing_job_recover_finalize_failed_api_v1_jobs__job_id__recover_finalize_failed_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7752,7 +7753,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerJobRecoverFinalizeFailedIn"];
+        "application/json": components["schemas"]["ProcessingJobRecoverFinalizeFailedIn"];
       };
     };
     responses: {
@@ -7762,7 +7763,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerJobRecoverFinalizeFailedOut"];
+          "application/json": components["schemas"]["ProcessingJobRecoverFinalizeFailedOut"];
         };
       };
       /** @description Validation Error */
@@ -7776,7 +7777,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_libraries_api_v1_refiner_libraries_get: {
+  get_libraries_api_v1_libraries_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7791,12 +7792,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerLibraryOut"][];
+          "application/json": components["schemas"]["ProcessingLibraryOut"][];
         };
       };
     };
   };
-  post_refiner_library_api_v1_refiner_libraries_post: {
+  post_processing_library_api_v1_libraries_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7805,7 +7806,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerLibraryCreateIn"];
+        "application/json": components["schemas"]["ProcessingLibraryCreateIn"];
       };
     };
     responses: {
@@ -7815,7 +7816,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerLibraryOut"];
+          "application/json": components["schemas"]["ProcessingLibraryOut"];
         };
       };
       /** @description Validation Error */
@@ -7829,7 +7830,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_discoverable_libraries_api_v1_refiner_libraries_discover__connection_id__get: {
+  get_processing_discoverable_libraries_api_v1_libraries_discover__connection_id__get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7860,7 +7861,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get: {
+  get_processing_library_drift_api_v1_libraries_discover__connection_id__drift_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7891,7 +7892,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post: {
+  post_processing_import_libraries_api_v1_libraries_discover__connection_id__import_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7902,7 +7903,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerLibraryImportIn"];
+        "application/json": components["schemas"]["ProcessingLibraryImportIn"];
       };
     };
     responses: {
@@ -7912,7 +7913,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerLibraryOut"][];
+          "application/json": components["schemas"]["ProcessingLibraryOut"][];
         };
       };
       /** @description Validation Error */
@@ -7926,7 +7927,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_libraries_reorder_api_v1_refiner_libraries_reorder_post: {
+  post_libraries_reorder_api_v1_libraries_reorder_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -7935,7 +7936,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerLibraryReorderIn"];
+        "application/json": components["schemas"]["ProcessingLibraryReorderIn"];
       };
     };
     responses: {
@@ -7945,7 +7946,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerLibraryOut"][];
+          "application/json": components["schemas"]["ProcessingLibraryOut"][];
         };
       };
       /** @description Validation Error */
@@ -7959,7 +7960,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_library_api_v1_refiner_libraries__library_id__get: {
+  get_processing_library_api_v1_libraries__library_id__get: {
     parameters: {
       query?: never;
       header?: never;
@@ -7976,7 +7977,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerLibraryOut"];
+          "application/json": components["schemas"]["ProcessingLibraryOut"];
         };
       };
       /** @description Validation Error */
@@ -7990,7 +7991,7 @@ export interface operations {
       };
     };
   };
-  put_refiner_library_api_v1_refiner_libraries__library_id__put: {
+  put_processing_library_api_v1_libraries__library_id__put: {
     parameters: {
       query?: never;
       header?: never;
@@ -8001,7 +8002,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerLibraryUpdateIn"];
+        "application/json": components["schemas"]["ProcessingLibraryUpdateIn"];
       };
     };
     responses: {
@@ -8011,7 +8012,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerLibraryOut"];
+          "application/json": components["schemas"]["ProcessingLibraryOut"];
         };
       };
       /** @description Validation Error */
@@ -8025,7 +8026,7 @@ export interface operations {
       };
     };
   };
-  delete_refiner_library_api_v1_refiner_libraries__library_id__delete: {
+  delete_processing_library_api_v1_libraries__library_id__delete: {
     parameters: {
       query?: never;
       header?: never;
@@ -8036,7 +8037,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerLibraryDeleteIn"];
+        "application/json": components["schemas"]["ProcessingLibraryDeleteIn"];
       };
     };
     responses: {
@@ -8459,7 +8460,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_library_preview_api_v1_refiner_libraries__library_id__preview_post: {
+  post_processing_library_preview_api_v1_libraries__library_id__preview_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -8470,7 +8471,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerRulesPreviewIn"];
+        "application/json": components["schemas"]["ProcessingRulesPreviewIn"];
       };
     };
     responses: {
@@ -8480,7 +8481,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerRulesPreviewOut"];
+          "application/json": components["schemas"]["ProcessingRulesPreviewOut"];
         };
       };
       /** @description Validation Error */
@@ -8494,7 +8495,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_library_unlink_api_v1_refiner_libraries__library_id__unlink_post: {
+  post_processing_library_unlink_api_v1_libraries__library_id__unlink_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -8505,7 +8506,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerLibraryDeleteIn"];
+        "application/json": components["schemas"]["ProcessingLibraryDeleteIn"];
       };
     };
     responses: {
@@ -8515,7 +8516,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerLibraryOut"];
+          "application/json": components["schemas"]["ProcessingLibraryOut"];
         };
       };
       /** @description Validation Error */
@@ -8529,7 +8530,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_maintenance_api_v1_refiner_maintenance_get: {
+  get_processing_maintenance_api_v1_processing_maintenance_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -8549,7 +8550,7 @@ export interface operations {
       };
     };
   };
-  post_refiner_maintenance_run_api_v1_refiner_maintenance_run_post: {
+  post_processing_maintenance_run_api_v1_processing_maintenance_run_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -8582,7 +8583,7 @@ export interface operations {
       };
     };
   };
-  get_metadata_provider_api_v1_refiner_metadata_provider_get: {
+  get_metadata_provider_api_v1_processing_metadata_provider_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -8602,7 +8603,7 @@ export interface operations {
       };
     };
   };
-  put_metadata_provider_api_v1_refiner_metadata_provider_put: {
+  put_metadata_provider_api_v1_processing_metadata_provider_put: {
     parameters: {
       query?: never;
       header?: never;
@@ -8635,7 +8636,7 @@ export interface operations {
       };
     };
   };
-  post_metadata_provider_test_api_v1_refiner_metadata_provider_test_post: {
+  post_metadata_provider_test_api_v1_processing_metadata_provider_test_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -8668,7 +8669,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_operator_settings_api_v1_refiner_operator_settings_get: {
+  get_operator_settings_api_v1_operator_settings_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -8683,12 +8684,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerOperatorSettingsOut"];
+          "application/json": components["schemas"]["ProcessingOperatorSettingsOut"];
         };
       };
     };
   };
-  put_refiner_operator_settings_api_v1_refiner_operator_settings_put: {
+  put_operator_settings_api_v1_operator_settings_put: {
     parameters: {
       query?: never;
       header?: never;
@@ -8697,7 +8698,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerOperatorSettingsPutIn"];
+        "application/json": components["schemas"]["ProcessingOperatorSettingsPutIn"];
       };
     };
     responses: {
@@ -8707,7 +8708,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerOperatorSettingsOut"];
+          "application/json": components["schemas"]["ProcessingOperatorSettingsOut"];
         };
       };
       /** @description Validation Error */
@@ -8721,7 +8722,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_overview_stats_api_v1_refiner_overview_stats_get: {
+  get_processing_overview_stats_api_v1_processing_overview_stats_get: {
     parameters: {
       query?: {
         /** @description How far back to count. Pass 1 for 'today' on the custody screen. */
@@ -8739,7 +8740,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerOverviewStatsOut"];
+          "application/json": components["schemas"]["ProcessingOverviewStatsOut"];
         };
       };
       /** @description Validation Error */
@@ -8753,7 +8754,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_reject_support_api_v1_refiner_reject_support_get: {
+  get_processing_reject_support_api_v1_processing_reject_support_get: {
     parameters: {
       query?: {
         connection_ids?: number[];
@@ -8784,7 +8785,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_rule_sets_api_v1_refiner_rule_sets_get: {
+  get_rule_sets_api_v1_rule_sets_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -8799,12 +8800,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerRuleSetOut"][];
+          "application/json": components["schemas"]["ProcessingRuleSetOut"][];
         };
       };
     };
   };
-  post_refiner_rule_set_api_v1_refiner_rule_sets_post: {
+  post_processing_rule_set_api_v1_rule_sets_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -8813,7 +8814,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerRuleSetIn"];
+        "application/json": components["schemas"]["ProcessingRuleSetIn"];
       };
     };
     responses: {
@@ -8823,7 +8824,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerRuleSetOut"];
+          "application/json": components["schemas"]["ProcessingRuleSetOut"];
         };
       };
       /** @description Validation Error */
@@ -8837,7 +8838,7 @@ export interface operations {
       };
     };
   };
-  put_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__put: {
+  put_processing_rule_set_api_v1_rule_sets__rule_set_id__put: {
     parameters: {
       query?: never;
       header?: never;
@@ -8848,7 +8849,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerRuleSetIn"];
+        "application/json": components["schemas"]["ProcessingRuleSetIn"];
       };
     };
     responses: {
@@ -8858,7 +8859,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerRuleSetOut"];
+          "application/json": components["schemas"]["ProcessingRuleSetOut"];
         };
       };
       /** @description Validation Error */
@@ -8872,7 +8873,7 @@ export interface operations {
       };
     };
   };
-  delete_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__delete: {
+  delete_processing_rule_set_api_v1_rule_sets__rule_set_id__delete: {
     parameters: {
       query?: never;
       header?: never;
@@ -8883,7 +8884,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerLibraryDeleteIn"];
+        "application/json": components["schemas"]["ProcessingLibraryDeleteIn"];
       };
     };
     responses: {
@@ -8905,7 +8906,7 @@ export interface operations {
       };
     };
   };
-  get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get: {
+  get_processing_runtime_settings_api_v1_processing_runtime_settings_get: {
     parameters: {
       query?: never;
       header?: never;
@@ -8920,7 +8921,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerRuntimeSettingsOut"];
+          "application/json": components["schemas"]["ProcessingRuntimeSettingsOut"];
         };
       };
     };

@@ -3,7 +3,7 @@ using Weir.Core.Activity;
 using Weir.Core.Json;
 using Weir.Core.Time;
 using Weir.Infrastructure.Activity;
-using Weir.Infrastructure.Refiner;
+using Weir.Infrastructure.Processing;
 using Weir.Infrastructure.Sqlite;
 using Weir.Infrastructure.Tests.Jobs;
 using Weir.Infrastructure.Tests.Platform;
@@ -12,7 +12,7 @@ namespace Weir.Infrastructure.Tests.Activity;
 
 /// <summary>
 /// Activity history reads, commit-time notification and processing-record retention (ports of
-/// <c>test_activity_stream.py</c> and <c>test_refiner_file_log.py</c>'s pruning), plus byte-for-byte
+/// <c>test_activity_stream.py</c> and <c>test_processing_file_log.py</c>'s pruning), plus byte-for-byte
 /// comparisons with the Python router on the same database.
 /// </summary>
 public sealed class ActivityHistoryStoreTests
@@ -59,13 +59,13 @@ public sealed class ActivityHistoryStoreTests
         using var fixture = new StoreFixture();
         var notifier = ActivityNotifications.For(fixture.Database);
         var writer = new SqliteActivityWriter(fixture.Database);
-        var id = await writer.RecordAsync(new ActivityEventDraft(ActivityEventTypes.RefinerFileProcessingProgress, "refiner", "Processing movie.mkv", "{\"percent\":10}"));
+        var id = await writer.RecordAsync(new ActivityEventDraft(ActivityEventTypes.ProcessingFileProcessingProgress, "processing", "Processing movie.mkv", "{\"percent\":10}"));
         Assert.Equal(new ActivityLatest(id, 1), notifier.Snapshot());
 
         var uow = await UnitOfWork.OpenAsync(fixture.Database);
         await using (uow)
         {
-            Assert.True(await SqliteActivityWriter.UpdateAsync(uow, id, eventType: ActivityEventTypes.RefinerFileRemuxPassCompleted, detail: "{\"percent\":42,\"ok\":false,\"relative_media_path\":\"m.mkv\"}"));
+            Assert.True(await SqliteActivityWriter.UpdateAsync(uow, id, eventType: ActivityEventTypes.ProcessingFileRemuxPassCompleted, detail: "{\"percent\":42,\"ok\":false,\"relative_media_path\":\"m.mkv\"}"));
             Assert.False(await SqliteActivityWriter.UpdateAsync(uow, id + 100, title: "missing"));
             Assert.Equal(new ActivityLatest(id, 1), notifier.Snapshot());
             await uow.CommitAsync();
@@ -73,7 +73,7 @@ public sealed class ActivityHistoryStoreTests
 
         Assert.Equal(new ActivityLatest(id, 2), notifier.Snapshot());
         Assert.Equal(1, await fixture.Scalar(
-            $"SELECT count(*) FROM activity_events WHERE id = {id} AND title = 'Processing movie.mkv' AND result = 'failed' AND relative_path = 'm.mkv' AND event_type = 'refiner.file_remux_pass_completed'"));
+            $"SELECT count(*) FROM activity_events WHERE id = {id} AND title = 'Processing movie.mkv' AND result = 'failed' AND relative_path = 'm.mkv' AND event_type = 'processing.file_remux_pass_completed'"));
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class ActivityHistoryStoreTests
         var notifier = ActivityNotifications.For(db.Database);
         var id = await db.Store.InTransactionAsync((connection, transaction) =>
         {
-            var inserted = SqliteActivityWriter.Record(connection, transaction, new ActivityEventDraft("refiner.x_completed", "refiner", "raw", null));
+            var inserted = SqliteActivityWriter.Record(connection, transaction, new ActivityEventDraft("processing.x_completed", "processing", "raw", null));
             Assert.Equal(0, notifier.Snapshot().Version);
             return inserted;
         });
@@ -96,7 +96,7 @@ public sealed class ActivityHistoryStoreTests
         using var db = new JobsTestDatabase(keepSeedRows: true);
         var now = new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
         db.Execute(
-            "INSERT INTO refiner_file_logs (relative_path, recorded_at) VALUES ('old.mkv', '2026-03-01 11:59:59.000000'), ('edge.mkv', '2026-03-03 12:00:00.000000'), ('new.mkv', '2026-05-31 00:00:00')");
+            "INSERT INTO file_logs (relative_path, recorded_at) VALUES ('old.mkv', '2026-03-01 11:59:59.000000'), ('edge.mkv', '2026-03-03 12:00:00.000000'), ('new.mkv', '2026-05-31 00:00:00')");
 
         async Task<int> PruneOnceAsync(DateTimeOffset moment)
         {
@@ -115,27 +115,27 @@ public sealed class ActivityHistoryStoreTests
             }
         }
 
-        db.Execute("UPDATE refiner_operator_settings SET file_log_retention_days = 0");
+        db.Execute("UPDATE operator_settings SET file_log_retention_days = 0");
         Assert.Equal(0, await PruneOnceAsync(now));
 
-        db.Execute("UPDATE refiner_operator_settings SET file_log_retention_days = 90");
+        db.Execute("UPDATE operator_settings SET file_log_retention_days = 90");
         Assert.Equal(1, await PruneOnceAsync(now));
-        Assert.Equal(2, db.Count("SELECT count(*) FROM refiner_file_logs"));
+        Assert.Equal(2, db.Count("SELECT count(*) FROM file_logs"));
 
         // No settings row: Python creates it with 90 days.
-        db.Execute("DELETE FROM refiner_operator_settings");
+        db.Execute("DELETE FROM operator_settings");
         Assert.Equal(0, await PruneOnceAsync(now));
         Assert.Equal(1, await PruneOnceAsync(now.AddDays(1)));
-        Assert.Equal("new.mkv", db.Scalar("SELECT group_concat(relative_path) FROM refiner_file_logs"));
+        Assert.Equal("new.mkv", db.Scalar("SELECT group_concat(relative_path) FROM file_logs"));
     }
 
     [Fact]
     public void Csv_quotes_only_what_the_excel_dialect_quotes()
     {
-        var row = new ActivityEventRow(7, PyDateTime.Naive(new DateTime(2026, 1, 2, 3, 4, 5)), "a.b", "refiner", "comma, \"quote\"", "line\nbreak", null, null, null, "plain;tab\t", null);
+        var row = new ActivityEventRow(7, PyDateTime.Naive(new DateTime(2026, 1, 2, 3, 4, 5)), "a.b", "processing", "comma, \"quote\"", "line\nbreak", null, null, null, "plain;tab\t", null);
         Assert.Equal(
             "id,created_at,module,event_type,trigger,result,library_id,relative_path,title,detail\r\n" +
-            "7,2026-01-02T03:04:05,refiner,a.b,,,,plain;tab\t,\"comma, \"\"quote\"\"\",\"line\nbreak\"\r\n",
+            "7,2026-01-02T03:04:05,processing,a.b,,,,plain;tab\t,\"comma, \"\"quote\"\"\",\"line\nbreak\"\r\n",
             ActivityHistory.ExportCsv([row]));
     }
 
@@ -146,9 +146,9 @@ public sealed class ActivityHistoryStoreTests
         using var fixture = new StoreFixture();
         await fixture.Execute(
             "INSERT INTO activity_events (created_at, event_type, module, title) VALUES " +
-            "('2026-01-01 00:00:01', 'a.1', 'refiner', 'one'), " +
-            "('2026-01-01 00:00:02', 'a.2', 'refiner', 'two'), " +
-            "('2026-01-01 00:00:03', 'a.3', 'refiner', 'three')");
+            "('2026-01-01 00:00:01', 'a.1', 'processing', 'one'), " +
+            "('2026-01-01 00:00:02', 'a.2', 'processing', 'two'), " +
+            "('2026-01-01 00:00:03', 'a.3', 'processing', 'three')");
 
         Assert.Equal(3, await fixture.WithUnitOfWork(uow => ActivityHistoryStore.CountAsync(uow, ActivityFilter.None)));
 
@@ -177,10 +177,10 @@ public sealed class ActivityHistoryStoreTests
         using var fixture = new StoreFixture();
         await fixture.Execute(
             "INSERT INTO activity_events (created_at, event_type, module, title) VALUES " +
-            "('2026-01-01 00:00:10', 'a.1', 'refiner', 'A'), " + // id 1, ties id 3
-            "('2026-01-01 00:00:05', 'a.2', 'refiner', 'B'), " + // id 2, older than id 1 and id 3
-            "('2026-01-01 00:00:10', 'a.3', 'refiner', 'C'), " + // id 3, ties id 1
-            "('2026-01-01 00:00:01', 'a.4', 'refiner', 'D')"); // id 4, oldest
+            "('2026-01-01 00:00:10', 'a.1', 'processing', 'A'), " + // id 1, ties id 3
+            "('2026-01-01 00:00:05', 'a.2', 'processing', 'B'), " + // id 2, older than id 1 and id 3
+            "('2026-01-01 00:00:10', 'a.3', 'processing', 'C'), " + // id 3, ties id 1
+            "('2026-01-01 00:00:01', 'a.4', 'processing', 'D')"); // id 4, oldest
 
         var first = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, ActivityFilter.None, limit: 2, beforeId: null));
         Assert.Equal(["C", "A"], first.Select(r => r.Title)); // the tie broken by id DESC: 3 before 1
@@ -198,8 +198,8 @@ public sealed class ActivityHistoryStoreTests
         using var fixture = new StoreFixture();
         await fixture.Execute(
             "INSERT INTO activity_events (created_at, event_type, module, title) VALUES " +
-            "('2026-01-01 00:00:01', 'a.1', 'refiner', 'one'), " +
-            "('2026-01-01 00:00:02', 'a.2', 'refiner', 'two')");
+            "('2026-01-01 00:00:01', 'a.1', 'processing', 'one'), " +
+            "('2026-01-01 00:00:02', 'a.2', 'processing', 'two')");
 
         var rows = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, ActivityFilter.None, limit: 10, beforeId: 999));
         Assert.Equal(["two", "one"], rows.Select(r => r.Title));
@@ -215,7 +215,7 @@ public sealed class ActivityHistoryStoreTests
         using var fixture = new StoreFixture();
         // Stored with no fractional part: the shape SQLAlchemy (and Weir) write for an exact second.
         await fixture.Execute(
-            "INSERT INTO activity_events (created_at, event_type, module, title) VALUES ('2026-01-02 03:04:05', 'a.1', 'refiner', 'exact')");
+            "INSERT INTO activity_events (created_at, event_type, module, title) VALUES ('2026-01-02 03:04:05', 'a.1', 'processing', 'exact')");
 
         Assert.True(PyDateTime.TryFromIsoFormat("2026-01-02T03:04:05", out var naiveBoundary));
         var atBoundary = new ActivityFilter(DateFrom: naiveBoundary);
@@ -244,9 +244,9 @@ public sealed class ActivityHistoryStoreTests
         using var fixture = new StoreFixture();
         await fixture.Execute(
             "INSERT INTO activity_events (created_at, event_type, module, title, relative_path, library_id) VALUES " +
-            "('2026-01-01 00:00:01', 'a.1', 'refiner', 'no library recorded', 'Film/movie.mkv', NULL)");
+            "('2026-01-01 00:00:01', 'a.1', 'processing', 'no library recorded', 'Film/movie.mkv', NULL)");
         await fixture.Execute(
-            "INSERT INTO refiner_file_logs (relative_path, recorded_at, library_id) VALUES ('Film/movie.mkv', '2026-01-01 00:00:01', NULL)");
+            "INSERT INTO file_logs (relative_path, recorded_at, library_id) VALUES ('Film/movie.mkv', '2026-01-01 00:00:01', NULL)");
 
         var counts = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.CountFileHistoryAsync(uow, libraryId: 7, "Film/movie.mkv"));
         Assert.Equal(1, counts.ActivityEvents);

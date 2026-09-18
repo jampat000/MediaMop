@@ -54,7 +54,7 @@ public sealed class MediaManagerApiTests
     {
         var manager = new ScriptedManager();
         var server = await WeirTestServer.StartAsync(
-            [("WEIR_SESSION_SECRET", Secret), ("WEIR_REFINER_WORKER_COUNT", "0"), ("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", ""), .. variables],
+            [("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), ("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", ""), .. variables],
             configureServices: services => services.AddSingleton<IManagerHttpHandlerFactory>(manager));
         await TestDatabase.SeedAdminAsync(server);
         var client = new ApiTestClient(server);
@@ -328,7 +328,7 @@ public sealed class MediaManagerApiTests
 
         using var notADict = await client.SendAsync(HttpMethod.Post, "/api/v1/intake/webhook/native", content: TestDatabase.RawJson("[1]"));
         Assert.Equal("""{"detail":[{"type":"dict_type","loc":["body"],"msg":"Input should be a valid dictionary","input":[1]}]}""", await notADict.Content.ReadAsStringAsync());
-        Assert.Equal(0, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM refiner_jobs WHERE job_kind = 'refiner.file.remux_pass.v1'"));
+        Assert.Equal(0, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM jobs WHERE job_kind = 'processing.file.remux_pass.v1'"));
     }
 
     [Fact]
@@ -336,7 +336,7 @@ public sealed class MediaManagerApiTests
     {
         foreach (var name in new[] { "WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "WEIR_SUBBER_WEBHOOK_SECRET" })
         {
-            await using var server = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_REFINER_WORKER_COUNT", "0"), (name, "s3cret")]);
+            await using var server = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), (name, "s3cret")]);
             var client = new ApiTestClient(server);
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/v1/intake/webhook/radarr", new { eventType = "Grab" })).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/intake/webhook/radarr", new { eventType = "Grab" }, new Dictionary<string, string> { ["X-Webhook-Secret"] = "s3cret" })).StatusCode);
@@ -349,7 +349,7 @@ public sealed class MediaManagerApiTests
         var watched = Path.Join(Path.GetTempPath(), "weir-handoff-" + Guid.NewGuid().ToString("N"));
         var (server, _, _) = await StartAsync(("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "s3cret"));
         await using var _server = server;
-        await TestDatabase.ExecuteAsync(server, "UPDATE refiner_libraries SET watched_folder = $w WHERE media_type = 'movie'", ("$w", watched));
+        await TestDatabase.ExecuteAsync(server, "UPDATE libraries SET watched_folder = $w WHERE media_type = 'movie'", ("$w", watched));
         var manager = new ApiTestClient(server);
         var secret = new Dictionary<string, string> { ["X-Webhook-Secret"] = "s3cret" };
 
@@ -365,7 +365,7 @@ public sealed class MediaManagerApiTests
         var handoff = new { eventType = "deluno.processor-handoff", handoffId = "h1", libraryId = "lib-1", mediaType = "movies", sourcePath = Path.Join(watched, "Film", "film.mkv"), callbackPath = "/api/integrations/processors/events" };
         using (var queued = await manager.PostAsync("/api/v1/intake/webhook/deluno", handoff, secret))
         {
-            Assert.Equal("""{"status":"ok","source":"deluno","event":"handoff","media_scope":"movie","enqueued":"refiner.file.remux_pass.v1"}""", await queued.Content.ReadAsStringAsync());
+            Assert.Equal("""{"status":"ok","source":"deluno","event":"handoff","media_scope":"movie","enqueued":"processing.file.remux_pass.v1"}""", await queued.Content.ReadAsStringAsync());
         }
 
         using (var status = await manager.GetAsync("/api/v1/intake/handoffs/deluno/h1", secret))
@@ -381,7 +381,7 @@ public sealed class MediaManagerApiTests
             Assert.Null(cancelled.Content.Headers.ContentType);
         }
 
-        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM activity_events WHERE event_type = 'refiner.handoff_cancelled' AND title = 'Deluno cancelled its hand-off of film.mkv'"));
+        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM activity_events WHERE event_type = 'processing.handoff_cancelled' AND title = 'Deluno cancelled its hand-off of film.mkv'"));
         Assert.Equal("cancelled", (await Json(await manager.GetAsync("/api/v1/intake/handoffs/deluno/h1", secret)))["state"]!.GetValue<string>());
         using var again = await manager.SendAsync(HttpMethod.Delete, "/api/v1/intake/handoffs/deluno/h1", headers: secret);
         Assert.Equal((HttpStatusCode.Conflict, "This hand-off is cancelled, so Weir did not cancel it."), (again.StatusCode, await Detail(again)));
@@ -405,7 +405,7 @@ public sealed class MediaManagerApiTests
         Directory.CreateDirectory(work);
         var artifact = Path.Join(work, ".movie.mkv.partial");
         await File.WriteAllTextAsync(artifact, "partial");
-        await TestDatabase.ExecuteAsync(server, "UPDATE refiner_libraries SET work_folder = $w WHERE media_type = 'movie'", ("$w", work));
+        await TestDatabase.ExecuteAsync(server, "UPDATE libraries SET work_folder = $w WHERE media_type = 'movie'", ("$w", work));
         var origin = new Dictionary<string, string> { ["Origin"] = "http://weir.local", ["X-Requested-With"] = "XMLHttpRequest" };
 
         using (var report = await client.GetAsync("/api/v1/system/reconciliation"))
@@ -414,33 +414,33 @@ public sealed class MediaManagerApiTests
             Assert.Equal((artifact, true), (issue["path"]!.GetValue<string>(), issue["requires_confirmation"]!.GetValue<bool>()));
         }
 
-        using (var noToken = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_refiner_temp_artifact", path = artifact, confirm = true }, origin))
+        using (var noToken = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_processing_temp_artifact", path = artifact, confirm = true }, origin))
         {
             Assert.Equal((HttpStatusCode.BadRequest, "Invalid or expired CSRF token."), (noToken.StatusCode, await Detail(noToken)));
         }
 
-        using (var badOrigin = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_refiner_temp_artifact", path = artifact, confirm = true, csrf_token = await client.CsrfAsync() }, new Dictionary<string, string> { ["Origin"] = "http://evil.example", ["X-Requested-With"] = "XMLHttpRequest" }))
+        using (var badOrigin = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_processing_temp_artifact", path = artifact, confirm = true, csrf_token = await client.CsrfAsync() }, new Dictionary<string, string> { ["Origin"] = "http://evil.example", ["X-Requested-With"] = "XMLHttpRequest" }))
         {
             Assert.Equal((HttpStatusCode.Forbidden, "Origin not allowed."), (badOrigin.StatusCode, await Detail(badOrigin)));
         }
 
         Assert.True(File.Exists(artifact));
-        using (var unconfirmed = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_refiner_temp_artifact", path = artifact, confirm = false, csrf_token = await client.CsrfAsync() }, origin))
+        using (var unconfirmed = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_processing_temp_artifact", path = artifact, confirm = false, csrf_token = await client.CsrfAsync() }, origin))
         {
             Assert.Equal(HttpStatusCode.BadRequest, unconfirmed.StatusCode);
             Assert.Contains("confirm=true", await Detail(unconfirmed), StringComparison.Ordinal);
         }
 
-        using var applied = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_refiner_temp_artifact", path = artifact, confirm = true, csrf_token = await client.CsrfAsync() }, origin);
+        using var applied = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_processing_temp_artifact", path = artifact, confirm = true, csrf_token = await client.CsrfAsync() }, origin);
         Assert.Equal("""{"applied":true,"message":"Removed the temp artifact."}""", await applied.Content.ReadAsStringAsync());
         Assert.False(File.Exists(artifact));
-        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM activity_events WHERE event_type = 'system.reconciliation.repair' AND detail = 'remove_refiner_temp_artifact: Removed the temp artifact.'"));
+        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM activity_events WHERE event_type = 'system.reconciliation.repair' AND detail = 'remove_processing_temp_artifact: Removed the temp artifact.'"));
     }
 
     [Fact]
     public async Task Head_on_the_post_only_webhook_is_method_not_allowed()
     {
-        await using var server = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_REFINER_WORKER_COUNT", "0"), ("WEIR_WEB_DIST", "")]);
+        await using var server = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), ("WEIR_WEB_DIST", "")]);
         using var request = new HttpRequestMessage(HttpMethod.Head, "/api/v1/intake/webhook/deluno");
         Assert.Equal(HttpStatusCode.MethodNotAllowed, (await server.Client.SendAsync(request)).StatusCode);
     }

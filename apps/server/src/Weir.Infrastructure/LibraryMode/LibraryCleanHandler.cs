@@ -5,13 +5,13 @@ using Weir.Core.Json;
 using Weir.Core.LibraryMode;
 using Weir.Core.Media;
 using Weir.Core.MediaManagers;
-using Weir.Core.Refiner;
+using Weir.Core.Processing;
 using Weir.Core.Rules;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Media;
-using Weir.Infrastructure.Refiner;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing;
+using Weir.Infrastructure.Processing.RemuxPass;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.LibraryMode;
@@ -81,8 +81,8 @@ public sealed class LibraryCleanHandler : IJobHandler
             return;
         }
 
-        RefinerLibraryRecord? library;
-        RefinerRulesConfig rules;
+        ProcessingLibraryRecord? library;
+        ProcessingRulesConfig rules;
         LibrarySettings settings;
         await using (var uow = await UnitOfWork.OpenAsync(_database, cancellationToken).ConfigureAwait(false))
         {
@@ -208,7 +208,7 @@ public sealed class LibraryCleanHandler : IJobHandler
         }
     }
 
-    private async Task OnCommittedAsync(RefinerLibraryRecord library, string path, LibraryFilePlanResult plan, SwapResult result, CancellationToken cancellationToken)
+    private async Task OnCommittedAsync(ProcessingLibraryRecord library, string path, LibraryFilePlanResult plan, SwapResult result, CancellationToken cancellationToken)
     {
         // #509 step 1: record what this clean removed for good, keyed the same way library mode identifies the
         // file everywhere else (library id + this path). A future rule change can then ask #509's diff whether
@@ -250,7 +250,7 @@ public sealed class LibraryCleanHandler : IJobHandler
 
     /// <summary>
     /// A locked file is not a failure (#506): back off 5, 15 then 60 minutes by putting the row back to <c>pending</c> with a
-    /// future <c>not_before</c> and clearing the lease ourselves — <see cref="RefinerJobStore.CompleteClaimedAsync"/>'s own
+    /// future <c>not_before</c> and clearing the lease ourselves — <see cref="ProcessingJobStore.CompleteClaimedAsync"/>'s own
     /// lease check then finds the lease already gone and leaves this update alone. After the third attempt, report it as
     /// given up and let the job complete normally.
     /// </summary>
@@ -268,9 +268,9 @@ public sealed class LibraryCleanHandler : IJobHandler
         var notBefore = _time.GetUtcNow() + delay.Value;
         await using var uow = await UnitOfWork.OpenAsync(_database, CancellationToken.None).ConfigureAwait(false);
         await uow.ExecuteAsync(
-            "UPDATE refiner_jobs SET payload_json = @payload, status = @pending, lease_owner = NULL, lease_expires_at = NULL, not_before = @notBefore, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
+            "UPDATE jobs SET payload_json = @payload, status = @pending, lease_owner = NULL, lease_expires_at = NULL, not_before = @notBefore, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
             ("@payload", PyJsonWriter.Dumps(payload, PyJsonFormat.Compact)),
-            ("@pending", RefinerJobStatus.Pending),
+            ("@pending", ProcessingJobStatus.Pending),
             ("@notBefore", notBefore.UtcDateTime),
             ("@id", context.Id)).ConfigureAwait(false);
         await uow.CommitAsync().ConfigureAwait(false);

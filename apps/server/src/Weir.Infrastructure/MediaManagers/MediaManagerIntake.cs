@@ -42,10 +42,10 @@ public sealed class MediaManagerIntake
     private readonly WeirOptions _options;
     private readonly MediaManagerConnectionService _connections;
     private readonly HandoffLedgerStore _ledger;
-    private readonly RefinerJobStore _jobs;
+    private readonly ProcessingJobStore _jobs;
     private readonly TimeProvider _time;
 
-    public MediaManagerIntake(WeirOptions options, MediaManagerConnectionService connections, HandoffLedgerStore ledger, RefinerJobStore jobs, TimeProvider time)
+    public MediaManagerIntake(WeirOptions options, MediaManagerConnectionService connections, HandoffLedgerStore ledger, ProcessingJobStore jobs, TimeProvider time)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));
@@ -59,7 +59,7 @@ public sealed class MediaManagerIntake
 
     public HandoffLedgerStore Ledger => _ledger;
 
-    public RefinerJobStore Jobs => _jobs;
+    public ProcessingJobStore Jobs => _jobs;
 
     /// <summary>
     /// <c>_authorise</c>: this source's own connection secret when it has one, else the instance-wide secret, else no check.
@@ -136,7 +136,7 @@ public sealed class MediaManagerIntake
     {
         ArgumentNullException.ThrowIfNull(uow);
         return uow.QueryAsync(
-            "SELECT id, media_type, watched_folder FROM refiner_libraries ORDER BY display_order, id",
+            "SELECT id, media_type, watched_folder FROM libraries ORDER BY display_order, id",
             reader => new IntakeLibrary(SqliteValues.GetInt64(reader, 0), SqliteValues.GetString(reader, 1), SqliteValues.GetString(reader, 2)));
     }
 
@@ -150,7 +150,7 @@ public sealed class MediaManagerIntake
             return (chosen.Library, chosen.Resolved);
         }
 
-        var scope = RefinerLibraryFolders.NormalizeMediaScope(importEvent.MediaScope);
+        var scope = ProcessingLibraryFolders.NormalizeMediaScope(importEvent.MediaScope);
         var fallback = libraries.FirstOrDefault(library => library.MediaType == scope);
         return (fallback, HandoffPaths.RelativeMediaPathForHandoff(fallback?.WatchedFolder ?? string.Empty, importEvent.FilePath));
     }
@@ -263,10 +263,10 @@ public sealed class MediaManagerIntake
         // No status reason: the queued job speaks for the file until a pass or scan records one, and a reason here
         // would change what the hand-off status tells the manager while the file waits.
         await uow.ExecuteAsync(
-            "INSERT INTO refiner_files (library_id, relative_path, status, status_reason, size_bytes, last_seen_at) " +
+            "INSERT INTO files (library_id, relative_path, status, status_reason, size_bytes, last_seen_at) " +
             "VALUES ($library, $path, 'unprocessed', '', $size, $now) " +
             "ON CONFLICT (library_id, relative_path) DO UPDATE SET size_bytes = excluded.size_bytes, updated_at = CURRENT_TIMESTAMP " +
-            "WHERE refiner_files.size_bytes = 0 AND excluded.size_bytes <> 0",
+            "WHERE files.size_bytes = 0 AND excluded.size_bytes <> 0",
             ("$library", library.Id),
             ("$path", relativePath),
             ("$size", size),

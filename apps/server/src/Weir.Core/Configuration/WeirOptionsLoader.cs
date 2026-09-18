@@ -18,8 +18,8 @@ public static class WeirOptionsLoader
     private const int SevenDaysSeconds = 7 * 24 * 3600;
     private const int ThirtyDaysSeconds = 30 * 24 * 3600;
 
-    /// <summary>Python's <c>DEFAULT_REFINER_JOB_LEASE_SECONDS</c> (#540 item 1).</summary>
-    public const int DefaultRefinerJobLeaseSeconds = 300;
+    /// <summary>Python's <c>DEFAULT_PROCESSING_JOB_LEASE_SECONDS</c> (#540 item 1).</summary>
+    public const int DefaultProcessingJobLeaseSeconds = 300;
 
     public static WeirOptions Load(RuntimeEnvironment runtime)
     {
@@ -77,24 +77,24 @@ public static class WeirOptionsLoader
 
         var paths = RuntimePaths.Resolve(runtime);
 
-        var refinerWorkers = ClampRefinerWorkerCount(EnvInt(runtime, "WEIR_REFINER_WORKER_COUNT", 8));
-        var refinerJobLeaseSeconds = ClampRefinerJobLeaseSeconds(EnvInt(runtime, "WEIR_REFINER_JOB_LEASE_SECONDS", DefaultRefinerJobLeaseSeconds));
-        var watcherEnabled = EnvBool(runtime, "WEIR_REFINER_WATCHER_ENABLED", true);
-        var watcherDebounce = Math.Max(0.25, Math.Min(300.0, EnvInt(runtime, "WEIR_REFINER_WATCHER_DEBOUNCE_SECONDS", 3)));
+        var processingWorkers = ClampProcessingWorkerCount(EnvInt(runtime, "WEIR_PROCESSING_WORKER_COUNT", 8));
+        var processingJobLeaseSeconds = ClampProcessingJobLeaseSeconds(EnvInt(runtime, "WEIR_PROCESSING_JOB_LEASE_SECONDS", DefaultProcessingJobLeaseSeconds));
+        var watcherEnabled = EnvBool(runtime, "WEIR_PROCESSING_WATCHER_ENABLED", true);
+        var watcherDebounce = Math.Max(0.25, Math.Min(300.0, EnvInt(runtime, "WEIR_PROCESSING_WATCHER_DEBOUNCE_SECONDS", 3)));
 
-        const string legacySweepEnabled = "WEIR_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED";
-        const string legacySweepInterval = "WEIR_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS";
+        const string legacySweepEnabled = "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED";
+        const string legacySweepInterval = "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS";
 
         bool SweepEnabled(string key) =>
             runtime.IsSet(key) ? EnvBool(runtime, key, false)
             : runtime.IsSet(legacySweepEnabled) && EnvBool(runtime, legacySweepEnabled, false);
 
         int SweepInterval(string key) =>
-            runtime.IsSet(key) ? ClampRefinerScheduleIntervalSeconds(EnvInt(runtime, key, 3600))
-            : runtime.IsSet(legacySweepInterval) ? ClampRefinerScheduleIntervalSeconds(EnvInt(runtime, legacySweepInterval, 3600))
-            : ClampRefinerScheduleIntervalSeconds(3600);
+            runtime.IsSet(key) ? ClampProcessingScheduleIntervalSeconds(EnvInt(runtime, key, 3600))
+            : runtime.IsSet(legacySweepInterval) ? ClampProcessingScheduleIntervalSeconds(EnvInt(runtime, legacySweepInterval, 3600))
+            : ClampProcessingScheduleIntervalSeconds(3600);
 
-        var remuxRoot = (runtime.Get("WEIR_REFINER_REMUX_MEDIA_ROOT") ?? string.Empty).Trim();
+        var remuxRoot = (runtime.Get("WEIR_PROCESSING_REMUX_MEDIA_ROOT") ?? string.Empty).Trim();
         var webDist = (runtime.Get("WEIR_WEB_DIST") ?? string.Empty).Trim();
 
         var outputOwnershipChown = EnvBool(runtime, "WEIR_CHOWN_OUTPUT", false);
@@ -132,39 +132,39 @@ public static class WeirOptionsLoader
             BackupDir = paths.BackupDir,
             LogDir = paths.LogDir,
             TempDir = paths.TempDir,
-            RefinerWorkerCount = refinerWorkers,
-            RefinerJobLeaseSeconds = refinerJobLeaseSeconds,
-            RefinerWatcherEnabled = watcherEnabled,
-            RefinerWatcherDebounceSeconds = watcherDebounce,
-            RefinerWatchedFolderRemuxScanDispatchScheduleEnabled = EnvBool(
-                runtime, "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", true),
-            RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs = EnvBool(
-                runtime, "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS", true),
-            RefinerProbeSizeMb = Clamp(EnvInt(runtime, "WEIR_REFINER_PROBE_SIZE_MB", 10), 1, 1024),
-            RefinerAnalyzeDurationSeconds = Clamp(EnvInt(runtime, "WEIR_REFINER_ANALYZE_DURATION_SECONDS", 10), 1, 300),
-            RefinerWatchedFolderMinFileAgeSeconds = ClampRefinerMinFileAgeSeconds(
-                EnvInt(runtime, "WEIR_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", 300)),
-            RefinerMovieOutputCleanupMinAgeSeconds = Clamp(
-                EnvInt(runtime, "WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS", 48 * 3600), 3600, ThirtyDaysSeconds),
-            RefinerTvOutputCleanupMinAgeSeconds = Clamp(
-                EnvInt(runtime, "WEIR_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS", 48 * 3600), 3600, ThirtyDaysSeconds),
-            RefinerWorkTempStaleSweepMovieScheduleEnabled = SweepEnabled("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED"),
-            RefinerWorkTempStaleSweepMovieScheduleIntervalSeconds = SweepInterval("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_INTERVAL_SECONDS"),
-            RefinerWorkTempStaleSweepTvScheduleEnabled = SweepEnabled("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED"),
-            RefinerWorkTempStaleSweepTvScheduleIntervalSeconds = SweepInterval("WEIR_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_INTERVAL_SECONDS"),
-            RefinerWorkTempStaleSweepMinStaleAgeSeconds = Clamp(
-                EnvInt(runtime, "WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MIN_STALE_AGE_SECONDS", 86_400), 60, ThirtyDaysSeconds),
-            RefinerMovieFailureCleanupScheduleEnabled = EnvBool(runtime, "WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED", false),
-            RefinerMovieFailureCleanupScheduleIntervalSeconds = ClampRefinerScheduleIntervalSeconds(
-                EnvInt(runtime, "WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", 3600)),
-            RefinerTvFailureCleanupScheduleEnabled = EnvBool(runtime, "WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED", false),
-            RefinerTvFailureCleanupScheduleIntervalSeconds = ClampRefinerScheduleIntervalSeconds(
-                EnvInt(runtime, "WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", 3600)),
-            RefinerMovieFailureCleanupGracePeriodSeconds = Clamp(
-                EnvInt(runtime, "WEIR_REFINER_MOVIE_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", 1800), 300, 604800),
-            RefinerTvFailureCleanupGracePeriodSeconds = Clamp(
-                EnvInt(runtime, "WEIR_REFINER_TV_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", 1800), 300, 604800),
-            RefinerRemuxMediaRoot = remuxRoot.Length == 0
+            ProcessingWorkerCount = processingWorkers,
+            ProcessingJobLeaseSeconds = processingJobLeaseSeconds,
+            ProcessingWatcherEnabled = watcherEnabled,
+            ProcessingWatcherDebounceSeconds = watcherDebounce,
+            ProcessingWatchedFolderRemuxScanDispatchScheduleEnabled = EnvBool(
+                runtime, "WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", true),
+            ProcessingWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs = EnvBool(
+                runtime, "WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS", true),
+            ProcessingProbeSizeMb = Clamp(EnvInt(runtime, "WEIR_PROCESSING_PROBE_SIZE_MB", 10), 1, 1024),
+            ProcessingAnalyzeDurationSeconds = Clamp(EnvInt(runtime, "WEIR_PROCESSING_ANALYZE_DURATION_SECONDS", 10), 1, 300),
+            ProcessingWatchedFolderMinFileAgeSeconds = ClampProcessingMinFileAgeSeconds(
+                EnvInt(runtime, "WEIR_PROCESSING_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", 300)),
+            ProcessingMovieOutputCleanupMinAgeSeconds = Clamp(
+                EnvInt(runtime, "WEIR_PROCESSING_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS", 48 * 3600), 3600, ThirtyDaysSeconds),
+            ProcessingTvOutputCleanupMinAgeSeconds = Clamp(
+                EnvInt(runtime, "WEIR_PROCESSING_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS", 48 * 3600), 3600, ThirtyDaysSeconds),
+            ProcessingWorkTempStaleSweepMovieScheduleEnabled = SweepEnabled("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED"),
+            ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds = SweepInterval("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_INTERVAL_SECONDS"),
+            ProcessingWorkTempStaleSweepTvScheduleEnabled = SweepEnabled("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED"),
+            ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds = SweepInterval("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_INTERVAL_SECONDS"),
+            ProcessingWorkTempStaleSweepMinStaleAgeSeconds = Clamp(
+                EnvInt(runtime, "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MIN_STALE_AGE_SECONDS", 86_400), 60, ThirtyDaysSeconds),
+            ProcessingMovieFailureCleanupScheduleEnabled = EnvBool(runtime, "WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED", false),
+            ProcessingMovieFailureCleanupScheduleIntervalSeconds = ClampProcessingScheduleIntervalSeconds(
+                EnvInt(runtime, "WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", 3600)),
+            ProcessingTvFailureCleanupScheduleEnabled = EnvBool(runtime, "WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED", false),
+            ProcessingTvFailureCleanupScheduleIntervalSeconds = ClampProcessingScheduleIntervalSeconds(
+                EnvInt(runtime, "WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_INTERVAL_SECONDS", 3600)),
+            ProcessingMovieFailureCleanupGracePeriodSeconds = Clamp(
+                EnvInt(runtime, "WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", 1800), 300, 604800),
+            ProcessingTvFailureCleanupGracePeriodSeconds = Clamp(
+                EnvInt(runtime, "WEIR_PROCESSING_TV_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", 1800), 300, 604800),
+            ProcessingRemuxMediaRoot = remuxRoot.Length == 0
                 ? null
                 : PythonCompat.NormalizeLexically(PythonCompat.ExpandUser(remuxRoot, runtime), runtime),
             JobRowsRetentionDays = Clamp(EnvInt(runtime, "WEIR_JOB_ROWS_RETENTION_DAYS", 90), 1, 365),
@@ -185,21 +185,21 @@ public static class WeirOptionsLoader
         };
     }
 
-    /// <summary><c>clamp_refiner_worker_count</c>: 0..8 slots; negative values mean 1.</summary>
-    public static int ClampRefinerWorkerCount(long raw) => raw < 0 ? 1 : (int)Math.Min(8, raw);
+    /// <summary><c>clamp_processing_worker_count</c>: 0..8 slots; negative values mean 1.</summary>
+    public static int ClampProcessingWorkerCount(long raw) => raw < 0 ? 1 : (int)Math.Min(8, raw);
 
     /// <summary>
     /// #540 item 1: 30 s .. 1 day. Below 30 s the lease-renewal heartbeat (every ~lease/3) would fire
     /// so often it could swamp the database; above a day, a crashed worker's row would sit unclaimed
     /// for an unreasonable time before startup recovery or a reclaim picks it up.
     /// </summary>
-    public static int ClampRefinerJobLeaseSeconds(long raw) => Clamp(raw, 30, 86_400);
+    public static int ClampProcessingJobLeaseSeconds(long raw) => Clamp(raw, 30, 86_400);
 
-    /// <summary><c>clamp_refiner_schedule_interval_seconds</c>: 60 s .. 7 days.</summary>
-    public static int ClampRefinerScheduleIntervalSeconds(long raw) => Clamp(raw, 60, SevenDaysSeconds);
+    /// <summary><c>clamp_processing_schedule_interval_seconds</c>: 60 s .. 7 days.</summary>
+    public static int ClampProcessingScheduleIntervalSeconds(long raw) => Clamp(raw, 60, SevenDaysSeconds);
 
-    /// <summary><c>clamp_refiner_min_file_age_seconds</c>: 0 .. 7 days.</summary>
-    public static int ClampRefinerMinFileAgeSeconds(long raw) => Clamp(raw, 0, SevenDaysSeconds);
+    /// <summary><c>clamp_processing_min_file_age_seconds</c>: 0 .. 7 days.</summary>
+    public static int ClampProcessingMinFileAgeSeconds(long raw) => Clamp(raw, 0, SevenDaysSeconds);
 
     /// <summary>
     /// For each <c>http(s)://localhost</c> or <c>127.0.0.1</c> origin, also allow the other hostname on

@@ -1,6 +1,6 @@
 """Black-box processing: a media manager hands Weir a file and hears back.
 
-Covers behaviour the backend tested only from the inside (test_refiner_talks_to_media_managers.py,
+Covers behaviour the backend tested only from the inside (test_processing_talks_to_media_managers.py,
 test_media_manager_completion_callback.py, test_media_manager_intake_api.py's folder cases): a running
 server, a fake Deluno, and fake ffprobe/ffmpeg.
 """

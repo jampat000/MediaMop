@@ -3,10 +3,10 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RefinerJobsInspectionSection } from "./refiner/refiner-jobs-inspection-section";
+import { ProcessingJobsInspectionSection } from "./processing/processing-jobs-inspection-section";
 
-vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
-  useRefinerJobsInspectionQuery: vi.fn(() => ({
+vi.mock("../lib/processing/jobs-inspection/queries", () => ({
+  useProcessingJobsInspectionQuery: vi.fn(() => ({
     isPending: false,
     isError: false,
     data: {
@@ -14,7 +14,7 @@ vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
         {
           id: 1,
           status: "completed",
-          job_kind: "refiner.process.test.v1",
+          job_kind: "processing.process.test.v1",
           updated_at: "2026-04-20T00:00:00Z",
           lease_owner: null,
           lease_expires_at: null,
@@ -23,12 +23,12 @@ vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
       ],
     },
   })),
-  useRefinerJobCancelPendingMutation: vi.fn(() => ({
+  useProcessingJobCancelPendingMutation: vi.fn(() => ({
     isPending: false,
     isError: false,
     mutate: vi.fn(),
   })),
-  useRefinerJobRecoverFinalizeFailedMutation: vi.fn(() => ({
+  useProcessingJobRecoverFinalizeFailedMutation: vi.fn(() => ({
     isPending: false,
     isError: false,
     mutate: vi.fn(),
@@ -71,11 +71,11 @@ describe("responsive smoke", () => {
     vi.clearAllMocks();
   });
 
-  it.each(VIEWPORTS)("renders Refiner jobs at %ipx", (width) => {
+  it.each(VIEWPORTS)("renders Processing jobs at %ipx", (width) => {
     setViewport(width);
-    render(withProviders(<RefinerJobsInspectionSection />));
+    render(withProviders(<ProcessingJobsInspectionSection />));
     expect(
-      screen.getByTestId("refiner-jobs-inspection-section"),
+      screen.getByTestId("processing-jobs-inspection-section"),
     ).toBeInTheDocument();
     expect(screen.getByText("Jobs")).toBeInTheDocument();
   });

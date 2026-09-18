@@ -1,5 +1,5 @@
 /**
- * Shared **module top-tab** context strip (Refiner, …).
+ * Shared **module top-tab** context strip (Processing, …).
  * Same visual rhythm as Suite Settings tab blurbs: double horizontal rule and even vertical padding.
  */
 

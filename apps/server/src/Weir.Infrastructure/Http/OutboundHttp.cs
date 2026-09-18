@@ -233,7 +233,7 @@ public sealed class NotificationDispatcher
     {
         try
         {
-            await PostOneAsync(channel, TestTitle, TestDetail, "job_completed", "refiner", 0, "test", cancellationToken).ConfigureAwait(false);
+            await PostOneAsync(channel, TestTitle, TestDetail, "job_completed", "processing", 0, "test", cancellationToken).ConfigureAwait(false);
             return null;
         }
         catch (ExternalEndpointException exception)
@@ -255,7 +255,7 @@ public sealed class NotificationDispatcher
     /// failed. Never throws; failures are logged through <paramref name="warn"/>.
     /// </summary>
     /// <param name="database">The database to read channels and the job's status from.</param>
-    /// <param name="module">The module the job belongs to (e.g. <c>refiner</c>).</param>
+    /// <param name="module">The module the job belongs to (e.g. <c>processing</c>).</param>
     /// <param name="eventKind"><c>completed</c> or <c>failed</c>.</param>
     /// <param name="jobId">The job's id, for the notification payload and the permanently-failed check.</param>
     /// <param name="jobKind">The job's kind, for the notification payload.</param>
@@ -280,9 +280,9 @@ public sealed class NotificationDispatcher
                 var uow = await Sqlite.UnitOfWork.OpenAsync(database).ConfigureAwait(false);
                 await using (uow.ConfigureAwait(false))
                 {
-                    if (eventKind == "failed" && module == "refiner")
+                    if (eventKind == "failed" && module == "processing")
                     {
-                        var status = await uow.ScalarAsync("SELECT status FROM refiner_jobs WHERE id = $id", ("$id", jobId)).ConfigureAwait(false);
+                        var status = await uow.ScalarAsync("SELECT status FROM jobs WHERE id = $id", ("$id", jobId)).ConfigureAwait(false);
                         if (status is not string text || text != "failed")
                         {
                             return;

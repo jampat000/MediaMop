@@ -29,7 +29,7 @@ public sealed record ReconciliationIssue(
 /// <summary>The pure parts of <c>weir.platform.reconciliation.service</c>.</summary>
 public static class ReconciliationRules
 {
-    public const string RemoveTempArtifactAction = "remove_refiner_temp_artifact";
+    public const string RemoveTempArtifactAction = "remove_processing_temp_artifact";
     public const int MaxIssuesPerCategory = 200;
 
     /// <summary><c>TEMP_ARTIFACT_SUFFIXES</c>.</summary>

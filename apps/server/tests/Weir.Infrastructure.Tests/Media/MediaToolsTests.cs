@@ -10,9 +10,9 @@ using Weir.Infrastructure.Processes;
 namespace Weir.Infrastructure.Tests.Media;
 
 /// <summary>
-/// Ports of <c>test_refiner_ffprobe_log_levels.py</c>, <c>test_refiner_remux_mux_validation.py</c>,
-/// <c>test_refiner_probe_controls.py</c> (tool resolution) and the detection half of
-/// <c>test_refiner_hardware_acceleration.py</c>, with a scripted runner in place of <c>subprocess</c>.
+/// Ports of <c>test_processing_ffprobe_log_levels.py</c>, <c>test_processing_remux_mux_validation.py</c>,
+/// <c>test_processing_probe_controls.py</c> (tool resolution) and the detection half of
+/// <c>test_processing_hardware_acceleration.py</c>, with a scripted runner in place of <c>subprocess</c>.
 /// </summary>
 public sealed class MediaToolsTests : IDisposable
 {
@@ -41,10 +41,10 @@ public sealed class MediaToolsTests : IDisposable
 
         await Tools(runner, logger).FfprobeJsonAsync(media);
 
-        Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("REFINER_FFPROBE", StringComparison.Ordinal));
-        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("REFINER_FFPROBE_FILE_STATE", StringComparison.Ordinal));
-        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("REFINER_FFPROBE_CALL", StringComparison.Ordinal));
-        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("REFINER_FFPROBE_RESULT", StringComparison.Ordinal));
+        Assert.DoesNotContain(logger.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("PROCESSING_FFPROBE", StringComparison.Ordinal));
+        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("PROCESSING_FFPROBE_FILE_STATE", StringComparison.Ordinal));
+        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("PROCESSING_FFPROBE_CALL", StringComparison.Ordinal));
+        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Debug && e.Message.Contains("PROCESSING_FFPROBE_RESULT", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class MediaToolsTests : IDisposable
         var error = await Assert.ThrowsAnyAsync<MediaToolException>(() => Tools(runner, logger).FfprobeJsonAsync(media));
 
         Assert.Contains("broken", error.Message, StringComparison.Ordinal);
-        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("REFINER_FFPROBE_RESULT", StringComparison.Ordinal));
+        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains("PROCESSING_FFPROBE_RESULT", StringComparison.Ordinal));
     }
 
     [Theory]
@@ -213,7 +213,7 @@ public sealed class MediaToolsTests : IDisposable
         Assert.Contains("incomplete", error.Message, StringComparison.Ordinal);
         Assert.Empty(Directory.EnumerateFileSystemEntries(workDir));
         var ffmpeg = runner.Requests[0];
-        Assert.StartsWith(Path.Combine(Path.GetFullPath(workDir), "source.refiner."), ffmpeg.Argv[^1], StringComparison.Ordinal);
+        Assert.StartsWith(Path.Combine(Path.GetFullPath(workDir), "source.processing."), ffmpeg.Argv[^1], StringComparison.Ordinal);
         Assert.EndsWith(".mkv", ffmpeg.Argv[^1], StringComparison.Ordinal);
     }
 

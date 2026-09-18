@@ -12,7 +12,7 @@ using Weir.Infrastructure.Auth;
 using Weir.Infrastructure.Http;
 using Weir.Infrastructure.LibraryMode;
 using Weir.Infrastructure.MediaManagers;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing.RemuxPass;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Settings;
@@ -40,8 +40,8 @@ public static class WeirApi
         services.AddSingleton<IExternalJsonPoster, ExternalJsonPoster>();
         services.AddSingleton<NotificationDispatcher>();
         services.AddWeirMediaManagers(options);
-        services.AddWeirRefinerApis();
-        services.AddWeirRefinerFailureFollowUps(options);
+        services.AddWeirProcessingApis();
+        services.AddWeirProcessingFailureFollowUps(options);
         services.AddWeirLibraryMode(options);
 
         // Scheduled work, hosted with the jobs (AddWeirJobs) by PeriodicTaskService.
@@ -101,7 +101,7 @@ public static class WeirApi
             endpoints.MapMediaManagerEndpoints();
             endpoints.MapNotificationEndpoints();
             endpoints.MapActivityEndpoints();
-            endpoints.MapWeirRefinerApis();
+            endpoints.MapWeirProcessingApis();
             var routes = endpoints.ServiceProvider.GetRequiredService<RouteTable>();
             routes.Add("/", [HttpMethods.Get], "/");
             routes.Add("/index.html", [HttpMethods.Get], "/index.html");
