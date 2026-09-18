@@ -36,11 +36,34 @@ describe("ErrorBoundary", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Route render failed")).toBeInTheDocument();
     expect(
-      screen.getByRole("navigation", { name: "Unavailable sections" }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("button", { name: "Reload Weir" }),
     ).toBeInTheDocument();
+  });
+
+  it("offers a route back to safety that does not need a router", () => {
+    render(<AppErrorScreen error={new Error("Bad route state")} />);
+
+    // A plain anchor on purpose: this screen also renders outside RouterProvider, where a
+    // react-router `Link` would throw and take the error screen down with it.
+    const home = screen.getByRole("link", { name: "Go to In hand" });
+    expect(home).toHaveAttribute("href", "/");
+  });
+
+  it("does not rebuild the app shell inside the failure", () => {
+    const { container } = render(
+      <AppErrorScreen error={new Error("Bad route state")} />,
+    );
+
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    expect(container.querySelector(".mm-sidebar")).toBeNull();
+  });
+
+  it("moves focus to the error screen so it is announced", () => {
+    render(<AppErrorScreen error={new Error("Bad route state")} />);
+
+    expect(document.activeElement).toBe(
+      screen.getByRole("main", { hidden: true }),
+    );
   });
 
   it("lets the user trigger reload from the fallback", () => {
