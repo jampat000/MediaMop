@@ -1,43 +1,6 @@
-import type { ReactNode } from "react";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
-/** Shared overview building blocks: the titled section card and job-list pagination. */
-
-// ─── Outer section wrapper ────────────────────────────────────────────────
-
-export function MmOverviewSection({
-  id,
-  headingId,
-  heading,
-  children,
-  "data-testid": dataTestId,
-  "data-overview-order": dataOverviewOrder,
-}: {
-  id?: string;
-  headingId: string;
-  heading: string;
-  children: ReactNode;
-  "data-testid"?: string;
-  "data-overview-order"?: string;
-}) {
-  return (
-    <section
-      id={id}
-      className="mm-card mm-dash-card mm-module-surface"
-      aria-labelledby={headingId}
-      data-testid={dataTestId}
-      data-overview-order={dataOverviewOrder}
-    >
-      <h2
-        id={headingId}
-        className="mm-card__title text-lg 2xl:text-xl min-[1760px]:text-2xl"
-      >
-        {heading}
-      </h2>
-      <div className="mm-card__body mt-5">{children}</div>
-    </section>
-  );
-}
+/** Job-list pagination, shared by the Overview and the Jobs tab. */
 
 export function MmJobsPagination({
   page,

@@ -249,10 +249,7 @@ export function SettingsSecurityTab() {
         aside={
           <button
             type="button"
-            className={mmActionButtonClass({
-              variant: "tertiary",
-              disabled: revokeOthers.isPending || sessionsQ.isPending,
-            })}
+            className="mm-quiet-link"
             disabled={
               revokeOthers.isPending ||
               sessionsQ.isPending ||
@@ -363,23 +360,17 @@ export function SettingsSecurityTab() {
         )}
       </SettingsQuietSection>
 
-      <section
-        className="mm-card w-full"
-        aria-labelledby="suite-security-change-username-heading"
+      <SettingsQuietSection
+        headingId="suite-security-change-username-heading"
+        heading="Change username"
       >
-        <h2
-          id="suite-security-change-username-heading"
-          className="mm-card__title"
-        >
-          Change username
-        </h2>
-        <p className="mm-card__body text-sm text-[var(--mm-text2)]">
+        <p className="mm-quiet-note">
           Weir has one account. Signing in ignores capitalisation, so{" "}
           <code>admin</code> and <code>Admin</code> are the same name.
         </p>
-        <div className="mm-card__body space-y-3">
+        <div className="mt-4 max-w-xl space-y-3">
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
               New username
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -395,7 +386,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
               Current password
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -411,7 +402,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           {changeUsername.isError ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="mm-status-text--failed text-sm" role="alert">
               {changeUsername.error instanceof Error
                 ? changeUsername.error.message
                 : "Could not change the username."}
@@ -454,24 +445,18 @@ export function SettingsSecurityTab() {
             {changeUsername.isPending ? "Saving…" : "Change username"}
           </button>
         </div>
-      </section>
-      <section
-        className="mm-card w-full"
-        aria-labelledby="suite-security-change-password-heading"
+      </SettingsQuietSection>
+      <SettingsQuietSection
+        headingId="suite-security-change-password-heading"
+        heading="Change password"
       >
-        <h2
-          id="suite-security-change-password-heading"
-          className="mm-card__title"
-        >
-          Change password
-        </h2>
-        <p className="mm-card__body text-sm text-[var(--mm-text2)]">
+        <p className="mm-quiet-note">
           Update your sign-in password. After saving, Weir requires a fresh
           sign-in.
         </p>
-        <div className="mm-card__body space-y-3">
+        <div className="mt-4 max-w-xl space-y-3">
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
               Current password
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -504,7 +489,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
               New password (min. 8 characters)
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -537,7 +522,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
               Confirm new password
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -570,7 +555,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           {changePassword.isError ? (
-            <p className="text-sm text-red-300" role="alert">
+            <p className="mm-status-text--failed text-sm" role="alert">
               {formatChangePasswordMutationError(changePassword.error)}
             </p>
           ) : null}
@@ -629,7 +614,7 @@ export function SettingsSecurityTab() {
             {changePassword.isPending ? "Saving..." : "Change password"}
           </button>
         </div>
-      </section>
+      </SettingsQuietSection>
     </div>
   );
 }

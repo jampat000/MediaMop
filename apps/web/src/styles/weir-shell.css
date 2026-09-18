@@ -202,84 +202,6 @@ body.mm-body {
   color: var(--mm-status-failed-text) !important;
 }
 
-/* Processing overview (pages/processing/processing-overview-tab.tsx). */
-.mm-proc-panel__lead {
-  margin: 0;
-  max-width: 44rem;
-  color: var(--mm-text2);
-  font-size: var(--mm-type-body);
-  line-height: 1.55;
-}
-
-.mm-proc-panel__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--mm-border);
-}
-
-.mm-proc-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 0.6rem;
-  margin: 0.9rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mm-proc-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius-sm);
-  background: color-mix(in srgb, var(--mm-surface-2) 55%, transparent);
-}
-
-.mm-proc-step__marker {
-  display: inline-grid;
-  width: 1.5rem;
-  height: 1.5rem;
-  flex-shrink: 0;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--mm-accent-soft);
-  color: var(--mm-accent-bright);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.mm-proc-step--done .mm-proc-step__marker {
-  background: var(--mm-status-healthy-bg);
-  color: var(--mm-status-healthy-text);
-}
-
-.mm-proc-step__text {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.mm-proc-step__text strong {
-  color: var(--mm-text1);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.mm-proc-step--done .mm-proc-step__text strong {
-  color: var(--mm-text2);
-}
-
-.mm-proc-step__text small {
-  color: var(--mm-text2);
-  font-size: var(--mm-type-caption);
-  line-height: 1.4;
-}
-
 .mm-activity-chip--success {
   border-color: color-mix(
     in srgb,
@@ -1348,15 +1270,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
     padding: calc(1.45rem * var(--mm-density-ui-scale))
       calc(1.55rem * var(--mm-density-ui-scale));
   }
-
-  .mm-card__title {
-    font-size: 0.6875rem;
-  }
-
-  .mm-card__body {
-    font-size: 0.953125rem;
-    line-height: 1.6;
-  }
 }
 
 /* Wide desktop (incl. 1440p at 125–150% OS scale where CSS width sits ~1700–2048px). */
@@ -1372,11 +1285,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
   .mm-page__lead {
     font-size: 1rem;
-  }
-
-  .mm-card__body {
-    font-size: 1rem;
-    line-height: 1.6;
   }
 }
 
@@ -1399,15 +1307,10 @@ html[data-mm-theme="light"] .mm-theme-toggle {
     padding: calc(1.5rem * var(--mm-density-ui-scale))
       calc(1.6rem * var(--mm-density-ui-scale));
   }
-
-  .mm-card__body {
-    font-size: 1.03125rem;
-  }
 }
 
 .mm-page,
-.mm-card,
-.mm-card__body {
+.mm-card {
   min-width: 0;
 }
 
@@ -1421,32 +1324,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   .mm-bubble-stack {
     gap: var(--mm-bubble-stack-gap-desktop);
   }
-}
-
-/* Card: main stack above a full-width primary-action footer (aligned across modules). */
-.mm-card-action-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  gap: var(--mm-bubble-stack-gap-mobile);
-  padding-bottom: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .mm-card-action-body {
-    gap: var(--mm-bubble-stack-gap-desktop);
-  }
-}
-
-.mm-card-action-footer {
-  margin-top: auto;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  border-top: 1px solid var(--mm-border);
-  padding-top: 1.5rem;
 }
 
 .mm-page__intro {
@@ -1494,24 +1371,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   border: 1px solid var(--mm-border);
   border-radius: 16px;
   box-shadow: var(--mm-shadow-card), var(--mm-shadow-card-inner);
-}
-
-.mm-card__title {
-  margin: 0 0 0.55rem;
-  font-size: 0.65625rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mm-eyebrow-color);
-}
-
-.mm-card__body {
-  margin: 0;
-  font-size: 0.90625rem;
-  line-height: 1.58;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  color: var(--mm-text2);
 }
 
 .mm-dash-card.mm-card {
@@ -1857,12 +1716,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   .mm-activity-remux-detail__compare {
     grid-template-columns: 1fr;
   }
-}
-
-.mm-module-surface {
-  max-width: 100%;
-  /* Inline only: a block reset here would cancel the parent's space-y-* gaps between cards. */
-  margin-inline: 0;
 }
 
 /* ---- Auth screens -------------------------------------------------------- */

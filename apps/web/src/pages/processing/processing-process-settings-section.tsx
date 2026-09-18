@@ -85,19 +85,23 @@ export function ProcessingProcessSettingsSection() {
   }
   if (q.isError) {
     return (
-      <div
-        className="mm-module-surface w-full min-w-0 rounded border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200"
-        role="alert"
-      >
-        <p className="font-semibold">Could not load processing settings</p>
-        <p className="mt-1">
-          {isLikelyNetworkFailure(q.error)
-            ? "Check that the Weir API is running."
-            : isHttpErrorFromApi(q.error)
-              ? "Sign in, then try again."
-              : "Request failed."}
-        </p>
-      </div>
+      // Something broken, in the language's own shape for it: a sentence with the
+      // interrupt marker, not a red box. Raw red-200 on a red-950 wash was also
+      // unreadable in the light theme.
+      <ul className="mm-interrupt" role="alert">
+        <li className="mm-interrupt__item">
+          <span className="mm-interrupt__text">
+            <strong className="font-semibold">
+              Could not load processing settings.
+            </strong>{" "}
+            {isLikelyNetworkFailure(q.error)
+              ? "Check that the Weir API is running."
+              : isHttpErrorFromApi(q.error)
+                ? "Sign in, then try again."
+                : "Request failed."}
+          </span>
+        </li>
+      </ul>
     );
   }
   if (!q.data) {
@@ -368,7 +372,7 @@ export function ProcessingProcessSettingsSection() {
           </QuietFieldGroup>
         </div>
         {save.isError ? (
-          <p className="mt-3 text-sm text-red-300" role="alert">
+          <p className="mm-status-text--failed mt-3 text-sm" role="alert">
             {save.error instanceof Error ? save.error.message : "Save failed."}
           </p>
         ) : null}

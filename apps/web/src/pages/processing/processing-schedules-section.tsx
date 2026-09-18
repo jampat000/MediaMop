@@ -260,19 +260,21 @@ export function ProcessingSchedulesSection() {
   }
   if (q.isError || libraries.isError) {
     return (
-      <div
-        className="mm-module-surface w-full min-w-0 rounded border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200"
-        role="alert"
-      >
-        <p className="font-semibold">Could not load schedules</p>
-        <p className="mt-1">
-          {isLikelyNetworkFailure(q.error ?? libraries.error)
-            ? "Check that the Weir API is running."
-            : isHttpErrorFromApi(q.error ?? libraries.error)
-              ? "Sign in, then try again."
-              : "Request failed."}
-        </p>
-      </div>
+      // Something broken, in the language's own shape for it: a sentence with the
+      // interrupt marker, not a red box. Raw red-200 on a red-950 wash was also
+      // unreadable in the light theme.
+      <ul className="mm-interrupt" role="alert">
+        <li className="mm-interrupt__item">
+          <span className="mm-interrupt__text">
+            <strong className="font-semibold">Could not load schedules.</strong>{" "}
+            {isLikelyNetworkFailure(q.error ?? libraries.error)
+              ? "Check that the Weir API is running."
+              : isHttpErrorFromApi(q.error ?? libraries.error)
+                ? "Sign in, then try again."
+                : "Request failed."}
+          </span>
+        </li>
+      </ul>
     );
   }
   if (!q.data || !libraries.data) {
@@ -387,14 +389,14 @@ export function ProcessingSchedulesSection() {
       </QuietSection>
 
       {saveTvSchedule.isError ? (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="mm-status-text--failed text-sm" role="alert">
           {saveTvSchedule.error instanceof Error
             ? saveTvSchedule.error.message
             : "Save TV schedule window failed."}
         </p>
       ) : null}
       {saveMovieSchedule.isError ? (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="mm-status-text--failed text-sm" role="alert">
           {saveMovieSchedule.error instanceof Error
             ? saveMovieSchedule.error.message
             : "Save Movies schedule window failed."}

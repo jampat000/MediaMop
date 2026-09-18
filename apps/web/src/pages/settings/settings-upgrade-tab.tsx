@@ -12,10 +12,10 @@ import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
+import { quietActionRowClass } from "../../components/shared/quiet-section";
 import {
   SettingsFactTable,
   SettingsQuietSection,
-  SUITE_SETTINGS_PREMIUM_PANEL_CLASS,
   type SettingsFact,
 } from "./settings-shared";
 
@@ -180,7 +180,10 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     The update has been downloaded. Restart Weir to apply it.
                   </p>
                   {applyUpdate.isError && (
-                    <p className="mt-1 text-xs text-red-300" role="alert">
+                    <p
+                      className="mm-status-text--failed mt-1 text-xs"
+                      role="alert"
+                    >
                       {applyUpdate.error instanceof Error
                         ? applyUpdate.error.message
                         : "Could not signal restart."}
@@ -255,35 +258,37 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
               </div>
             </SettingsQuietSection>
 
-            {/* An input group with its own Save scope keeps its boundary. */}
+            {/* An input group with its own Save scope. Rule 3: the scope is the
+                section's heading and hairline and the Save row under it, not a box —
+                and the choices are radio rows, not bordered tiles inside that box. */}
             {updateStatusQ.data.install_type === "windows" ? (
-              <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
-                <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
-                  Update mode
-                </h4>
-                <p className="text-sm text-[var(--mm-text2)]">
+              <SettingsQuietSection
+                headingId="suite-settings-upgrade-mode-heading"
+                heading="Update mode"
+              >
+                <p className="mm-quiet-note">
                   Choose how the Weir tray app handles available updates.
                 </p>
                 {updateSettingsQ.isPending ? (
-                  <p className="text-sm text-[var(--mm-text3)]">
+                  <p className="mm-quiet-note mt-3">
                     Loading update preferences...
                   </p>
                 ) : updateSettingsQ.isError ? (
-                  <p className="text-sm text-[var(--mm-text3)]">
+                  <p className="mm-quiet-note mt-3">
                     Could not load update preferences.
                   </p>
                 ) : (
-                  <>
-                    <fieldset className="mt-1 space-y-2">
+                  <div className="mt-4 max-w-2xl space-y-5">
+                    <fieldset className="divide-y divide-[var(--mm-border)]">
                       <legend className="sr-only">Update mode</legend>
                       {UPDATE_MODES.map((opt) => (
                         <label
                           key={opt.value}
                           className={[
-                            "flex min-w-0 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors",
+                            "flex min-w-0 cursor-pointer items-start gap-2.5 py-2.5 text-sm first:pt-0",
                             modeDraft === opt.value
-                              ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
-                              : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
+                              ? "text-[var(--mm-text)]"
+                              : "text-[var(--mm-text2)]",
                           ].join(" ")}
                         >
                           <input
@@ -310,7 +315,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                       ))}
                     </fieldset>
 
-                    <div className="space-y-3 border-t border-[var(--mm-border)] pt-3">
+                    <div className="space-y-3">
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--mm-text2)]">
                         <input
                           type="checkbox"
@@ -326,7 +331,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                       </label>
 
                       <label className="block text-sm text-[var(--mm-text2)]">
-                        <span className="mb-1.5 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
+                        <span className="mb-1.5 block text-[length:var(--mm-type-eyebrow)] font-semibold tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)] uppercase">
                           Check interval
                         </span>
                         <select
@@ -346,24 +351,23 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                         </select>
                       </label>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {saveMode.isError && (
-                  <p
-                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                    role="alert"
-                  >
+                  <p className="mm-status-text--failed text-sm" role="alert">
                     {saveMode.error instanceof Error
                       ? saveMode.error.message
                       : "Could not save update settings."}
                   </p>
                 )}
                 {saveMsg && !saveMode.isError && (
-                  <p className="text-sm text-emerald-400">{saveMsg}</p>
+                  <p className="mm-status-text--healthy mt-3 text-sm">
+                    {saveMsg}
+                  </p>
                 )}
 
-                <div className="flex gap-2 pt-1">
+                <div className={`mt-5 ${quietActionRowClass}`}>
                   <button
                     type="button"
                     className={mmActionButtonClass({
@@ -402,7 +406,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     </button>
                   )}
                 </div>
-              </div>
+              </SettingsQuietSection>
             ) : updateStatusQ.data.install_type === "docker" &&
               updateStatusQ.data.docker_update_command ? (
               <SettingsQuietSection
