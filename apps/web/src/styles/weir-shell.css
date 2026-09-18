@@ -884,6 +884,47 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   overflow-y: auto;
 }
 
+/* AppHydrateFallback (app/hydrate-fallback.tsx) stands in for the real sidebar while a route's
+   lazy chunk loads. `.mm-sidebar` already gives it the right panel geometry and background, so
+   these two rules exist only to put something in the two placeholder marks inside it — without
+   them the marks are empty elements with no size, and the fallback panel reads as blank. Reuses
+   `mm-pulse-dot` (Loading section, above) rather than inventing a second pulse animation. */
+.mm-sidebar--fallback {
+  padding: calc(14px * var(--mm-density-ui-scale)) 0;
+  gap: calc(20px * var(--mm-density-ui-scale));
+}
+
+.mm-sidebar-fallback-mark {
+  width: calc(28px * var(--mm-density-ui-scale));
+  height: calc(28px * var(--mm-density-ui-scale));
+  margin: 0 calc(26px * var(--mm-density-ui-scale));
+  border-radius: var(--mm-radius-sm);
+  background: color-mix(in srgb, var(--mm-text3) 30%, transparent);
+  animation: mm-pulse-dot 1.6s ease-in-out infinite;
+}
+
+.mm-sidebar-fallback-lines {
+  flex: 1;
+  margin: 0 calc(16px * var(--mm-density-ui-scale));
+  border-radius: var(--mm-radius-sm);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--mm-text3) 20%, transparent) 0,
+    color-mix(in srgb, var(--mm-text3) 20%, transparent) 10px,
+    transparent 10px,
+    transparent 34px
+  );
+  animation: mm-pulse-dot 1.6s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-sidebar-fallback-mark,
+  .mm-sidebar-fallback-lines {
+    animation: none;
+  }
+}
+
 .mm-sidebar-brand {
   display: flex;
   flex-direction: column;

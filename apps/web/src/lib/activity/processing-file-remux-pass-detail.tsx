@@ -263,7 +263,7 @@ export function ProcessingFileRemuxPassActivityDetail({
   if (!parsed) {
     return (
       <span
-        className="mm-activity-row__detail mm-activity-row__detail--raw"
+        className="mm-activity-row__detail"
         data-testid="processing-remux-activity-detail-raw"
       >
         {detail}
