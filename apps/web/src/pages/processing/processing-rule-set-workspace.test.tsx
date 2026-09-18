@@ -217,7 +217,7 @@ it("edits ordered rules, original-language behavior, metadata cleanup, and the p
   expect(sentRuleSet).not.toHaveProperty("used_by_library_count");
   expect(sentRuleSet).not.toHaveProperty("updated_at");
 
-  fireEvent.click(screen.getByRole("button", { name: "Configure" }));
+  fireEvent.click(screen.getByRole("button", { name: "Configure →" }));
   fireEvent.change(screen.getByRole("combobox", { name: "Provider" }), {
     target: { value: "tmdb" },
   });

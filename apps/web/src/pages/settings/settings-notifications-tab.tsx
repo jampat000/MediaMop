@@ -371,10 +371,10 @@ export function SettingsNotificationsTab() {
           !showAddForm && editingId === null ? (
             <button
               type="button"
-              className={mmActionButtonClass({ variant: "secondary" })}
+              className="mm-quiet-link"
               onClick={() => setShowAddForm(true)}
             >
-              Add notification channel
+              Add notification channel →
             </button>
           ) : null
         }

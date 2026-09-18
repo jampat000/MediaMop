@@ -286,7 +286,7 @@ def test_processing_audio_subtitles_editor_renders(weir_shell: str) -> None:
             open_sidebar(page, "Processing")
             page.get_by_role("tab", name="Audio & subtitles", exact=True).click()
             expect(page.get_by_test_id("processing-rule-set-workspace")).to_be_visible()
-            page.get_by_role("button", name="New profile", exact=True).click()
+            page.get_by_role("button", name="New profile →", exact=True).click()
             expect(page.get_by_label("Profile name", exact=True)).to_be_visible()
             expect(page.get_by_text("Audio order", exact=True)).not_to_be_visible()
 

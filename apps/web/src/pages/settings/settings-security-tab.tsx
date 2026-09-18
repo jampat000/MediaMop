@@ -270,7 +270,7 @@ export function SettingsSecurityTab() {
           >
             {revokeOthers.isPending
               ? "Signing out…"
-              : "Sign out other sessions"}
+              : "Sign out other sessions →"}
           </button>
         }
       >

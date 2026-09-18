@@ -555,11 +555,11 @@ export function ProcessingLibrariesSection() {
           editable ? (
             <button
               type="button"
-              className={mmActionButtonClass({ variant: "primary" })}
+              className="mm-quiet-link"
               onClick={startAdd}
               data-testid="processing-library-add"
             >
-              Add library
+              Add library →
             </button>
           ) : null
         }

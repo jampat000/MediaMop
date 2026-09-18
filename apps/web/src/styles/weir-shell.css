@@ -1265,11 +1265,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   .mm-page__lead {
     font-size: 0.984375rem;
   }
-
-  .mm-card {
-    padding: calc(1.45rem * var(--mm-density-ui-scale))
-      calc(1.55rem * var(--mm-density-ui-scale));
-  }
 }
 
 /* Wide desktop (incl. 1440p at 125–150% OS scale where CSS width sits ~1700–2048px). */
@@ -1302,15 +1297,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   .mm-page__title {
     font-size: clamp(1.72rem, 2.05vw, 2.35rem);
   }
-
-  .mm-card {
-    padding: calc(1.5rem * var(--mm-density-ui-scale))
-      calc(1.6rem * var(--mm-density-ui-scale));
-  }
 }
 
-.mm-page,
-.mm-card {
+.mm-page {
   min-width: 0;
 }
 
@@ -1359,22 +1348,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   letter-spacing: -0.012em;
   overflow-wrap: anywhere;
   color: var(--mm-text2);
-}
-
-.mm-card {
-  padding: calc(1.35rem * var(--mm-density-ui-scale))
-    calc(1.45rem * var(--mm-density-ui-scale));
-  min-height: 5rem;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent 34%),
-    var(--mm-card-bg);
-  border: 1px solid var(--mm-border);
-  border-radius: 16px;
-  box-shadow: var(--mm-shadow-card), var(--mm-shadow-card-inner);
-}
-
-.mm-dash-card.mm-card {
-  min-height: 0;
 }
 
 .mm-activity-row__detail {
@@ -2239,10 +2212,6 @@ select.mm-input::-ms-expand {
   .mm-page__lead {
     font-size: 0.875rem;
     line-height: 1.5;
-  }
-
-  .mm-card {
-    padding: 1rem 1rem;
   }
 
   .mm-workspace-tabs {

@@ -732,9 +732,12 @@
   border-radius: 4px;
 }
 
+/* No `margin` here. Preflight already zeroes it, and a note's distance from what it
+ * follows is its parent's call: declaring it in this unlayered rule silently cancelled
+ * the `mt-*` on nineteen notes across ten files, so every one of them sat flush
+ * against the table or heading above it. */
 .mm-quiet-note {
   max-width: 44rem;
-  margin: 0;
   color: var(--mm-text2);
   font-size: var(--mm-type-body);
   line-height: 1.55;

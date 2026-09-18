@@ -794,7 +794,7 @@ class LiveAudit:
         toggles = self.page.get_by_role("radio")
         if toggles.count() >= 2:
             toggles.last.click()
-        refresh = self.page.get_by_role("button", name="Refresh", exact=True)
+        refresh = self.page.get_by_role("button", name="Refresh →", exact=True)
         if refresh.count():
             self.click(refresh, "refresh Settings logs")
 
@@ -858,7 +858,7 @@ class LiveAudit:
             existing.first.wait_for(state="detached", timeout=TIMEOUT_MS)
         self.click(
             self.page.get_by_role(
-                "button", name="Add notification channel", exact=True
+                "button", name="Add notification channel →", exact=True
             ),
             "open notification channel form",
         )

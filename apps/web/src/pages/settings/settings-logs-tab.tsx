@@ -173,21 +173,15 @@ export function SettingsLogsTab() {
           <>
             <button
               type="button"
-              className={mmActionButtonClass({
-                variant: "secondary",
-                disabled: logsQ.isFetching,
-              })}
+              className="mm-quiet-link"
               disabled={logsQ.isFetching}
               onClick={() => void logsQ.refetch()}
             >
-              {logsQ.isFetching ? "Refreshing..." : "Refresh"}
+              {logsQ.isFetching ? "Refreshing…" : "Refresh →"}
             </button>
             <button
               type="button"
-              className={mmActionButtonClass({
-                variant: "tertiary",
-                disabled: !logSearch.trim() && !logLevel && !tracebacksOnly,
-              })}
+              className="mm-quiet-link"
               disabled={!logSearch.trim() && !logLevel && !tracebacksOnly}
               onClick={() => {
                 setLogSearch("");
@@ -195,7 +189,7 @@ export function SettingsLogsTab() {
                 setTracebacksOnly(false);
               }}
             >
-              Clear filters
+              Clear filters →
             </button>
           </>
         }

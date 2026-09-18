@@ -687,10 +687,7 @@ export function ProcessingRuleSetWorkspace() {
           !creating ? (
             <button
               type="button"
-              className={mmActionButtonClass({
-                variant: "primary",
-                disabled: !editable,
-              })}
+              className="mm-quiet-link"
               disabled={!editable}
               onClick={() => {
                 setCreating(true);
@@ -700,7 +697,7 @@ export function ProcessingRuleSetWorkspace() {
                 setAdvancedOrderingOpen(false);
               }}
             >
-              New profile
+              New profile →
             </button>
           ) : null
         }
@@ -1247,11 +1244,11 @@ export function ProcessingRuleSetWorkspace() {
             </span>
             <button
               type="button"
-              className={mmActionButtonClass({ variant: "secondary" })}
+              className="mm-quiet-link"
               aria-expanded={providerEditorOpen}
               onClick={() => setProviderEditorOpen((open) => !open)}
             >
-              {providerEditorOpen ? "Close" : "Configure"}
+              {providerEditorOpen ? "Close →" : "Configure →"}
             </button>
           </>
         }

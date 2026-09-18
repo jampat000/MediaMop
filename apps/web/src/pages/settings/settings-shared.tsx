@@ -3,8 +3,6 @@ import type { SuiteLogEntry } from "../../lib/suite/types";
 
 export type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
 
-export const SUITE_SETTINGS_DASH_CARD_CLASS =
-  "mm-card mm-dash-card flex min-h-0 min-w-0 flex-col gap-5";
 export const CONFIGURATION_BACKUP_INTERVAL_HOURS = [
   6, 12, 24, 48, 72, 168,
 ] as const;
