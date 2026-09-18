@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from tests.contract.processing import _helpers as h
+from tests.contract.libraries import _helpers as h
 from tests.contract.support import seed
 from tests.contract.support.client import API, WeirClient
 
