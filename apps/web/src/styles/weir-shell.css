@@ -383,21 +383,15 @@ body.mm-body {
   color: var(--mm-status-failed-text);
 }
 
-/* Activity list: one compact row per entry inside a single surface. */
-.mm-activity-list {
-  margin-top: 0.75rem;
-  overflow: hidden;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius);
-  background: var(--mm-card-bg);
-}
-
+/* Activity list: one compact row per entry, borderless. The card this used to sit
+ * in is gone (docs/design/content-language.md rule 3); the hairline between rows is
+ * what separates them now. */
 .mm-activity-list > * + * {
   border-top: 1px solid var(--mm-border);
 }
 
 .mm-activity-list__empty {
-  padding: 1rem;
+  padding: 0.75rem 0;
   color: var(--mm-text2);
   font-size: var(--mm-type-body);
 }
@@ -407,7 +401,9 @@ body.mm-body {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   column-gap: 0.75rem;
-  padding: 0.7rem 1rem;
+  /* Flush right with the section hairline; just enough on the left for the
+   * severity accent (the inset box-shadow below) to read beside the text. */
+  padding: 0.7rem 0 0.7rem 0.75rem;
 }
 
 .mm-activity-item--warning {
@@ -629,14 +625,8 @@ body.mm-body {
   border-top: 1px solid var(--mm-border);
 }
 
-.mm-activity-filters {
-  margin-top: var(--mm-space);
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius);
-  background: var(--mm-card-bg);
-}
-
+/* The filters are a quiet section now, not a card: `.mm-activity-filters` survives
+ * only as the hook the narrow-screen collapse below hangs off. */
 .mm-activity-filters__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
@@ -663,10 +653,6 @@ body.mm-body {
   .mm-activity-filters[data-expanded="false"] .mm-activity-filters__extra {
     display: none;
   }
-
-  .mm-activity-filters__divider {
-    display: none;
-  }
 }
 
 .mm-activity-filters__actions {
@@ -677,30 +663,8 @@ body.mm-body {
   margin-top: 0.8rem;
 }
 
-.mm-activity-filters__divider {
-  width: 1px;
-  height: 1.5rem;
-  margin-inline: 0.25rem;
-  background: var(--mm-border);
-}
-
-.mm-activity-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.75rem;
-  margin-top: 1rem;
-}
-
-.mm-activity-summary__text {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  color: var(--mm-text2);
-  font-size: var(--mm-type-body);
-}
-
+/* The summary line leads the page now (rule 1), so its old flex row and text rule
+ * are gone; the live dot is all that is left of it. */
 .mm-activity-summary__live {
   width: 0.5rem;
   height: 0.5rem;
@@ -708,13 +672,6 @@ body.mm-body {
   border-radius: 50%;
   background: var(--mm-status-healthy-text);
   box-shadow: 0 0 0 3px var(--mm-status-healthy-bg);
-}
-
-.mm-activity-summary__tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-left: auto;
 }
 
 /* Pause lives in the toolbar so it is reachable from any screen: the reason to want it
