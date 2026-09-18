@@ -24,6 +24,17 @@ As of this writing, against `origin/main`:
 | Processing Files / Jobs / Maintenance | Uncommitted work in progress, no PR yet (worktree `wt-processing-data`, branch `design/processing-data-tabs`) |
 | Settings (all tabs) | Uncommitted work in progress, no PR yet (worktree `wt-settings-content`, branch `design/settings-content`) |
 
+> **Status note, 2026-09-18.** Every row above except Settings has since merged
+> (#596, #597, #600, #601). Settings did not: the owner rejected the converted result,
+> and Settings → General is being rebuilt on `design/settings-general-content`. A
+> design-QA pass (`design/site-qa`) is running across the other screens for the same
+> class of defect — ragged multi-column grids, an orphaned card in a last row, bordered
+> things nested inside bordered things, cards a conversion missed, and pages that
+> disagree with each other. **So the reshoot in §4 is on hold**: `processing.png` and
+> `settings.png` are near-certain to change again, and anything captured before that
+> pass settles would be obsolete within the hour. Re-read this document before shooting;
+> the layouts will have moved.
+
 Separately, a recent PR changed the sidebar's product blurb from "Cleans every download
 before your media manager imports it" to "Cleans new downloads, and files already in
 your library" (`apps/web/src/components/brand/brand-header-link.tsx:20` and
@@ -39,10 +50,15 @@ Two locations hold screenshots: the repo-root `screenshots/` directory (linked f
 `README.md`) and `docs-site/static/img/` (linked from `docs-site/src/pages/index.tsx`).
 There is no `docs/screenshots/` — `README.md`'s relative links resolve against the
 repo root. `docs-site/` has no screenshots of its own beyond that `static/img/`
-directory; four of its eight images (`existing-library.png`, `in-hand-light.png`,
-`in-hand-mobile.png`, `processing-detail.png`) are unreferenced from any `docs-site`
-page — confirmed identical byte-for-byte to their `screenshots/` counterparts, and
-dead weight in the Docusaurus build.
+directory; **six** of its eight images (`activity.png`, `existing-library.png`,
+`in-hand-light.png`, `in-hand-mobile.png`, `processing-detail.png`, `settings.png`) are
+unreferenced from any `docs-site` page — confirmed identical byte-for-byte to their
+`screenshots/` counterparts, and dead weight in the Docusaurus build.
+
+> **Corrected 2026-09-18.** This paragraph first said four. All eight are byte-identical
+> duplicates, and `docs-site` references exactly two of them: `processing.png`
+> (`src/pages/index.tsx:14`) and `in-hand.png` (`src/pages/index.tsx:88`). `activity.png`
+> and `settings.png` are as unreferenced as the other four. All six have now been deleted.
 
 All eight images were last touched in the same commit, `b921284a` ("docs: new
 screenshots and page names for the Weir design, closes #564", #569). That commit
@@ -81,11 +97,11 @@ Sort by how wrong each is:
 4. **Stale, soon flatly false** — `activity.png`, `settings.png`. Structurally still
    close to what's on `main` today (mid-air, since neither has merged), but both will
    be wrong the moment their PR lands, and both already carry the old sidebar blurb.
-5. **Cosmetic / cleanup** — the four unreferenced duplicates under
-   `docs-site/static/img/` (`existing-library.png`, `in-hand-light.png`,
-   `in-hand-mobile.png`, `processing-detail.png`). Not linked from anywhere;
-   removing them is safe once the referenced set is refreshed, but it isn't a
-   documentation-accuracy problem on its own.
+5. **Cosmetic / cleanup** — the six unreferenced duplicates under
+   `docs-site/static/img/` (`activity.png`, `existing-library.png`, `in-hand-light.png`,
+   `in-hand-mobile.png`, `processing-detail.png`, `settings.png`). Not linked from
+   anywhere; removing them did not have to wait for the refreshed set, and it isn't a
+   documentation-accuracy problem on its own. **Done.**
 
 Every one of the eight images additionally shows the sidebar's old blurb, "Cleans
 every download before your media manager imports it" — see the background section
@@ -212,6 +228,15 @@ seeded with representative data — and writes
 `<index>-<slug>--<empty|seeded>--<theme>--<desktop|narrow>.png` plus a
 `contact-sheet.html` and `manifest.txt`.
 
+`seed_representative_data()` was extended while preparing the refresh: Processing →
+Overview's "last 30 days" figures are not read off the activity rows' text but by
+re-parsing the detail of `processing.file_remux_pass_completed` events as the JSON
+envelope `RemuxPassHandler` writes (`OverviewStatsStore.BuildAsync`). The seed's two
+finished passes were plain `job_completed` lines, so they appeared in the feed and in
+none of the figures, and a fully seeded install reported **0 files handed back and a 0%
+success rate** directly beside a band saying it had handed back two. Both now carry the
+real event type and the real envelope.
+
 From the repository root, one time, before running it:
 
 ```powershell
@@ -228,6 +253,34 @@ Then, from the repository root:
 ```powershell
 python scripts/screenshot-site.py .\screenshot-refresh
 ```
+
+> **Verified 2026-09-18, and this is no longer the right command for the README.**
+> The screen numbering and slugs below still match `scripts/screenshot-site.py` on
+> `main` (`04-in-hand`, `05-activity`, `06-processing-overview`,
+> `11-processing-library-overview`, `18-settings`) — the five conversions that have
+> landed since did not renumber anything. What does not match is the **frame**. The
+> harness shoots `full_page=True` at `device_scale_factor=2`, from a 1440×1000 desktop
+> viewport and a 390×844 narrow one. Every image this repo publishes is viewport-only
+> at `device_scale_factor=1`, 1440×900 on the desktop and 400×860 on the phone (read
+> straight out of the PNG headers). Publishing a harness frame would change the size of
+> every image in the README gallery and reflow it.
+>
+> So the README's set is now captured by
+> [`scripts/capture-readme-screenshots.py`](../../scripts/capture-readme-screenshots.py),
+> which imports the harness and reuses its bring-up wholesale — the disposable
+> `WEIR_HOME`, the server process, `seed_representative_data()`, the theme mechanism and
+> the throwaway admin bootstrapped over the API — and replaces only the viewport, the
+> device scale factor, and the list of shots. It captures all eight published images,
+> including the processing record below, in one pass:
+>
+> ```powershell
+> python scripts/capture-readme-screenshots.py .
+eadme-shots
+> ```
+>
+> The harness stays exactly what it is for: reviewing every screen, both themes, both
+> widths, empty and seeded. Use it for that, and the table below to know which harness
+> frame corresponds to which published image.
 
 That produces every frame this document's screenshots need. The mapping from the
 harness's output to the seven images this repo actually publishes:
@@ -249,32 +302,42 @@ the README gallery.
 
 ### What the harness cannot give you
 
-- **`screenshots/processing-detail.png`** ("Processing record detail" — an expanded
-  file-history row inside Files). The harness only opens each screen's default state;
-  it never clicks a row open. Whoever refreshes this needs a bespoke Playwright step
-  (or a manual capture) against the seeded server the harness already knows how to
-  start: navigate to `?tab=files`, click a completed file's row to expand its
-  history, then screenshot. If the person doing this wants to reuse the harness's own
-  plumbing rather than writing new automation, `scripts/screenshot-site.py`'s
-  `run_scenario()` and `Shooter` class are the reference — the seeded server startup,
-  theme/viewport contexts and login flow are already exactly what a bespoke capture
-  needs, only the click-to-expand step and the one-off screenshot call are new. Once
-  captured, replace `screenshots/processing-detail.png` and delete the unreferenced
-  `docs-site/static/img/processing-detail.png` duplicate rather than update it too.
+- **`screenshots/processing-detail.png`** ("Processing record detail"). The harness
+  only opens each screen's default state; it never presses a button. This panel is
+  behind **Processing record** on a file's row in Processing → Files
+  (`processing-file-log-{id}` opens `processing-file-log-panel`) — not an expanded
+  history row, which is what this document assumed before the Files conversion landed.
+  `scripts/capture-readme-screenshots.py` now drives it.
+- **A processing record to open.** `seed_representative_data()` seeds files, jobs,
+  library rows and activity, but no `file_logs` rows at all, so the panel opens saying
+  "0 record(s)" against an otherwise well-seeded install. The capture script seeds one
+  `file_logs` row for the file the harness already marks `processed`, shaped like the
+  payload `RemuxPassRunner` writes for a successful live remux, and fails the run rather
+  than shoot an empty panel.
 - **Confirming `processing-detail.png` no longer says "Refiner" anywhere.** Read the
   new capture, not just the class names, since this is exactly the kind of leftover
-  string a purely structural review would miss.
+  string a purely structural review would miss. For what it is worth, the source is
+  already clean: the only `refiner` left in `apps/web/src` is a legacy route redirect
+  and two regression tests that assert the name is absent. The stale pixels came from
+  the record's own stored JSON key, `refiner_watched_folder_resolved`, which migration
+  `0009_drop_the_refiner_name.sql` renamed to `processing_watched_folder_resolved`; a
+  record written by today's server cannot carry the old spelling.
 
 ### Cleanup once the refresh lands
 
 Delete the four unreferenced duplicates under `docs-site/static/img/` instead of
 refreshing them, unless a future PR starts referencing them from a `docs-site` page:
 
+**Done** — all six unreferenced duplicates were removed ahead of the reshoot, since
+nothing referenced them and nothing about the redesign changes that:
+
 ```powershell
+git rm docs-site/static/img/activity.png
 git rm docs-site/static/img/existing-library.png
 git rm docs-site/static/img/in-hand-light.png
 git rm docs-site/static/img/in-hand-mobile.png
 git rm docs-site/static/img/processing-detail.png
+git rm docs-site/static/img/settings.png
 ```
 
 (`docs-site/static/img/in-hand.png` and `docs-site/static/img/processing.png` stay —

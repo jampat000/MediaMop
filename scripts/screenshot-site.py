@@ -342,6 +342,50 @@ class Shooter:
         self.shoot(page, screen.index, screen.slug, theme, width_name, screen.label)
 
 
+def remux_pass_detail(
+    *,
+    outcome: str,
+    trigger: str,
+    result: str,
+    user_message: str,
+    relative_path: str,
+    source_size_bytes: int,
+    output_size_bytes: int,
+    audio_removed: int,
+    subtitles_removed: int,
+    media_scope: str = "movie",
+    copied_without_remux: bool = False,
+) -> str:
+    """One finished pass's Activity detail, shaped like RemuxPassVisibility.ClipForActivity's output.
+
+    The envelope keys (module/action/trigger/result/severity/counts/user_message) come from
+    Observability.ActivityDetailEnvelope; the rest are the pass payload keys Processing -> Overview
+    reads back out of it.
+    """
+
+    import json
+
+    detail = {
+        "module": "processing",
+        "action": "remux",
+        "trigger": trigger,
+        "result": result,
+        "severity": "info" if result == "success" else "error",
+        "media_scope": media_scope,
+        "media_scope_label": "Movie" if media_scope == "movie" else "TV",
+        "counts": {"audio_removed": audio_removed, "subtitles_removed": subtitles_removed},
+        "user_message": user_message,
+        "ok": True,
+        "outcome": outcome,
+        "relative_media_path": relative_path,
+        "source_size_bytes": source_size_bytes,
+        "output_size_bytes": output_size_bytes,
+    }
+    if copied_without_remux:
+        detail["output_copied_without_remux"] = True
+    return json.dumps(detail)
+
+
 def seed_representative_data(home: str) -> None:
     """Plain SQL against the server's own SQLite file — no fixtures added to the product.
 
@@ -633,12 +677,29 @@ def seed_representative_data(home: str) -> None:
                 ],
             )
 
+            # Processing -> Overview's "last 30 days" figures are not read off these rows' text: they
+            # re-parse the detail of `processing.file_remux_pass_completed` events as the JSON envelope
+            # RemuxPassHandler writes (see OverviewStatsStore.BuildAsync). A finished pass seeded as a
+            # plain "job_completed" line therefore shows up in the feed and nowhere in the figures, which
+            # is how a seeded install ended up reporting 0 files handed back and a 0% success rate beside
+            # two files it had just handed back. So the two finished passes below carry the real event
+            # type and the real envelope.
             activity = [
                 (
-                    "job_completed",
+                    "processing.file_remux_pass_completed",
                     "processing",
                     "Late Autumn Reprise finished",
-                    "Removed 1 commentary track, kept 2 subtitle languages",
+                    remux_pass_detail(
+                        outcome="live_output_written",
+                        trigger="schedule",
+                        result="success",
+                        user_message="Late Autumn Reprise.mkv was processed successfully",
+                        relative_path="Movies/Late Autumn Reprise (2023)/Late Autumn Reprise.mkv",
+                        source_size_bytes=6_100_000_000,
+                        output_size_bytes=5_870_000_000,
+                        audio_removed=1,
+                        subtitles_removed=0,
+                    ),
                     "schedule",
                     "ok",
                 ),
@@ -659,10 +720,22 @@ def seed_representative_data(home: str) -> None:
                     "ok",
                 ),
                 (
-                    "job_completed",
+                    "processing.file_remux_pass_completed",
                     "processing",
                     "Northline S01E02 finished",
-                    "Passed through unchanged",
+                    remux_pass_detail(
+                        outcome="live_skipped_not_required",
+                        trigger="watched_folder",
+                        result="success",
+                        user_message="No changes needed for Northline.S01E02.mkv",
+                        relative_path="TV/Northline/Season 01/Northline.S01E02.mkv",
+                        source_size_bytes=1_750_000_000,
+                        output_size_bytes=1_750_000_000,
+                        audio_removed=0,
+                        subtitles_removed=0,
+                        media_scope="tv",
+                        copied_without_remux=True,
+                    ),
                     "watched_folder",
                     "ok",
                 ),
