@@ -75,18 +75,18 @@ function Features(): ReactNode {
   );
 }
 
-function InHandPreview(): ReactNode {
+function HomeScreenPreview(): ReactNode {
   return (
     <section className={styles.preview}>
       <div className="container">
-        <h2>In hand, at a glance</h2>
+        <h2>Home, at a glance</h2>
         <p>
           Files Weir is responsible for right now, between your media manager
           handing them over and getting them back.
         </p>
         <img
-          src="/Weir/img/in-hand.png"
-          alt="Weir In hand page"
+          src="/Weir/img/home.png"
+          alt="Weir's Home screen"
           className={styles.dashboardImage}
         />
       </div>
@@ -101,7 +101,7 @@ export default function Home(): ReactNode {
       <Hero />
       <main>
         <Features />
-        <InHandPreview />
+        <HomeScreenPreview />
       </main>
     </Layout>
   );

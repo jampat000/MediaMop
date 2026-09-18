@@ -1805,12 +1805,12 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   gap: 0.65rem;
 }
 
+/* A field label, in sentence case like every form in the app. The uppercase eyebrow is
+ * kept for group titles and column heads (`.mm-auth-eyebrow` above the card title). */
 .mm-auth-label {
-  font-size: var(--mm-type-eyebrow);
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--mm-text2);
-  letter-spacing: var(--mm-tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /**
@@ -2287,13 +2287,13 @@ select.mm-input::-ms-expand {
   gap: 8px;
 }
 
-/* --- "In hand": files Weir currently has custody of (#463) -------------------------------
+/* --- Home: files Weir currently has custody of (#463) --------------------------------------
    The page's lead band, figure row and sections are the page-neutral primitives in
    weir-content.css. What is left here is the file row itself, which nothing else draws:
    built on the type ramp and surface tokens rather than fixed values, so both themes work
    and the four density steps still scale it. */
 
-.mm-inhand-list {
+.mm-home-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2301,7 +2301,7 @@ select.mm-input::-ms-expand {
 
 /* A borderless list of rows, flush with its section heading: one hairline per row, none
    under the last. The card these used to sit in is gone — see docs/design/content-language.md. */
-.mm-inhand-row {
+.mm-home-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
   gap: 1rem;
@@ -2310,18 +2310,18 @@ select.mm-input::-ms-expand {
   border-bottom: 1px solid var(--mm-border);
 }
 
-.mm-inhand-row:last-child {
+.mm-home-row:last-child {
   border-bottom: none;
 }
 
-.mm-inhand-row__main {
+.mm-home-row__main {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
 
-.mm-inhand-row__name {
+.mm-home-row__name {
   font-size: var(--mm-type-body);
   color: var(--mm-text);
   overflow: hidden;
@@ -2330,13 +2330,13 @@ select.mm-input::-ms-expand {
 }
 
 /* Numbers and codecs line up column-to-column without the whole screen reading as a terminal. */
-.mm-inhand-row__facts {
+.mm-home-row__facts {
   font-size: var(--mm-type-caption);
   color: var(--mm-text3);
   font-variant-numeric: tabular-nums;
 }
 
-.mm-inhand-row__state {
+.mm-home-row__state {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -2346,23 +2346,23 @@ select.mm-input::-ms-expand {
 }
 
 /* Held upstream is not a failure — the guardrail is working. */
-.mm-inhand-row__state--held {
+.mm-home-row__state--held {
   color: var(--mm-status-info-text);
 }
 
-.mm-inhand-row__reason {
+.mm-home-row__reason {
   color: var(--mm-text3);
   overflow-wrap: anywhere;
 }
 
-.mm-inhand-row__progress {
+.mm-home-row__progress {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.15rem;
 }
 
-.mm-inhand-row__progress-track {
+.mm-home-row__progress-track {
   position: relative;
   flex-grow: 1;
   height: 5px;
@@ -2371,7 +2371,7 @@ select.mm-input::-ms-expand {
   overflow: hidden;
 }
 
-.mm-inhand-row__progress-fill {
+.mm-home-row__progress-fill {
   display: block;
   height: 100%;
   border-radius: var(--mm-radius-pill);
@@ -2379,21 +2379,21 @@ select.mm-input::-ms-expand {
   transition: width 0.6s ease;
 }
 
-.mm-inhand-row__progress-text {
+.mm-home-row__progress-text {
   flex-shrink: 0;
   color: var(--mm-accent-bright);
   font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 720px) {
-  .mm-inhand-row {
+  .mm-home-row {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 /* The file name is a button that opens its story (#468). Reset the button chrome so it still
    reads as a name in a list, with the affordance carried by hover and focus instead. */
-button.mm-inhand-row__name {
+button.mm-home-row__name {
   display: block;
   width: 100%;
   padding: 0;
@@ -2406,13 +2406,13 @@ button.mm-inhand-row__name {
   cursor: pointer;
 }
 
-button.mm-inhand-row__name:hover {
+button.mm-home-row__name:hover {
   color: var(--mm-accent-bright);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-button.mm-inhand-row__name:focus-visible {
+button.mm-home-row__name:focus-visible {
   outline: 2px solid var(--mm-accent-ring);
   outline-offset: 2px;
   border-radius: 2px;

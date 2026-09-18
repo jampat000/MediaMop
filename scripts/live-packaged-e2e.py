@@ -530,19 +530,19 @@ class LiveAudit:
         self.page.set_viewport_size({"width": 1_440, "height": 1_000})
         self.record("desktop collapse/theme and mobile navigation controls")
 
-    def in_hand(self) -> None:
-        self.open_sidebar("In hand")
+    def home(self) -> None:
+        self.open_sidebar("Home")
         self.visible(
-            self.page.get_by_role("heading", name="In hand", exact=True), "In hand page"
+            self.page.get_by_role("heading", name="Home", exact=True), "Home page"
         )
-        # The dashboard folded into In hand (#459): no sidebar entry any more.
+        # The dashboard folded into Home (#459): no sidebar entry any more.
         self.require(
             not self.page.get_by_role("link", name="Dashboard", exact=True).count(),
             "Dashboard must not appear in the sidebar",
         )
         self.assert_no_visible_crash()
-        self.screenshot("in-hand")
-        self.record("In hand main screen")
+        self.screenshot("home")
+        self.record("Home main screen")
 
     def activity(self) -> None:
         self.open_sidebar("Activity")
@@ -1340,7 +1340,7 @@ def run(playwright: Playwright) -> dict[str, Any]:
         audit.bootstrap_and_sign_in()
         audit.authenticated_read_surface()
         audit.shell_and_responsive()
-        audit.in_hand()
+        audit.home()
         audit.activity()
         audit.processing()
         audit.settings_general_and_setup()

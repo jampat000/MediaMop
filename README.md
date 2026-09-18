@@ -27,7 +27,8 @@ exist to show you what it is doing and to configure it.
 - **Media managers** — Radarr, Sonarr, Deluno, or anything posting Weir's own payload — hand files over,
   and are asked back what they are importing before Weir removes anything. "Could not ask" is treated as a
   different answer from "nothing is importing", and only the second one clears a delete.
-- **In hand** is the main screen: the files Weir is holding right now, and anything that needs a person.
+- **Home** is the main screen: the files Weir is holding right now, between your media manager handing
+  them over and getting them back, and anything that needs a person.
 - **Activity** and **Settings** carry history, logs, backups, upgrades, security posture and configuration.
 
 The app is a C# / .NET 10 server with SQLite and a React + Vite web UI. Packaged builds ship ffmpeg and
@@ -36,9 +37,9 @@ library can be set to use ffmpeg for everything instead.
 
 ## Screenshots
 
-| In hand | Activity |
+| Home | Activity |
 | --- | --- |
-| ![In hand](screenshots/in-hand.png) | ![Activity](screenshots/activity.png) |
+| ![Home](screenshots/home.png) | ![Activity](screenshots/activity.png) |
 
 | Processing | Existing library |
 | --- | --- |
@@ -56,7 +57,7 @@ library can be set to use ffmpeg for everything instead.
 
 | Light mode | On your phone |
 | --- | --- |
-| ![In hand in light mode](screenshots/in-hand-light.png) | ![In hand on a phone](screenshots/in-hand-mobile.png) |
+| ![Home in light mode](screenshots/home-light.png) | ![Home on a phone](screenshots/home-mobile.png) |
 
 ## Quick start
 

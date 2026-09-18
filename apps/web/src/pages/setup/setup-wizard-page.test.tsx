@@ -124,7 +124,7 @@ describe("SetupWizardPage", () => {
     updateLibraryMock.mockResolvedValue({});
   });
 
-  it("finishes on In hand, with no start page to choose (#459)", async () => {
+  it("finishes on Home, with no start page to choose (#459)", async () => {
     renderWizard();
 
     expect(

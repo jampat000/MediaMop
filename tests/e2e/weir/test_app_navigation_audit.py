@@ -27,10 +27,10 @@ def test_signed_in_navigation_covers_main_screens_and_tabs(weir_shell: str) -> N
 
             ensure_signed_in(page, base)
 
-            open_sidebar(page, "In hand")
+            open_sidebar(page, "Home")
             expect(page).to_have_url(re.compile(r".*/(?:$|[/?#])"))
-            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
-            # The dashboard folded into In hand (#459) and 3.0.0 dropped its redirect: no
+            expect(page.get_by_role("heading", name="Home", exact=True)).to_be_visible()
+            # The dashboard folded into Home (#459) and 3.0.0 dropped its redirect: no
             # sidebar entry, and /dashboard is the not-found page rather than a hidden alias.
             expect(page.get_by_role("link", name="Dashboard", exact=True)).to_have_count(0)
             page.goto(f"{base}/dashboard", wait_until="domcontentloaded")
@@ -38,7 +38,7 @@ def test_signed_in_navigation_covers_main_screens_and_tabs(weir_shell: str) -> N
                 page.get_by_role("heading", name="Page not found", exact=True)
             ).to_be_visible()
             page.goto(base + "/", wait_until="domcontentloaded")
-            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
+            expect(page.get_by_role("heading", name="Home", exact=True)).to_be_visible()
 
             open_sidebar(page, "Activity")
             expect(page).to_have_url(re.compile(r".*/activity"))

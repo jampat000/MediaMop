@@ -78,7 +78,7 @@ GATED_SCREENS: list[Screen] = [
 # Every other screen the app has, in review order. Tabs and sub-views are addressed by their own
 # query params (`?tab=`, `?view=`), exactly as an operator's bookmark would.
 NORMAL_SCREENS: list[Screen] = [
-    Screen(4, "in-hand", "/", '[data-testid="shell-ready"]', "In hand"),
+    Screen(4, "home", "/", '[data-testid="shell-ready"]', "Home"),
     Screen(5, "activity", "/activity", '[data-testid="activity-feed"]', "Activity"),
     Screen(
         6,

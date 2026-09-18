@@ -29,7 +29,7 @@ The band answers the first question a page exists to answer:
 | Page              | The band is                                                             |
 | ----------------- | ----------------------------------------------------------------------- |
 | Processing        | The pipeline: six file statuses, left to right, each a filter into Files |
-| In hand           | The six statuses of the pool Weir is holding, left to right, each a filter into Files |
+| Home              | The six statuses of the pool Weir is holding, left to right, each a filter into Files |
 | Activity          | No band. Shipped without one — see below                                 |
 | Settings          | No band. Settings has no "now" — it starts at rule 3                     |
 
@@ -146,7 +146,7 @@ Processing has two distinct empties, and both are decided, not judged:
 | Condition                                | What renders                                                                      |
 | ---------------------------------------- | --------------------------------------------------------------------------------- |
 | No library has a watched folder          | The existing "Get started" checklist, alone. No band, no figures.                   |
-| Folders set, but nothing in hand at all  | One `.mm-quiet-note` sentence where the band would be. The figure row still renders. |
+| Folders set, but Weir holds nothing     | One `.mm-quiet-note` sentence where the band would be. The figure row still renders. |
 | Census still loading, or failed to load  | The same `.mm-quiet-note` slot, with the loading or failure sentence.                |
 
 Apply the same shape to your page: the strongest empty wins outright; a merely-zero
@@ -225,7 +225,7 @@ Before this, `.mm-lead-band` was a wrapping flex row. A flex line justifies itse
 independently of every other line, so a count of 1 alone on the second line drew wider
 than a count of 2 sharing the first. Swept 390–1600 in 10px steps, Processing Overview
 inverted the comparison at 63 of 122 widths with six segments and counts of only 0, 1
-and 2; In hand at 3 of 122; Files put its ninth segment on a line by itself at 1280 and
+and 2; Home at 3 of 122; Files put its ninth segment on a line by itself at 1280 and
 drew a 1 nine times wider than a 2.
 
 **Honesty.** If the band draws a fixed set of states and the data has others, count

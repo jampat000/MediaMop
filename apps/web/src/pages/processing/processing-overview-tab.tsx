@@ -403,12 +403,12 @@ export function ProcessingOverviewTab({
   // present it as one — the tile beside this one already says how many came back.
   const terminal = stats ? stats.files_processed + stats.files_failed : 0;
   const counts = files.data?.status_counts ?? {};
-  const inHand = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  const censusTotal = Object.values(counts).reduce((sum, n) => sum + n, 0);
   const shownInBand = FLOW_STAGES.reduce(
     (sum, stage) => sum + (counts[stage.status] ?? 0),
     0,
   );
-  const elsewhere = inHand - shownInBand;
+  const elsewhere = censusTotal - shownInBand;
 
   const ruleSetById = new Map(
     (ruleSets.data ?? []).map((ruleSet) => [ruleSet.id, ruleSet]),
@@ -440,16 +440,16 @@ export function ProcessingOverviewTab({
             <AttentionList items={attention} onOpenTab={onOpenTab} />
           ) : null}
 
-          {files.isPending || files.isError || inHand === 0 ? (
+          {files.isPending || files.isError || censusTotal === 0 ? (
             <p
               className="mm-quiet-note"
               data-testid="processing-overview-flow-empty"
             >
               {files.isPending
-                ? "Counting the files Weir has in hand…"
+                ? "Counting the files Weir is holding…"
                 : files.isError
-                  ? "Could not count the files Weir has in hand. The Files tab still works."
-                  : "Weir has no files in hand yet. Nothing has landed in a watched folder since the last scan."}
+                  ? "Could not count the files Weir is holding. The Files tab still works."
+                  : "Weir is holding no files yet. Nothing has landed in a watched folder since the last scan."}
             </p>
           ) : (
             <FlowBand

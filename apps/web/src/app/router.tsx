@@ -14,7 +14,7 @@ const routeErrorElement = <RouteErrorScreen />;
 // Every route below is an address Weir 3.0.0 actually serves. There are deliberately no
 // redirects from addresses earlier versions used: the `refiner` redirect and the MovedTo
 // helper went when the #578 rename turned the redirect into a route pointing at itself, and
-// `/dashboard` — the page #459 folded into In hand — has gone with them. 3.0.0 is a breaking
+// `/dashboard` — the page #459 folded into Home — has gone with them. 3.0.0 is a breaking
 // release with no installs to migrate, so an old bookmark gets the Not found page rather than
 // a silent rewrite that then has to be carried forever. The one `Navigate` left is the
 // signed-out catch-all, which is authentication, not history.
@@ -62,8 +62,7 @@ const router = createBrowserRouter([
                 // the question an operator actually opens the app to answer (#463).
                 index: true,
                 lazy: async () => ({
-                  Component: (await import("../pages/in-hand/in-hand-page"))
-                    .InHandPage,
+                  Component: (await import("../pages/home/home-page")).HomePage,
                 }),
                 errorElement: routeErrorElement,
               },

@@ -12,7 +12,7 @@ Weir issues should stay practical and reproducible. Every issue needs a clear us
   #584 removed the name from the code. It has not been renamed because renaming it relabels every
   issue that already carries it. Read it as "Processing" until someone decides to rename it.
 - `area: dashboard` - runtime health and summary metrics. Also carries the old page name: #459 folded
-  the Dashboard into **In hand** and 3.0.0 dropped the `/dashboard` route, so this is the In hand and
+  the Dashboard into **Home** and 3.0.0 dropped the `/dashboard` route, so this is the Home and
   Processing Overview label now.
 - `area: activity` - Activity timeline, filters, events, and live updates.
 - `area: settings` - settings, security, logs, backup, and support screens.

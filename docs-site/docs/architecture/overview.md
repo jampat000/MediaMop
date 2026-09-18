@@ -10,7 +10,7 @@ library. Processing is the application — it remuxes media into cleaner outputs
 arrive in a library's watched folder or as a pass over a library you already have. mkvmerge writes
 Matroska and ffmpeg writes everything else, and each library can be set to use ffmpeg for
 everything instead. Around it, the platform provides activity history, logs, backups, upgrades,
-and security posture. The main screen, **In hand**, shows what Weir is holding right now and
+and security posture. The main screen, **Home**, shows what Weir is holding right now and
 anything that needs a person.
 
 ## Runtime shape
@@ -59,7 +59,7 @@ but the .NET migrations are now the only source of schema changes.
 |-----------|---------------|
 | `src/app` | App-level router and providers |
 | `src/layouts` | Shell/navigation layout |
-| `src/pages` | Feature pages (In hand, Processing, Activity, Settings, setup) |
+| `src/pages` | Feature pages (Home, Processing, Activity, Settings, setup) |
 | `src/lib` | API clients, query hooks, typed data helpers |
 | `src/components` | Reusable UI and brand components |
 
