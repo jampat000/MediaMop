@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  configurationBundlePaths,
   deleteNotificationChannel,
   suiteConfigurationBackupsPath,
   suiteConfigurationBundlePath,
   suiteSecurityOverviewPath,
   suiteSettingsPath,
+  suiteUpdateStatusPath,
 } from "./suite-settings-api";
 
 afterEach(() => {
@@ -22,12 +22,10 @@ describe("suite settings API paths", () => {
     expect(suiteConfigurationBackupsPath()).toBe(
       "/api/v1/suite/configuration-backups",
     );
-    expect(configurationBundlePaths).toContain(
-      "/api/v1/suite/settings/configuration-bundle",
-    );
-    expect(configurationBundlePaths).toContain(
-      "/api/v1/system/suite-configuration-bundle",
-    );
+    // One address per handler since 3.0.0. The `/suite/settings/configuration-bundle` and
+    // `/system/suite-configuration-bundle` aliases the Python suite also answered on are gone,
+    // and so is the client loop that tried each one until something was not a 404.
+    expect(suiteUpdateStatusPath()).toBe("/api/v1/suite/update-status");
   });
 
   it("sends a CSRF header when deleting a notification channel", async () => {

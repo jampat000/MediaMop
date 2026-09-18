@@ -52,7 +52,7 @@ public sealed record WeirOptions
 
     /// <summary>
     /// Guards the hand-off intake webhook for installs with no per-connection secret yet.
-    /// Read from <c>WEIR_MEDIA_MANAGER_WEBHOOK_SECRET</c>, then the legacy <c>WEIR_SUBBER_WEBHOOK_SECRET</c>.
+    /// Read from <c>WEIR_MEDIA_MANAGER_WEBHOOK_SECRET</c> and nothing else since 3.0.0.
     /// </summary>
     public required string? MediaManagerWebhookSecret { get; init; }
 
@@ -102,9 +102,6 @@ public sealed record WeirOptions
     public required int ProcessingTvFailureCleanupScheduleIntervalSeconds { get; init; }
     public required int ProcessingMovieFailureCleanupGracePeriodSeconds { get; init; }
     public required int ProcessingTvFailureCleanupGracePeriodSeconds { get; init; }
-
-    /// <summary>Legacy read only; remux paths come from saved Processing settings.</summary>
-    public required string? ProcessingRemuxMediaRoot { get; init; }
 
     public required int JobRowsRetentionDays { get; init; }
     public required int JobRowsRetentionScheduleIntervalSeconds { get; init; }

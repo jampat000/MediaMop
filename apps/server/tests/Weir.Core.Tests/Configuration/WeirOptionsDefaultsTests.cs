@@ -83,7 +83,6 @@ public sealed class WeirOptionsDefaultsTests
         Assert.Equal(3600, Defaults.ProcessingTvFailureCleanupScheduleIntervalSeconds);
         Assert.Equal(1800, Defaults.ProcessingMovieFailureCleanupGracePeriodSeconds);
         Assert.Equal(1800, Defaults.ProcessingTvFailureCleanupGracePeriodSeconds);
-        Assert.Null(Defaults.ProcessingRemuxMediaRoot);
     }
 
     [Fact]

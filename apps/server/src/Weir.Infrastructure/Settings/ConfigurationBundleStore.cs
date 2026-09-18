@@ -9,8 +9,16 @@ namespace Weir.Infrastructure.Settings;
 
 /// <summary>
 /// Export and restore of the settings rows (port of <c>weir.platform.configuration_bundle.service</c>),
-/// format version 4, still reading version 3.
+/// format version 4 only.
 /// </summary>
+/// <remarks>
+/// This used to also read format version 3 — the shape the Python suite exported, with
+/// <c>processing_path_settings</c> and <c>processing_remux_rules_settings</c> sections that were
+/// unpicked into the first movie and TV library and their rule set. 3.0.0 drops it. There are no
+/// version 3 bundles that matter (one install, a breaking release), and the reconstruction was the
+/// worst kind of code to keep: it only ran on input nobody has, so it could rot silently while
+/// still being on the restore path for bundles that are the current shape.
+/// </remarks>
 public static class ConfigurationBundleStore
 {
     public const int FormatVersion = 4;
@@ -69,13 +77,13 @@ public static class ConfigurationBundleStore
         ArgumentNullException.ThrowIfNull(bundle);
         var supported = bundle.Get("format_version") switch
         {
-            PyInt i => i.Value == 3 || i.Value == 4,
-            PyFloat f => f.Value is 3.0 or 4.0,
+            PyInt i => i.Value == FormatVersion,
+            PyFloat f => f.Value == FormatVersion,
             _ => false,
         };
         if (!supported)
         {
-            throw new PyValueErrorException("Unsupported configuration bundle format_version (this build reads 3, 4).");
+            throw new PyValueErrorException($"Unsupported configuration bundle format_version (this build reads {FormatVersion}).");
         }
 
         foreach (var key in new[] { SuiteTable, ArrTable, ProcessingOperatorTable })
@@ -174,154 +182,37 @@ public static class ConfigurationBundleStore
         }
     }
 
+    /// <summary>
+    /// Replaces <c>libraries</c> and <c>rule_sets</c> from the bundle's own rows.
+    /// </summary>
+    /// <remarks>
+    /// The format version 3 path that used to live here is gone (see the type remarks): no
+    /// <c>processing_path_settings</c>/<c>processing_remux_rules_settings</c> reconstruction, and no
+    /// <c>media_scope</c> to <c>media_type</c> rename for rows exported before #557. A version 4
+    /// bundle always carries both sections in the current shape, because this build wrote it.
+    /// </remarks>
     private static async Task RestoreProcessingLibrariesAsync(UnitOfWork uow, PyDict bundle)
     {
-        if (bundle.ContainsKey(LibrariesTable))
-        {
-            await uow.ExecuteAsync("DELETE FROM libraries").ConfigureAwait(false);
-            await uow.ExecuteAsync("DELETE FROM rule_sets").ConfigureAwait(false);
-            var ruleColumns = await ColumnsAsync(uow, RuleSetsTable).ConfigureAwait(false);
-            var libraryColumns = await ColumnsAsync(uow, LibrariesTable).ConfigureAwait(false);
-            foreach (var row in Iterate(bundle.Get(RuleSetsTable) ?? new PyList()))
-            {
-                var data = row as PyDict ?? throw new PyTypeErrorException($"'{row.PythonTypeName}' object has no attribute 'items'");
-                await InsertAsync(uow, RuleSetsTable, ruleColumns, ToKwargs(ruleColumns, data)).ConfigureAwait(false);
-            }
-
-            foreach (var row in Iterate(bundle[LibrariesTable]))
-            {
-                var data = row as PyDict ?? throw new PyTypeErrorException($"'{row.PythonTypeName}' object has no attribute 'items'");
-                if (!data.ContainsKey("media_type") && data.ContainsKey("media_scope"))
-                {
-                    data = data.Copy().Set("media_type", data["media_scope"]);
-                }
-
-                await InsertAsync(uow, LibrariesTable, libraryColumns, ToKwargs(libraryColumns, data)).ConfigureAwait(false);
-            }
-
-            return;
-        }
-
-        var legacyPaths = LegacySection(bundle, "processing_path_settings");
-        var legacyRules = LegacySection(bundle, "processing_remux_rules_settings");
-        if (legacyPaths.Count == 0 && legacyRules.Count == 0)
+        if (!bundle.ContainsKey(LibrariesTable))
         {
             return;
         }
 
-        foreach (var (scope, prefix) in new[] { ("movie", string.Empty), ("tv", "tv_") })
+        await uow.ExecuteAsync("DELETE FROM libraries").ConfigureAwait(false);
+        await uow.ExecuteAsync("DELETE FROM rule_sets").ConfigureAwait(false);
+        var ruleColumns = await ColumnsAsync(uow, RuleSetsTable).ConfigureAwait(false);
+        var libraryColumns = await ColumnsAsync(uow, LibrariesTable).ConfigureAwait(false);
+        foreach (var row in Iterate(bundle.Get(RuleSetsTable) ?? new PyList()))
         {
-            var library = await uow.QuerySingleAsync(
-                "SELECT id, watched_folder, work_folder, output_folder, scan_interval_seconds, rule_set_id FROM libraries " +
-                "WHERE media_type = $scope ORDER BY display_order, id LIMIT 1 OFFSET 0",
-                reader => new
-                {
-                    Id = SqliteValues.GetInt64(reader, 0),
-                    Watched = SqliteValues.GetString(reader, 1),
-                    Work = SqliteValues.GetString(reader, 2),
-                    Output = SqliteValues.GetString(reader, 3),
-                    Interval = SqliteValues.GetInt64(reader, 4),
-                    RuleSetId = reader.IsDBNull(5) ? (long?)null : SqliteValues.GetInt64(reader, 5),
-                },
-                ("$scope", scope)).ConfigureAwait(false);
-            if (library is null)
-            {
-                continue;
-            }
-
-            var librarySets = new List<string>();
-            var libraryParameters = new List<(string, object?)> { ("$id", library.Id) };
-            void SetText(string column, PyJson? value, string current)
-            {
-                if (value is null or PyNull)
-                {
-                    return;
-                }
-
-                var text = value.IsTruthy ? PyConvert.Str(value) : string.Empty;
-                if (text != current)
-                {
-                    librarySets.Add($"{column}=${column}");
-                    libraryParameters.Add(($"${column}", text));
-                }
-            }
-
-            SetText("watched_folder", legacyPaths.Get($"processing_{prefix}watched_folder"), library.Watched);
-            SetText("work_folder", legacyPaths.Get($"processing_{prefix}work_folder"), library.Work);
-            SetText("output_folder", legacyPaths.Get($"processing_{prefix}output_folder"), library.Output);
-            if (legacyPaths.Get($"{(scope == "tv" ? "tv" : "movie")}_watched_folder_check_interval_seconds") is { } interval and not PyNull)
-            {
-                var seconds = Saturate(PyConvert.ToInt(interval));
-                if (seconds != library.Interval)
-                {
-                    librarySets.Add("scan_interval_seconds=$scan_interval_seconds");
-                    libraryParameters.Add(("$scan_interval_seconds", seconds));
-                }
-            }
-
-            if (librarySets.Count > 0)
-            {
-                librarySets.Add("updated_at=CURRENT_TIMESTAMP");
-                await uow.ExecuteAsync($"UPDATE libraries SET {string.Join(", ", librarySets)} WHERE id = $id", [.. libraryParameters]).ConfigureAwait(false);
-            }
-
-            if (library.RuleSetId is not { } ruleSetId || ruleSetId == 0 || legacyRules.Count == 0)
-            {
-                continue;
-            }
-
-            var ruleColumns = await ColumnsAsync(uow, RuleSetsTable).ConfigureAwait(false);
-            var ruleSet = await ReadTypedRowAsync(uow, RuleSetsTable, ruleColumns, new PyInt(ruleSetId)).ConfigureAwait(false);
-            if (ruleSet is null)
-            {
-                continue;
-            }
-
-            var sets = new List<string>();
-            var parameters = new List<(string, object?)> { ("$id", ruleSetId) };
-            foreach (var field in new[] { "primary_audio_lang", "secondary_audio_lang", "tertiary_audio_lang", "default_audio_slot", "subtitle_mode", "subtitle_langs_csv", "audio_preference_mode" })
-            {
-                if (legacyRules.Get(prefix + field) is { } value and not PyNull)
-                {
-                    var text = PyConvert.Str(value);
-                    if (!PythonEquals(ColumnKind.Raw, ruleSet[field], new PyStr(text)))
-                    {
-                        sets.Add($"{field}=${field}");
-                        parameters.Add(($"${field}", text));
-                    }
-                }
-            }
-
-            foreach (var field in new[] { "remove_commentary", "preserve_forced_subs", "preserve_default_subs" })
-            {
-                if (legacyRules.Get(prefix + field) is { } value and not PyNull)
-                {
-                    var flag = value.IsTruthy;
-                    if (!PythonEquals(ColumnKind.Boolean, ruleSet[field], PyJson.Of(flag)))
-                    {
-                        sets.Add($"{field}=${field}");
-                        parameters.Add(($"${field}", flag ? 1 : 0));
-                    }
-                }
-            }
-
-            if (sets.Count > 0)
-            {
-                sets.Add("updated_at=CURRENT_TIMESTAMP");
-                await uow.ExecuteAsync($"UPDATE rule_sets SET {string.Join(", ", sets)} WHERE id = $id", [.. parameters]).ConfigureAwait(false);
-            }
-        }
-    }
-
-    private static PyDict LegacySection(PyDict bundle, string key)
-    {
-        var value = bundle.Get(key);
-        if (value is null || !value.IsTruthy)
-        {
-            return new PyDict();
+            var data = row as PyDict ?? throw new PyTypeErrorException($"'{row.PythonTypeName}' object has no attribute 'items'");
+            await InsertAsync(uow, RuleSetsTable, ruleColumns, ToKwargs(ruleColumns, data)).ConfigureAwait(false);
         }
 
-        return value as PyDict ?? throw new PyTypeErrorException($"'{value.PythonTypeName}' object has no attribute 'get'");
+        foreach (var row in Iterate(bundle[LibrariesTable]))
+        {
+            var data = row as PyDict ?? throw new PyTypeErrorException($"'{row.PythonTypeName}' object has no attribute 'items'");
+            await InsertAsync(uow, LibrariesTable, libraryColumns, ToKwargs(libraryColumns, data)).ConfigureAwait(false);
+        }
     }
 
     private static IEnumerable<PyJson> Iterate(PyJson value) => value switch

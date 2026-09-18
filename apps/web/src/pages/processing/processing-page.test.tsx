@@ -172,16 +172,6 @@ describe("ProcessingPage", () => {
     expect(screen.queryByText(/Refiner/)).toBeNull();
   });
 
-  it("an old ?tab=existing-library anchor still opens the Library tab", async () => {
-    renderProcessingPage("/processing?tab=existing-library");
-    await waitFor(() =>
-      expect(screen.getByRole("tab", { name: "Library" })).toHaveAttribute(
-        "aria-selected",
-        "true",
-      ),
-    );
-  });
-
   it("Overview is the default tab and links Activity without leaking env keys", () => {
     renderProcessingPage();
     expect(screen.getByTestId("processing-overview-panel")).toBeInTheDocument();

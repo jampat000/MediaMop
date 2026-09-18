@@ -20,7 +20,7 @@ REMUX_KIND = "processing.file.remux_pass.v1"
 CALLBACK_PATH = "/api/integrations/processors/events"
 
 #: No instance-wide webhook secret, whatever the developer's shell holds.
-NO_WEBHOOK_SECRET = {"WEIR_MEDIA_MANAGER_WEBHOOK_SECRET": "", "WEIR_SUBBER_WEBHOOK_SECRET": ""}
+NO_WEBHOOK_SECRET = {"WEIR_MEDIA_MANAGER_WEBHOOK_SECRET": ""}
 
 
 # --- media manager connections ------------------------------------------------------------------

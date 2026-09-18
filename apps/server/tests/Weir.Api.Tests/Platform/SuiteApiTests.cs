@@ -110,13 +110,10 @@ public sealed class SuiteApiTests
         var client = new ApiTestClient(server);
         await client.SignInAsync();
 
-        foreach (var path in new[] { "/api/v1/suite/update-status", "/api/v1/suite/settings/update-status" })
-        {
-            var body = await Json(await client.GetAsync(path));
-            Assert.Equal("1.0.0", body["current_version"]!.GetValue<string>());
-            Assert.Equal("1.2.3", body["latest_version"]!.GetValue<string>());
-            Assert.Equal("update_available", body["status"]!.GetValue<string>());
-        }
+        var body = await Json(await client.GetAsync("/api/v1/suite/update-status"));
+        Assert.Equal("1.0.0", body["current_version"]!.GetValue<string>());
+        Assert.Equal("1.2.3", body["latest_version"]!.GetValue<string>());
+        Assert.Equal("update_available", body["status"]!.GetValue<string>());
 
         catalog.NotFound = true;
         var missing = await Json(await client.GetAsync("/api/v1/suite/update-status"));
@@ -219,31 +216,55 @@ public sealed class SuiteApiTests
         await TestDatabase.SeedViewerAsync(server);
         var viewer = new ApiTestClient(server);
         await viewer.SignInAsync("bob", ViewerPassword);
-        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync("/api/v1/system/suite-configuration-bundle")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync("/api/v1/suite/configuration-bundle")).StatusCode);
 
         Assert.Equal(4, (await Json(await client.GetAsync("/api/v1/suite/configuration-bundle")))["format_version"]!.GetValue<int>());
-        var bundle = (await Json(await client.GetAsync("/api/v1/system/suite-configuration-bundle"))).AsObject();
+        var bundle = (await Json(await client.GetAsync("/api/v1/suite/configuration-bundle"))).AsObject();
         Assert.True(bundle.ContainsKey("arr_library_operator_settings"));
         Assert.DoesNotContain(bundle, pair => pair.Key.StartsWith("pruner_", StringComparison.Ordinal));
 
         var older = bundle.DeepClone().AsObject();
         older["suite_settings"]!["product_display_name"] = "Restored From Older Backup";
         older["pruner_server_instances"] = new JsonArray(new JsonObject { ["id"] = 1, ["provider"] = "plex" });
-        using var put = await client.PutAsync("/api/v1/system/suite-configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = older });
+        using var put = await client.PutAsync("/api/v1/suite/configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = older });
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
         Assert.Equal("Restored From Older Backup", (await Json(put))["suite_settings"]!["product_display_name"]!.GetValue<string>());
 
-        using var restore = await client.PutAsync("/api/v1/system/suite-configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle });
+        using var restore = await client.PutAsync("/api/v1/suite/configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle });
         Assert.Equal("Weir", (await Json(restore))["suite_settings"]!["product_display_name"]!.GetValue<string>());
 
         var bad = bundle.DeepClone().AsObject();
         bad["format_version"] = 999;
-        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsync("/api/v1/system/suite-configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = bad })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsync("/api/v1/suite/configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = bad })).StatusCode);
 
         var olderFormat = JsonNode.Parse(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "Fixtures", "bundle-v4.json")));
-        using var fromOlder = await client.PutAsync("/api/v1/system/suite-configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = olderFormat });
+        using var fromOlder = await client.PutAsync("/api/v1/suite/configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = olderFormat });
         Assert.Equal(HttpStatusCode.OK, fromOlder.StatusCode);
         Assert.Equal("Exported By An Older Weir", (await Json(fromOlder))["suite_settings"]!["product_display_name"]!.GetValue<string>());
+    }
+
+    /// <summary>
+    /// Each of these was a second address for a handler that already had one, carried over from the
+    /// Python suite's <c>system_configuration</c> router and its <c>/suite/settings/...</c> spellings
+    /// so an older web bundle or a partly-forwarding proxy would still find the endpoint. 3.0.0
+    /// serves one address per handler; this is here so an alias cannot quietly reappear.
+    /// </summary>
+    [Fact]
+    public async Task The_retired_url_aliases_for_bundles_snapshots_and_update_status_are_not_served()
+    {
+        var (server, client) = await SignedInAdminAsync();
+        await using var _ = server;
+        foreach (var path in new[]
+        {
+            "/api/v1/system/suite-configuration-bundle",
+            "/api/v1/system/suite-configuration-backups",
+            "/api/v1/suite/settings/configuration-bundle",
+            "/api/v1/suite/settings/update-status",
+        })
+        {
+            using var response = await client.GetAsync(path);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
     }
 
     [Fact]
@@ -260,11 +281,11 @@ public sealed class SuiteApiTests
             await uow.CommitAsync();
         }
 
-        var list = await Json(await client.GetAsync("/api/v1/system/suite-configuration-backups"));
+        var list = await Json(await client.GetAsync("/api/v1/suite/configuration-backups"));
         Assert.Equal(backups.Directory, list["directory"]!.GetValue<string>());
         Assert.Single(list["items"]!.AsArray());
 
-        using var download = await client.GetAsync($"/api/v1/system/suite-configuration-backups/{id}/download");
+        using var download = await client.GetAsync($"/api/v1/suite/configuration-backups/{id}/download");
         Assert.Equal(HttpStatusCode.OK, download.StatusCode);
         Assert.Equal(4, JsonNode.Parse(await download.Content.ReadAsStringAsync())!["format_version"]!.GetValue<int>());
         Assert.Contains("attachment", Header(download, "Content-Disposition"), StringComparison.Ordinal);

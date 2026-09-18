@@ -8155,7 +8155,7 @@
         "type": "object"
       },
       "SuiteSettingsPutIn": {
-        "description": "Body for ``PUT /suite/settings``.\n\n``extra=\"ignore\"`` keeps older browser builds or tools from failing when they send removed keys.\n``application_logs_enabled`` is accepted for compatibility with pre-0047 APIs but is not persisted.",
+        "description": "Body for ``PUT /suite/settings``.\n\nUnknown keys are ignored rather than rejected.",
         "properties": {
           "activity_retention_days": {
             "anyOf": [
@@ -8175,18 +8175,6 @@
             "minLength": 1,
             "title": "App Timezone",
             "type": "string"
-          },
-          "application_logs_enabled": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Deprecated; retained so older clients can POST without changes. Ignored when persisting.",
-            "title": "Application Logs Enabled"
           },
           "configuration_backup_enabled": {
             "anyOf": [
@@ -13615,94 +13603,6 @@
         ]
       }
     },
-    "/api/v1/suite/settings/configuration-bundle": {
-      "get": {
-        "description": "Export suite + module configuration as JSON (operators/admins only — contains secrets).",
-        "operationId": "get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Configuration Bundle Api V1 Suite Settings Configuration Bundle Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Configuration Bundle",
-        "tags": [
-          "suite"
-        ]
-      },
-      "put": {
-        "description": "Replace suite + module configuration from a prior export (operators/admins only).",
-        "operationId": "put_configuration_bundle_api_v1_suite_settings_configuration_bundle_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfigurationBundleImportIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Configuration Bundle Api V1 Suite Settings Configuration Bundle Put",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Configuration Bundle",
-        "tags": [
-          "suite"
-        ]
-      }
-    },
-    "/api/v1/suite/settings/update-status": {
-      "get": {
-        "description": "Read-only update check for the signed-in Settings page.",
-        "operationId": "get_suite_update_status_api_v1_suite_settings_update_status_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuiteUpdateStatusOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Suite Update Status",
-        "tags": [
-          "suite"
-        ]
-      }
-    },
     "/api/v1/suite/update-settings": {
       "get": {
         "description": "Read the tray update-mode preferences from update-settings.json.",
@@ -13960,131 +13860,6 @@
         "summary": "Post Reconciliation Repair",
         "tags": [
           "system-reconciliation"
-        ]
-      }
-    },
-    "/api/v1/system/suite-configuration-backups": {
-      "get": {
-        "operationId": "get_suite_configuration_backups_api_v1_system_suite_configuration_backups_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuiteConfigurationBackupListOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Suite Configuration Backups",
-        "tags": [
-          "system"
-        ]
-      }
-    },
-    "/api/v1/system/suite-configuration-backups/{backup_id}/download": {
-      "get": {
-        "operationId": "download_suite_configuration_backup_api_v1_system_suite_configuration_backups__backup_id__download_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "backup_id",
-            "required": true,
-            "schema": {
-              "title": "Backup Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Download Suite Configuration Backup",
-        "tags": [
-          "system"
-        ]
-      }
-    },
-    "/api/v1/system/suite-configuration-bundle": {
-      "get": {
-        "operationId": "get_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Suite Configuration Bundle Api V1 System Suite Configuration Bundle Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Suite Configuration Bundle",
-        "tags": [
-          "system"
-        ]
-      },
-      "put": {
-        "operationId": "put_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfigurationBundleImportIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Put Suite Configuration Bundle Api V1 System Suite Configuration Bundle Put",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Suite Configuration Bundle",
-        "tags": [
-          "system"
         ]
       }
     },

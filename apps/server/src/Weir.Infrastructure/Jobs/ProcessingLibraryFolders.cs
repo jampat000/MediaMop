@@ -11,9 +11,6 @@ public sealed record ProcessingLibraryFolderRow(long Id, string MediaType, int D
 /// </summary>
 public static class ProcessingLibraryFolders
 {
-    private const string LegacyWindowsMovieWork = @"C:\ProgramData\Media\processing-movie-work";
-    private const string LegacyWindowsTvWork = @"C:\ProgramData\Weir\processing-tv-work";
-
     /// <summary>Every library, ordered by <c>display_order</c> then <c>id</c>.</summary>
     public static List<ProcessingLibraryFolderRow> List(SqliteConnection connection, SqliteTransaction? transaction)
     {
@@ -58,18 +55,31 @@ public static class ProcessingLibraryFolders
 
     public static string DefaultTvWorkFolder(string weirHome) => Path.Join(Path.GetFullPath(weirHome), "processing", "processing-tv-work");
 
-    /// <summary><c>effective_library_work_folder</c>: the library's own folder, or the per-scope default it used to use.</summary>
+    /// <summary>
+    /// <c>effective_library_work_folder</c>: the library's own folder, or the per-scope default when it
+    /// has none.
+    /// </summary>
+    /// <remarks>
+    /// Until 3.0.0 this also treated two hard-coded Windows paths — <c>C:\ProgramData\Media\
+    /// processing-movie-work</c> and <c>C:\ProgramData\Weir\processing-tv-work</c>, the defaults an
+    /// older MediaMop-era install wrote into <c>work_folder</c> — as if the column were empty, so they
+    /// silently resolved to the <c>WEIR_HOME</c> default instead. Those are gone. A row still holding
+    /// one of those paths is now taken at face value, like any other custom path: it is used as
+    /// written, and if the folder does not exist the caller refuses the run with "the library's
+    /// work/temp folder must be an existing directory when set to a custom path" rather than quietly
+    /// working somewhere else. An empty <c>work_folder</c> is untouched and still gets the default.
+    /// </remarks>
     public static string EffectiveWorkFolder(ProcessingLibraryFolderRow library, string weirHome)
     {
         ArgumentNullException.ThrowIfNull(library);
         var raw = library.WorkFolder.Trim();
-        var scope = (string.IsNullOrEmpty(library.MediaType) ? "movie" : library.MediaType).Trim().ToLowerInvariant();
-        if (raw.Length == 0 || IsLegacyDefaultWorkFolder(raw, scope))
+        if (raw.Length > 0)
         {
-            return scope == "tv" ? DefaultTvWorkFolder(weirHome) : DefaultMovieWorkFolder(weirHome);
+            return raw;
         }
 
-        return raw;
+        var scope = (string.IsNullOrEmpty(library.MediaType) ? "movie" : library.MediaType).Trim().ToLowerInvariant();
+        return scope == "tv" ? DefaultTvWorkFolder(weirHome) : DefaultMovieWorkFolder(weirHome);
     }
 
     /// <summary><c>Path(text).expanduser()</c> made absolute, for touching the filesystem.</summary>
@@ -83,11 +93,5 @@ public static class ProcessingLibraryFolders
         }
 
         return Path.GetFullPath(text);
-    }
-
-    private static bool IsLegacyDefaultWorkFolder(string raw, string scope)
-    {
-        var legacy = scope == "tv" ? LegacyWindowsTvWork : LegacyWindowsMovieWork;
-        return string.Equals(raw.TrimEnd('\\', '/'), legacy.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
     }
 }

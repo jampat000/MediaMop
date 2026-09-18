@@ -403,8 +403,6 @@ class LiveAudit:
             "/api/v1/suite/notification-channels",
             "/api/v1/suite/security-overview",
             "/api/v1/suite/settings",
-            "/api/v1/suite/settings/configuration-bundle",
-            "/api/v1/suite/settings/update-status",
             "/api/v1/suite/update-settings",
             "/api/v1/suite/update-state",
             "/api/v1/suite/update-status",
@@ -412,9 +410,6 @@ class LiveAudit:
             "/api/v1/system/media-tools",
             "/api/v1/system/readiness",
             "/api/v1/system/reconciliation",
-            "/api/v1/system/suite-configuration-backups",
-            "/api/v1/system/suite-configuration-backups/999999/download",
-            "/api/v1/system/suite-configuration-bundle",
         )
         headers = {
             "Accept": "application/json",

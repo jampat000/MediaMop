@@ -132,19 +132,26 @@ public static class RemuxPassPaths
     public static string DefaultWorkFolder(string weirHome, string mediaType) =>
         Path.Join(Resolve(weirHome), "processing", mediaType == "tv" ? "processing-tv-work" : "processing-movie-work");
 
-    /// <summary><c>effective_library_work_folder</c>: the library's own, or the per-scope default it used to use.</summary>
+    /// <summary>
+    /// <c>effective_library_work_folder</c>: the library's own, or the per-scope default when it has
+    /// none. <c>IsDefault</c> says which, and callers use it to decide whether a folder that is not on
+    /// disk is an error (a custom path) or something to create (the default).
+    /// </summary>
+    /// <remarks>
+    /// This carried the same two hard-coded MediaMop-era Windows paths as
+    /// <see cref="Jobs.ProcessingLibraryFolders.EffectiveWorkFolder"/> and for the same reason; 3.0.0
+    /// removed both copies. See that method for what changes for a row still holding one.
+    /// </remarks>
     public static (string WorkFolder, bool IsDefault) EffectiveWorkFolder(ProcessingLibraryRecord library, string weirHome)
     {
         ArgumentNullException.ThrowIfNull(library);
         var raw = PyStrings.Strip(library.WorkFolder ?? string.Empty);
-        var scope = PyStrings.Strip(library.MediaType ?? "movie").ToLowerInvariant();
-        var legacy = scope == "tv" ? @"C:\ProgramData\Weir\processing-tv-work" : @"C:\ProgramData\Media\processing-movie-work";
-        if (raw.Length == 0 || string.Equals(raw.TrimEnd('\\', '/'), legacy, StringComparison.OrdinalIgnoreCase))
+        if (raw.Length > 0)
         {
-            return (DefaultWorkFolder(weirHome, scope), true);
+            return (raw, false);
         }
 
-        return (raw, false);
+        return (DefaultWorkFolder(weirHome, PyStrings.Strip(library.MediaType ?? "movie").ToLowerInvariant()), true);
     }
 
     /// <summary>

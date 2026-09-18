@@ -99,8 +99,12 @@ def _assert_tab_workspace(page, *, page_test_id: str, tabs_test_id: str) -> None
     expect(panel).to_have_attribute("aria-labelledby", active_tab.get_attribute("id"))
 
 
-def test_old_dashboard_address_lands_on_in_hand(weir_shell: str) -> None:
-    """The dashboard folded into In hand (#459); a bookmark to /dashboard still works."""
+def test_old_dashboard_address_is_not_found(weir_shell: str) -> None:
+    """The dashboard folded into In hand (#459) and 3.0.0 dropped the redirect it left behind.
+
+    /dashboard gets the not-found page, which offers the way to In hand rather than
+    silently pretending the address is still a page.
+    """
     base = weir_shell.rstrip("/")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -111,10 +115,16 @@ def test_old_dashboard_address_lands_on_in_hand(weir_shell: str) -> None:
             ensure_signed_in(page, base)
 
             page.goto(f"{base}/dashboard", wait_until="domcontentloaded")
-            expect(page).to_have_url(re.compile(r".*/(?:$|[?#])"))
-            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
+            expect(page).to_have_url(re.compile(r".*/dashboard"))
+            expect(
+                page.get_by_role("heading", name="Page not found", exact=True)
+            ).to_be_visible()
             expect(page.get_by_role("link", name="Dashboard", exact=True)).to_have_count(0)
             _assert_no_error_state(page)
+
+            page.get_by_role("link", name="Go to In hand", exact=True).click()
+            expect(page).to_have_url(re.compile(r".*/(?:$|[?#])"))
+            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
         finally:
             browser.close()
 

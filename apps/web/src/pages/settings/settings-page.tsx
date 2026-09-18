@@ -394,7 +394,7 @@ export function SettingsPage() {
       log_retention_days: Number.isFinite(retention)
         ? retention
         : d.log_retention_days,
-      application_logs_enabled: true,
+
       ...(finalizeActivityRetentionDays() !== undefined
         ? { activity_retention_days: finalizeActivityRetentionDays() }
         : {}),

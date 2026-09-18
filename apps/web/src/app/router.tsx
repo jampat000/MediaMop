@@ -11,6 +11,13 @@ import { AppHydrateFallback } from "./hydrate-fallback";
 
 const routeErrorElement = <RouteErrorScreen />;
 
+// Every route below is an address Weir 3.0.0 actually serves. There are deliberately no
+// redirects from addresses earlier versions used: the `refiner` redirect and the MovedTo
+// helper went when the #578 rename turned the redirect into a route pointing at itself, and
+// `/dashboard` — the page #459 folded into In hand — has gone with them. 3.0.0 is a breaking
+// release with no installs to migrate, so an old bookmark gets the Not found page rather than
+// a silent rewrite that then has to be carried forever. The one `Navigate` left is the
+// signed-out catch-all, which is authentication, not history.
 const router = createBrowserRouter([
   {
     path: "/login",
@@ -59,11 +66,6 @@ const router = createBrowserRouter([
                     .InHandPage,
                 }),
                 errorElement: routeErrorElement,
-              },
-              {
-                // The dashboard folded into In hand (#459). Old bookmarks land there.
-                path: "dashboard",
-                element: <Navigate to="/" replace />,
               },
               {
                 path: "activity",

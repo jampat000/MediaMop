@@ -205,14 +205,28 @@ public sealed class StartupRecoveryTests : IDisposable
         Assert.Equal(new StartupRecoveryReport(new StartupJobRecoveryResult(0, 0), 0, 0), report);
     }
 
+    /// <summary>
+    /// Only an empty <c>work_folder</c> gets the per-scope default. The old MediaMop-era Windows
+    /// defaults used to be recognised here and mapped to it as well; 3.0.0 removed that, so they are
+    /// now ordinary custom paths and are returned unchanged. That is the behaviour change, pinned.
+    /// </summary>
     [Fact]
-    public void A_legacy_default_work_folder_resolves_to_the_scope_default()
+    public void Only_an_empty_work_folder_falls_back_to_the_scope_default()
     {
-        var legacy = new ProcessingLibraryFolderRow(1, "movie", 0, @"C:\ProgramData\Media\processing-movie-work\", string.Empty);
+        var row = new ProcessingLibraryFolderRow(1, "movie", 0, string.Empty, string.Empty);
 
-        Assert.Equal(ProcessingLibraryFolders.DefaultMovieWorkFolder(_db.Home), ProcessingLibraryFolders.EffectiveWorkFolder(legacy, _db.Home));
-        Assert.Equal(ProcessingLibraryFolders.DefaultTvWorkFolder(_db.Home), ProcessingLibraryFolders.EffectiveWorkFolder(legacy with { MediaType = "TV", WorkFolder = " " }, _db.Home));
-        Assert.Equal("/data/work", ProcessingLibraryFolders.EffectiveWorkFolder(legacy with { WorkFolder = " /data/work " }, _db.Home));
+        Assert.Equal(ProcessingLibraryFolders.DefaultMovieWorkFolder(_db.Home), ProcessingLibraryFolders.EffectiveWorkFolder(row, _db.Home));
+        Assert.Equal(ProcessingLibraryFolders.DefaultTvWorkFolder(_db.Home), ProcessingLibraryFolders.EffectiveWorkFolder(row with { MediaType = "TV", WorkFolder = " " }, _db.Home));
+        Assert.Equal("/data/work", ProcessingLibraryFolders.EffectiveWorkFolder(row with { WorkFolder = " /data/work " }, _db.Home));
+
+        // The two paths that used to be treated as "unset" are now taken literally, trailing
+        // separator and all, exactly as any other path a person typed in would be.
+        Assert.Equal(
+            @"C:\ProgramData\Media\processing-movie-work\",
+            ProcessingLibraryFolders.EffectiveWorkFolder(row with { WorkFolder = @"C:\ProgramData\Media\processing-movie-work\" }, _db.Home));
+        Assert.Equal(
+            @"C:\ProgramData\Weir\processing-tv-work",
+            ProcessingLibraryFolders.EffectiveWorkFolder(row with { MediaType = "tv", WorkFolder = @"C:\ProgramData\Weir\processing-tv-work" }, _db.Home));
     }
 
     private Task<StartupRecoveryReport> RunAsync() => StartupRecovery.RunAsync(_db.Store, _db.Home, Now, NullLogger.Instance);
