@@ -358,7 +358,8 @@ it("sorts a breakdown table when its column header is clicked", async () => {
   const codecColumn = () =>
     within(table)
       .getAllByTestId("library-breakdown-row")
-      .map((row) => within(row).getAllByRole("cell")[0].textContent);
+      // The value column is the row's header cell (`.mm-quiet-table__name`), not a plain cell.
+      .map((row) => within(row).getByRole("rowheader").textContent);
 
   // Most files first by default.
   expect(codecColumn()).toEqual(["HEVC", "AV1"]);
@@ -380,7 +381,7 @@ it("a breakdown's Show files link opens Files filtered by that facet", async () 
   await openView("Languages");
   const table = await screen.findByTestId("library-breakdown-audio_language");
   fireEvent.click(
-    within(table).getAllByRole("button", { name: "Show files" })[1],
+    within(table).getAllByRole("button", { name: /^Show files/ })[1],
   );
 
   expect(
@@ -625,7 +626,7 @@ it("groups problems with what to do, and opens Files filtered to a group", async
   expect(group).toHaveTextContent("Wait until seeding finishes.");
   expect(group).toHaveTextContent("…and 1 more.");
 
-  fireEvent.click(within(group).getByRole("button", { name: "Show files" }));
+  fireEvent.click(within(group).getByRole("button", { name: /^Show files/ }));
 
   await waitFor(() =>
     expect(fetchFiles).toHaveBeenCalledWith(

@@ -2,6 +2,11 @@
  * Issue #568: one breakdown as a sortable table with a share bar per row, plus a "Show files" link that
  * filters the Files sub-view by that value. The rows are the distinct values of one facet (tens of rows at
  * most, already aggregated by the server), so sorting them here is cheap and never touches the file list.
+ *
+ * Rule 3 of docs/design/content-language.md: a heading, a hairline, then the content — no box, and the
+ * table is `.mm-quiet-table`. Below 760px that primitive stacks each row and reads the column name from
+ * `data-label`, which also hides the header — and with it these sort controls. Sorting is a pointer-width
+ * affordance here; the filters on the Files sub-view are not.
  */
 import { useMemo, useState } from "react";
 
@@ -11,7 +16,6 @@ import {
   type LibraryBreakdownRow,
   type LibraryFacet,
 } from "../../../lib/processing/library-api";
-import { mmActionButtonClass } from "../../../lib/ui/mm-control-roles";
 
 type BreakdownSort = "value" | "files" | "size";
 
@@ -47,6 +51,7 @@ export function LibraryBreakdownTable({
 }: LibraryBreakdownTableProps) {
   const [sort, setSort] = useState<BreakdownSort>("files");
   const [descending, setDescending] = useState(true);
+  const headingId = `library-breakdown-${facet}-heading`;
 
   const sorted = useMemo(() => {
     const copy = [...rows];
@@ -73,9 +78,8 @@ export function LibraryBreakdownTable({
     }
   };
 
-  const header = (key: BreakdownSort, label: string, className = "") => (
+  const header = (key: BreakdownSort, label: string) => (
     <th
-      className={`py-1 font-medium ${className}`}
       scope="col"
       aria-sort={
         sort === key ? (descending ? "descending" : "ascending") : "none"
@@ -96,79 +100,78 @@ export function LibraryBreakdownTable({
 
   return (
     <section
-      className="mm-bubble space-y-2 p-4"
+      className="mm-quiet-section"
+      aria-labelledby={headingId}
       data-testid={`library-breakdown-${facet}`}
     >
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-        {heading}
-      </h3>
-      {rows.length === 0 ? (
-        <p className="text-sm text-[var(--mm-text3)]">{emptyMessage}</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[26rem] text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--mm-border)] text-[var(--mm-text3)]">
-                {header("value", columnLabel(facet))}
-                {header("files", "Files", "w-20 text-right")}
-                {header("size", "Size", "w-28 text-right")}
-                <th className="w-40 py-1 font-medium" scope="col">
-                  Share
-                </th>
-                <th className="w-28 py-1" scope="col">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((row) => (
-                <tr
-                  key={row.value}
-                  className="border-b border-[var(--mm-border)]/50"
-                  data-testid="library-breakdown-row"
-                >
-                  <td className="py-1.5 text-[var(--mm-text1)]">
-                    {libraryFacetValueLabel(facet, row.value)}
-                  </td>
-                  <td className="py-1.5 text-right tabular-nums">
-                    {row.files}
-                  </td>
-                  <td className="py-1.5 text-right tabular-nums text-[var(--mm-text2)]">
-                    {formatBytes(row.size_bytes)}
-                  </td>
-                  <td className="py-1.5">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-2 min-w-[3rem] flex-1 overflow-hidden rounded-full bg-[var(--mm-well-bg)]"
-                        role="presentation"
-                      >
-                        <div
-                          className="h-full rounded-full bg-[var(--mm-accent)]"
-                          style={{
-                            width: `${Math.max(2, Math.round(row.share * 100))}%`,
-                          }}
-                        />
-                      </div>
-                      <span className="w-10 shrink-0 text-right text-xs tabular-nums text-[var(--mm-text3)]">
-                        {Math.round(row.share * 100)}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-1.5 text-right">
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({ variant: "tertiary" })}
-                      onClick={() => onShowFiles(facet, row.value)}
-                    >
-                      Show files
-                    </button>
-                  </td>
+      <div className="mm-quiet-section__head">
+        <h3 id={headingId} className="mm-quiet-section__title">
+          {heading}
+        </h3>
+      </div>
+      <div className="mm-quiet-section__body">
+        {rows.length === 0 ? (
+          <p className="mm-quiet-note">{emptyMessage}</p>
+        ) : (
+          <div className="mm-quiet-table-wrap">
+            <table className="mm-quiet-table min-w-[30rem] max-[760px]:min-w-0">
+              <thead>
+                <tr>
+                  {header("value", columnLabel(facet))}
+                  {header("files", "Files")}
+                  {header("size", "Size")}
+                  <th scope="col">Share</th>
+                  <th scope="col">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {sorted.map((row) => (
+                  <tr key={row.value} data-testid="library-breakdown-row">
+                    <th scope="row" className="mm-quiet-table__name">
+                      {libraryFacetValueLabel(facet, row.value)}
+                    </th>
+                    <td data-label="Files" className="tabular-nums">
+                      {row.files}
+                    </td>
+                    <td data-label="Size" className="tabular-nums">
+                      {formatBytes(row.size_bytes)}
+                    </td>
+                    <td data-label="Share">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-2 min-w-[3rem] flex-1 overflow-hidden rounded-full bg-[var(--mm-well-bg)]"
+                          role="presentation"
+                        >
+                          <div
+                            className="h-full rounded-full bg-[var(--mm-accent)]"
+                            style={{
+                              width: `${Math.max(2, Math.round(row.share * 100))}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="w-10 shrink-0 text-right text-xs tabular-nums text-[var(--mm-text3)]">
+                          {Math.round(row.share * 100)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="">
+                      <button
+                        type="button"
+                        className="mm-quiet-link"
+                        onClick={() => onShowFiles(facet, row.value)}
+                      >
+                        Show files →
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

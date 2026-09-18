@@ -5,6 +5,11 @@
  * Every total and breakdown is a SQL aggregate from the server (`library-overview`), and the Files table is
  * server-sorted, server-filtered and paged (`library-files`), so a library of thousands of files never has to
  * reach the browser to be counted (#568 point 7).
+ *
+ * Laid out to docs/design/content-language.md. The tab has no lead band: a library census is not a "now".
+ * Overview carries the one figure row (rule 2) and everything else is quiet, borderless body (rule 3). The
+ * sub-navigation below is the shared `WorkspaceTabList`, deliberately left identical to the outer workspace
+ * tab row — it is the same affordance one level down, and the component is frozen chrome either way.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -291,33 +296,39 @@ export function ProcessingLibrarySection() {
 
   const emptyState = (
     <section
-      className="mm-bubble space-y-2 p-4"
+      className="mm-quiet-section"
+      aria-labelledby="library-empty-state-heading"
       data-testid="library-empty-state"
     >
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-        Nothing scanned yet
-      </h3>
-      <p className="max-w-prose text-sm text-[var(--mm-text2)]">
-        {SCAN_EXPLANATION}
-      </p>
-      {settings.data && settings.data.library_folders.length === 0 ? (
-        <p className="text-sm text-[var(--mm-text3)]">
-          Add at least one library folder below, then scan.
-        </p>
-      ) : null}
-      {editable ? (
-        <button
-          type="button"
-          className={mmActionButtonClass({
-            variant: "primary",
-            disabled: scanning || settings.data?.library_folders.length === 0,
-          })}
-          disabled={scanning || settings.data?.library_folders.length === 0}
-          onClick={() => scanMutation.mutate()}
+      <div className="mm-quiet-section__head">
+        <h3
+          id="library-empty-state-heading"
+          className="mm-quiet-section__title"
         >
-          {scanning ? "Scanning…" : "Scan now"}
-        </button>
-      ) : null}
+          Nothing scanned yet
+        </h3>
+      </div>
+      <div className="mm-quiet-section__body space-y-3">
+        <p className="mm-quiet-note">{SCAN_EXPLANATION}</p>
+        {settings.data && settings.data.library_folders.length === 0 ? (
+          <p className="mm-quiet-note">
+            Add at least one library folder below, then scan.
+          </p>
+        ) : null}
+        {editable ? (
+          <button
+            type="button"
+            className={mmActionButtonClass({
+              variant: "primary",
+              disabled: scanning || settings.data?.library_folders.length === 0,
+            })}
+            disabled={scanning || settings.data?.library_folders.length === 0}
+            onClick={() => scanMutation.mutate()}
+          >
+            {scanning ? "Scanning…" : "Scan now"}
+          </button>
+        ) : null}
+      </div>
     </section>
   );
 
@@ -374,14 +385,13 @@ export function ProcessingLibrarySection() {
       </div>
 
       {scan?.errors?.length ? (
-        <div
-          className="mm-bubble space-y-1 p-3 text-sm text-[var(--mm-status-warning-text)]"
-          data-testid="library-scan-errors"
-        >
+        <ul className="mm-interrupt" data-testid="library-scan-errors">
           {scan.errors.map((error) => (
-            <p key={error}>{error}</p>
+            <li key={error} className="mm-interrupt__item">
+              <span className="mm-interrupt__text">{error}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : null}
 
       <WorkspaceTabList
@@ -398,7 +408,7 @@ export function ProcessingLibrarySection() {
         id="library-view-panel"
         role="tabpanel"
         aria-labelledby={`library-view-tab-${view}`}
-        className="flex w-full min-w-0 flex-col gap-4"
+        className="mm-quiet-stack"
       >
         {view === "overview" ? (
           <>
@@ -452,18 +462,15 @@ export function ProcessingLibrarySection() {
                 nothingScanned ? (
                   emptyState
                 ) : (
-                  <p className="text-sm text-[var(--mm-text3)]">
+                  <p className="mm-quiet-note">
                     No file matches these filters.
                   </p>
                 )
               }
             />
             {cleanNotice ? (
-              <div
-                className="mm-bubble space-y-1 p-3 text-sm text-[var(--mm-text2)]"
-                data-testid="library-clean-notice"
-              >
-                <p>
+              <div className="space-y-1" data-testid="library-clean-notice">
+                <p className="mm-quiet-note">
                   {cleanNotice.queued} file(s) queued to clean
                   {cleanNotice.skipped.length > 0
                     ? `; ${cleanNotice.skipped.length} skipped (still shared with a download)`
@@ -517,7 +524,7 @@ export function ProcessingLibrarySection() {
                     emptyState
                   ) : (
                     <p
-                      className="text-sm text-[var(--mm-text2)]"
+                      className="mm-quiet-note"
                       data-testid="library-no-problems"
                     >
                       Nothing is in the way: every file Weir found is either

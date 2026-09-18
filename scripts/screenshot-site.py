@@ -620,6 +620,19 @@ def seed_representative_data(home: str) -> None:
                         (library_id, library_file_id, facet, value),
                     )
 
+            # What a clean would actually remove from the two "would change" files, and what that
+            # would give back. The Library tab's Overview leads with these (they are the numbers a
+            # clean acts on), so a seed that left them at their 0 defaults would show the tab's
+            # headline figure as an empty one.
+            conn.executemany(
+                "UPDATE library_files SET removed_audio_tracks = ?, removed_subtitle_tracks = ?, "
+                "estimated_bytes_saved = ? WHERE library_id = 1 AND path = ?",
+                [
+                    (1, 2, 310_000_000, "Movies/Harbor Static (2021)/Harbor Static.mkv"),
+                    (2, 4, 940_000_000, "Movies/Nightfall Junction (2018)/Nightfall Junction.mkv"),
+                ],
+            )
+
             activity = [
                 (
                     "job_completed",
