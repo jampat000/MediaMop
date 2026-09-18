@@ -171,4 +171,13 @@ public sealed class LibraryCleanHandlerTests : IDisposable
         Assert.Equal(1, await _fixture.Store.Scalar($"SELECT count(*) FROM activity_events WHERE event_type = '{LibraryActivityEventTypes.FileCleaned}'"));
         Assert.Equal(0, await ReferencePolicyJobCountAsync());
     }
+
+    [Theory]
+    [InlineData(1, 0, "removed 1 audio track")]
+    [InlineData(2, 0, "removed 2 audio tracks")]
+    [InlineData(0, 1, "removed 1 subtitle track")]
+    [InlineData(1, 3, "removed 1 audio track and 3 subtitle tracks")]
+    [InlineData(0, 0, "removed no audio or subtitle tracks")]
+    public void What_a_clean_removed_reads_in_english(int audio, int subtitles, string expected) =>
+        Assert.Equal(expected, LibraryCleanHandler.RemovedTracks(audio, subtitles));
 }

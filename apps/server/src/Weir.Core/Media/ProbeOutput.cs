@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using Weir.Core.Json;
 using Weir.Core.Rules;
+using Weir.Core.Text;
 
 namespace Weir.Core.Media;
 
@@ -203,7 +204,7 @@ public static class ProbeOutput
         if (expectedAudio > 0 && audioCount != expectedAudio)
         {
             throw new MediaToolException(
-                $"validation failed: expected {expectedAudio.ToString(CultureInfo.InvariantCulture)} audio stream(s), got {audioCount.ToString(CultureInfo.InvariantCulture)}");
+                $"validation failed: expected {Plural.Of(expectedAudio, "audio stream")}, got {audioCount.ToString(CultureInfo.InvariantCulture)}");
         }
 
         if (expectedDurationSeconds is { } expected && expected > 0)

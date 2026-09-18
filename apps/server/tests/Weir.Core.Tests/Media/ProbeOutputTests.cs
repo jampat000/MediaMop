@@ -28,6 +28,16 @@ public sealed class ProbeOutputTests
     }
 
     [Fact]
+    public void A_wrong_audio_count_names_the_expected_count_in_english()
+    {
+        var one = Assert.Throws<MediaToolException>(() => ProbeOutput.ValidateRemuxOutput(Probe(100.0, audio: 2), 1, null));
+        Assert.Equal("validation failed: expected 1 audio stream, got 2", one.Message);
+
+        var two = Assert.Throws<MediaToolException>(() => ProbeOutput.ValidateRemuxOutput(Probe(100.0, audio: 1), 2, null));
+        Assert.Equal("validation failed: expected 2 audio streams, got 1", two.Message);
+    }
+
+    [Fact]
     public void Staged_output_accepts_normal_duration_rounding() =>
         ProbeOutput.ValidateRemuxOutput(Probe(5379.0), 1, 5384.046);
 

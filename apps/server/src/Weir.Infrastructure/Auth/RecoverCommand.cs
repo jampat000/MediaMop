@@ -3,6 +3,7 @@ using Weir.Core.Auth;
 using Weir.Core.Configuration;
 using Weir.Core.Json;
 using Weir.Core.Security;
+using Weir.Core.Text;
 using Weir.Core.Time;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Runtime;
@@ -129,7 +130,7 @@ public static class RecoverCommand
                 stdout.WriteLine("The account is active and has the admin role.");
             }
 
-            stdout.WriteLine($"{revoked} signed-in session(s) were ended — sign in again with the new password.");
+            stdout.WriteLine($"{Plural.Of(revoked, "signed-in session")} {Plural.Noun(revoked, "was", "were")} ended — sign in again with the new password.");
             return ExitOk;
         }
     }
@@ -163,7 +164,7 @@ public static class RecoverCommand
             ActivityEventTypes.AuthPasswordChanged,
             "auth",
             "Password recovered from the server",
-            $"{user.Username} — reset from the server console. {revoked} signed-in session(s) were ended.").ConfigureAwait(false);
+            $"{user.Username} — reset from the server console. {Plural.Of(revoked, "signed-in session")} {Plural.Noun(revoked, "was", "were")} ended.").ConfigureAwait(false);
 
         return revoked;
     }

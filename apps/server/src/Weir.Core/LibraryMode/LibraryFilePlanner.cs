@@ -1,4 +1,5 @@
 using Weir.Core.Rules;
+using Weir.Core.Text;
 
 namespace Weir.Core.LibraryMode;
 
@@ -46,22 +47,22 @@ public sealed record LibraryFilePlanResult(
         var pieces = new List<string>();
         if (plan.RemovedAudio.Count > 0)
         {
-            pieces.Add($"remove {plan.RemovedAudio.Count} audio track(s) ({string.Join(", ", plan.RemovedAudio)})");
+            pieces.Add($"remove {Plural.Of(plan.RemovedAudio.Count, "audio track")} ({string.Join(", ", plan.RemovedAudio)})");
         }
 
         if (plan.RemovedSubtitles.Count > 0)
         {
-            pieces.Add($"remove {plan.RemovedSubtitles.Count} subtitle track(s) ({string.Join(", ", plan.RemovedSubtitles)})");
+            pieces.Add($"remove {Plural.Of(plan.RemovedSubtitles.Count, "subtitle track")} ({string.Join(", ", plan.RemovedSubtitles)})");
         }
 
         if (plan.RemovedImages.Count > 0)
         {
-            pieces.Add($"remove {plan.RemovedImages.Count} embedded image(s)");
+            pieces.Add($"remove {Plural.Of(plan.RemovedImages.Count, "embedded image")}");
         }
 
         if (plan.RemovedAttachments.Count > 0)
         {
-            pieces.Add($"remove {plan.RemovedAttachments.Count} attachment(s)");
+            pieces.Add($"remove {Plural.Of(plan.RemovedAttachments.Count, "attachment")}");
         }
 
         if (plan.MetadataNotes.Count > 0)

@@ -1,6 +1,7 @@
 using System.Globalization;
 using Weir.Core.Json;
 using Weir.Core.Rules;
+using Weir.Core.Text;
 
 namespace Weir.Core.Media;
 
@@ -136,7 +137,7 @@ public static class HardwareAcceleration
         {
             AvailableMethods = methods.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
             Detected = true,
-            Detail = $"ffmpeg reports {methods.Count.ToString(CultureInfo.InvariantCulture)} acceleration method(s). Being listed does not prove a device is present.",
+            Detail = $"ffmpeg reports {Plural.Of(methods.Count, "acceleration method")}. Being listed does not prove a device is present.",
         };
     }
 

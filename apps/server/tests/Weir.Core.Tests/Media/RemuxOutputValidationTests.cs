@@ -61,7 +61,19 @@ public sealed class RemuxOutputValidationTests
 
         var error = Assert.Throws<MediaToolException>(() => RemuxOutputValidation.ValidateAgainstPlan(output, plan, null, 100.0, [], []));
 
-        Assert.Equal("Planned 3 subtitle track(s), output has 2.", error.Message);
+        Assert.Equal("Planned 3 subtitle tracks, output has 2.", error.Message);
+    }
+
+    [Fact]
+    public void A_single_planned_subtitle_track_reads_in_the_singular()
+    {
+        var plan = MakePlan([0], [Track(1, "eng", @default: true)], [Subtitle(2, "eng")]);
+        var output = Probe(
+            """{"format":{"duration":"100.0"},"streams":[{"codec_type":"video"},{"codec_type":"audio","disposition":{"default":1},"tags":{"language":"eng"}}]}""");
+
+        var error = Assert.Throws<MediaToolException>(() => RemuxOutputValidation.ValidateAgainstPlan(output, plan, null, 100.0, [], []));
+
+        Assert.Equal("Planned 1 subtitle track, output has 0.", error.Message);
     }
 
     [Fact]

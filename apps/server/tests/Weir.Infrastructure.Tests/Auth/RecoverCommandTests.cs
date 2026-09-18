@@ -116,7 +116,7 @@ public sealed class RecoverCommandTests
         Assert.Equal(string.Empty, stderr.ToString());
         Assert.Contains("Password reset for 'james'.", stdout.ToString());
         Assert.Contains("The account is active and has the admin role.", stdout.ToString());
-        Assert.Contains("2 signed-in session(s) were ended — sign in again with the new password.", stdout.ToString());
+        Assert.Contains("2 signed-in sessions were ended — sign in again with the new password.", stdout.ToString());
 
         var user = await fixture.WithUnitOfWork(uow => AuthStore.FindUserByLowerUsernameAsync(uow, "james"));
         Assert.NotNull(user);
@@ -136,7 +136,29 @@ public sealed class RecoverCommandTests
             reader => (Title: SqliteValues.GetString(reader, 0), Detail: SqliteValues.GetString(reader, 1))));
         var eventRow = Assert.Single(eventRows);
         Assert.Equal("Password recovered from the server", eventRow.Title);
-        Assert.Equal("james — reset from the server console. 2 signed-in session(s) were ended.", eventRow.Detail);
+        Assert.Equal("james — reset from the server console. 2 signed-in sessions were ended.", eventRow.Detail);
+    }
+
+    [Fact]
+    public async Task One_ended_session_reads_in_the_singular()
+    {
+        using var fixture = new RecoverFixture();
+        await fixture.SeedUserAsync("james", OldPassword, sessions: 1);
+        var (stdout, stderr) = Writers();
+
+        var exit = await RecoverCommand.RunAsync(
+            ["--username", "james", "--password", NewPassword],
+            fixture.Runtime,
+            stdout,
+            stderr,
+            new FakePasswordPrompt(isInteractive: false));
+
+        Assert.Equal(RecoverCommand.ExitOk, exit);
+        Assert.Contains("1 signed-in session was ended — sign in again with the new password.", stdout.ToString());
+        var details = await fixture.WithUnitOfWork(uow => uow.QueryAsync(
+            "SELECT detail FROM activity_events WHERE event_type = 'auth.password_changed'",
+            reader => SqliteValues.GetString(reader, 0)));
+        Assert.Equal("james — reset from the server console. 1 signed-in session was ended.", Assert.Single(details));
     }
 
     [Fact]

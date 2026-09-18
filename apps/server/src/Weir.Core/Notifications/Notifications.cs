@@ -375,7 +375,7 @@ public static class ExternalUrlPolicy
         var parsed = SplitUrl.Parse(raw.Trim().TrimEnd('/'));
         if (parsed.Scheme is not ("http" or "https") || parsed.Hostname is null)
         {
-            throw new PyValueErrorException("URL must be a valid http(s) URL.");
+            throw new PyValueErrorException("URL must be a valid http or https URL.");
         }
 
         if (!string.IsNullOrEmpty(parsed.Username) || !string.IsNullOrEmpty(parsed.Password) || parsed.Query.Length > 0 || parsed.Fragment.Length > 0)

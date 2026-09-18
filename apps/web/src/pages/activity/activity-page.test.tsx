@@ -476,7 +476,7 @@ describe("ActivityPage", () => {
       activity_events: 3,
       processing_records: 1,
       message:
-        "This removes 3 Activity event(s) and 1 processing record(s) about Movies/Movie.mkv.",
+        "This removes 3 Activity events and 1 processing record about Movies/Movie.mkv.",
     });
     mocks.removeActivityFileHistory.mockResolvedValue({
       relative_path: "Movies/Movie.mkv",
@@ -500,7 +500,7 @@ describe("ActivityPage", () => {
       library_id: 3,
     });
     expect(dialog).toHaveTextContent(
-      "This removes 3 Activity event(s) and 1 processing record(s) about Movies/Movie.mkv.",
+      "This removes 3 Activity events and 1 processing record about Movies/Movie.mkv.",
     );
     expect(dialog).toHaveTextContent("3 Activity events");
     expect(dialog).toHaveTextContent("1 processing record");

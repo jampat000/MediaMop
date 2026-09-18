@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Weir.Core.Json;
 using Weir.Core.Rules;
+using Weir.Core.Text;
 
 namespace Weir.Core.Media;
 
@@ -223,8 +224,8 @@ public static class MkvmergeCommands
         if (mappable.Count != identification.Tracks.Count)
         {
             throw new MkvmergeTrackMappingException(
-                $"mkvmerge reported {identification.Tracks.Count.ToString(CultureInfo.InvariantCulture)} track(s) but ffprobe reported "
-                + $"{mappable.Count.ToString(CultureInfo.InvariantCulture)} matching stream(s), so a plan built from ffprobe indices "
+                $"mkvmerge reported {Plural.Of(identification.Tracks.Count, "track")} but ffprobe reported "
+                + $"{Plural.Of(mappable.Count, "matching stream")}, so a plan built from ffprobe indices "
                 + "cannot be addressed to mkvmerge safely.");
         }
 

@@ -214,7 +214,7 @@ public sealed class MediaManagerServiceTests
         var duplicate = await Assert.ThrowsAsync<MediaManagerConnectionException>(() => fixture.AddConnectionAsync("radarr", " Deluno "));
         Assert.Equal("A connection named 'Deluno' already exists.", duplicate.Message);
         var badUrl = await Assert.ThrowsAsync<MediaManagerConnectionException>(() => fixture.AddConnectionAsync("radarr", "X", "not-a-url"));
-        Assert.Equal("That address will not work: URL must be a valid http(s) URL.", badUrl.Message);
+        Assert.Equal("That address will not work: URL must be a valid http or https URL.", badUrl.Message);
         await Assert.ThrowsAsync<MediaManagerConnectionException>(() => fixture.AddConnectionAsync("radarr", "  "));
 
         await fixture.Db(async uow => { await fixture.Connections.UpdateAsync(uow, saved, name: "Deluno renamed"); return 0; });

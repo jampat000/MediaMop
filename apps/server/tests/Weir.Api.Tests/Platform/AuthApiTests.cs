@@ -334,8 +334,15 @@ public sealed class AuthApiTests
 
         await b.SignInAsync();
         using var others = await a.PostAsync("/api/v1/auth/sessions/revoke-others", headers: csrf);
-        Assert.Equal("{\"message\":\"Signed out 1 other session(s).\",\"revoked_count\":1}", await others.Content.ReadAsStringAsync());
+        Assert.Equal("{\"message\":\"Signed out 1 other session.\",\"revoked_count\":1}", await others.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, (await a.GetAsync("/api/v1/auth/me")).StatusCode);
+
+        // Two at once reads in the plural.
+        var c = new ApiTestClient(server);
+        await b.SignInAsync();
+        await c.SignInAsync();
+        using var twoOthers = await a.PostAsync("/api/v1/auth/sessions/revoke-others", headers: csrf);
+        Assert.Equal("{\"message\":\"Signed out 2 other sessions.\",\"revoked_count\":2}", await twoOthers.Content.ReadAsStringAsync());
     }
 
     [Fact]

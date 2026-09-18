@@ -19,7 +19,7 @@
             "vaapi"
           ],
           "detected": true,
-          "detail": "ffmpeg reports 3 acceleration method(s). Being listed does not prove a device is present.",
+          "detail": "ffmpeg reports 3 acceleration methods. Being listed does not prove a device is present.",
           "vendors": [
             "intel",
             "nvidia",
@@ -52,7 +52,7 @@
             "vulkan"
           ],
           "detected": true,
-          "detail": "ffmpeg reports 8 acceleration method(s). Being listed does not prove a device is present.",
+          "detail": "ffmpeg reports 8 acceleration methods. Being listed does not prove a device is present.",
           "vendors": [
             "amd",
             "intel",
@@ -119,7 +119,7 @@
             "vaapi"
           ],
           "detected": true,
-          "detail": "ffmpeg reports 3 acceleration method(s). Being listed does not prove a device is present.",
+          "detail": "ffmpeg reports 3 acceleration methods. Being listed does not prove a device is present.",
           "vendors": [
             "nvidia",
             "vaapi"
@@ -145,7 +145,7 @@
             "video_toolbox2"
           ],
           "detected": true,
-          "detail": "ffmpeg reports 2 acceleration method(s). Being listed does not prove a device is present.",
+          "detail": "ffmpeg reports 2 acceleration methods. Being listed does not prove a device is present.",
           "vendors": []
         }
       }
@@ -167,7 +167,7 @@
             "videotoolbox"
           ],
           "detected": true,
-          "detail": "ffmpeg reports 1 acceleration method(s). Being listed does not prove a device is present.",
+          "detail": "ffmpeg reports 1 acceleration method. Being listed does not prove a device is present.",
           "vendors": [
             "apple"
           ]

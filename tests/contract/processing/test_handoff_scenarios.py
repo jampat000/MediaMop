@@ -44,7 +44,7 @@ def test_handoff_is_remuxed_and_reported_complete_with_the_managers_output_path(
     assert body["processorName"] == "Weir"
     assert body["libraryId"] == h.DELUNO_LIBRARY_KEY
     assert body["releaseName"] == "Contract.Release.2024"
-    assert body["message"] == "Removed 1 audio track(s)."
+    assert body["message"] == "Removed 1 audio track."
     # Rebuilt under the manager's own processor output folder, not Weir's local path.
     expected = f"{h.DELUNO_OUTPUT_ROOT}/Blade.Runner.2049/film.mkv"
     assert body["outputPath"].replace("\\", "/") == expected

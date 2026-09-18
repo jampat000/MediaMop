@@ -156,7 +156,7 @@ public sealed class ActivityApiTests
         using var preview = await client.GetAsync("/api/v1/activity/file-history?relative_path=Heat/heat.mkv&library_id=1");
         Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
         Assert.Equal(
-            "{\"relative_path\":\"Heat/heat.mkv\",\"activity_events\":2,\"processing_records\":1,\"message\":\"This removes 2 Activity event(s) and 1 processing record(s) about Heat/heat.mkv. " +
+            "{\"relative_path\":\"Heat/heat.mkv\",\"activity_events\":2,\"processing_records\":1,\"message\":\"This removes 2 Activity events and 1 processing record about Heat/heat.mkv. " +
             "It does not touch the file itself, its current status on the Files screen, or anything else's history.\"}",
             await preview.Content.ReadAsStringAsync());
 

@@ -7,6 +7,7 @@ using Weir.Core.Auth;
 using Weir.Core.Json;
 using Weir.Core.Processing;
 using Weir.Core.Rules;
+using Weir.Core.Text;
 using Weir.Core.Time;
 using Weir.Core.Validation;
 using Weir.Infrastructure.Activity;
@@ -596,7 +597,7 @@ public static class ProcessingFilesEndpoints
             ActivityEventTypes.ProcessingFileManualPlanQueued,
             "processing",
             $"Manual track choice queued for {name}",
-            $"{session.User.Username} chose {choice.Keep.Count} track(s) to keep for {context.File.RelativePath} (job {job.Id}).")
+            $"{session.User.Username} chose {Plural.Of(choice.Keep.Count, "track")} to keep for {context.File.RelativePath} (job {job.Id}).")
             .ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
 
