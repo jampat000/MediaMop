@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import type { ProcessingFileStatus } from "../../lib/processing/files-api";
 import {
   WorkspacePage,
   WorkspacePanel,
@@ -115,22 +116,33 @@ export function ProcessingPage() {
     }
   }, [searchParams, setSearchParams]);
 
-  const selectTab = (next: ProcessingPageTabId) => {
+  const selectTab = (
+    next: ProcessingPageTabId,
+    fileStatus?: ProcessingFileStatus,
+  ) => {
     setTab(next);
     const params = new URLSearchParams(searchParams);
     if (next === "overview") params.delete("tab");
     else params.set("tab", next);
+    // The Files tab reads `?status=` on mount, so a lead-band segment can hand it a
+    // filter. Any other tab drops a stale filter rather than carrying it around.
+    if (next === "files" && fileStatus) params.set("status", fileStatus);
+    else params.delete("status");
     setSearchParams(params, { replace: true });
   };
 
-  const openFromOverview = (target: ProcessingOverviewOpenTab) => {
+  const openFromOverview = (
+    target: ProcessingOverviewOpenTab,
+    fileStatus?: ProcessingFileStatus,
+  ) => {
     const map: Record<ProcessingOverviewOpenTab, ProcessingPageTabId> = {
       libraries: "libraries",
       "audio-subtitles": "audio-subtitles",
       jobs: "jobs",
       schedules: "schedules",
+      files: "files",
     };
-    selectTab(map[target]);
+    selectTab(map[target], fileStatus);
   };
 
   return (

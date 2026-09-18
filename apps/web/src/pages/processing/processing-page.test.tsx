@@ -16,6 +16,7 @@ import type {
   ProcessingLibrary,
   ProcessingRuleSet,
 } from "../../lib/processing/libraries-api";
+import { processingFilesKey } from "../../lib/processing/files-queries";
 import {
   processingLibrariesKey,
   processingRuleSetsKey,
@@ -102,6 +103,25 @@ function seedProcessingQueries(qc: QueryClient) {
     files_processed: 42,
     files_failed: 1,
     success_rate_percent: 97.7,
+    output_written_count: 38,
+    already_optimized_count: 4,
+    net_space_saved_bytes: 3_221_225_472,
+    net_space_saved_percent: 12.5,
+  });
+  // The lead band is drawn from the file census, not from job counts.
+  qc.setQueryData(processingFilesKey({ limit: 1 }), {
+    files: [],
+    returned: 0,
+    limit: 1,
+    status_counts: {
+      unprocessed: 6,
+      on_hold: 2,
+      processing: 1,
+      processed: 42,
+      skipped: 3,
+      processing_failed: 1,
+      out_of_schedule: 5,
+    },
   });
   qc.setQueryData(processingLibrariesKey, seededLibraries);
   qc.setQueryData(processingRuleSetsKey, [englishJapaneseRules]);
@@ -187,7 +207,7 @@ describe("ProcessingPage", () => {
     expect(screen.getByTestId("processing-overview-panel")).toBeInTheDocument();
     const overview =
       screen.getByTestId("processing-overview-panel").textContent ?? "";
-    expect(overview).toMatch(/At a glance/i);
+    expect(overview).toMatch(/Processed/i);
     expect(overview).not.toMatch(/WEIR_/i);
     // Also deliberately the old spelling: the guard is that a raw table identifier never reaches
     // the panel. Matching /jobs/i instead would fire on ordinary prose now the table is `jobs`.
@@ -232,17 +252,50 @@ describe("ProcessingPage", () => {
     expect(screen.queryByText(/Next steps/i)).toBeNull();
   });
 
-  it("Overview shows last-30-day stats card", () => {
+  it("Overview leads with the pipeline, then one hero figure and its supporters", () => {
     renderProcessingPage();
-    const panel = screen.getByTestId("processing-overview-at-a-glance");
-    const last30 = screen.getByTestId("processing-overview-last-30-days");
-    expect(last30.textContent).toMatch(/Processed/i);
-    expect(last30.textContent).toMatch(/42/);
-    expect(last30.textContent).toMatch(/Failed/i);
-    expect(last30.textContent).toMatch(/Success rate/i);
-    expect(last30.textContent).toMatch(/97.7%/);
-    expect(last30.textContent).toMatch(/Up to 1 at once/i);
-    expect(panel.textContent).toMatch(/not changed for 60 seconds/i);
+    // Rule 1: a band across the top, one segment per pipeline stage, each a filter.
+    const stages = screen.getAllByTestId("processing-overview-flow-stage");
+    expect(stages).toHaveLength(6);
+    expect(stages.map((stage) => stage.textContent)).toEqual([
+      expect.stringContaining("Waiting"),
+      expect.stringContaining("On hold"),
+      expect.stringContaining("Processing"),
+      expect.stringContaining("Done"),
+      expect.stringContaining("Skipped"),
+      expect.stringContaining("Failed"),
+    ]);
+    // Wider stage for the bigger number: the share is the count, floored.
+    expect(stages[3].getAttribute("style")).toMatch(/--mm-flow-share: 42/);
+    // The two operator facts that used to sit in the stats card are still on the page.
+    const caption = screen.getByTestId("processing-overview-flow-caption");
+    expect(caption.textContent).toMatch(/not changed for 60 seconds/i);
+    expect(caption.textContent).toMatch(/Up to 1 at once/i);
+    // Files in states the band does not draw are counted, not hidden.
+    expect(caption.textContent).toMatch(
+      /5 more in states the band does not show/i,
+    );
+
+    // Rule 2: one hero figure, narrow supporters beside it.
+    const figures = screen.getByTestId("processing-overview-last-30-days");
+    expect(figures.textContent).toMatch(/Processed/i);
+    expect(figures.textContent).toMatch(/42/);
+    expect(figures.textContent).toMatch(/Success rate/i);
+    expect(figures.textContent).toMatch(/97.7%/);
+    expect(figures.textContent).toMatch(/Reclaimed/i);
+    expect(figures.textContent).toMatch(/3.0 GB/);
+    expect(figures.querySelectorAll(".mm-figure--hero")).toHaveLength(1);
+  });
+
+  it("a lead-band stage opens Files filtered to that stage", async () => {
+    renderProcessingPage();
+    fireEvent.click(screen.getAllByTestId("processing-overview-flow-stage")[5]);
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
   });
 
   it("Overview shows a dash for the success rate before any job has finished", () => {
@@ -255,12 +308,39 @@ describe("ProcessingPage", () => {
       files_processed: 0,
       files_failed: 0,
       success_rate_percent: 0,
+      output_written_count: 0,
+      already_optimized_count: 0,
+      net_space_saved_bytes: 0,
+      net_space_saved_percent: 0,
     });
     qc.setQueryData(qk.me, operatorMe);
     render(wrap(<ProcessingPage />, qc));
     const last30 = screen.getByTestId("processing-overview-last-30-days");
     expect(last30.textContent).toMatch(/Success rate—/);
     expect(last30.textContent).not.toMatch(/0%/);
+  });
+
+  it("a band of six zeroes never ships: an empty census says so in words", () => {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    seedProcessingQueries(qc);
+    qc.setQueryData(processingFilesKey({ limit: 1 }), {
+      files: [],
+      returned: 0,
+      limit: 1,
+      status_counts: {},
+    });
+    qc.setQueryData(qk.me, operatorMe);
+    render(wrap(<ProcessingPage />, qc));
+    expect(screen.queryByTestId("processing-overview-flow")).toBeNull();
+    expect(
+      screen.getByTestId("processing-overview-flow-empty").textContent,
+    ).toMatch(/no files in hand yet/i);
+    // The figures still carry the month, so the page is not blank.
+    expect(
+      screen.getByTestId("processing-overview-last-30-days").textContent,
+    ).toMatch(/Processed/i);
   });
 
   it("Overview shows the setup checklist instead of attention items when no folder is set", () => {

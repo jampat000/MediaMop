@@ -1,0 +1,612 @@
+/* Weir content language — page-neutral primitives for the body of every page.
+ *
+ * The rules these implement, and how to apply them to a page, are in
+ * docs/design/content-language.md. Nothing here styles the shell: the sidebar,
+ * top bar, page header and workspace tab row live in weir-shell.css and are
+ * frozen. Colours, type sizes and spacing come from weir-tokens.css only.
+ *
+ *   1. The lead band     .mm-lead / .mm-lead-band    — what is happening now, across the top.
+ *   2. The figure row    .mm-figure-row / .mm-figure — one hero number, narrow supporters.
+ *   3. The quiet body    .mm-quiet-*                 — everything else, borderless.
+ */
+
+/* ── 1 · The lead band ───────────────────────────────────────────────────────
+ * The one place a page is allowed to be loud: a single bordered band across the
+ * top whose segments are as wide as the number they carry. Each segment is a
+ * control that filters or opens the detail behind it.
+ */
+
+.mm-lead {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.mm-lead-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: color-mix(in srgb, var(--mm-surface) 72%, transparent);
+  box-shadow: var(--mm-shadow-card-inner);
+}
+
+/* Segment width is the share of the total this segment holds, set per instance as
+ * `style={{ "--mm-flow-share": n }}`. Zero-count segments still take a minimum
+ * width so the band reads as a whole pipeline, not only its busy parts. */
+.mm-lead-band__segment {
+  position: relative;
+  min-width: 9rem;
+  flex: 1 1 0;
+  flex-grow: var(--mm-flow-share);
+  padding: 1.05rem 0.9rem 2.4rem;
+  border: 0;
+  border-left: 1px solid var(--mm-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.mm-lead-band__segment:first-child {
+  border-left: 0;
+}
+
+.mm-lead-band__segment::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: var(--mm-gold-dim);
+}
+
+.mm-lead-band__segment--empty::before {
+  background: var(--mm-border);
+}
+
+.mm-lead-band__segment--live::before {
+  background: var(--mm-accent);
+}
+
+.mm-lead-band__segment:hover {
+  background: color-mix(in srgb, var(--mm-card-bg) 70%, transparent);
+}
+
+.mm-lead-band__segment:hover .mm-lead-band__go,
+.mm-lead-band__segment:focus-visible .mm-lead-band__go {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.mm-lead-band__segment:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: -2px;
+}
+
+.mm-lead-band__label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.mm-lead-band__value {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--mm-text1);
+  font-size: 1.875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.mm-lead-band__segment--live .mm-lead-band__value {
+  color: var(--mm-accent);
+}
+
+.mm-lead-band__segment--empty .mm-lead-band__value {
+  color: var(--mm-text3);
+}
+
+.mm-lead-band__hint {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-caption);
+  line-height: 1.4;
+}
+
+.mm-lead-band__go {
+  position: absolute;
+  bottom: 0.95rem;
+  left: 0.9rem;
+  color: var(--mm-accent);
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateX(-3px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.mm-lead-band__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--mm-radius-pill);
+  background: var(--mm-accent);
+  box-shadow: 0 0 0 3px var(--mm-accent-soft);
+  animation: mm-lead-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes mm-lead-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-lead-band__pulse {
+    animation: none;
+  }
+}
+
+/* One line under the band: what the band means on the left, the single sentence
+ * the operator should take away on the right. */
+.mm-lead-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1.5rem;
+  margin: 0;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-caption);
+  line-height: 1.45;
+}
+
+/* ── 2 · The figure row ──────────────────────────────────────────────────────
+ * One hero number in a wide tile, its supporters in narrow tiles beside it. The
+ * first child is the hero; every later child is a supporter, however many there
+ * are. Equal-weight tiles are the thing this replaces.
+ */
+
+.mm-figure-row {
+  display: grid;
+  min-width: 0;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  grid-template-columns: minmax(0, 1.8fr);
+  gap: 1.1rem;
+}
+
+.mm-figure {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 1.25rem 1.35rem 1.3rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-card-bg);
+  box-shadow: var(--mm-shadow-card-inner);
+}
+
+.mm-figure__eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.mm-figure__value {
+  margin-top: 0.9rem;
+  color: var(--mm-text1);
+  font-size: 2.25rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.mm-figure--hero .mm-figure__value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.65rem;
+  margin-top: 1rem;
+  font-size: 3.5rem;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+}
+
+.mm-figure--warn .mm-figure__value {
+  color: var(--mm-status-failed-text);
+}
+
+/* The words that belong to the hero number, on its baseline. */
+.mm-figure__unit {
+  color: var(--mm-text2);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.mm-figure__note {
+  margin: 0.55rem 0 0;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-caption);
+  line-height: 1.45;
+}
+
+/* Fill is set per instance as `style={{ "--mm-meter-fill": "97.7%" }}`. */
+.mm-figure__meter {
+  overflow: hidden;
+  height: 6px;
+  margin-top: 1rem;
+  border-radius: var(--mm-radius-pill);
+  background: var(--mm-well-bg);
+}
+
+.mm-figure__meter::after {
+  content: "";
+  display: block;
+  width: var(--mm-meter-fill);
+  height: 100%;
+  background: var(--mm-accent);
+}
+
+.mm-figure__foot {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.mm-figure__foot > div {
+  min-width: 0;
+}
+
+.mm-figure__foot-value {
+  display: block;
+  color: var(--mm-text1);
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.mm-figure__foot-label {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1280px) {
+  .mm-figure-row {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mm-figure--hero {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .mm-figure-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mm-figure--hero .mm-figure__value {
+    font-size: 2.75rem;
+  }
+}
+
+/* ── 3 · The quiet body ──────────────────────────────────────────────────────
+ * Everything below the lead. No cards, no panels: a heading, a hairline, then
+ * content. Hierarchy is type scale and whitespace.
+ */
+
+.mm-quiet-stack {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.mm-quiet-section {
+  min-width: 0;
+}
+
+.mm-quiet-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.mm-quiet-section__title {
+  margin: 0;
+  color: var(--mm-text1);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+.mm-quiet-section__aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1.1rem;
+}
+
+.mm-quiet-section__body {
+  min-width: 0;
+  margin-top: 0.9rem;
+}
+
+/* The only control the quiet body carries: a text link, never a button chrome. */
+.mm-quiet-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mm-text2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.mm-quiet-link:hover {
+  color: var(--mm-accent);
+}
+
+.mm-quiet-link:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.mm-quiet-note {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--mm-text2);
+  font-size: var(--mm-type-body);
+  line-height: 1.55;
+}
+
+/* ── 3a · The borderless table ─────────────────────────────────────────────── */
+
+.mm-quiet-table-wrap {
+  overflow-x: auto;
+}
+
+.mm-quiet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mm-type-body);
+}
+
+.mm-quiet-table thead th {
+  padding: 0 0.75rem 0.6rem;
+  border-bottom: 1px solid var(--mm-line);
+  color: var(--mm-text3);
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mm-quiet-table tbody th,
+.mm-quiet-table tbody td {
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid var(--mm-border);
+  color: var(--mm-text2);
+  font-weight: 400;
+  text-align: left;
+  vertical-align: top;
+}
+
+.mm-quiet-table tbody tr:last-child th,
+.mm-quiet-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.mm-quiet-table th:first-child,
+.mm-quiet-table td:first-child {
+  padding-left: 0;
+}
+
+.mm-quiet-table th:last-child,
+.mm-quiet-table td:last-child {
+  padding-right: 0;
+}
+
+.mm-quiet-table__name {
+  min-width: 0;
+  color: var(--mm-text1);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.mm-quiet-table__name > span:first-child {
+  margin-right: 0.4rem;
+}
+
+.mm-quiet-table__strong {
+  display: block;
+  color: var(--mm-text1);
+  font-weight: 500;
+}
+
+.mm-quiet-table__sub {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-caption);
+  font-weight: 400;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.mm-quiet-badge {
+  display: inline-block;
+  margin: 0.1rem 0.3rem 0 0;
+  padding: 0 0.45rem;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-pill);
+  color: var(--mm-text2);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.6;
+  vertical-align: 0.05em;
+}
+
+.mm-quiet-badge--off {
+  border-color: var(--mm-warning-border);
+  color: var(--mm-status-warning-text);
+}
+
+.mm-quiet-state {
+  white-space: nowrap;
+}
+
+.mm-quiet-state--ok {
+  color: var(--mm-text2);
+}
+
+.mm-quiet-state--ok::before {
+  content: "✓ ";
+  color: var(--mm-status-healthy-text);
+}
+
+.mm-quiet-state--missing {
+  color: var(--mm-status-warning-text);
+  font-weight: 500;
+}
+
+@media (max-width: 760px) {
+  .mm-quiet-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .mm-quiet-table,
+  .mm-quiet-table tbody,
+  .mm-quiet-table tr,
+  .mm-quiet-table th,
+  .mm-quiet-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .mm-quiet-table tbody tr {
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--mm-border);
+  }
+
+  .mm-quiet-table tbody th,
+  .mm-quiet-table tbody td {
+    padding: 0.15rem 0;
+    border-bottom: 0;
+  }
+
+  .mm-quiet-table tbody td {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .mm-quiet-table tbody td::before {
+    content: attr(data-label);
+    color: var(--mm-text3);
+    font-size: var(--mm-type-caption);
+  }
+
+  .mm-quiet-table__name {
+    padding-bottom: 0.3rem;
+  }
+}
+
+/* ── 3b · The interrupt ──────────────────────────────────────────────────────
+ * Something broken or blocking, above the lead band. It is a list of sentences,
+ * not a card and not a banner: the loud element on a page is the band.
+ */
+
+.mm-interrupt {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mm-interrupt__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
+}
+
+.mm-interrupt__text {
+  min-width: 14rem;
+  flex: 1;
+  color: var(--mm-text1);
+  font-size: var(--mm-type-body);
+  line-height: 1.5;
+}
+
+.mm-interrupt__text::before {
+  content: "!";
+  display: inline-grid;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-right: 0.55rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--mm-status-warning-text);
+  color: var(--mm-on-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  vertical-align: -0.15em;
+}
