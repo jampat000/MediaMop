@@ -1,3 +1,5 @@
+using Microsoft.Data.Sqlite;
+using Weir.Core.Jobs;
 using Weir.Core.Json;
 using Weir.Core.Processing;
 using Weir.Core.Rules;
@@ -182,38 +184,61 @@ public static class WatchedFolderScanOps
                 continue;
             }
 
-            var raw = (payloadJson ?? string.Empty).Trim();
-            if (raw.Length == 0)
-            {
-                continue;
-            }
-
-            PyJson data;
-            try
-            {
-                data = PyJsonParser.Parse(raw);
-            }
-            catch (PyJsonDecodeException)
-            {
-                continue;
-            }
-
-            if (data is not PyDict dict)
-            {
-                continue;
-            }
-
-            var rel = dict.Get("relative_media_path") is PyStr relStr ? relStr.Value : null;
-            long? jobLibraryId = dict.Get("library_id") is PyInt libInt ? (long)libInt.Value : null;
-            var jobScope = dict.Get("media_scope") is PyStr scopeStr ? ProcessingMediaScopes.Normalize(scopeStr.Value) : ProcessingMediaScopes.Movie;
-            var sameLibrary = libraryId is null || jobLibraryId == libraryId;
-            if (rel is not null && rel.Trim() == relativePosix && jobScope == wantScope && sameLibrary)
+            if (PayloadNamesFile(payloadJson, relativePosix, wantScope, libraryId))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// The pending or leased remux pass for this file, if any, read inside the caller's write transaction — the
+    /// one identity every automatic enqueue path agrees on (library, relative path, scope), so a check and the
+    /// insert that depends on it cannot be split by another writer. Oldest first.
+    /// </summary>
+    internal static ProcessingJob? ActiveRemuxPassForRelativePath(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string relativePosix,
+        string mediaScope,
+        long? libraryId)
+    {
+        var wantScope = ProcessingMediaScopes.Normalize(mediaScope);
+        return ProcessingJobStore.ActiveOfKind(connection, transaction, RequeueStore.RemuxPassJobKind)
+            .FirstOrDefault(job => PayloadNamesFile(job.PayloadJson, relativePosix, wantScope, libraryId));
+    }
+
+    /// <summary>Whether a remux-pass payload names this file: same relative path, same scope, and same library when one is given.</summary>
+    private static bool PayloadNamesFile(string? payloadJson, string relativePosix, string wantScope, long? libraryId)
+    {
+        var raw = (payloadJson ?? string.Empty).Trim();
+        if (raw.Length == 0)
+        {
+            return false;
+        }
+
+        PyJson data;
+        try
+        {
+            data = PyJsonParser.Parse(raw);
+        }
+        catch (PyJsonDecodeException)
+        {
+            return false;
+        }
+
+        if (data is not PyDict dict)
+        {
+            return false;
+        }
+
+        var rel = dict.Get("relative_media_path") is PyStr relStr ? relStr.Value : null;
+        long? jobLibraryId = dict.Get("library_id") is PyInt libInt ? (long)libInt.Value : null;
+        var jobScope = dict.Get("media_scope") is PyStr scopeStr ? ProcessingMediaScopes.Normalize(scopeStr.Value) : ProcessingMediaScopes.Movie;
+        var sameLibrary = libraryId is null || jobLibraryId == libraryId;
+        return rel is not null && rel.Trim() == relativePosix && jobScope == wantScope && sameLibrary;
     }
 
     private static bool ExistingCompletedOutputPathIsSafe(string path)

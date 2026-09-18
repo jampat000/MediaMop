@@ -1,8 +1,10 @@
+using Microsoft.Data.Sqlite;
 using Weir.Core.Configuration;
 using Weir.Core.Jobs;
 using Weir.Core.Json;
 using Weir.Core.MediaManagers;
 using Weir.Infrastructure.Jobs;
+using Weir.Infrastructure.Processing;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.MediaManagers;
@@ -216,8 +218,22 @@ public sealed class MediaManagerIntake
         foreach (var target in targets)
         {
             var dedupeKey = IntakeRules.DedupeKeyFor(baseKey, targets, target, relativePath);
-            var payload = IntakeRules.PayloadJson(IntakeRules.Payload(importEvent, library, relativePath, target));
-            _jobs.EnqueueOrGet(uow.Connection, uow.WriteTransaction(), dedupeKey, IntakeRules.RemuxPassJobKind, payload, JobQueueRules.DefaultMaxAttempts, 0, 0);
+            var payload = IntakeRules.Payload(importEvent, library, relativePath, target);
+            var connection = uow.Connection;
+            var transaction = uow.WriteTransaction();
+
+            // Folder detection may already have queued (or started) this very file under its own random key. One file
+            // gets one pass: the hand-off takes over that pass rather than adding a second one. A resend of this same
+            // hand-off still lands on its own row through EnqueueOrGet below, exactly as before.
+            if (library is not null &&
+                ProcessingJobStore.GetByDedupeKey(connection, transaction, dedupeKey) is null &&
+                WatchedFolderScanOps.ActiveRemuxPassForRelativePath(connection, transaction, target, library.MediaType, library.Id) is { } active)
+            {
+                AdoptActivePass(connection, transaction, active, importEvent, dedupeKey, payload);
+                continue;
+            }
+
+            _jobs.EnqueueOrGet(connection, transaction, dedupeKey, IntakeRules.RemuxPassJobKind, IntakeRules.PayloadJson(payload), JobQueueRules.DefaultMaxAttempts, 0, 0);
         }
 
         if (!string.IsNullOrEmpty(importEvent.HandoffId))
@@ -234,6 +250,49 @@ public sealed class MediaManagerIntake
         }
 
         return IntakeRules.RemuxPassJobKind;
+    }
+
+    /// <summary>
+    /// A hand-off for a file that already has a pending or leased pass (queued by folder detection, an automatic retry
+    /// or a user) makes that pass its own instead of queuing a second one: the job is re-keyed to the hand-off's dedupe
+    /// key, so <c>GET /api/v1/intake/handoffs/{kind}/{id}</c> finds it (queue position, working), and it takes the
+    /// hand-off's origin, so the outcome is called back to the manager. A pass that is already running picks the origin
+    /// up when it finishes (<see cref="Processing.RemuxPass.RemuxPassHandler"/>). A pass that already belongs to
+    /// another hand-off is left with it: this hand-off is still recorded and answers from the file's own state.
+    /// </summary>
+    private static void AdoptActivePass(
+        SqliteConnection connection, SqliteTransaction transaction, ProcessingJob active, MediaManagerImportEvent importEvent, string dedupeKey, PyDict handoffPayload)
+    {
+        PyDict existing;
+        try
+        {
+            existing = PyJsonParser.Parse(string.IsNullOrEmpty(active.PayloadJson) ? "{}" : active.PayloadJson) as PyDict ?? new PyDict();
+        }
+        catch (PyJsonDecodeException)
+        {
+            existing = new PyDict();
+        }
+
+        if (HandoffOrigin.FromPayload(existing) is { HandoffId: { } ownerId } owner &&
+            (owner.SourceKey != importEvent.SourceKey || ownerId != importEvent.HandoffId))
+        {
+            return;
+        }
+
+        if (handoffPayload.Get("origin") is PyDict origin)
+        {
+            existing.Set("origin", origin);
+        }
+
+        existing.Set("trigger", "webhook");
+        var newKey = string.IsNullOrEmpty(importEvent.HandoffId) ? active.DedupeKey : dedupeKey;
+        ProcessingJobStore.Execute(
+            connection,
+            transaction,
+            "UPDATE jobs SET dedupe_key = @dedupe, payload_json = @payload, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
+            ("@dedupe", newKey),
+            ("@payload", IntakeRules.PayloadJson(existing)),
+            ("@id", active.Id));
     }
 
     /// <summary>

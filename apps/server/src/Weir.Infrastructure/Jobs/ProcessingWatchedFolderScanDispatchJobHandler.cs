@@ -366,12 +366,19 @@ public sealed class ProcessingWatchedFolderScanDispatchJobHandler : IJobHandler
             operatorSettings.RunnerCapacity, operatorSettings.RunnerCostSd, operatorSettings.RunnerCost720P,
             operatorSettings.RunnerCost1080P, operatorSettings.RunnerCost4K, operatorSettings.RunnerCostUndetermined);
 
-        await _jobStore.EnqueueOrGetAsync(
-            dedupe,
-            RequeueStore.RemuxPassJobKind,
-            PyJsonWriter.Dumps(payload, PyJsonFormat.Compact),
-            runnerCost: budget.CostFor(resolutionClass),
-            priority: (int)library.Priority).ConfigureAwait(false);
+        // The dedupe key above is random, so it cannot stop a second pass for the same file. The file's identity does:
+        // look for a pending or leased pass for this file and insert only when there is none, both inside the one
+        // BEGIN IMMEDIATE transaction. The caller's earlier ActiveRemuxPassExists check ran on uow, which it had to
+        // commit before this (see the deadlock note at the call site), so a hand-off — or another scan — could slip a
+        // pass in between the two; this re-check under the write lock closes that window. It also covers the
+        // automatic-retry branch, which had no active-pass check at all.
+        var payloadJson = PyJsonWriter.Dumps(payload, PyJsonFormat.Compact);
+        var runnerCost = budget.CostFor(resolutionClass);
+        await _jobStore.InTransactionAsync(
+            (connection, transaction) =>
+                WatchedFolderScanOps.ActiveRemuxPassForRelativePath(connection, transaction, rel, mediaScope, library.Id)
+                ?? _jobStore.EnqueueOrGet(
+                    connection, transaction, dedupe, RequeueStore.RemuxPassJobKind, payloadJson, JobQueueRules.DefaultMaxAttempts, runnerCost, (int)library.Priority)).ConfigureAwait(false);
     }
 
     private static string PosixParent(string relativePosix)
