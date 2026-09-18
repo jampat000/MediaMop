@@ -17,7 +17,7 @@ Use the Velopack setup exe from the release being validated.
 9. Confirm the setup wizard opens after first-user creation.
 10. Confirm `Skip for now` exits the wizard and can be reopened from Settings.
 11. Confirm `Finish setup` saves timezone, display density, backup schedule, and starter module settings.
-12. In Settings, confirm setup wizard, timezone, log retention, and display density cards render correctly.
+12. In Settings, confirm the reopened setup wizard renders correctly as borderless sections (it lost its card in #592; do not expect card chrome there), and that the timezone, log retention, and display density cards in Settings General render correctly.
 13. Confirm Backup and Restore controls sit consistently at the bottom of their cards.
 14. Create a configuration backup.
 15. Restore that backup and confirm the app remains usable.
