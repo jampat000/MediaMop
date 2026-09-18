@@ -7,6 +7,7 @@ import {
   useTestNotificationChannelMutation,
   useUpdateNotificationChannelMutation,
 } from "../../lib/suite/queries";
+import { ConfirmRemovalDialog } from "../../components/ui/confirm-removal-dialog";
 import {
   mmActionButtonClass,
   mmEditableTextFieldClass,
@@ -261,6 +262,7 @@ function ChannelRow({
               disabled: deleting,
             })}
             disabled={deleting}
+            aria-haspopup="dialog"
             onClick={onDelete}
           >
             {deleting ? "Removing..." : "Remove"}
@@ -295,6 +297,11 @@ export function SettingsNotificationsTab() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  // Remove asks first. `pendingDelete` is the channel the dialog is asking about — it holds the
+  // whole channel, not just the id, so the dialog can say which one by name.
+  const [pendingDelete, setPendingDelete] =
+    useState<NotificationChannelOut | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
   const [testResults, setTestResults] = useState<
     Record<number, { ok: boolean; error: string | null }>
@@ -315,8 +322,14 @@ export function SettingsNotificationsTab() {
 
   const handleDelete = async (id: number) => {
     setDeletingId(id);
+    setDeleteError(null);
     try {
       await deleteMutation.mutateAsync(id);
+      setPendingDelete(null);
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Could not remove this channel.",
+      );
     } finally {
       setDeletingId(null);
     }
@@ -445,7 +458,10 @@ export function SettingsNotificationsTab() {
                           key={channel.id}
                           channel={channel}
                           onEdit={() => setEditingId(channel.id)}
-                          onDelete={() => void handleDelete(channel.id)}
+                          onDelete={() => {
+                            setDeleteError(null);
+                            setPendingDelete(channel);
+                          }}
                           onTest={() => void handleTest(channel.id)}
                           testing={testingId === channel.id}
                           testResult={testResults[channel.id] ?? null}
@@ -481,6 +497,31 @@ export function SettingsNotificationsTab() {
           </div>
         ) : null}
       </SettingsQuietSection>
+
+      {pendingDelete ? (
+        <ConfirmRemovalDialog
+          testId="notification-channel-remove-confirm"
+          title={`Remove ${pendingDelete.label}?`}
+          description={
+            <>
+              <p>
+                Weir will stop sending job notifications to{" "}
+                {pendingDelete.label}. Its address and the events it listens for
+                go with it.
+              </p>
+              <p>Other channels keep working. This cannot be undone.</p>
+            </>
+          }
+          confirmLabel="Remove channel"
+          busy={deletingId === pendingDelete.id}
+          error={deleteError}
+          onCancel={() => {
+            setDeleteError(null);
+            setPendingDelete(null);
+          }}
+          onConfirm={() => void handleDelete(pendingDelete.id)}
+        />
+      ) : null}
     </div>
   );
 }

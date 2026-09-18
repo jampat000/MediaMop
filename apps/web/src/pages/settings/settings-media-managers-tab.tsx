@@ -13,6 +13,7 @@ import {
   useTestMediaManagerConnection,
   useUpdateMediaManagerConnection,
 } from "../../lib/media-managers/queries";
+import { ConfirmRemovalDialog } from "../../components/ui/confirm-removal-dialog";
 import {
   mmActionButtonClass,
   mmEditableTextFieldClass,
@@ -220,6 +221,8 @@ function ConnectionCard({
   const test = useTestMediaManagerConnection();
   const secret = useGenerateMediaManagerWebhookSecret();
   const [revealed, setRevealed] = useState<string | null>(null);
+  // Remove asks first. Nothing is deleted until the dialog is confirmed.
+  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
   const busy =
     update.isPending || remove.isPending || test.isPending || secret.isPending;
 
@@ -267,11 +270,50 @@ function ConnectionCard({
           data-testid="media-manager-remove"
           className={mmActionButtonClass({ variant: "tertiary" })}
           disabled={busy}
-          onClick={() => remove.mutate(connection.id)}
+          aria-haspopup="dialog"
+          onClick={() => {
+            remove.reset();
+            setConfirmingRemoval(true);
+          }}
         >
           Remove
         </button>
       </div>
+
+      {confirmingRemoval ? (
+        <ConfirmRemovalDialog
+          testId="media-manager-remove-confirm"
+          title={`Remove ${connection.name}?`}
+          description={
+            <>
+              <p>
+                Weir will stop accepting files from {connection.name}. Its
+                address, API key and webhook secret go with it, so connecting it
+                again means setting it up from scratch.
+              </p>
+              <p>No media file is touched. This cannot be undone.</p>
+            </>
+          }
+          confirmLabel="Remove connection"
+          busy={remove.isPending}
+          error={
+            remove.isError
+              ? remove.error instanceof Error
+                ? remove.error.message
+                : "Could not remove this connection."
+              : null
+          }
+          onCancel={() => {
+            remove.reset();
+            setConfirmingRemoval(false);
+          }}
+          onConfirm={() =>
+            remove.mutate(connection.id, {
+              onSuccess: () => setConfirmingRemoval(false),
+            })
+          }
+        />
+      ) : null}
 
       {/* The address and secret are needed once, when wiring the other app up.
           Folded away so the card answers "is it connected" at a glance. */}

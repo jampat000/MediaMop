@@ -190,6 +190,21 @@ class LiveAudit:
         self.visible(locator, message).click()
         self.page.wait_for_timeout(120)
 
+    def confirm_removal(self, test_id: str, names: str, message: str) -> None:
+        """Answer the confirmation step now sitting in front of a Remove button.
+
+        Remove no longer deletes on the first click. The dialog has to name the thing it
+        is about to delete, which is the whole point of it, so that is asserted here
+        rather than assumed.
+        """
+
+        dialog = self.visible(self.page.get_by_test_id(test_id), f"{message} dialog")
+        self.require(
+            f"Remove {names}?" in dialog.inner_text(),
+            f"{message} dialog did not name {names}",
+        )
+        self.click(dialog.get_by_test_id(f"{test_id}-confirm"), message)
+
     def settle(self, timeout_ms: int = 1_500) -> None:
         try:
             self.page.wait_for_load_state("networkidle", timeout=timeout_ms)
@@ -819,7 +834,11 @@ class LiveAudit:
         # channel behind.
         existing = self.page.get_by_text("Live audit channel", exact=True)
         while existing.count():
-            card = existing.first.locator("xpath=../../../..")
+            card = existing.first.locator("xpath=ancestor::tr")
+            self.click(
+                card.get_by_role("button", name="Remove", exact=True),
+                "ask to remove leftover notification channel",
+            )
             with self.page.expect_response(
                 lambda response: (
                     response.request.method == "DELETE"
@@ -827,8 +846,9 @@ class LiveAudit:
                 ),
                 timeout=TIMEOUT_MS,
             ) as delete_response:
-                self.click(
-                    card.get_by_role("button", name="Remove", exact=True),
+                self.confirm_removal(
+                    "notification-channel-remove-confirm",
+                    "Live audit channel",
                     "remove leftover notification channel",
                 )
             self.require(
@@ -862,7 +882,7 @@ class LiveAudit:
         )
         row = self.page.get_by_text("Live audit channel", exact=True)
         self.visible(row, "created notification channel")
-        row_parent = row.locator("xpath=../../..")
+        row_parent = row.locator("xpath=ancestor::tr")
         self.click(
             row_parent.get_by_role("button", name="Edit", exact=True),
             "edit notification channel",
@@ -875,7 +895,46 @@ class LiveAudit:
             "cancel notification edit",
         )
         row_parent = self.page.get_by_text("Live audit channel", exact=True).locator(
-            "xpath=../../.."
+            "xpath=ancestor::tr"
+        )
+        # Cancelling has to leave the channel exactly where it was: that is the promise the
+        # confirmation makes, and it is worth proving before relying on the confirm path.
+        self.click(
+            row_parent.get_by_role("button", name="Remove", exact=True),
+            "ask to remove notification channel",
+        )
+        self.click(
+            self.page.get_by_test_id("notification-channel-remove-confirm-cancel"),
+            "cancel notification channel removal",
+        )
+        self.visible(
+            self.page.get_by_text("Live audit channel", exact=True),
+            "notification channel survived a cancelled removal",
+        )
+        row_parent = self.page.get_by_text("Live audit channel", exact=True).locator(
+            "xpath=ancestor::tr"
+        )
+        # Escape is the other way out, and it must not delete either.
+        self.click(
+            row_parent.get_by_role("button", name="Remove", exact=True),
+            "ask to remove notification channel again",
+        )
+        self.visible(
+            self.page.get_by_test_id("notification-channel-remove-confirm"),
+            "notification channel removal confirmation",
+        )
+        self.page.keyboard.press("Escape")
+        self.page.wait_for_timeout(120)
+        self.visible(
+            self.page.get_by_text("Live audit channel", exact=True),
+            "notification channel survived Escape",
+        )
+        row_parent = self.page.get_by_text("Live audit channel", exact=True).locator(
+            "xpath=ancestor::tr"
+        )
+        self.click(
+            row_parent.get_by_role("button", name="Remove", exact=True),
+            "ask to remove notification channel once more",
         )
         with self.page.expect_response(
             lambda response: (
@@ -884,8 +943,9 @@ class LiveAudit:
             ),
             timeout=TIMEOUT_MS,
         ) as delete_response:
-            self.click(
-                row_parent.get_by_role("button", name="Remove", exact=True),
+            self.confirm_removal(
+                "notification-channel-remove-confirm",
+                "Live audit channel",
                 "remove notification channel",
             )
         self.require(
@@ -894,7 +954,7 @@ class LiveAudit:
         self.page.get_by_text("Live audit channel", exact=True).wait_for(
             state="detached", timeout=TIMEOUT_MS
         )
-        self.record("notification channel create, edit/cancel, and remove")
+        self.record("notification channel create, edit/cancel, and confirmed remove")
 
     def settings_media_managers(self) -> None:
         self.click(
@@ -907,6 +967,10 @@ class LiveAudit:
         )
         for card in self.page.get_by_test_id("media-manager-card").all():
             if "Live audit manager" in card.inner_text():
+                self.click(
+                    card.get_by_test_id("media-manager-remove"),
+                    "ask to remove leftover media manager",
+                )
                 with self.page.expect_response(
                     lambda response: (
                         response.request.method == "DELETE"
@@ -914,8 +978,9 @@ class LiveAudit:
                     ),
                     timeout=TIMEOUT_MS,
                 ) as delete_response:
-                    self.click(
-                        card.get_by_test_id("media-manager-remove"),
+                    self.confirm_removal(
+                        "media-manager-remove-confirm",
+                        "Live audit manager",
                         "remove leftover media manager",
                     )
                 self.require(
@@ -977,6 +1042,21 @@ class LiveAudit:
         self.visible(
             card.get_by_test_id("media-manager-status"), "media manager test result"
         )
+        # Cancelling must leave the connection intact - the confirmation is only worth
+        # anything if "no" really means nothing happened.
+        self.click(
+            card.get_by_test_id("media-manager-remove"),
+            "ask to remove media manager",
+        )
+        self.click(
+            self.page.get_by_test_id("media-manager-remove-confirm-cancel"),
+            "cancel media manager removal",
+        )
+        self.visible(card, "media manager survived a cancelled removal")
+        self.click(
+            card.get_by_test_id("media-manager-remove"),
+            "ask to remove media manager again",
+        )
         with self.page.expect_response(
             lambda response: (
                 response.request.method == "DELETE"
@@ -984,8 +1064,10 @@ class LiveAudit:
             ),
             timeout=TIMEOUT_MS,
         ) as delete_response:
-            self.click(
-                card.get_by_test_id("media-manager-remove"), "remove media manager"
+            self.confirm_removal(
+                "media-manager-remove-confirm",
+                "Live audit manager",
+                "remove media manager",
             )
         self.require(
             delete_response.value.status == 204, "media manager removal failed"
@@ -998,7 +1080,7 @@ class LiveAudit:
         )
         self.screenshot("settings-integrations")
         self.record(
-            "media-manager create, secret generation, enable/disable, connection test, and remove"
+            "media-manager create, secret generation, enable/disable, connection test, and confirmed remove"
         )
 
     def processing_pass_through_lifecycle(self) -> None:
