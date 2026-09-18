@@ -43,7 +43,10 @@ As of this writing, against `origin/main`:
 > design-QA pass (`design/site-qa`) is running across the other screens for the same
 > class of defect — ragged multi-column grids, an orphaned card in a last row, bordered
 > things nested inside bordered things, cards a conversion missed, and pages that
-> disagree with each other. **So the reshoot in §4 is on hold**: `processing.png` and
+> disagree with each other. ~~**So the reshoot in §4 is on hold**~~ **Done: the README
+> screenshot refresh landed on `main` with the 3.0.0 release (#583), and `library.png` was
+> re-shot again in #615 after its problem-count and "(s)" copy fixes.** As first written:
+> `processing.png` and
 > `settings.png` are near-certain to change again, and anything captured before that
 > pass settles would be obsolete within the hour. Re-read this document before shooting;
 > the layouts will have moved.
