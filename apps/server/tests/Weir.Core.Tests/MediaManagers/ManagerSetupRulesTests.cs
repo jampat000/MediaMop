@@ -70,8 +70,8 @@ public sealed class ManagerSetupRulesTests
     {
         var clients = Clients();
 
-        Assert.Equal(new ArrDownloadClientEntry("qBittorrent", "QBittorrent", true, "qbittorrent", "tv-sonarr", null), clients[0]);
-        Assert.Equal(new ArrDownloadClientEntry("SABnzbd", "Sabnzbd", false, "sabnzbd", "tv", null), clients[1]);
+        Assert.Equal(new ArrDownloadClientEntry("qBittorrent", "QBittorrent", true, "qbittorrent", "tv-sonarr", null, "torrent"), clients[0]);
+        Assert.Equal(new ArrDownloadClientEntry("SABnzbd", "Sabnzbd", false, "sabnzbd", "tv", null, "usenet"), clients[1]);
         Assert.Equal("movies-radarr", Clients("""[{"enable":true,"name":"q","fields":[{"name":"host","value":"q"},{"name":"movieCategory","value":"movies-radarr"}]}]""", MediaManagerKinds.Movie)[0].Category);
         Assert.Equal("/downloads/tv", Clients("""[{"enable":true,"name":"t","fields":[{"name":"host","value":"t"},{"name":"tvDirectory","value":"/downloads/tv"}]}]""")[0].Directory);
     }
@@ -243,6 +243,38 @@ public sealed class ManagerSetupRulesTests
         Assert.Contains(working.Lines, line => line.State == SetupCheckLine.Ok && line.Text == "2 downloads in Sonarr's queue already point at Weir's output folder.");
         Assert.Contains(broken.Lines, line => line.State == SetupCheckLine.Problem &&
             line.Text == "Sonarr is still looking for a download in /media/downloads/complete/Show.S01E03-GRP, inside the watched folder rather than Weir's output, so no mapping is being applied to it.");
+    }
+
+    private const string Mapped = """[{"host":"qbittorrent","remotePath":"/media/downloads/complete/","localPath":"/media/downloads/weir/","id":1}]""";
+
+    private const string SeedingProblem =
+        "Your download client seeds torrents. Turn off \"After cleaning, remove the original download\" so seeding keeps working and Sonarr can import.";
+
+    [Fact]
+    public void A_torrent_client_with_originals_removed_is_a_problem_because_the_import_would_never_happen()
+    {
+        var removing = ManagerSetupRules.EvaluateArr(
+            "Sonarr", MediaManagerKinds.Tv, "/media/downloads/complete", "/media/downloads/weir", Mappings(Mapped), Clients(), true, removesOriginals: true);
+        var keeping = ManagerSetupRules.EvaluateArr(
+            "Sonarr", MediaManagerKinds.Tv, "/media/downloads/complete", "/media/downloads/weir", Mappings(Mapped), Clients(), true, removesOriginals: false);
+
+        Assert.Contains(removing.Lines, line => line.State == SetupCheckLine.Problem && line.Text == SeedingProblem);
+        Assert.DoesNotContain(keeping.Lines, line => line.State == SetupCheckLine.Problem);
+    }
+
+    [Fact]
+    public void A_usenet_only_setup_is_not_warned_about_seeding()
+    {
+        var usenet = Clients("""[{"enable":true,"protocol":"usenet","name":"SABnzbd","fields":[{"name":"host","value":"qbittorrent"},{"name":"tvCategory","value":"tv"}]}]""");
+        var disabledTorrent = Clients() is var both ? [both[0] with { Enabled = false }, both[1] with { Enabled = true, Host = "qbittorrent" }] : both;
+
+        var usenetOnly = ManagerSetupRules.EvaluateArr(
+            "Sonarr", MediaManagerKinds.Tv, "/media/downloads/complete", "/media/downloads/weir", Mappings(Mapped), usenet, true, removesOriginals: true);
+        var torrentDisabled = ManagerSetupRules.EvaluateArr(
+            "Sonarr", MediaManagerKinds.Tv, "/media/downloads/complete", "/media/downloads/weir", Mappings(Mapped), disabledTorrent, true, removesOriginals: true);
+
+        Assert.DoesNotContain(usenetOnly.Lines, line => line.Text == SeedingProblem);
+        Assert.DoesNotContain(torrentDisabled.Lines, line => line.Text == SeedingProblem);
     }
 
     // --- Deluno ---------------------------------------------------------------------------------------

@@ -380,10 +380,22 @@ public sealed class RemuxPassHandler : IJobHandler
                         : result.Get("outcome") is PyStr { Value: RemuxPassOutcomes.LiveSkippedNotRequired }
                             ? "Checked this file and found that no changes were needed."
                             : "Finished processing this file.";
+                    if (result.Get("source_kept_by_library_setting") is PyBool { Value: true })
+                    {
+                        processedReason += " The original download was kept in the watched folder, as this library asks.";
+                    }
+
                     if (await RemuxPassFileState.MarkFileStatusAsync(uow, library.Id, rel, ProcessingFileStatuses.Processed, processedReason, now).ConfigureAwait(false))
                     {
                         await RemuxPassFileState.ClearFailureFieldsAsync(uow, library.Id, rel).ConfigureAwait(false);
                     }
+
+                    await RemuxPassFileState.RecordProcessedSourceAsync(
+                        uow,
+                        library.Id,
+                        rel,
+                        result.Get("source_fingerprint_size") is PyInt size ? (long)size.Value : null,
+                        result.Get("source_fingerprint_mtime_ns") is PyInt mtime ? (long)mtime.Value : null).ConfigureAwait(false);
                 },
                 _logger,
                 "file outcome").ConfigureAwait(false);

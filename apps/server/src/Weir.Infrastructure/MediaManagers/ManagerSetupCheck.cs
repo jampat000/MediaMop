@@ -27,7 +27,8 @@ public sealed class ManagerSetupCheck
     }
 
     /// <summary>One entry per enabled connection that covers <paramref name="mediaScope"/>, in connection order.</summary>
-    public async Task<List<PyDict>> CheckAsync(UnitOfWork uow, string mediaScope, string watchedFolder, string outputFolder, CancellationToken cancellationToken = default)
+    public async Task<List<PyDict>> CheckAsync(
+        UnitOfWork uow, string mediaScope, string watchedFolder, string outputFolder, bool removesOriginals = true, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uow);
         var results = new List<PyDict>();
@@ -55,7 +56,7 @@ public sealed class ManagerSetupCheck
             }
             else if (isArr)
             {
-                (var hosts, lines) = await CheckArrAsync(connection, mediaScope, watchedFolder, outputFolder, cancellationToken).ConfigureAwait(false);
+                (var hosts, lines) = await CheckArrAsync(connection, mediaScope, watchedFolder, outputFolder, removesOriginals, cancellationToken).ConfigureAwait(false);
                 entry.Set("mapping", new PyDict()
                     .Set("hosts", new PyList(hosts.Select(host => (PyJson)new PyStr(host))))
                     .Set("remote_path", PyStrings.Strip(watchedFolder))
@@ -77,7 +78,7 @@ public sealed class ManagerSetupCheck
     }
 
     private async Task<(IReadOnlyList<string> Hosts, IReadOnlyList<SetupCheckLine> Lines)> CheckArrAsync(
-        ManagerConnection connection, string mediaScope, string watchedFolder, string outputFolder, CancellationToken cancellationToken)
+        ManagerConnection connection, string mediaScope, string watchedFolder, string outputFolder, bool removesOriginals, CancellationToken cancellationToken)
     {
         PyJson? mappings;
         PyJson? clients;
@@ -100,7 +101,8 @@ public sealed class ManagerSetupCheck
             ManagerSetupRules.ParseMappings(mappings),
             ManagerSetupRules.ParseDownloadClients(clients, mediaScope),
             await CompletedDownloadHandlingAsync(connection, cancellationToken).ConfigureAwait(false),
-            await QueueOutputPathsAsync(connection, cancellationToken).ConfigureAwait(false));
+            await QueueOutputPathsAsync(connection, cancellationToken).ConfigureAwait(false),
+            removesOriginals);
         return (result.Hosts, result.Lines);
     }
 

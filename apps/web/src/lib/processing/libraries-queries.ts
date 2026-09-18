@@ -49,6 +49,7 @@ export function useProcessingManagerSetupQuery(
   mediaType: ProcessingMediaType,
   watchedFolder: string,
   outputFolder: string,
+  removeOriginal: boolean,
   enabled: boolean,
 ) {
   return useQuery({
@@ -58,9 +59,15 @@ export function useProcessingManagerSetupQuery(
       mediaType,
       watchedFolder,
       outputFolder,
+      removeOriginal,
     ],
     queryFn: () =>
-      fetchProcessingManagerSetup(mediaType, watchedFolder, outputFolder),
+      fetchProcessingManagerSetup(
+        mediaType,
+        watchedFolder,
+        outputFolder,
+        removeOriginal,
+      ),
     enabled,
     staleTime: 30_000,
     retry: false,

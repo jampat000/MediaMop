@@ -36,7 +36,11 @@ manager link.
   in Sonarr/Radarr (Settings → Download Clients → Remote Path Mappings) maps that
   folder to Weir's output folder, so Completed Download Handling only ever looks
   at cleaned files. Weir writes each output under the same relative path, name
-  and extension as the download, and publishes it in one step. The library editor
+  and extension as the download, and publishes it in one step. With a torrent
+  client, turn off the library's "After cleaning, remove the original download":
+  Sonarr/Radarr only import a download the client reports as completed, and a
+  torrent whose files Weir removed reports missing files instead. Kept originals
+  are recognised by size and modification time and never cleaned twice. The library editor
   shows the exact Host, Remote Path and Local Path, and checks them against the
   saved connection with `GET` requests only; Weir never changes a manager's
   settings.

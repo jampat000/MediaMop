@@ -140,6 +140,7 @@ def _library_put_body(current: dict[str, Any], changes: dict[str, Any]) -> dict[
         "priority",
         "rule_set_id",
         "manager_connection_ids",
+        "remove_original_after_success",
     )
     body = {key: current[key] for key in writable if key in current}
     body.update(changes)

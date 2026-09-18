@@ -222,12 +222,15 @@ export function LibraryManagerSetup({
   mediaType,
   watchedFolder,
   outputFolder,
+  removeOriginal = true,
   editable,
   onUseFolders,
 }: {
   mediaType: ProcessingMediaType;
   watchedFolder: string;
   outputFolder: string;
+  /** The library's "After cleaning, remove the original download": a torrent client makes that a problem. */
+  removeOriginal?: boolean;
   editable: boolean;
   onUseFolders: (watched: string | null, output: string | null) => void;
 }) {
@@ -240,6 +243,7 @@ export function LibraryManagerSetup({
     settled.mediaType,
     settled.watched,
     settled.output,
+    removeOriginal,
     true,
   );
   const scope = PROCESSING_MEDIA_TYPE_LABELS[mediaType];

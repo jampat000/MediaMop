@@ -138,6 +138,7 @@ _WRITABLE_LIBRARY_FIELDS = [
     "priority",
     "rule_set_id",
     "manager_connection_ids",
+    "remove_original_after_success",
 ]
 
 

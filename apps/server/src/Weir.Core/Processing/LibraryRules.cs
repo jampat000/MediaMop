@@ -65,6 +65,9 @@ public sealed record ProcessingLibraryInput
     public long Priority { get; init; }
     public long? RuleSetId { get; init; }
     public IReadOnlyList<long> ManagerConnectionIds { get; init; } = [];
+
+    /// <summary><c>remove_original_after_success</c>; see <see cref="ProcessingLibraryRecord.RemoveOriginalAfterSuccess"/>.</summary>
+    public bool RemoveOriginalAfterSuccess { get; init; } = true;
 }
 
 /// <summary>One other library's folders, for the overlap check (<c>_validate_folders</c>).</summary>
@@ -279,6 +282,7 @@ public static class LibraryRules
             Priority = body.Priority,
             ScheduleGrid = grid,
             RuleSetId = ValidateRuleSet(body.RuleSetId, ruleSetExists),
+            RemoveOriginalAfterSuccess = body.RemoveOriginalAfterSuccess,
         };
     }
 

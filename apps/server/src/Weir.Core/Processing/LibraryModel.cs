@@ -134,6 +134,12 @@ public sealed record ProcessingLibraryRecord
     /// <summary>#548: rewrite with ffmpeg when the preferred writer cannot write or validate a file.</summary>
     public bool RewriteWithFfmpeg { get; init; } = true;
 
+    /// <summary>
+    /// Remove the source from the watched folder after a successful pass (the default). Off keeps the original download,
+    /// its folder and its sidecars exactly where the download client put them, so a torrent keeps seeding.
+    /// </summary>
+    public bool RemoveOriginalAfterSuccess { get; init; } = true;
+
     public long ScanIntervalSeconds { get; init; } = 300;
     public long HoldMinutes { get; init; }
     public long FileDetectionIntervalSeconds { get; init; } = 30;

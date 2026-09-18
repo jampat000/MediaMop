@@ -156,6 +156,7 @@ public static class ProcessingLibraryEndpoints
             .Set("priority", row.Priority)
             .Set("rule_set_id", row.RuleSetId)
             .Set("manager_connection_ids", new PyList(managerIds.Select(id => (PyJson)PyJson.Of(id))))
+            .Set("remove_original_after_success", row.RemoveOriginalAfterSuccess)
             .Set("manager_coverage", coverage)
             .Set("manager_coverage_detail", coverageDetail)
             .Set("discovered_from_connection_id", row.DiscoveredFromConnectionId)
@@ -273,11 +274,20 @@ public static class ProcessingLibraryEndpoints
 
         var watchedFolder = PyStrings.Slice(request.Query("watched_folder") ?? string.Empty, 4000);
         var outputFolder = PyStrings.Slice(request.Query("output_folder") ?? string.Empty, 4000);
+        var removesOriginals = true;
+        if (request.Query("remove_original_after_success") is { } rawRemove)
+        {
+            if (PydanticRules.TryLiteral(new PyStr(rawRemove.ToLowerInvariant()), ["query", "remove_original_after_success"], ["true", "false"], issues, out var parsedRemove))
+            {
+                removesOriginals = parsedRemove == "true";
+            }
+        }
+
         issues.ThrowIfAny();
 
         var uow = await request.DbAsync().ConfigureAwait(false);
         var managers = await request.Service<ManagerSetupCheck>()
-            .CheckAsync(uow, mediaType, watchedFolder, outputFolder, request.Context.RequestAborted)
+            .CheckAsync(uow, mediaType, watchedFolder, outputFolder, removesOriginals, request.Context.RequestAborted)
             .ConfigureAwait(false);
         return ApiRoutes.Ok(new PyDict().Set("media_type", mediaType).Set("managers", new PyList(managers.Select(item => (PyJson)item))));
     }
@@ -357,6 +367,7 @@ public static class ProcessingLibraryEndpoints
         var priority = model.Number("priority", 0, required: false, ge: -100, le: 100);
         var ruleSetId = model.OptionalInt("rule_set_id");
         var managerConnectionIds = model.IntList("manager_connection_ids");
+        var removeOriginalAfterSuccess = model.Bool("remove_original_after_success", defaultValue: true);
 
         return new ProcessingLibraryInput
         {
@@ -410,6 +421,7 @@ public static class ProcessingLibraryEndpoints
             Priority = priority,
             RuleSetId = ruleSetId,
             ManagerConnectionIds = managerConnectionIds,
+            RemoveOriginalAfterSuccess = removeOriginalAfterSuccess,
         };
     }
 

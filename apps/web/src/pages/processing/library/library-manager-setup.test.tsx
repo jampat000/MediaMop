@@ -107,6 +107,7 @@ it("shows Sonarr exactly what to enter, with copy buttons, and what is still wro
     "tv",
     "/media/downloads/complete",
     "/media/downloads/weir",
+    true,
   );
 });
 

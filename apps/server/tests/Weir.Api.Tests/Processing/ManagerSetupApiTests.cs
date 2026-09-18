@@ -59,10 +59,11 @@ public sealed class ManagerSetupApiTests
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
-    private static async Task<JsonArray> ManagersAsync(ApiTestClient client, string mediaType, string watched, string output)
+    private static async Task<JsonArray> ManagersAsync(ApiTestClient client, string mediaType, string watched, string output, bool? removeOriginal = null)
     {
+        var remove = removeOriginal is { } flag ? $"&remove_original_after_success={(flag ? "true" : "false")}" : string.Empty;
         using var response = await client.GetAsync(
-            $"{Path}?media_type={mediaType}&watched_folder={Uri.EscapeDataString(watched)}&output_folder={Uri.EscapeDataString(output)}");
+            $"{Path}?media_type={mediaType}&watched_folder={Uri.EscapeDataString(watched)}&output_folder={Uri.EscapeDataString(output)}{remove}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = (await Json(response))!;
         Assert.Equal(mediaType, body["media_type"]!.GetValue<string>());
@@ -94,9 +95,15 @@ public sealed class ManagerSetupApiTests
         Assert.Contains(("problem", "Sonarr has no remote path mapping for /media/downloads/complete yet — add the one above."), Lines(missing));
 
         manager.Json(HttpMethod.Get, "/api/v3/remotepathmapping", """[{"host":"qbittorrent","remotePath":"/media/downloads/complete/","localPath":"/media/downloads/weir/","id":1}]""");
-        var added = Assert.Single(await ManagersAsync(client, "tv", "/media/downloads/complete", "/media/downloads/weir"))!;
+        var removing = Assert.Single(await ManagersAsync(client, "tv", "/media/downloads/complete", "/media/downloads/weir"))!;
+        var keeping = Assert.Single(await ManagersAsync(client, "tv", "/media/downloads/complete", "/media/downloads/weir", removeOriginal: false))!;
 
-        Assert.True(added["ready"]!.GetValue<bool>());
+        // qBittorrent seeds, so a library that removes originals would stop the import; one that keeps them is ready.
+        Assert.False(removing["ready"]!.GetValue<bool>());
+        Assert.Contains(
+            ("problem", "Your download client seeds torrents. Turn off \"After cleaning, remove the original download\" so seeding keeps working and Sonarr can import."),
+            Lines(removing));
+        Assert.True(keeping["ready"]!.GetValue<bool>());
         Assert.All(manager.Requests, request => Assert.Equal(HttpMethod.Get, request.Method));
         Assert.All(manager.Requests, request => Assert.Equal("key", request.Headers.GetValues("X-Api-Key").Single()));
     }
@@ -132,6 +139,34 @@ public sealed class ManagerSetupApiTests
         Assert.Equal("/media/downloads/weir/tv", deluno["suggested_output_folder"]!.GetValue<string>());
         Assert.True(deluno["ready"]!.GetValue<bool>());
         Assert.All(manager.Requests, request => Assert.Equal(HttpMethod.Get, request.Method));
+    }
+
+    [Fact]
+    public async Task A_library_removes_originals_unless_told_to_keep_them_and_says_which()
+    {
+        var (server, client, _) = await StartAsync();
+        await using var _server = server;
+
+        async Task<JsonNode> CreateAsync(string name, bool? remove)
+        {
+            var body = new Dictionary<string, object?> { ["csrf_token"] = await client.CsrfAsync(), ["name"] = name, ["media_type"] = "tv" };
+            if (remove is { } flag)
+            {
+                body["remove_original_after_success"] = flag;
+            }
+
+            using var response = await client.PostAsync("/api/v1/processing/libraries", body);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            return (await Json(response))!;
+        }
+
+        var byDefault = await CreateAsync("Shows default", null);
+        var keeping = await CreateAsync("Shows seeding", false);
+        using var read = await client.GetAsync($"/api/v1/processing/libraries/{keeping["id"]!.GetValue<long>()}");
+
+        Assert.True(byDefault["remove_original_after_success"]!.GetValue<bool>());
+        Assert.False(keeping["remove_original_after_success"]!.GetValue<bool>());
+        Assert.False((await Json(read))!["remove_original_after_success"]!.GetValue<bool>());
     }
 
     [Fact]

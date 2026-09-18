@@ -14,7 +14,7 @@ public static class FileStateStore
         "video_codec, audio_track_count, subtitle_track_count, duration_seconds, audio_codecs, video_bit_depth, size_changed_at, " +
         "hold_until, failure_class, failure_attempts, next_retry_at, output_collision_policy, output_collision_action, " +
         "output_collision_reason, hardware_method, hardware_fell_back_to_software, hardware_reason, last_seen_at, last_attempt_at, " +
-        "created_at, updated_at";
+        "created_at, updated_at, processed_source_size, processed_source_mtime_ns";
 
     public static Task<ProcessingFileRecord?> GetAsync(UnitOfWork uow, long id) =>
         uow.QuerySingleAsync($"SELECT {Columns} FROM files WHERE id = @id", Read, ("@id", id));
@@ -234,5 +234,7 @@ public static class FileStateStore
         LastAttemptAt = SqliteValues.GetDateTimeOrNull(reader, 27),
         CreatedAt = SqliteValues.GetDateTime(reader, 28),
         UpdatedAt = SqliteValues.GetDateTime(reader, 29),
+        ProcessedSourceSize = reader.IsDBNull(30) ? null : reader.GetInt64(30),
+        ProcessedSourceMtimeNs = reader.IsDBNull(31) ? null : reader.GetInt64(31),
     };
 }

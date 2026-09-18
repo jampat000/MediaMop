@@ -4140,6 +4140,12 @@ export interface components {
        * @default
        */
       work_folder: string;
+      /**
+       * Remove Original After Success
+       * @description After a successful pass, remove the original download from the watched folder. Off keeps the file, its folder and its sidecars where the download client put them, so a torrent keeps seeding.
+       * @default true
+       */
+      remove_original_after_success: boolean;
     };
     /** ProcessingLibraryDeleteIn */
     ProcessingLibraryDeleteIn: {
@@ -4287,6 +4293,12 @@ export interface components {
       watched_folder: string;
       /** Work Folder */
       work_folder: string;
+      /**
+       * Remove Original After Success
+       * @description After a successful pass, remove the original download from the watched folder. Off keeps the file, its folder and its sidecars where the download client put them, so a torrent keeps seeding.
+       * @default true
+       */
+      remove_original_after_success: boolean;
     };
     /** ProcessingLibraryReorderIn */
     ProcessingLibraryReorderIn: {
@@ -4562,6 +4574,12 @@ export interface components {
        * @default
        */
       work_folder: string;
+      /**
+       * Remove Original After Success
+       * @description After a successful pass, remove the original download from the watched folder. Off keeps the file, its folder and its sidecars where the download client put them, so a torrent keeps seeding.
+       * @default true
+       */
+      remove_original_after_success: boolean;
     };
     /**
      * ProcessingManualPlanIn
@@ -8596,6 +8614,7 @@ export interface operations {
         media_type: "movie" | "tv";
         watched_folder?: string;
         output_folder?: string;
+        remove_original_after_success?: boolean;
       };
       header?: never;
       path?: never;

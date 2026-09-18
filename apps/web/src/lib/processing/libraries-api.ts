@@ -44,6 +44,8 @@ export interface ProcessingLibrary {
   /** Files beside the video that travel with it, renamed to the output's stem. Empty migrates nothing. */
   sidecar_patterns_csv: string;
   preserve_original_timestamps: boolean;
+  /** Off keeps the original download in the watched folder after cleaning, so a torrent keeps seeding. */
+  remove_original_after_success: boolean;
   /** What to do when an output already exists at the same path. "replace" is the long-standing behaviour. */
   output_collision_policy: string;
   /** Hardware decoding. A choice that cannot work falls back to software and records why. */
@@ -107,6 +109,8 @@ export interface ProcessingLibraryWrite {
   hold_minutes: number;
   sidecar_patterns_csv: string;
   preserve_original_timestamps: boolean;
+  /** Off keeps the original download in the watched folder after cleaning, so a torrent keeps seeding. */
+  remove_original_after_success: boolean;
   output_collision_policy: string;
   hardware_decode_mode: string;
   hardware_device: string;
@@ -414,6 +418,7 @@ export function writeFromProcessingLibrary(
     hold_minutes: library.hold_minutes,
     sidecar_patterns_csv: library.sidecar_patterns_csv,
     preserve_original_timestamps: library.preserve_original_timestamps,
+    remove_original_after_success: library.remove_original_after_success,
     output_collision_policy: library.output_collision_policy,
     hardware_decode_mode: library.hardware_decode_mode,
     hardware_device: library.hardware_device,
@@ -475,11 +480,13 @@ export async function fetchProcessingManagerSetup(
   mediaType: ProcessingMediaType,
   watchedFolder: string,
   outputFolder: string,
+  removeOriginal = true,
 ): Promise<ProcessingManagerSetup> {
   const query = new URLSearchParams({
     media_type: mediaType,
     watched_folder: watchedFolder,
     output_folder: outputFolder,
+    remove_original_after_success: removeOriginal ? "true" : "false",
   });
   const path = `/api/v1/processing/manager-setup?${query.toString()}`;
   const response = await apiFetch(path);

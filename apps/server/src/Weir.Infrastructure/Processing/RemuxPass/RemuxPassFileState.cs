@@ -131,6 +131,19 @@ public static class RemuxPassFileState
         return decision;
     }
 
+    /// <summary>
+    /// The size and modification time of the source a successful pass cleaned (migration 0010), or null for both when the
+    /// pass did not measure it. The watched-folder scan compares them with the file on disk for a library that keeps
+    /// originals (<see cref="Weir.Core.Processing.ProcessedSourceRules"/>).
+    /// </summary>
+    public static Task RecordProcessedSourceAsync(UnitOfWork uow, long libraryId, string relativePath, long? sizeBytes, long? modifiedTimeNs) =>
+        uow.ExecuteAsync(
+            "UPDATE files SET processed_source_size = $size, processed_source_mtime_ns = $mtime WHERE library_id = $library AND relative_path = $path",
+            ("$size", sizeBytes),
+            ("$mtime", sizeBytes is null ? null : modifiedTimeNs),
+            ("$library", libraryId),
+            ("$path", relativePath));
+
     /// <summary>The row's reason, or null when there is no row.</summary>
     public static async Task<string?> StatusReasonAsync(UnitOfWork uow, long libraryId, string relativePath) =>
         (await FindAsync(uow, libraryId, relativePath).ConfigureAwait(false))?.StatusReason;

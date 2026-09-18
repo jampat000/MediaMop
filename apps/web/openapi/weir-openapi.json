@@ -4706,6 +4706,12 @@
             "maxLength": 4000,
             "title": "Work Folder",
             "type": "string"
+          },
+          "remove_original_after_success": {
+            "default": true,
+            "description": "After a successful pass, remove the original download from the watched folder. Off keeps the file, its folder and its sidecars where the download client put them, so a torrent keeps seeding.",
+            "title": "Remove Original After Success",
+            "type": "boolean"
           }
         },
         "required": [
@@ -5055,6 +5061,12 @@
           "work_folder": {
             "title": "Work Folder",
             "type": "string"
+          },
+          "remove_original_after_success": {
+            "default": true,
+            "description": "After a successful pass, remove the original download from the watched folder. Off keeps the file, its folder and its sidecars where the download client put them, so a torrent keeps seeding.",
+            "title": "Remove Original After Success",
+            "type": "boolean"
           }
         },
         "required": [
@@ -5504,6 +5516,12 @@
             "maxLength": 4000,
             "title": "Work Folder",
             "type": "string"
+          },
+          "remove_original_after_success": {
+            "default": true,
+            "description": "After a successful pass, remove the original download from the watched folder. Off keeps the file, its folder and its sidecars where the download client put them, so a torrent keeps seeding.",
+            "title": "Remove Original After Success",
+            "type": "boolean"
           }
         },
         "required": [
@@ -12717,6 +12735,16 @@
               "maxLength": 4000,
               "title": "Output Folder",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "remove_original_after_success",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Remove Original After Success",
+              "type": "boolean"
             }
           }
         ],

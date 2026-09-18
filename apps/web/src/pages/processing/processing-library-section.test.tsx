@@ -56,6 +56,7 @@ function library(over: Partial<ProcessingLibrary> = {}): ProcessingLibrary {
     hold_minutes: 0,
     sidecar_patterns_csv: ".srt,.nfo",
     preserve_original_timestamps: false,
+    remove_original_after_success: true,
     output_collision_policy: "replace",
     hardware_decode_mode: "off",
     hardware_device: "",

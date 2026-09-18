@@ -127,6 +127,23 @@ public sealed class ProcessingWatchedFolderScanDispatchJobHandler : IJobHandler
             var observedSize = FileSizeBytes(filePath);
             var previous = await FileStateStore.ExistingFileRowAsync(uow, library.Id, rel).ConfigureAwait(false);
 
+            // A library that keeps originals leaves each cleaned source in the watched folder. The file the last successful
+            // pass cleaned — same size, same modification time, both recorded by that pass — is finished: note that it
+            // was seen and move on, so it is never queued again. A new or replaced file at the same path differs in one
+            // of the two and is processed as usual.
+            var keepsOriginals = !library.RemoveOriginalAfterSuccess;
+            if (keepsOriginals && ProcessedSourceRules.IsSameCleanedFile(previous, observedSize, ModifiedTimeNs(filePath)))
+            {
+                await uow.ExecuteAsync(
+                    "UPDATE files SET last_seen_at = @seen WHERE id = @id",
+                    ("@seen", SqliteValues.ToSqlite(PyDateTime.FromDateTimeOffset(now))), ("@id", previous!.Id)).ConfigureAwait(false);
+                continue;
+            }
+
+            // With a fingerprint on record, it alone decides whether this is the cleaned file; the activity-history
+            // check below (path and size only) would mistake a same-size replacement for it.
+            var fingerprintDecides = keepsOriginals && ProcessedSourceRules.HasFingerprint(previous);
+
             if (previous is not null && previous.SizeBytes != observedSize)
             {
                 // A changed source is a new processing opportunity: do not carry a failure/quarantine
@@ -219,7 +236,8 @@ public sealed class ProcessingWatchedFolderScanDispatchJobHandler : IJobHandler
 
             var cleanupRetryReady = !settling.IsSettling && access.Problem is null;
             var noActivePass = !await WatchedFolderScanOps.ActiveRemuxPassExistsForRelativePathAsync(uow, rel, mediaScope, library.Id).ConfigureAwait(false);
-            if (mediaScope == ProcessingMediaScopes.Movie && cleanupRetryReady && noActivePass &&
+            // Finishing a source removal a lock interrupted: only for a library that removes originals.
+            if (mediaScope == ProcessingMediaScopes.Movie && cleanupRetryReady && noActivePass && !keepsOriginals &&
                 await WatchedFolderScanOps.CompletedRemuxOutputExistsForRelativePathAsync(uow, rel, mediaScope, library.Id, runtime.OutputFolder, filePath).ConfigureAwait(false))
             {
                 await RetryCompletedMovieCleanupAsync(uow, library.Id, runtime.WatchedFolder, filePath, rel, observedSize, settling, now).ConfigureAwait(false);
@@ -262,9 +280,10 @@ public sealed class ProcessingWatchedFolderScanDispatchJobHandler : IJobHandler
                 continue;
             }
 
-            if (await WatchedFolderScanOps.CompletedRemuxOutputExistsForRelativePathAsync(uow, rel, mediaScope, library.Id, runtime.OutputFolder, filePath).ConfigureAwait(false))
+            if (!fingerprintDecides &&
+                await WatchedFolderScanOps.CompletedRemuxOutputExistsForRelativePathAsync(uow, rel, mediaScope, library.Id, runtime.OutputFolder, filePath).ConfigureAwait(false))
             {
-                if (mediaScope == ProcessingMediaScopes.Movie)
+                if (mediaScope == ProcessingMediaScopes.Movie && !keepsOriginals)
                 {
                     WatchedFolderScanOps.RetryCompletedMovieSourceCleanup(runtime.WatchedFolder, filePath);
                 }
@@ -431,6 +450,20 @@ public sealed class ProcessingWatchedFolderScanDispatchJobHandler : IJobHandler
             return null;
         }
         catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The modification time as <c>SourceFiles.Fingerprint</c> measures it (ns since the Unix epoch), or null.</summary>
+    private static long? ModifiedTimeNs(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.Exists ? (info.LastWriteTimeUtc - DateTime.UnixEpoch).Ticks * 100 : null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             return null;
         }

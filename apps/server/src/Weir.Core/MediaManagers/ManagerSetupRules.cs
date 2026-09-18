@@ -125,7 +125,12 @@ public readonly record struct ArrOsPath(string Text)
 public sealed record RemotePathMappingEntry(string Host, string RemotePath, string LocalPath);
 
 /// <summary>One download client the manager uses (<c>GET /api/v3/downloadclient</c>), reduced to what the check reads.</summary>
-public sealed record ArrDownloadClientEntry(string Name, string Implementation, bool Enabled, string? Host, string? Category, string? Directory);
+public sealed record ArrDownloadClientEntry(
+    string Name, string Implementation, bool Enabled, string? Host, string? Category, string? Directory, string? Protocol = null)
+{
+    /// <summary><c>protocol</c> is the camelCased <c>DownloadProtocol</c>: <c>torrent</c> or <c>usenet</c>.</summary>
+    public bool IsTorrent => string.Equals(Protocol, "torrent", StringComparison.OrdinalIgnoreCase);
+}
 
 /// <summary>One line of a setup check: fine, a problem with its fix, or a note worth reading.</summary>
 public sealed record SetupCheckLine(string State, string Text)
@@ -191,7 +196,8 @@ public static class ManagerSetupRules
                 row.Get("enable") is not PyBool { Value: false },
                 fields.GetValueOrDefault("host"),
                 fields.GetValueOrDefault(categoryField),
-                fields.GetValueOrDefault(directoryField) ?? fields.GetValueOrDefault("completedDirectory")));
+                fields.GetValueOrDefault(directoryField) ?? fields.GetValueOrDefault("completedDirectory"),
+                PyValues.FirstText(row, "protocol")));
         }
 
         return clients;
@@ -212,7 +218,8 @@ public static class ManagerSetupRules
         IReadOnlyList<RemotePathMappingEntry> mappings,
         IReadOnlyList<ArrDownloadClientEntry> clients,
         bool? completedDownloadHandling,
-        IReadOnlyList<string>? queueOutputPaths = null)
+        IReadOnlyList<string>? queueOutputPaths = null,
+        bool removesOriginals = false)
     {
         ArgumentNullException.ThrowIfNull(mappings);
         ArgumentNullException.ThrowIfNull(clients);
@@ -246,6 +253,17 @@ public static class ManagerSetupRules
         {
             lines.Add(new SetupCheckLine(SetupCheckLine.Problem, $"{managerLabel} has no enabled download client, so it has no downloads to import."));
             return new ArrSetupResult(hosts, lines);
+        }
+
+        // Weir removing a seeding torrent's files makes qBittorrent report missingFiles, which Sonarr/Radarr read as
+        // a warning (Download/Clients/QBittorrent/QBittorrent.cs L281-283) — and Completed Download Handling only imports
+        // a download the client reports as completed (Download/CompletedDownloadService.cs L68), so the import never
+        // happens. A usenet download is not seeded, so removing it is fine.
+        if (removesOriginals && enabled.Any(client => client.IsTorrent))
+        {
+            lines.Add(new SetupCheckLine(
+                SetupCheckLine.Problem,
+                $"Your download client seeds torrents. Turn off \"After cleaning, remove the original download\" so seeding keeps working and {managerLabel} can import."));
         }
 
         lines.AddRange(MappingLines(managerLabel, watched, output, mappings, hosts));
