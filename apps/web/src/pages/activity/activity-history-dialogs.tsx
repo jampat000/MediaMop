@@ -7,10 +7,7 @@ import { useState } from "react";
 import type { ActivityFileHistoryPreview } from "../../lib/api/types";
 import type { SuiteOperationalHistoryResetOut } from "../../lib/suite/types";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
-
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
+import { plural } from "../../lib/ui/mm-plural";
 
 function DialogFrame({
   titleId,

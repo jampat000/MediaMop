@@ -14,7 +14,9 @@ import {
   LIBRARY_FACET_LABELS,
   type LibraryFacet,
   type LibraryOverview,
+  type LibraryProblemKind,
 } from "../../../lib/processing/library-api";
+import { plural } from "../../../lib/ui/mm-plural";
 import { LibraryBreakdownTable } from "./library-breakdown-table";
 
 export type LibraryOverviewViewProps = {
@@ -53,6 +55,40 @@ function Support({
   );
 }
 
+/**
+ * The problem kinds a clean's own preflight finds on a file the scan said it would change. Every other kind is
+ * the scan's reason for calling a file "cannot be processed", so those files are already in that tile.
+ */
+const HELD_BACK_KINDS: ReadonlySet<LibraryProblemKind> = new Set([
+  "seeding",
+  "manager_redownload",
+]);
+
+/**
+ * The attention line above the figure row, or null when nothing needs attention. Its first number is the
+ * "Cannot be processed" tile's own number, read from the same total, so the two can never disagree. Files that
+ * could be processed but that Weir is holding back (still shared with a download, or the manager would fetch
+ * them again) are named separately, because they are not in that tile. The server keeps the Problems groups
+ * disjoint, and puts every "cannot be processed" file in exactly one of them, so the Problems view adds up to
+ * the same total this line gives.
+ */
+export function problemsSentence(overview: LibraryOverview): string | null {
+  const cannot = overview.totals.cannot_process;
+  const heldBack = overview.problems
+    .filter((group) => HELD_BACK_KINDS.has(group.kind))
+    .reduce((sum, group) => sum + group.files, 0);
+  if (cannot > 0 && heldBack > 0) {
+    return `${plural(cannot, "file", "files")} Weir cannot process, and ${heldBack.toLocaleString()} more it will not clean as things stand.`;
+  }
+  if (cannot > 0) {
+    return `${plural(cannot, "file", "files")} Weir cannot process.`;
+  }
+  if (heldBack > 0) {
+    return `${plural(heldBack, "file", "files")} Weir will not clean as things stand.`;
+  }
+  return null;
+}
+
 export function LibraryOverviewView({
   overview,
   onShowFiles,
@@ -64,20 +100,19 @@ export function LibraryOverviewView({
     return <>{emptyState}</>;
   }
 
-  const problemFiles = overview.problems.reduce(
-    (sum, group) => sum + group.files,
-    0,
-  );
+  const attention = problemsSentence(overview);
 
   return (
     <div className="mm-quiet-stack">
       <div className="mm-lead">
-        {problemFiles > 0 ? (
+        {attention ? (
           <ul className="mm-interrupt">
             <li className="mm-interrupt__item">
-              <span className="mm-interrupt__text">
-                {problemFiles} file(s) Weir will not clean as things stand. See
-                Problems for what to do about each.
+              <span
+                className="mm-interrupt__text"
+                data-testid="library-overview-problems"
+              >
+                {attention} See Problems for what to do about each.
               </span>
               <button
                 type="button"

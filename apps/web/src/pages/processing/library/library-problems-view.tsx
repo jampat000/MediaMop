@@ -11,6 +11,7 @@ import {
   type LibraryProblemGroup,
   type LibraryProblemKind,
 } from "../../../lib/processing/library-api";
+import { plural } from "../../../lib/ui/mm-plural";
 
 export type LibraryProblemsViewProps = {
   groups: LibraryProblemGroup[];
@@ -46,7 +47,8 @@ export function LibraryProblemsView({
               </h3>
               <div className="mm-quiet-section__aside">
                 <span className="text-xs text-[var(--mm-text3)]">
-                  {group.files} file(s) · {formatBytes(group.size_bytes)}
+                  {plural(group.files, "file", "files")} ·{" "}
+                  {formatBytes(group.size_bytes)}
                 </span>
                 <button
                   type="button"

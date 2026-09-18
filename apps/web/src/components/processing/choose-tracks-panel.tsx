@@ -16,6 +16,7 @@ import type {
   ProcessingFileTracks,
   ProcessingManualPlanChoice,
 } from "../../lib/processing/files-api";
+import { plural } from "../../lib/ui/mm-plural";
 
 type SelectableType = "video" | "audio" | "subtitle";
 
@@ -345,9 +346,13 @@ export function ChooseTracksPanel({
               {other.length > 0 ? (
                 <details className="mm-story-pass__detail">
                   <summary>
-                    {other.length} embedded image/attachment stream(s) not shown
-                    above — these are handled by the saved rules, not by this
-                    choice
+                    {plural(
+                      other.length,
+                      "embedded image or attachment stream",
+                      "embedded image or attachment streams",
+                    )}{" "}
+                    not shown above — these are handled by the saved rules, not
+                    by this choice
                   </summary>
                   <ul>
                     {other.map((track) => (

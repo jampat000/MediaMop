@@ -35,6 +35,7 @@ import {
 import { mmStatusPillClass } from "../../lib/ui/mm-status-tone";
 import { parseAppDate, useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { usePauseQuery } from "../../lib/pause/pause-queries";
+import { plural } from "../../lib/ui/mm-plural";
 
 function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
@@ -380,7 +381,8 @@ function timestampLabel(
     relative = `${Math.floor(elapsedSeconds / 60)} min ago`;
   else if (elapsedSeconds < 86_400)
     relative = `${Math.floor(elapsedSeconds / 3600)} hr ago`;
-  else relative = `${Math.floor(elapsedSeconds / 86_400)} day(s) ago`;
+  else
+    relative = `${plural(Math.floor(elapsedSeconds / 86_400), "day", "days")} ago`;
   return `${formatDate(value)} · ${relative}`;
 }
 
@@ -761,8 +763,9 @@ export function ProcessingFilesSection() {
       }
       setSelectedIds(new Set());
       const parts: string[] = [];
-      if (started) parts.push(`${started} file(s) queued`);
-      if (checked) parts.push(`${checked} library/libraries rechecked`);
+      if (started) parts.push(`${plural(started, "file", "files")} queued`);
+      if (checked)
+        parts.push(`${plural(checked, "library", "libraries")} rechecked`);
       setNotice(
         `${parts.join("; ")}. Weir will update the file state as work moves.`,
       );
@@ -1058,7 +1061,7 @@ export function ProcessingFilesSection() {
                   {openLog.relative_path}
                 </p>
                 <p className="text-xs text-[var(--mm-text3)]">
-                  {openLog.entries.length} record(s) ·{" "}
+                  {plural(openLog.entries.length, "record", "records")} ·{" "}
                   {openLog.retention_days === 0
                     ? "kept forever"
                     : `kept for ${openLog.retention_days} days`}

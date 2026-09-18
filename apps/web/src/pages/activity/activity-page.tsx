@@ -47,6 +47,7 @@ import {
   ClearAllHistoryDialog,
   RemoveFileHistoryDialog,
 } from "./activity-history-dialogs";
+import { plural } from "../../lib/ui/mm-plural";
 
 type ActivityTone = "info" | "success" | "warning" | "error";
 
@@ -148,10 +149,6 @@ function last24HoursRange(now: Date): { from: string; to: string } {
     from: toLocalInput(new Date(now.getTime() - 24 * 60 * 60 * 1000)),
     to: "",
   };
-}
-
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 function fileNameOf(path: string): string {

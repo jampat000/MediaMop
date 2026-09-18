@@ -20,6 +20,7 @@ import type {
   LibraryFile,
   LibraryFilesResult,
   LibraryOverview,
+  LibraryProblemGroup,
   LibraryProblemsResult,
   LibraryTotals,
 } from "../../lib/processing/library-api";
@@ -634,6 +635,112 @@ it("groups problems with what to do, and opens Files filtered to a group", async
       expect.objectContaining({ problem: "seeding" }),
     ),
   );
+});
+
+function group(
+  kind: LibraryProblemGroup["kind"],
+  files: number,
+): LibraryProblemGroup {
+  return {
+    kind,
+    title: kind,
+    what_to_do: "Do something.",
+    files,
+    size_bytes: files * 1_000,
+    sample_paths: [],
+  };
+}
+
+it("the Overview's attention line counts the same files as the Cannot be processed tile and Problems", async () => {
+  asOperator();
+  // What a scan produces: every file it cannot process carries one of the scan's own reasons, so the
+  // groups add up to the tile. The alert used to add the groups up itself, and a file in no group
+  // (or in two) put "3 files" above a tile that said 4.
+  const groups = [
+    group("no_permission", 1),
+    group("unreadable", 2),
+    group("no_audio_left", 1),
+  ];
+  mockLibrary({
+    overview: overview({
+      totals: totals({
+        files: 8,
+        matches: 2,
+        would_change: 2,
+        cannot_process: 4,
+      }),
+      problems: groups,
+    }),
+    problems: problemsResult({ groups, total: 4 }),
+  });
+
+  render(<ProcessingLibrarySection />, { wrapper });
+
+  const alert = await screen.findByTestId("library-overview-problems");
+  const tile = screen.getByTestId("library-figure-cannot-process");
+  expect(tile).toHaveTextContent("4");
+  expect(alert).toHaveTextContent(
+    "4 files Weir cannot process. See Problems for what to do about each.",
+  );
+
+  await openView("Problems");
+  const shown = await screen.findAllByTestId("library-problem-group");
+  const counted = shown
+    .map((section) =>
+      Number(/(\d+) files?/.exec(section.textContent ?? "")?.[1]),
+    )
+    .reduce((sum, n) => sum + n, 0);
+  expect(counted).toBe(4);
+});
+
+it("names the files Weir is holding back separately from the ones it cannot process", async () => {
+  asOperator();
+  mockLibrary({
+    overview: overview({
+      totals: totals({ files: 6, cannot_process: 2 }),
+      problems: [
+        group("seeding", 1),
+        group("manager_redownload", 1),
+        group("unreadable", 2),
+      ],
+    }),
+  });
+
+  render(<ProcessingLibrarySection />, { wrapper });
+
+  expect(
+    await screen.findByTestId("library-overview-problems"),
+  ).toHaveTextContent(
+    "2 files Weir cannot process, and 2 more it will not clean as things stand.",
+  );
+  expect(screen.getByTestId("library-figure-cannot-process")).toHaveTextContent(
+    "2",
+  );
+});
+
+it("writes one file as one file, never file(s)", async () => {
+  asOperator();
+  mockLibrary({
+    overview: overview({
+      totals: totals({
+        files: 1,
+        matches: 0,
+        would_change: 0,
+        cannot_process: 1,
+      }),
+      problems: [group("unreadable", 1)],
+    }),
+  });
+
+  const { container } = render(<ProcessingLibrarySection />, { wrapper });
+
+  expect(
+    await screen.findByTestId("library-overview-problems"),
+  ).toHaveTextContent("1 file Weir cannot process.");
+  expect(screen.getByTestId("library-scan-state")).toHaveTextContent(
+    /\b1 file, /,
+  );
+  expect(container.textContent).not.toContain("(s)");
 });
 
 it("says nothing is in the way when a scanned library has no problems", async () => {

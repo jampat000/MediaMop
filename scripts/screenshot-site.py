@@ -22,10 +22,12 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import json
 import secrets
 import shutil
 import sqlite3
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -405,8 +407,6 @@ def remux_pass_detail(
     reads back out of it.
     """
 
-    import json
-
     detail = {
         "module": "processing",
         "action": "remux",
@@ -594,7 +594,7 @@ def seed_representative_data(home: str) -> None:
                     0,
                     "eng AAC 2.0",
                     None,
-                    "seeding",
+                    "no_permission",
                 ),
                 (
                     1,
@@ -650,7 +650,7 @@ def seed_representative_data(home: str) -> None:
                     1,
                     "eng DTS 5.1, fra AC3 2.0",
                     "eng",
-                    "manager_redownload",
+                    "unreadable",
                 ),
             ]
             for row in library_files:
@@ -706,6 +706,27 @@ def seed_representative_data(home: str) -> None:
                         (library_id, library_file_id, facet, value),
                     )
 
+            # Every "cannot be processed" row above carries one of the four reasons a scan itself can
+            # reach (unreadable, no permission, no video, no audio left). "Still shared with a download"
+            # and "the manager would download it again" are only ever found by a clean's preflight, on a
+            # file the scan said would change, so seeding either on a cannot-process row is a state the
+            # product cannot reach: it put a file in the tile and in no Problems group.
+            #
+            # The completed scan job is what the Library tab reads "Last scanned ..." from. Without it the
+            # rows above look like a scan whose tracking job retention has since pruned, which is a real
+            # state but not the one a README screenshot should show.
+            scanned_at = int(time.time()) - 2 * 3600 - 17 * 60
+            conn.execute(
+                "INSERT INTO jobs (dedupe_key, job_kind, payload_json, status) VALUES (?, ?, ?, 'completed')",
+                (
+                    f"processing.library.scan.v1:1:{secrets.token_hex(16)}",
+                    "processing.library.scan.v1",
+                    json.dumps(
+                        {"library_id": 1, "ok": True, "scan_result": {"generated_at": scanned_at, "errors": []}}
+                    ),
+                ),
+            )
+
             # What a clean would actually remove from the two "would change" files, and what that
             # would give back. The Library tab's Overview leads with these (they are the numbers a
             # clean acts on), so a seed that left them at their 0 defaults would show the tab's
@@ -757,7 +778,7 @@ def seed_representative_data(home: str) -> None:
                     "library_scan",
                     "library",
                     "Movies library scan finished",
-                    "8 files scanned, 2 would change, 3 cannot be processed",
+                    "8 files scanned, 2 would change, 4 cannot be processed",
                     "manual",
                     "ok",
                 ),
@@ -823,9 +844,12 @@ def seed_representative_data(home: str) -> None:
                 "INSERT INTO notification_channels (label, provider, url, events_json, enabled) VALUES (?, ?, ?, ?, ?)",
                 ("Ops webhook", "generic", "https://example.invalid/hooks/weir", '["job_failed", "job_completed"]', 1),
             )
+            # A passing test is only a result with a time behind it: the product records both in
+            # one write, and Settings > Media managers will not say "Connected" without the time.
             conn.execute(
-                "INSERT INTO media_manager_connections (kind, name, enabled, base_url, last_connection_test_ok, last_connection_test_detail) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO media_manager_connections (kind, name, enabled, base_url, last_connection_test_ok, "
+                "last_connection_test_at, last_connection_test_detail) "
+                "VALUES (?, ?, ?, ?, ?, datetime('now', '-14 minutes'), ?)",
                 ("sonarr", "Sonarr (main)", 1, "http://127.0.0.1:8989", 1, "Reachable, 214 series"),
             )
     finally:
