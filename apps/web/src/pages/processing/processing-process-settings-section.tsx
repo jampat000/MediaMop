@@ -20,6 +20,10 @@ import {
 } from "../../lib/processing/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
+/** One column of a `sm:grid-cols-2 gap-4` row, so a field on a line of its own lines
+ *  up with the paired fields above it instead of stretching to the form's width. */
+const HALF_WIDTH_FIELD_CLASS = "sm:max-w-[calc(50%_-_0.5rem)]";
+
 function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
@@ -172,7 +176,7 @@ export function ProcessingProcessSettingsSection() {
     options: { min?: number; max?: number; step?: number; hint?: string } = {},
   ) => (
     <label className="block min-w-0">
-      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+      <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
         {label}
       </span>
       <input
@@ -248,7 +252,7 @@ export function ProcessingProcessSettingsSection() {
         own intake, schedule and concurrency above.
       </p>
       <div className="mt-6 text-sm leading-relaxed text-[var(--mm-text2)]">
-        <div className="grid gap-10 xl:grid-cols-2 xl:gap-x-14">
+        <div className="grid max-w-3xl gap-10">
           <QuietFieldGroup
             title="Throughput budget"
             detail="Files consume runner units by resolution. Work starts only when both a file slot and enough units are available."
@@ -257,7 +261,7 @@ export function ProcessingProcessSettingsSection() {
               <div className="block min-w-0">
                 <span
                   id={filesAtOnceLabelId}
-                  className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]"
+                  className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]"
                 >
                   Absolute file limit
                 </span>
@@ -277,6 +281,8 @@ export function ProcessingProcessSettingsSection() {
                 setRunnerCapacity,
                 { min: 1, max: 64 },
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {numberField("SD cost", runnerCostSd, setRunnerCostSd, {
                 max: 64,
               })}
@@ -289,6 +295,8 @@ export function ProcessingProcessSettingsSection() {
               {numberField("4K cost", runnerCost4k, setRunnerCost4k, {
                 max: 64,
               })}
+            </div>
+            <div className={HALF_WIDTH_FIELD_CLASS}>
               {numberField(
                 "Unknown-resolution cost",
                 runnerCostUndetermined,
@@ -305,7 +313,7 @@ export function ProcessingProcessSettingsSection() {
             title="Admission safety"
             detail="Final guardrails before Weir probes or writes a file. Keep downloader limits too; these protect the processing host."
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className={`grid gap-4 ${HALF_WIDTH_FIELD_CLASS}`}>
               {numberField(
                 "Minimum unchanged age (seconds)",
                 minFileAgeSeconds,
@@ -330,44 +338,43 @@ export function ProcessingProcessSettingsSection() {
           </QuietFieldGroup>
 
           <QuietFieldGroup
-            className="xl:col-span-2"
             title="Records and cleanup"
             detail="Choose how much diagnostic history to keep and how Weir treats its own temporary data after work finishes or fails."
           >
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className={HALF_WIDTH_FIELD_CLASS}>
               {numberField(
                 "Processing-record retention (days)",
                 fileLogRetentionDays,
                 setFileLogRetentionDays,
                 { max: 3650, hint: "0 keeps file records forever." },
               )}
-              <div className="lg:col-span-2">
-                {toggleField(
-                  "Reclaim stale temporary files",
-                  "Safely removes old files from Weir's private work area. Recommended and enabled by default.",
-                  workTempStaleSweepEnabled,
-                  setWorkTempStaleSweepEnabled,
-                )}
-                {toggleField(
-                  "Keep failed work files",
-                  "Leaves failed temporary outputs available for inspection; the stale sweep will not remove them.",
-                  keepFailedWorkFiles,
-                  setKeepFailedWorkFiles,
-                )}
-                {toggleField(
-                  "Verbose file-detection records",
-                  "Adds noisy intake diagnostics while troubleshooting. Turn it off again after the cause is clear.",
-                  verboseDetectionLogging,
-                  setVerboseDetectionLogging,
-                )}
-                {toggleField(
-                  "Delete source after a terminal failure",
-                  "High risk: removes the original release folder after Weir gives up. Successful processing cleanup is separate and remains automatic.",
-                  failureCleanupEnabled,
-                  setFailureCleanupEnabled,
-                  true,
-                )}
-              </div>
+            </div>
+            <div>
+              {toggleField(
+                "Reclaim stale temporary files",
+                "Safely removes old files from Weir's private work area. Recommended and enabled by default.",
+                workTempStaleSweepEnabled,
+                setWorkTempStaleSweepEnabled,
+              )}
+              {toggleField(
+                "Keep failed work files",
+                "Leaves failed temporary outputs available for inspection; the stale sweep will not remove them.",
+                keepFailedWorkFiles,
+                setKeepFailedWorkFiles,
+              )}
+              {toggleField(
+                "Verbose file-detection records",
+                "Adds noisy intake diagnostics while troubleshooting. Turn it off again after the cause is clear.",
+                verboseDetectionLogging,
+                setVerboseDetectionLogging,
+              )}
+              {toggleField(
+                "Delete source after a terminal failure",
+                "High risk: removes the original release folder after Weir gives up. Successful processing cleanup is separate and remains automatic.",
+                failureCleanupEnabled,
+                setFailureCleanupEnabled,
+                true,
+              )}
             </div>
           </QuietFieldGroup>
         </div>
