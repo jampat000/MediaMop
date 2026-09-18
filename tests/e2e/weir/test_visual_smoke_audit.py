@@ -3,7 +3,7 @@
 Run with WEIR_E2E=1. Screenshots are saved to artifacts/screenshots/ for
 visual inspection. The artifacts/ directory is .gitignored so no pixel-exact
 baselines are committed; these are informational smoke checks. What is asserted is
-the structure of each screen, rebaselined for the 3.0 screens in #462: In hand at
+the structure of each screen, rebaselined for the 3.0 screens in #462: Home at
 "/" (the dashboard folded into it in #459) and the Activity page's history statement.
 
 Usage:
@@ -100,9 +100,9 @@ def _assert_tab_workspace(page, *, page_test_id: str, tabs_test_id: str) -> None
 
 
 def test_old_dashboard_address_is_not_found(weir_shell: str) -> None:
-    """The dashboard folded into In hand (#459) and 3.0.0 dropped the redirect it left behind.
+    """The dashboard folded into Home (#459) and 3.0.0 dropped the redirect it left behind.
 
-    /dashboard gets the not-found page, which offers the way to In hand rather than
+    /dashboard gets the not-found page, which offers the way to Home rather than
     silently pretending the address is still a page.
     """
     base = weir_shell.rstrip("/")
@@ -122,15 +122,15 @@ def test_old_dashboard_address_is_not_found(weir_shell: str) -> None:
             expect(page.get_by_role("link", name="Dashboard", exact=True)).to_have_count(0)
             _assert_no_error_state(page)
 
-            page.get_by_role("link", name="Go to In hand", exact=True).click()
+            page.get_by_role("link", name="Go to Home", exact=True).click()
             expect(page).to_have_url(re.compile(r".*/(?:$|[?#])"))
-            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
+            expect(page.get_by_role("heading", name="Home", exact=True)).to_be_visible()
         finally:
             browser.close()
 
 
-def test_in_hand_is_the_landing_page(weir_shell: str) -> None:
-    """3.0 lands on In hand at "/": what Weir is holding (#463)."""
+def test_home_is_the_landing_page(weir_shell: str) -> None:
+    """3.0 lands on Home at "/": what Weir is holding (#463)."""
     base = weir_shell.rstrip("/")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -141,12 +141,12 @@ def test_in_hand_is_the_landing_page(weir_shell: str) -> None:
             ensure_signed_in(page, base)
             page.goto(f"{base}/", wait_until="domcontentloaded")
 
-            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
+            expect(page.get_by_role("heading", name="Home", exact=True)).to_be_visible()
             # Page content only: the shell brand line is replaced by the Weir rename (#458).
             expect(page.locator("main").get_by_text("your library", exact=False)).to_have_count(0)
             _assert_document_owns_vertical_scroll(page)
             _assert_no_error_state(page)
-            _save_screenshot(page, "in-hand")
+            _save_screenshot(page, "home")
         finally:
             browser.close()
 
@@ -286,7 +286,7 @@ def test_processing_audio_subtitles_editor_renders(weir_shell: str) -> None:
             open_sidebar(page, "Processing")
             page.get_by_role("tab", name="Audio & subtitles", exact=True).click()
             expect(page.get_by_test_id("processing-rule-set-workspace")).to_be_visible()
-            page.get_by_role("button", name="New profile", exact=True).click()
+            page.get_by_role("button", name="New profile →", exact=True).click()
             expect(page.get_by_label("Profile name", exact=True)).to_be_visible()
             expect(page.get_by_text("Audio order", exact=True)).not_to_be_visible()
 

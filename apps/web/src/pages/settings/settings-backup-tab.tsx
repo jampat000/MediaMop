@@ -12,9 +12,12 @@ import {
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
 import {
+  QuietFieldGroup,
+  quietActionRowClass,
+} from "../../components/shared/quiet-section";
+import {
   CONFIGURATION_BACKUP_INTERVAL_HOURS,
   SettingsQuietSection,
-  SUITE_SETTINGS_DASH_CARD_CLASS,
   formatBackupBytes,
 } from "./settings-shared";
 
@@ -77,176 +80,157 @@ export function SettingsBackupTab({
           className="mm-quiet-stack"
           data-testid="suite-settings-backup-restore"
         >
-          <div>
-            <h3
-              id="suite-settings-backup-heading"
-              className="mm-quiet-section__title"
-            >
-              Backup and restore
-            </h3>
-            <p className="mm-quiet-note mt-1">
+          <SettingsQuietSection
+            headingId="suite-settings-backup-heading"
+            heading="Backup and restore"
+          >
+            <p className="mm-quiet-note">
               Keep a clean copy of Weir settings and restore them if something
               goes wrong.
             </p>
-          </div>
 
-          {/* Two distinct actions, each with its own scope and its own button.
-              The boundary is what says which button belongs to which. */}
-          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
-            <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
-              <div className="mm-card-action-body">
-                <div>
-                  <p className="text-[11px] font-semibold tracking-[0.14em] text-[var(--mm-gold)] uppercase">
-                    Automatic protection
+            {/* Two distinct actions, each with its own scope and its own Save row.
+                Rule 3: what says which button belongs to which is the eyebrow and the
+                hairline over each group, not a box around it — and stacking them means
+                a short group beside a long one can no longer leave a ragged column. */}
+            <div className="mt-6 grid gap-10">
+              <QuietFieldGroup
+                title="Scheduled snapshots"
+                detail="Weir keeps the latest five configuration snapshots using the same restore-safe JSON format."
+              >
+                <div className="max-w-xl space-y-4">
+                  <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
+                      checked={configurationBackupEnabled}
+                      disabled={!editable || save.isPending}
+                      onChange={(e) =>
+                        setConfigurationBackupEnabled(e.target.checked)
+                      }
+                    />
+                    <span>Run scheduled configuration backups</span>
+                  </label>
+                  <label className="block text-sm text-[var(--mm-text2)]">
+                    <span className="mb-1.5 block text-sm text-[var(--mm-text2)]">
+                      Minimum time between runs
+                    </span>
+                    <select
+                      className="mm-input w-full max-w-xs"
+                      value={configurationBackupIntervalHours}
+                      disabled={!editable || save.isPending}
+                      onChange={(e) =>
+                        setConfigurationBackupIntervalHours(
+                          Number(e.target.value),
+                        )
+                      }
+                    >
+                      {CONFIGURATION_BACKUP_INTERVAL_HOURS.map((h) => (
+                        <option key={h} value={h}>
+                          {h === 168
+                            ? "Every 7 days (168 h)"
+                            : `Every ${h} hours`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm text-[var(--mm-text2)]">
+                    <span className="mb-1.5 block text-sm text-[var(--mm-text2)]">
+                      Preferred backup time
+                    </span>
+                    <input
+                      type="time"
+                      className="mm-input w-full max-w-xs"
+                      value={configurationBackupPreferredTime}
+                      disabled={!editable || save.isPending}
+                      onChange={(e) =>
+                        setConfigurationBackupPreferredTime(
+                          e.target.value || "02:00",
+                        )
+                      }
+                    />
+                  </label>
+                  <p className="text-xs text-[var(--mm-text3)]">
+                    <span className="font-medium text-[var(--mm-text2)]">
+                      Last automatic run:
+                    </span>{" "}
+                    {formatDate(settingsData.configuration_backup_last_run_at)}
                   </p>
-                  <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
-                    Scheduled snapshots
-                  </h4>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                    Weir keeps the latest five configuration snapshots using the
-                    same restore-safe JSON format.
+                  <p className="text-xs text-[var(--mm-text3)]">
+                    <span className="font-medium text-[var(--mm-text2)]">
+                      Target time:
+                    </span>{" "}
+                    {configurationBackupPreferredTime}
                   </p>
                 </div>
-                <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                    checked={configurationBackupEnabled}
-                    disabled={!editable || save.isPending}
-                    onChange={(e) =>
-                      setConfigurationBackupEnabled(e.target.checked)
+                <div className={quietActionRowClass}>
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({
+                      variant: "secondary",
+                      disabled:
+                        !editable || !backupScheduleDirty || save.isPending,
+                    })}
+                    disabled={
+                      !editable || !backupScheduleDirty || save.isPending
                     }
-                  />
-                  <span>Run scheduled configuration backups</span>
-                </label>
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
-                    Minimum time between runs
-                  </span>
-                  <select
-                    className="mm-input w-full max-w-xs"
-                    value={configurationBackupIntervalHours}
-                    disabled={!editable || save.isPending}
-                    onChange={(e) =>
-                      setConfigurationBackupIntervalHours(
-                        Number(e.target.value),
-                      )
-                    }
+                    onClick={() => onSaveBackupSchedule()}
                   >
-                    {CONFIGURATION_BACKUP_INTERVAL_HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {h === 168
-                          ? "Every 7 days (168 h)"
-                          : `Every ${h} hours`}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
-                    Preferred backup time
-                  </span>
-                  <input
-                    type="time"
-                    className="mm-input w-full max-w-xs"
-                    value={configurationBackupPreferredTime}
-                    disabled={!editable || save.isPending}
-                    onChange={(e) =>
-                      setConfigurationBackupPreferredTime(
-                        e.target.value || "02:00",
-                      )
-                    }
-                  />
-                </label>
-                <p className="text-xs text-[var(--mm-text3)]">
-                  <span className="font-medium text-[var(--mm-text2)]">
-                    Last automatic run:
-                  </span>{" "}
-                  {formatDate(settingsData.configuration_backup_last_run_at)}
-                </p>
-                <p className="text-xs text-[var(--mm-text3)]">
-                  <span className="font-medium text-[var(--mm-text2)]">
-                    Target time:
-                  </span>{" "}
-                  {configurationBackupPreferredTime}
-                </p>
-              </div>
-              <div className="mm-card-action-footer">
-                <button
-                  type="button"
-                  className={mmActionButtonClass({
-                    variant: "secondary",
-                    disabled:
-                      !editable || !backupScheduleDirty || save.isPending,
-                  })}
-                  disabled={!editable || !backupScheduleDirty || save.isPending}
-                  onClick={() => onSaveBackupSchedule()}
-                >
-                  {save.isPending ? "Saving..." : "Save backup schedule"}
-                </button>
-                {save.isError && lastSuiteSaveTarget === "backup" ? (
-                  <p
-                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                    role="alert"
-                    data-testid="suite-settings-backup-save-error"
-                  >
-                    {save.error instanceof Error
-                      ? save.error.message
-                      : "Could not save."}
-                  </p>
-                ) : null}
-              </div>
-            </section>
-
-            <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
-              <div className="mm-card-action-body">
-                <div>
-                  <p className="text-[11px] font-semibold tracking-[0.14em] text-[var(--mm-gold)] uppercase">
-                    Manual control
-                  </p>
-                  <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
-                    Export or restore now
-                  </h4>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                    Download a full settings file, or restore a Weir
-                    configuration JSON from disk.
-                  </p>
+                    {save.isPending ? "Saving..." : "Save backup schedule"}
+                  </button>
+                  {save.isError && lastSuiteSaveTarget === "backup" ? (
+                    <p
+                      className="mm-status-text--failed text-sm"
+                      role="alert"
+                      data-testid="suite-settings-backup-save-error"
+                    >
+                      {save.error instanceof Error
+                        ? save.error.message
+                        : "Could not save."}
+                    </p>
+                  ) : null}
                 </div>
-              </div>
-              <div className="mm-card-action-footer">
-                <button
-                  type="button"
-                  className={mmActionButtonClass({
-                    variant: "secondary",
-                    disabled: backupBusy || save.isPending,
-                  })}
-                  disabled={backupBusy || save.isPending}
-                  onClick={() => onDownloadConfiguration()}
-                >
-                  Download configuration now
-                </button>
-                <button
-                  type="button"
-                  className={mmActionButtonClass({
-                    variant: "tertiary",
-                    disabled: backupBusy || save.isPending,
-                  })}
-                  disabled={backupBusy || save.isPending}
-                  onClick={() => restoreInputRef.current?.click()}
-                >
-                  Restore from file...
-                </button>
-                <input
-                  ref={restoreInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  aria-label="Choose configuration JSON file to restore"
-                  onChange={(e) => onRestoreFileChange(e)}
-                />
-              </div>
-            </section>
-          </div>
+              </QuietFieldGroup>
+
+              <QuietFieldGroup
+                title="Export or restore now"
+                detail="Download a full settings file, or restore a Weir configuration JSON from disk."
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({
+                      variant: "secondary",
+                      disabled: backupBusy || save.isPending,
+                    })}
+                    disabled={backupBusy || save.isPending}
+                    onClick={() => onDownloadConfiguration()}
+                  >
+                    Download configuration now
+                  </button>
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({
+                      variant: "tertiary",
+                      disabled: backupBusy || save.isPending,
+                    })}
+                    disabled={backupBusy || save.isPending}
+                    onClick={() => restoreInputRef.current?.click()}
+                  >
+                    Restore from file...
+                  </button>
+                  <input
+                    ref={restoreInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    className="hidden"
+                    aria-label="Choose configuration JSON file to restore"
+                    onChange={(e) => onRestoreFileChange(e)}
+                  />
+                </div>
+              </QuietFieldGroup>
+            </div>
+          </SettingsQuietSection>
 
           {/* A list of what is on disk: display content, so it loses its box. */}
           <SettingsQuietSection
@@ -317,15 +301,12 @@ export function SettingsBackupTab({
           </SettingsQuietSection>
 
           {backupMsg ? (
-            <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
+            <p className="mm-status-text--healthy text-sm" role="status">
               {backupMsg}
             </p>
           ) : null}
           {backupErr ? (
-            <p
-              className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-              role="alert"
-            >
+            <p className="mm-status-text--failed text-sm" role="alert">
               {backupErr}
             </p>
           ) : null}

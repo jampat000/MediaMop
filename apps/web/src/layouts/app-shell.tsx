@@ -89,13 +89,13 @@ export function AppShell() {
               to="/"
               end
               className={sidebarNavClass}
-              title="In hand"
+              title="Home"
               onClick={() => setSidebarOpen(false)}
             >
               <span className="mm-sidebar-link-icon" aria-hidden="true">
                 <NavIconHome />
               </span>
-              <span className="mm-sidebar-link-label">In hand</span>
+              <span className="mm-sidebar-link-label">Home</span>
             </NavLink>
             <NavLink
               to="/activity"

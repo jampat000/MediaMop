@@ -76,9 +76,9 @@ def readme_shots() -> list[tuple[str, str, str, dict[str, int]]]:
     """(published name, path, theme, viewport) for every image the README links, bar the record."""
 
     return [
-        ("in-hand.png", "/", "dark", DESKTOP_VIEWPORT),
-        ("in-hand-light.png", "/", "light", DESKTOP_VIEWPORT),
-        ("in-hand-mobile.png", "/", "dark", PHONE_VIEWPORT),
+        ("home.png", "/", "dark", DESKTOP_VIEWPORT),
+        ("home-light.png", "/", "light", DESKTOP_VIEWPORT),
+        ("home-mobile.png", "/", "dark", PHONE_VIEWPORT),
         ("activity.png", "/activity", "dark", DESKTOP_VIEWPORT),
         ("processing.png", "/processing?tab=overview", "dark", DESKTOP_VIEWPORT),
         ("library.png", "/processing?tab=library&view=overview", "dark", DESKTOP_VIEWPORT),

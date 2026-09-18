@@ -155,7 +155,7 @@ export function ClearAllHistoryDialog({
         is touched. This cannot be undone.
       </p>
       <label className="mt-3 block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+        <span className="mb-1.5 block text-sm text-[var(--mm-text2)]">
           Type RESET to confirm
         </span>
         <input

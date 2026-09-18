@@ -202,84 +202,6 @@ body.mm-body {
   color: var(--mm-status-failed-text) !important;
 }
 
-/* Processing overview (pages/processing/processing-overview-tab.tsx). */
-.mm-proc-panel__lead {
-  margin: 0;
-  max-width: 44rem;
-  color: var(--mm-text2);
-  font-size: var(--mm-type-body);
-  line-height: 1.55;
-}
-
-.mm-proc-panel__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--mm-border);
-}
-
-.mm-proc-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 0.6rem;
-  margin: 0.9rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mm-proc-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius-sm);
-  background: color-mix(in srgb, var(--mm-surface-2) 55%, transparent);
-}
-
-.mm-proc-step__marker {
-  display: inline-grid;
-  width: 1.5rem;
-  height: 1.5rem;
-  flex-shrink: 0;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--mm-accent-soft);
-  color: var(--mm-accent-bright);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.mm-proc-step--done .mm-proc-step__marker {
-  background: var(--mm-status-healthy-bg);
-  color: var(--mm-status-healthy-text);
-}
-
-.mm-proc-step__text {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.mm-proc-step__text strong {
-  color: var(--mm-text1);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.mm-proc-step--done .mm-proc-step__text strong {
-  color: var(--mm-text2);
-}
-
-.mm-proc-step__text small {
-  color: var(--mm-text2);
-  font-size: var(--mm-type-caption);
-  line-height: 1.4;
-}
-
 .mm-activity-chip--success {
   border-color: color-mix(
     in srgb,
@@ -1343,20 +1265,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   .mm-page__lead {
     font-size: 0.984375rem;
   }
-
-  .mm-card {
-    padding: calc(1.45rem * var(--mm-density-ui-scale))
-      calc(1.55rem * var(--mm-density-ui-scale));
-  }
-
-  .mm-card__title {
-    font-size: 0.6875rem;
-  }
-
-  .mm-card__body {
-    font-size: 0.953125rem;
-    line-height: 1.6;
-  }
 }
 
 /* Wide desktop (incl. 1440p at 125–150% OS scale where CSS width sits ~1700–2048px). */
@@ -1372,11 +1280,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
   .mm-page__lead {
     font-size: 1rem;
-  }
-
-  .mm-card__body {
-    font-size: 1rem;
-    line-height: 1.6;
   }
 }
 
@@ -1394,20 +1297,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   .mm-page__title {
     font-size: clamp(1.72rem, 2.05vw, 2.35rem);
   }
-
-  .mm-card {
-    padding: calc(1.5rem * var(--mm-density-ui-scale))
-      calc(1.6rem * var(--mm-density-ui-scale));
-  }
-
-  .mm-card__body {
-    font-size: 1.03125rem;
-  }
 }
 
-.mm-page,
-.mm-card,
-.mm-card__body {
+.mm-page {
   min-width: 0;
 }
 
@@ -1421,32 +1313,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   .mm-bubble-stack {
     gap: var(--mm-bubble-stack-gap-desktop);
   }
-}
-
-/* Card: main stack above a full-width primary-action footer (aligned across modules). */
-.mm-card-action-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  gap: var(--mm-bubble-stack-gap-mobile);
-  padding-bottom: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .mm-card-action-body {
-    gap: var(--mm-bubble-stack-gap-desktop);
-  }
-}
-
-.mm-card-action-footer {
-  margin-top: auto;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  border-top: 1px solid var(--mm-border);
-  padding-top: 1.5rem;
 }
 
 .mm-page__intro {
@@ -1482,40 +1348,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   letter-spacing: -0.012em;
   overflow-wrap: anywhere;
   color: var(--mm-text2);
-}
-
-.mm-card {
-  padding: calc(1.35rem * var(--mm-density-ui-scale))
-    calc(1.45rem * var(--mm-density-ui-scale));
-  min-height: 5rem;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent 34%),
-    var(--mm-card-bg);
-  border: 1px solid var(--mm-border);
-  border-radius: 16px;
-  box-shadow: var(--mm-shadow-card), var(--mm-shadow-card-inner);
-}
-
-.mm-card__title {
-  margin: 0 0 0.55rem;
-  font-size: 0.65625rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mm-eyebrow-color);
-}
-
-.mm-card__body {
-  margin: 0;
-  font-size: 0.90625rem;
-  line-height: 1.58;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  color: var(--mm-text2);
-}
-
-.mm-dash-card.mm-card {
-  min-height: 0;
 }
 
 .mm-activity-row__detail {
@@ -1859,12 +1691,6 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   }
 }
 
-.mm-module-surface {
-  max-width: 100%;
-  /* Inline only: a block reset here would cancel the parent's space-y-* gaps between cards. */
-  margin-inline: 0;
-}
-
 /* ---- Auth screens -------------------------------------------------------- */
 
 .mm-auth-body {
@@ -1979,12 +1805,12 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   gap: 0.65rem;
 }
 
+/* A field label, in sentence case like every form in the app. The uppercase eyebrow is
+ * kept for group titles and column heads (`.mm-auth-eyebrow` above the card title). */
 .mm-auth-label {
-  font-size: var(--mm-type-eyebrow);
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--mm-text2);
-  letter-spacing: var(--mm-tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /**
@@ -2388,10 +2214,6 @@ select.mm-input::-ms-expand {
     line-height: 1.5;
   }
 
-  .mm-card {
-    padding: 1rem 1rem;
-  }
-
   .mm-workspace-tabs {
     margin-top: 0.75rem;
     border-radius: 12px;
@@ -2465,13 +2287,13 @@ select.mm-input::-ms-expand {
   gap: 8px;
 }
 
-/* --- "In hand": files Weir currently has custody of (#463) -------------------------------
+/* --- Home: files Weir currently has custody of (#463) --------------------------------------
    The page's lead band, figure row and sections are the page-neutral primitives in
    weir-content.css. What is left here is the file row itself, which nothing else draws:
    built on the type ramp and surface tokens rather than fixed values, so both themes work
    and the four density steps still scale it. */
 
-.mm-inhand-list {
+.mm-home-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2479,7 +2301,7 @@ select.mm-input::-ms-expand {
 
 /* A borderless list of rows, flush with its section heading: one hairline per row, none
    under the last. The card these used to sit in is gone — see docs/design/content-language.md. */
-.mm-inhand-row {
+.mm-home-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
   gap: 1rem;
@@ -2488,18 +2310,18 @@ select.mm-input::-ms-expand {
   border-bottom: 1px solid var(--mm-border);
 }
 
-.mm-inhand-row:last-child {
+.mm-home-row:last-child {
   border-bottom: none;
 }
 
-.mm-inhand-row__main {
+.mm-home-row__main {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
 
-.mm-inhand-row__name {
+.mm-home-row__name {
   font-size: var(--mm-type-body);
   color: var(--mm-text);
   overflow: hidden;
@@ -2508,13 +2330,13 @@ select.mm-input::-ms-expand {
 }
 
 /* Numbers and codecs line up column-to-column without the whole screen reading as a terminal. */
-.mm-inhand-row__facts {
+.mm-home-row__facts {
   font-size: var(--mm-type-caption);
   color: var(--mm-text3);
   font-variant-numeric: tabular-nums;
 }
 
-.mm-inhand-row__state {
+.mm-home-row__state {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -2524,23 +2346,23 @@ select.mm-input::-ms-expand {
 }
 
 /* Held upstream is not a failure — the guardrail is working. */
-.mm-inhand-row__state--held {
+.mm-home-row__state--held {
   color: var(--mm-status-info-text);
 }
 
-.mm-inhand-row__reason {
+.mm-home-row__reason {
   color: var(--mm-text3);
   overflow-wrap: anywhere;
 }
 
-.mm-inhand-row__progress {
+.mm-home-row__progress {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.15rem;
 }
 
-.mm-inhand-row__progress-track {
+.mm-home-row__progress-track {
   position: relative;
   flex-grow: 1;
   height: 5px;
@@ -2549,7 +2371,7 @@ select.mm-input::-ms-expand {
   overflow: hidden;
 }
 
-.mm-inhand-row__progress-fill {
+.mm-home-row__progress-fill {
   display: block;
   height: 100%;
   border-radius: var(--mm-radius-pill);
@@ -2557,21 +2379,21 @@ select.mm-input::-ms-expand {
   transition: width 0.6s ease;
 }
 
-.mm-inhand-row__progress-text {
+.mm-home-row__progress-text {
   flex-shrink: 0;
   color: var(--mm-accent-bright);
   font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 720px) {
-  .mm-inhand-row {
+  .mm-home-row {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 /* The file name is a button that opens its story (#468). Reset the button chrome so it still
    reads as a name in a list, with the affordance carried by hover and focus instead. */
-button.mm-inhand-row__name {
+button.mm-home-row__name {
   display: block;
   width: 100%;
   padding: 0;
@@ -2584,13 +2406,13 @@ button.mm-inhand-row__name {
   cursor: pointer;
 }
 
-button.mm-inhand-row__name:hover {
+button.mm-home-row__name:hover {
   color: var(--mm-accent-bright);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-button.mm-inhand-row__name:focus-visible {
+button.mm-home-row__name:focus-visible {
   outline: 2px solid var(--mm-accent-ring);
   outline-offset: 2px;
   border-radius: 2px;

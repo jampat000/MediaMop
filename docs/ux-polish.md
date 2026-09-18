@@ -27,7 +27,7 @@ content-language.md as the tie-breaker, not this file.
 - Primary card actions should sit at the bottom of the card unless the control needs to remain inline for usability.
 - Settings cards should be grouped by user task, not backend implementation.
 - Multi-section product areas use the same themed horizontal section bar in Processing and Settings. It scrolls horizontally on narrow screens while preserving the tab-to-panel accessibility contract.
-- In hand and Activity remain task-focused pages rather than duplicating the section bar. In hand is the main screen: what Weir holds now and anything that needs a person; searchable history and full job lists belong in Activity and Processing's Jobs section.
+- Home and Activity remain task-focused pages rather than duplicating the section bar. Home is the main screen: what Weir holds now and anything that needs a person; searchable history and full job lists belong in Activity and Processing's Jobs section.
 - The document is the page scroll owner. Do not trap signed-in pages inside a fixed-height nested scrolling pane.
 - Empty states should be compact, aligned with the surrounding layout, and explain what to do next.
 - Long detail views should be compressed by default and expandable when more information is useful.
@@ -39,10 +39,10 @@ content-language.md as the tie-breaker, not this file.
   - warning or review needed: amber
   - failed or blocked: red
   - informational or queued: blue/neutral
-- Bubbles, badges, and pills should use the same shape language across In hand, Activity, Settings, and Processing.
+- Bubbles, badges, and pills should use the same shape language across Home, Activity, Settings, and Processing.
   **Unfulfilled, and it has diverged rather than merely lagged.** Now that every page in
   [`design/redesign-docs-impact.md`](design/redesign-docs-impact.md) has converted, there are three
-  shape families, not one: In hand grew its own `mm-inhand-row__state`, Activity kept
+  shape families, not one: Home grew its own `mm-home-row__state`, Activity kept
   `mm-activity-chip` / `mm-status-badge`, and Processing and Settings use the redesign's
   `mm-quiet-badge` / `mm-quiet-state`. The rule stays as written — it is the target — but closing it
   is now a deliberate consolidation, not something the remaining conversions will deliver on their own.
@@ -50,7 +50,7 @@ content-language.md as the tie-breaker, not this file.
 
 ## Screen-specific baseline
 
-- In hand shows useful operational status, not just navigation.
+- Home shows useful operational status, not just navigation.
 - Activity is live, user-friendly, filterable, searchable, color-coded, and readable at scale.
 - Processing activity can show before/after file details, size savings, languages, subtitles, and removals in an expandable layout. Still true after Files converted in #600: the detail lives in the expandable **Processing record** entry in a file's history, which labels source and output file and size, space saved, the processing plan, output validation, source cleanup and duration, with the raw payload behind a further `<details>`. It is an expandable row rather than a card now; the behaviour this bullet asks for is unchanged.
 - Settings General groups setup wizard, timezone, log retention, and display density cleanly.

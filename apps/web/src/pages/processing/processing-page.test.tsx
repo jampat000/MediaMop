@@ -326,7 +326,7 @@ describe("ProcessingPage", () => {
     expect(screen.queryByTestId("processing-overview-flow")).toBeNull();
     expect(
       screen.getByTestId("processing-overview-flow-empty").textContent,
-    ).toMatch(/no files in hand yet/i);
+    ).toMatch(/holding no files yet/i);
     // The figures still carry the month, so the page is not blank.
     expect(
       screen.getByTestId("processing-overview-last-30-days").textContent,

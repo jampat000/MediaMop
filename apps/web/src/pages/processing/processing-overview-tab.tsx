@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { MmOverviewSection } from "../../components/overview/mm-overview-cards";
 import { PageLoading } from "../../components/shared/page-loading";
 import { QuietSection } from "../../components/shared/quiet-section";
 import {
@@ -28,7 +27,6 @@ import {
   useProcessingOverviewStatsQuery,
 } from "../../lib/processing/queries";
 import { processingStreamLanguageLabel } from "../../lib/processing/stream-language-options";
-import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
 export type ProcessingOverviewOpenTab =
   "libraries" | "audio-subtitles" | "jobs" | "schedules" | "files";
@@ -189,47 +187,63 @@ function SetupChecklist({
       ),
     },
   ];
+  // Rule 3: the strongest empty state still takes the page over, but it does it as a
+  // heading, a hairline and a list — not as a card of bordered tiles inside a bordered
+  // card. One column, so three steps whose hints are different lengths still share a
+  // left edge and cannot leave an orphan in the last row.
   return (
-    <MmOverviewSection
+    <QuietSection
       headingId="processing-guided-setup-heading"
       heading="Get started"
       data-testid="processing-guided-setup"
+      aside={
+        onOpenTab ? (
+          <button
+            type="button"
+            className="mm-quiet-link"
+            onClick={() => onOpenTab("libraries")}
+          >
+            Set up libraries →
+          </button>
+        ) : null
+      }
     >
-      <p className="mm-proc-panel__lead">
+      <p className="mm-quiet-note">
         Weir has no folder to watch yet. Three steps and it starts cleaning new
         downloads.
       </p>
-      <ol className="mm-proc-steps">
+      <ol className="mt-4 grid gap-3.5">
         {steps.map((step, index) => (
-          <li
-            key={step.title}
-            className={`mm-proc-step${step.done ? " mm-proc-step--done" : ""}`}
-          >
-            <span className="mm-proc-step__marker" aria-hidden="true">
+          <li key={step.title} className="flex min-w-0 items-baseline gap-3">
+            <span
+              aria-hidden="true"
+              className={`w-3 shrink-0 text-[length:var(--mm-type-eyebrow)] font-semibold tabular-nums ${
+                step.done
+                  ? "text-[var(--mm-status-healthy-text)]"
+                  : "text-[var(--mm-gold-dim)]"
+              }`}
+            >
               {step.done ? "✓" : index + 1}
             </span>
-            <span className="mm-proc-step__text">
-              <strong>
+            <span className="min-w-0">
+              <strong
+                className={`text-sm font-semibold ${
+                  step.done
+                    ? "text-[var(--mm-text2)]"
+                    : "text-[var(--mm-text1)]"
+                }`}
+              >
                 {step.title}
                 {step.done ? <span className="sr-only"> (done)</span> : null}
               </strong>
-              <small>{step.hint}</small>
+              <span className="mt-0.5 block text-[length:var(--mm-type-caption)] leading-[1.4] text-[var(--mm-text2)]">
+                {step.hint}
+              </span>
             </span>
           </li>
         ))}
       </ol>
-      {onOpenTab ? (
-        <div className="mm-proc-panel__actions">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary" })}
-            onClick={() => onOpenTab("libraries")}
-          >
-            Set up libraries
-          </button>
-        </div>
-      ) : null}
-    </MmOverviewSection>
+    </QuietSection>
   );
 }
 
@@ -384,14 +398,17 @@ export function ProcessingOverviewTab({
   });
 
   const stats = overviewStats.data;
-  const finished = stats ? stats.files_processed + stats.files_failed : 0;
+  // The denominator the server divides by: OverviewStatsStore calls it `terminal`
+  // (completed + failed). It is not a count of successes, so nothing on screen may
+  // present it as one — the tile beside this one already says how many came back.
+  const terminal = stats ? stats.files_processed + stats.files_failed : 0;
   const counts = files.data?.status_counts ?? {};
-  const inHand = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  const censusTotal = Object.values(counts).reduce((sum, n) => sum + n, 0);
   const shownInBand = FLOW_STAGES.reduce(
     (sum, stage) => sum + (counts[stage.status] ?? 0),
     0,
   );
-  const elsewhere = inHand - shownInBand;
+  const elsewhere = censusTotal - shownInBand;
 
   const ruleSetById = new Map(
     (ruleSets.data ?? []).map((ruleSet) => [ruleSet.id, ruleSet]),
@@ -423,16 +440,16 @@ export function ProcessingOverviewTab({
             <AttentionList items={attention} onOpenTab={onOpenTab} />
           ) : null}
 
-          {files.isPending || files.isError || inHand === 0 ? (
+          {files.isPending || files.isError || censusTotal === 0 ? (
             <p
               className="mm-quiet-note"
               data-testid="processing-overview-flow-empty"
             >
               {files.isPending
-                ? "Counting the files Weir has in hand…"
+                ? "Counting the files Weir is holding…"
                 : files.isError
-                  ? "Could not count the files Weir has in hand. The Files tab still works."
-                  : "Weir has no files in hand yet. Nothing has landed in a watched folder since the last scan."}
+                  ? "Could not count the files Weir is holding. The Files tab still works."
+                  : "Weir is holding no files yet. Nothing has landed in a watched folder since the last scan."}
             </p>
           ) : (
             <FlowBand
@@ -498,11 +515,11 @@ export function ProcessingOverviewTab({
               <div className="mm-figure__value">
                 {!stats
                   ? "…"
-                  : finished === 0
+                  : terminal === 0
                     ? "—"
                     : `${stats.success_rate_percent}%`}
               </div>
-              {stats && finished > 0 ? (
+              {stats && terminal > 0 ? (
                 <div
                   className="mm-figure__meter"
                   aria-hidden="true"
@@ -516,9 +533,9 @@ export function ProcessingOverviewTab({
               <p className="mm-figure__note">
                 {!stats
                   ? "Last 30 days"
-                  : finished === 0
-                    ? "No finished jobs yet"
-                    : `${finished.toLocaleString()} finished · ${stats.files_failed.toLocaleString()} failed`}
+                  : terminal === 0
+                    ? "Nothing finished yet"
+                    : `${stats.files_processed.toLocaleString()} succeeded · ${stats.files_failed.toLocaleString()} failed`}
               </p>
             </section>
 

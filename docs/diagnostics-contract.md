@@ -37,6 +37,6 @@ Messages must explain what happened and what the user should do next. Do not exp
 
 ## Runtime truthfulness
 
-Readiness, In hand status, metrics, activity, and settings pages must reflect real runtime behaviour. A disabled worker, unavailable dependency, queued but unprocessed job, or skipped deletion must be shown as degraded/skipped, not successful.
+Readiness, Home status, metrics, activity, and settings pages must reflect real runtime behaviour. A disabled worker, unavailable dependency, queued but unprocessed job, or skipped deletion must be shown as degraded/skipped, not successful.
 
-In hand and overview success totals must be derived from explicit terminal outcome components. Do not calculate a success total from queued jobs, scanned files, attempted work, or broad completed queue rows unless that queue row itself proves finalized work.
+Home and overview success totals must be derived from explicit terminal outcome components. Do not calculate a success total from queued jobs, scanned files, attempted work, or broad completed queue rows unless that queue row itself proves finalized work.

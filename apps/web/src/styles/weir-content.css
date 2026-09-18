@@ -78,6 +78,12 @@
   position: relative;
   display: flex;
   flex-wrap: wrap;
+  /* The band stretches every segment to the tallest one. Without this, a wrapping flex
+   * container shares that spare height out *between* its lines, so a segment with no
+   * hint (or a one-line hint) pushed its number down and one with a two-line hint pulled
+   * it up: measured on main, the numbers across one band sat up to 29px apart. Packing
+   * the lines at the top puts every number on the same line. */
+  align-content: flex-start;
   align-items: baseline;
   /* 0 in a row, so widths are pure share; 100% when stacked, so each takes a line. */
   flex-basis: calc(var(--mm-band-stacked) * 100%);
@@ -157,10 +163,21 @@
   /* In a row, every label reserves two lines whether it needs them or not, so a stage
    * whose name wraps does not push its number below the others: the numbers across the
    * band have to sit on one line for the band to be read as a comparison at all. */
-  min-height: calc((1 - var(--mm-band-stacked)) * 2.45em);
+  /* Sized from the eyebrow token, not `em`: a segment near its floor takes its label
+   * down to 0.625rem, and an em reservation shrank with it and lifted that number 3px
+   * above the rest. */
+  min-height: calc(
+    (1 - var(--mm-band-stacked)) * 2.45 * var(--mm-type-eyebrow)
+  );
   flex-grow: 1;
+  /* Wrapping on, so the lines pack at the top of the reservation; items stay centred
+   * on their own line so the live dot still sits on the text it belongs to. The line
+   * height makes 2.45em exactly two lines — inherited, a wrapped label overran it. */
+  flex-wrap: wrap;
+  align-content: flex-start;
   align-items: center;
   gap: 0.4rem;
+  line-height: 1.225;
   color: var(--mm-text3);
   font-size: var(--mm-type-eyebrow);
   font-weight: 600;
@@ -235,6 +252,10 @@
   }
 
   .mm-lead-band__value {
+    /* The full-size number's box, with this smaller one standing on its floor: the
+     * digits then share a baseline with their neighbours instead of floating above
+     * them. 0.5rem is 1.875rem less 1.375rem. */
+    padding-top: 0.5rem;
     font-size: 1.375rem;
     letter-spacing: -0.02em;
   }
@@ -505,14 +526,40 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* Three supporters in two columns left the third alone on its own row. They keep
+   * one row of three under the hero instead, the same as two keep one row of two. */
+  .mm-figure-row:has(> .mm-figure:nth-child(4)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .mm-figure--hero {
     grid-column: 1 / -1;
   }
 }
 
+/* Three supporters are narrow enough that a longer label wraps ("Cannot be processed"),
+ * which dropped that tile's number 18px below its neighbours'. In a row that dense,
+ * every supporter reserves two label lines so the numbers stay level. A row of one or
+ * two supporters never wraps its labels and is left exactly as it was. */
+.mm-figure-row:has(> .mm-figure:nth-child(4))
+  > .mm-figure:not(.mm-figure--hero)
+  .mm-figure__eyebrow {
+  align-items: flex-start;
+  min-height: 2.6em;
+  line-height: 1.3;
+}
+
 @media (max-width: 720px) {
-  .mm-figure-row {
+  .mm-figure-row,
+  .mm-figure-row:has(> .mm-figure:nth-child(4)) {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* One tile per line: nothing beside a label to line up with. */
+  .mm-figure-row:has(> .mm-figure:nth-child(4))
+    > .mm-figure:not(.mm-figure--hero)
+    .mm-figure__eyebrow {
+    min-height: 0;
   }
 
   .mm-figure--hero .mm-figure__value {
@@ -685,9 +732,12 @@
   border-radius: 4px;
 }
 
+/* No `margin` here. Preflight already zeroes it, and a note's distance from what it
+ * follows is its parent's call: declaring it in this unlayered rule silently cancelled
+ * the `mt-*` on nineteen notes across ten files, so every one of them sat flush
+ * against the table or heading above it. */
 .mm-quiet-note {
   max-width: 44rem;
-  margin: 0;
   color: var(--mm-text2);
   font-size: var(--mm-type-body);
   line-height: 1.55;

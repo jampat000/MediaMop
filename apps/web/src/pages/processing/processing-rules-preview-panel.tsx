@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import type { ProcessingRuleSetWrite } from "../../lib/processing/libraries-api";
+import { mmStatusPillClass } from "../../lib/ui/mm-status-tone";
 import {
   useProcessingLibrariesQuery,
   useProcessingRulesPreview,
@@ -72,13 +73,7 @@ function TrackRow({ track }: { track: ProcessingRulesPreviewTrack }) {
         {track.type === "audio" && track.channels > 0 ? track.channels : "—"}
       </td>
       <td className="px-3 py-2">
-        <span
-          className={
-            kept
-              ? "rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300"
-              : "rounded-full border border-red-400/40 bg-red-400/10 px-2 py-0.5 text-xs font-semibold text-red-300"
-          }
-        >
+        <span className={mmStatusPillClass(kept ? "healthy" : "failed")}>
           {kept ? "Keep" : "Drop"}
         </span>
       </td>
@@ -104,11 +99,9 @@ function PreviewResults({ result }: { result: ProcessingRulesPreviewResult }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span
-          className={
-            result.remux_required
-              ? "rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 font-semibold text-amber-300"
-              : "rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 font-semibold text-emerald-300"
-          }
+          className={mmStatusPillClass(
+            result.remux_required ? "warning" : "healthy",
+          )}
         >
           {result.remux_required
             ? "A remux would run"

@@ -173,7 +173,9 @@ export function LoginPage() {
           ) : null}
 
           {boot.data?.bootstrap_allowed ? (
-            <p className="mm-auth-lead mt-2">
+            // No `mt-2`: `.mm-auth-lead` sets its own margin, so the utility never applied.
+            // The gap above comes from the banner or lead paragraph before it, as it always did.
+            <p className="mm-auth-lead">
               First-time setup?{" "}
               <Link
                 to="/setup"
@@ -239,10 +241,11 @@ export function LoginPage() {
                 {loginErrorMessage}
               </p>
             ) : null}
-            <label className="flex items-start gap-3 rounded-md border border-[var(--mm-line)] bg-[var(--mm-surface-2)] px-3 py-3 text-sm text-[var(--mm-text2)]">
+            {/* A checkbox row, not a filled box inside the sign-in card. */}
+            <label className="flex items-start gap-3 py-1 text-sm text-[var(--mm-text2)]">
               <input
                 type="checkbox"
-                className="mt-0.5 h-4 w-4"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
                 aria-label="Trust this device"
                 checked={trustedDevice}
                 onChange={(e) => setTrustedDevice(e.target.checked)}

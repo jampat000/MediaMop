@@ -9,6 +9,10 @@ import {
 } from "../../components/shared/quiet-section";
 import { ScheduleGridEditor } from "./schedule-grid-editor";
 import { useMeQuery } from "../../lib/auth/queries";
+import {
+  mmStatusPillClass,
+  type MmStatusTone,
+} from "../../lib/ui/mm-status-tone";
 import { useMediaManagerConnectionsQuery } from "../../lib/media-managers/queries";
 import {
   PROCESSING_MEDIA_TYPE_LABELS,
@@ -280,14 +284,10 @@ function managerCoverageLabel(value: string): string {
   return "No upstream signal";
 }
 
-function managerCoverageClass(value: string): string {
-  if (value === "connected") {
-    return "border-emerald-700/50 bg-emerald-500/10 text-emerald-300";
-  }
-  if (value === "unreachable") {
-    return "border-rose-700/50 bg-rose-500/10 text-rose-300";
-  }
-  return "border-amber-700/50 bg-amber-500/10 text-amber-300";
+function managerCoverageTone(value: string): MmStatusTone {
+  if (value === "connected") return "healthy";
+  if (value === "unreachable") return "failed";
+  return "warning";
 }
 
 /**
@@ -555,11 +555,11 @@ export function ProcessingLibrariesSection() {
           editable ? (
             <button
               type="button"
-              className={mmActionButtonClass({ variant: "primary" })}
+              className="mm-quiet-link"
               onClick={startAdd}
               data-testid="processing-library-add"
             >
-              Add library
+              Add library →
             </button>
           ) : null
         }
@@ -622,7 +622,9 @@ export function ProcessingLibrariesSection() {
                       </td>
                       <td data-label="Manager">
                         <span
-                          className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${managerCoverageClass(library.manager_coverage)}`}
+                          className={mmStatusPillClass(
+                            managerCoverageTone(library.manager_coverage),
+                          )}
                         >
                           {managerCoverageLabel(library.manager_coverage)}
                         </span>
@@ -776,7 +778,7 @@ export function ProcessingLibrariesSection() {
                     >
                       <input
                         type="checkbox"
-                        className="mt-1"
+                        className="mt-1 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
                         checked={selectedDiscoveredKeys.includes(item.key)}
                         disabled={unavailable}
                         onChange={(event) =>

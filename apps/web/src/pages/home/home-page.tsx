@@ -1,5 +1,6 @@
 /**
- * "In hand" — what Weir is currently responsible for (#463).
+ * Home — what Weir is currently responsible for (#463). Until 3.0.0 this screen was
+ * called "In hand"; the name changed, the subject did not.
  *
  * Weir is a stage in the middle of a pipeline. A media manager downloads a release into a
  * completed folder, Weir takes it, works on it, and writes it to an output folder the
@@ -8,7 +9,7 @@
  *
  * It answers four questions, in this order:
  *   1. what arrived and is waiting
- *   2. what is in hand right now, and what is happening to each file
+ *   2. what it is holding right now, and what is happening to each file
  *   3. what is stuck — and therefore missing from the manager
  *   4. what was handed back
  *
@@ -52,7 +53,7 @@ import {
 import { useSystemReadinessQuery } from "../../lib/system/readiness-queries";
 
 /** Statuses that mean the file is Weir's responsibility right now. */
-const IN_HAND: ReadonlySet<string> = new Set([
+const HELD_STATUSES: ReadonlySet<string> = new Set([
   "unprocessed",
   "processing",
   "on_hold",
@@ -182,7 +183,7 @@ function statusToneClass(status: string): string {
   if (STUCK.has(status)) return "mm-status-text--failed";
   if (status === "processing") return "mm-status-text--warning";
   if (status === "processed") return "mm-status-text--healthy";
-  if (status === "blocked_upstream") return "mm-inhand-row__state--held";
+  if (status === "blocked_upstream") return "mm-home-row__state--held";
   return "";
 }
 
@@ -199,26 +200,26 @@ function FileRow({
   const percent = file.progress_percent;
 
   return (
-    <li className="mm-inhand-row" data-testid="in-hand-row">
-      <div className="mm-inhand-row__main">
+    <li className="mm-home-row" data-testid="home-row">
+      <div className="mm-home-row__main">
         <button
           type="button"
-          className="mm-inhand-row__name"
+          className="mm-home-row__name"
           title={`What happened to ${file.relative_path}`}
           onClick={() => onOpen(file)}
         >
           {name}
         </button>
-        <span className="mm-inhand-row__facts">
+        <span className="mm-home-row__facts">
           {[formatBytes(file.size_bytes), facts].filter(Boolean).join(" · ")}
         </span>
         <DirectPlayLine
           directPlay={file.direct_play}
-          testId={`in-hand-direct-play-${file.id}`}
+          testId={`home-direct-play-${file.id}`}
         />
       </div>
 
-      <div className="mm-inhand-row__state">
+      <div className="mm-home-row__state">
         <span className={statusToneClass(file.status)}>
           {PROCESSING_FILE_STATUS_LABELS[file.status] ?? file.status}
           {file.blocked_by_connection
@@ -227,12 +228,12 @@ function FileRow({
         </span>
         {/* The reason sentence is written for the operator by the pass itself. */}
         {file.status_reason ? (
-          <span className="mm-inhand-row__reason">{file.status_reason}</span>
+          <span className="mm-home-row__reason">{file.status_reason}</span>
         ) : null}
         {percent !== null ? (
-          <span className="mm-inhand-row__progress">
+          <span className="mm-home-row__progress">
             <span
-              className="mm-inhand-row__progress-track"
+              className="mm-home-row__progress-track"
               role="progressbar"
               aria-valuenow={Math.round(percent)}
               aria-valuemin={0}
@@ -240,11 +241,11 @@ function FileRow({
               aria-label={`Processing ${name}`}
             >
               <span
-                className="mm-inhand-row__progress-fill"
+                className="mm-home-row__progress-fill"
                 style={{ width: `${Math.max(2, Math.round(percent))}%` }}
               />
             </span>
-            <span className="mm-inhand-row__progress-text">
+            <span className="mm-home-row__progress-text">
               {Math.round(percent)}%{eta ? ` · ${eta}` : ""}
             </span>
           </span>
@@ -267,7 +268,7 @@ function HoldingBand({
   }));
   const total = stages.reduce((sum, stage) => sum + stage.count, 0);
   return (
-    <div className="mm-lead-band" data-testid="in-hand-band">
+    <div className="mm-lead-band" data-testid="home-band">
       {stages.map((stage) => {
         const live = Boolean(stage.live) && stage.count > 0;
         const modifier =
@@ -285,7 +286,7 @@ function HoldingBand({
             className={`mm-lead-band__segment${modifier}`}
             style={{ "--mm-flow-share": share } as CSSProperties}
             to={filesHref(stage.status)}
-            data-testid="in-hand-band-stage"
+            data-testid="home-band-stage"
           >
             <span className="mm-lead-band__label">
               {stage.label}
@@ -337,7 +338,7 @@ function QuietSection({
   );
 }
 
-export function InHandPage(): React.ReactElement {
+export function HomePage(): React.ReactElement {
   useActivityStreamInvalidations(LIVE_KEYS, { exact: true, throttleMs: 1_500 });
   const files = useProcessingFilesQuery(FILES_QUERY);
   const today = useProcessingOverviewStatsQuery(1);
@@ -360,7 +361,9 @@ export function InHandPage(): React.ReactElement {
   const closeStory = useCallback(() => setStoryFile(null), []);
 
   const grouped = useMemo(() => {
-    const rows = (files.data?.files ?? []).filter((f) => IN_HAND.has(f.status));
+    const rows = (files.data?.files ?? []).filter((f) =>
+      HELD_STATUSES.has(f.status),
+    );
     const byLibrary = new Map<string, ProcessingFile[]>();
     for (const row of rows) {
       const key = row.library_name || "Unknown library";
@@ -398,7 +401,10 @@ export function InHandPage(): React.ReactElement {
 
   const counts = files.data?.status_counts ?? {};
   const working = counts.processing ?? 0;
-  const inHandTotal = [...IN_HAND].reduce((n, s) => n + (counts[s] ?? 0), 0);
+  const heldTotal = [...HELD_STATUSES].reduce(
+    (n, s) => n + (counts[s] ?? 0),
+    0,
+  );
   const holdingTotal = HOLDING_STAGES.reduce(
     (n, stage) => n + (counts[stage.status] ?? 0),
     0,
@@ -464,7 +470,7 @@ export function InHandPage(): React.ReactElement {
         <p className="mm-page__eyebrow">
           Between your manager and your storage
         </p>
-        <h1 className="mm-page__title">In hand</h1>
+        <h1 className="mm-page__title">Home</h1>
         <p className="mm-page__lead">
           Files Weir is responsible for right now, between your media manager
           handing them over and getting them back.
@@ -474,7 +480,7 @@ export function InHandPage(): React.ReactElement {
       <div className="mm-quiet-stack">
         <div className="mm-lead">
           {interrupts.length > 0 ? (
-            <ul className="mm-interrupt" data-testid="in-hand-notices">
+            <ul className="mm-interrupt" data-testid="home-notices">
               {interrupts.map((item) => (
                 <li key={item.key} className="mm-interrupt__item">
                   <span className="mm-interrupt__text">{item.text}</span>
@@ -489,15 +495,15 @@ export function InHandPage(): React.ReactElement {
           {noWatchedFolder ? null : (
             <>
               {holdingTotal === 0 ? (
-                <p className="mm-quiet-note" data-testid="in-hand-band-empty">
-                  Weir has nothing in hand. Anything your manager drops in a
-                  watched folder shows up here after the next scan.
+                <p className="mm-quiet-note" data-testid="home-band-empty">
+                  Weir is holding nothing right now. Anything your manager drops
+                  in a watched folder shows up here after the next scan.
                 </p>
               ) : (
                 <HoldingBand counts={counts} />
               )}
 
-              <p className="mm-lead-caption" data-testid="in-hand-caption">
+              <p className="mm-lead-caption" data-testid="home-caption">
                 <span>
                   {holdingTotal === 0
                     ? "Weir picks a file up once your manager has finished writing it."
@@ -507,13 +513,13 @@ export function InHandPage(): React.ReactElement {
                 <span>
                   {working > 0
                     ? `${working.toLocaleString()} being worked on right now.`
-                    : inHandTotal > 0
-                      ? `${inHandTotal.toLocaleString()} waiting their turn.`
+                    : heldTotal > 0
+                      ? `${heldTotal.toLocaleString()} waiting their turn.`
                       : "Nothing is waiting."}
                 </span>
               </p>
 
-              <div className="mm-figure-row" data-testid="in-hand-today">
+              <div className="mm-figure-row" data-testid="home-today">
                 <section className="mm-figure mm-figure--hero">
                   <div className="mm-figure__eyebrow">
                     <span>Handed back today</span>
@@ -600,7 +606,7 @@ export function InHandPage(): React.ReactElement {
 
         {stuck.length > 0 ? (
           <QuietSection
-            headingId="in-hand-stuck"
+            headingId="home-stuck"
             heading="Stuck in Weir's hands"
             aside={
               <Link
@@ -615,7 +621,7 @@ export function InHandPage(): React.ReactElement {
               Your media manager will not see these until they are dealt with.
               The originals are untouched in the watched folder.
             </p>
-            <ul className="mm-inhand-list">
+            <ul className="mm-home-list">
               {stuck.map((file) => (
                 <FileRow key={file.id} file={file} onOpen={openStory} />
               ))}
@@ -624,7 +630,7 @@ export function InHandPage(): React.ReactElement {
         ) : null}
 
         {grouped.length === 0 && stuck.length === 0 ? (
-          <QuietSection headingId="in-hand-empty" heading="Nothing in hand">
+          <QuietSection headingId="home-empty" heading="Nothing held right now">
             <p className="mm-quiet-note">
               Every file your manager handed over has been dealt with and passed
               back. New arrivals in a watched folder will show up here.
@@ -642,7 +648,7 @@ export function InHandPage(): React.ReactElement {
                 </p>
               }
             >
-              <ul className="mm-inhand-list">
+              <ul className="mm-home-list">
                 {rows.map((file) => (
                   <FileRow key={file.id} file={file} onOpen={openStory} />
                 ))}

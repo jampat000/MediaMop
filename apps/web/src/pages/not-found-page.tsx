@@ -20,7 +20,7 @@ export function NotFoundPage() {
         to="/"
         className="mt-6 text-sm font-medium text-[var(--mm-accent)] underline-offset-4 hover:underline"
       >
-        Go to In hand
+        Go to Home
       </Link>
     </main>
   );

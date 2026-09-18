@@ -106,7 +106,7 @@ export function AppErrorScreen({
               className="text-sm font-medium text-[var(--mm-accent)] underline-offset-4 hover:underline"
               href="/"
             >
-              Go to In hand
+              Go to Home
             </a>
           </div>
           <details className="mt-5 text-sm text-[var(--mm-text2)]">

@@ -158,9 +158,9 @@ export function StartupGate({ children }: { children: ReactNode }) {
                 <span
                   className={
                     step.status === "ready"
-                      ? "mt-1 h-2.5 w-2.5 rounded-full bg-emerald-400"
+                      ? "mt-1 h-2.5 w-2.5 rounded-full bg-[var(--mm-status-healthy-text)]"
                       : state.kind === "failed"
-                        ? "mt-1 h-2.5 w-2.5 rounded-full bg-red-400"
+                        ? "mt-1 h-2.5 w-2.5 rounded-full bg-[var(--mm-status-failed-text)]"
                         : "mt-1 h-2.5 w-2.5 rounded-full bg-[var(--mm-accent)]"
                   }
                 />

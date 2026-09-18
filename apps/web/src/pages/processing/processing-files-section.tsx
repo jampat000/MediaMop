@@ -32,6 +32,7 @@ import {
   mmEditableTextFieldClass,
   mmSelectFieldClass,
 } from "../../lib/ui/mm-control-roles";
+import { mmStatusPillClass } from "../../lib/ui/mm-status-tone";
 import { parseAppDate, useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { usePauseQuery } from "../../lib/pause/pause-queries";
 
@@ -118,20 +119,8 @@ const PROCESSING_STATUS_TONES: Record<
   disabled: "neutral",
 };
 
-const STATUS_TONE_CLASS: Record<ProcessingStatusTone, string> = {
-  healthy:
-    "text-[var(--mm-status-healthy-text)] bg-[var(--mm-status-healthy-bg)]",
-  info: "text-[var(--mm-status-info-text)] bg-[var(--mm-status-info-bg)]",
-  warning:
-    "text-[var(--mm-status-warning-text)] bg-[var(--mm-status-warning-bg)]",
-  neutral: "text-[var(--mm-text3)] bg-[var(--mm-well-bg)]",
-};
-
-const STATUS_PILL_BASE =
-  "inline-flex items-center whitespace-nowrap rounded-full border border-current px-[0.55rem] py-[0.2rem] text-[0.66rem] font-bold leading-[1.2] tracking-[0.04em]";
-
 function statusPillClass(status: ProcessingFileStatus): string {
-  return `${STATUS_PILL_BASE} ${STATUS_TONE_CLASS[PROCESSING_STATUS_TONES[status]]}`;
+  return mmStatusPillClass(PROCESSING_STATUS_TONES[status]);
 }
 
 function fileStatusFromUrl(): ProcessingFileStatus | undefined {
@@ -592,12 +581,12 @@ export function ProcessingFilesSection() {
   // Every file Weir holds, and the part of it the band draws. `status_counts` covers all
   // eleven statuses; BUCKETS draws nine, so `passed_through` and `rejected` are counted
   // and said out loud in the caption rather than quietly dropped.
-  const inHand = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  const censusTotal = Object.values(counts).reduce((sum, n) => sum + n, 0);
   const shownInBand = BUCKETS.reduce(
     (sum, status) => sum + (counts[status] ?? 0),
     0,
   );
-  const elsewhere = inHand - shownInBand;
+  const elsewhere = censusTotal - shownInBand;
   // The same arithmetic the old "Needs action" tile did. It moves into the band's caption
   // rather than being a fourth number in a box above the band.
   const needsAction =
@@ -868,7 +857,7 @@ export function ProcessingFilesSection() {
       data-testid="processing-files-section"
     >
       <div className="mm-lead">
-        {inHand === 0 ? (
+        {censusTotal === 0 ? (
           <p
             className="mm-quiet-note"
             data-testid="processing-files-flow-empty"
@@ -887,7 +876,7 @@ export function ProcessingFilesSection() {
 
         {/* The caption explains the band. With no band drawn there is nothing for it to
             explain, and the empty sentence above has already said the whole story. */}
-        {inHand === 0 ? null : (
+        {censusTotal === 0 ? null : (
           <p
             className="mm-lead-caption"
             data-testid="processing-files-flow-caption"
@@ -923,11 +912,11 @@ export function ProcessingFilesSection() {
               className="mm-quiet-link"
               onClick={() => selectFileStatus(undefined)}
             >
-              Show all {inHand.toLocaleString()} files →
+              Show all {censusTotal.toLocaleString()} files →
             </button>
           ) : (
             <span className="text-xs text-[var(--mm-text3)]">
-              {inHand.toLocaleString()} files
+              {censusTotal.toLocaleString()} files
             </span>
           )
         }
@@ -1115,9 +1104,7 @@ export function ProcessingFilesSection() {
                       {/* The outcome word itself says what happened; the chip is a shape,
                         not a verdict, so it stays tone-neutral rather than painting every
                         record — including a failed one — healthy green as it used to. */}
-                      <span
-                        className={`${STATUS_PILL_BASE} ${STATUS_TONE_CLASS.neutral}`}
-                      >
+                      <span className={mmStatusPillClass("neutral")}>
                         {(entry.outcome || "recorded").replaceAll("_", " ")}
                       </span>
                     </div>
@@ -1159,7 +1146,7 @@ export function ProcessingFilesSection() {
           // When Weir holds nothing at all the lead already said so, and the strongest
           // empty wins outright rather than saying it twice. This line is for the other
           // empty: files exist, but the filters on this screen hide all of them.
-          inHand === 0 ? null : (
+          censusTotal === 0 ? null : (
             <p className="mt-5 text-sm text-[var(--mm-text3)]">
               No files match. Weir records a file the first time a scan looks at
               it.

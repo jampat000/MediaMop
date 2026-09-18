@@ -57,7 +57,7 @@ describe("AppShell", () => {
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<AppShell />}>
-            <Route index element={<div>In hand</div>} />
+            <Route index element={<div>Home</div>} />
           </Route>
         </Routes>
       </MemoryRouter>,
@@ -72,7 +72,7 @@ describe("AppShell", () => {
     expect(screen.queryByText(/feature limits/i)).not.toBeInTheDocument();
   });
 
-  it("has no Dashboard entry; In hand is the main screen (#459)", () => {
+  it("has no Dashboard entry; Home is the main screen (#459)", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
@@ -83,7 +83,7 @@ describe("AppShell", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "In hand" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Dashboard" }),
     ).not.toBeInTheDocument();
@@ -108,7 +108,7 @@ describe("AppShell", () => {
     // The whole nav, in order. A new entry has to be added here deliberately, and a label that
     // stops matching its destination fails rather than quietly misleading someone.
     expect(items).toEqual([
-      ["In hand", "/"],
+      ["Home", "/"],
       ["Activity", "/activity"],
       ["Processing", "/processing"],
       ["Settings", "/settings"],
@@ -120,7 +120,7 @@ describe("AppShell", () => {
       <MemoryRouter initialEntries={["/activity"]}>
         <Routes>
           <Route path="/" element={<AppShell />}>
-            <Route index element={<div>In hand</div>} />
+            <Route index element={<div>Home</div>} />
             <Route path="activity" element={<div>Activity</div>} />
             <Route path="*" element={<div>Not found</div>} />
           </Route>
@@ -137,13 +137,13 @@ describe("AppShell", () => {
     expect(current()).toEqual(["Activity"]);
     unmount();
 
-    // `/dashboard` is the Not found page now that 3.0.0 dropped its redirect (#585). In hand is
+    // `/dashboard` is the Not found page now that 3.0.0 dropped its redirect (#585). Home is
     // the index route, so it must not claim to be the screen you are on.
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <Routes>
           <Route path="/" element={<AppShell />}>
-            <Route index element={<div>In hand</div>} />
+            <Route index element={<div>Home</div>} />
             <Route path="*" element={<div>Not found</div>} />
           </Route>
         </Routes>
@@ -178,7 +178,7 @@ describe("AppShell", () => {
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<AppShell />}>
-            <Route index element={<div>In hand page</div>} />
+            <Route index element={<div>Home page</div>} />
             <Route path="activity" element={<div>Activity page</div>} />
           </Route>
         </Routes>

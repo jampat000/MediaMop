@@ -10,6 +10,12 @@ worded correctly until a still-converting screen settles.
 image below is unchanged; only prose was edited, and only where a sentence was wrong
 independent of how an in-flight screen finishes.
 
+> **Since written:** the main screen this document calls "In hand" was renamed **Home** in
+> #614, and its files moved with it: `screenshots/in-hand*.png` are now `screenshots/home*.png`,
+> `docs-site/static/img/in-hand.png` is `home.png`, `pages/in-hand/in-hand-page.tsx` is
+> `pages/home/home-page.tsx`, `mm-inhand-*` is `mm-home-*`, and the harness slug `04-in-hand`
+> is `04-home`. The inventory below is left as it was written, as a record of what it found.
+
 > **Update (2026-09-18): every conversion in the table below has now merged**, and the items this
 > document deferred to "once a shipped screen settles" have been worked through — see
 > [Deferred](#deferred--needs-a-shipped-screen-to-word-correctly) and

@@ -45,7 +45,7 @@ describe("ErrorBoundary", () => {
 
     // A plain anchor on purpose: this screen also renders outside RouterProvider, where a
     // react-router `Link` would throw and take the error screen down with it.
-    const home = screen.getByRole("link", { name: "Go to In hand" });
+    const home = screen.getByRole("link", { name: "Go to Home" });
     expect(home).toHaveAttribute("href", "/");
   });
 

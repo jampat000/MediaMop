@@ -687,10 +687,7 @@ export function ProcessingRuleSetWorkspace() {
           !creating ? (
             <button
               type="button"
-              className={mmActionButtonClass({
-                variant: "primary",
-                disabled: !editable,
-              })}
+              className="mm-quiet-link"
               disabled={!editable}
               onClick={() => {
                 setCreating(true);
@@ -700,7 +697,7 @@ export function ProcessingRuleSetWorkspace() {
                 setAdvancedOrderingOpen(false);
               }}
             >
-              New profile
+              New profile →
             </button>
           ) : null
         }
@@ -737,11 +734,13 @@ export function ProcessingRuleSetWorkspace() {
         ) : null}
 
         {!draft ? (
-          <div className="mt-5 rounded-xl border border-dashed border-[var(--mm-border)] px-4 py-6 text-sm text-[var(--mm-text2)]">
-            <p className="font-medium text-[var(--mm-text1)]">
+          <div className="mt-5">
+            <p className="text-sm font-medium text-[var(--mm-text1)]">
               No profiles yet
             </p>
-            <p className="mt-1">Create one, then assign it under Libraries.</p>
+            <p className="mm-quiet-note mt-1">
+              Create one, then assign it under Libraries.
+            </p>
           </div>
         ) : (
           <div className="mt-6 space-y-5 border-t border-[var(--mm-border)] pt-6">
@@ -749,7 +748,7 @@ export function ProcessingRuleSetWorkspace() {
               {textField("Profile name", "name", "English feature films")}
             </div>
 
-            <div className="grid items-start gap-10 xl:grid-cols-2 xl:gap-x-14">
+            <div className="grid max-w-2xl gap-10">
               <ProfileSettingsSection
                 step={1}
                 title="Audio"
@@ -1013,7 +1012,7 @@ export function ProcessingRuleSetWorkspace() {
                 title="Remove from container"
                 detail="Select optional streams and tags Weir should strip after track selection."
               >
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3">
                   {toggle(
                     "Embedded images",
                     "Strip embedded cover art.",
@@ -1245,11 +1244,11 @@ export function ProcessingRuleSetWorkspace() {
             </span>
             <button
               type="button"
-              className={mmActionButtonClass({ variant: "secondary" })}
+              className="mm-quiet-link"
               aria-expanded={providerEditorOpen}
               onClick={() => setProviderEditorOpen((open) => !open)}
             >
-              {providerEditorOpen ? "Close" : "Configure"}
+              {providerEditorOpen ? "Close →" : "Configure →"}
             </button>
           </>
         }

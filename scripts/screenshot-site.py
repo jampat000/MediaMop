@@ -78,7 +78,7 @@ GATED_SCREENS: list[Screen] = [
 # Every other screen the app has, in review order. Tabs and sub-views are addressed by their own
 # query params (`?tab=`, `?view=`), exactly as an operator's bookmark would.
 NORMAL_SCREENS: list[Screen] = [
-    Screen(4, "in-hand", "/", '[data-testid="shell-ready"]', "In hand"),
+    Screen(4, "home", "/", '[data-testid="shell-ready"]', "Home"),
     Screen(5, "activity", "/activity", '[data-testid="activity-feed"]', "Activity"),
     Screen(
         6,
@@ -164,9 +164,51 @@ NORMAL_SCREENS: list[Screen] = [
         '[data-testid="processing-maintenance-section"]',
         "Processing - Maintenance",
     ),
-    Screen(18, "settings", "/settings", '[data-testid="suite-settings-page"]', "Settings"),
+    Screen(18, "settings", "/settings", '[data-testid="suite-settings-page"]', "Settings - General"),
     Screen(
         19,
+        "settings-security",
+        "/settings?tab=security",
+        '[data-testid="suite-settings-security"]',
+        "Settings - Security",
+    ),
+    Screen(
+        20,
+        "settings-backup",
+        "/settings?tab=backup",
+        '[data-testid="suite-settings-backup-tab"]',
+        "Settings - Backup and restore",
+    ),
+    Screen(
+        21,
+        "settings-upgrade",
+        "/settings?tab=upgrade",
+        '[data-testid="suite-settings-upgrade-tab"]',
+        "Settings - Upgrade",
+    ),
+    Screen(
+        22,
+        "settings-logs",
+        "/settings?tab=logs",
+        '[data-testid="suite-settings-logs"]',
+        "Settings - Logs",
+    ),
+    Screen(
+        23,
+        "settings-notifications",
+        "/settings?tab=notifications",
+        '[data-testid="suite-settings-notifications"]',
+        "Settings - Notifications",
+    ),
+    Screen(
+        24,
+        "settings-media-managers",
+        "/settings?tab=media-managers",
+        '[data-testid="media-manager-add"]',
+        "Settings - Media managers",
+    ),
+    Screen(
+        25,
         "not-found",
         "/this-page-does-not-exist-weir-screenshot-harness",
         "text=Page not found",

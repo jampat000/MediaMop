@@ -16,10 +16,8 @@ import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
-import {
-  SettingsQuietSection,
-  SUITE_SETTINGS_PREMIUM_PANEL_CLASS,
-} from "./settings-shared";
+import { QuietFieldGroup } from "../../components/shared/quiet-section";
+import { SettingsQuietSection } from "./settings-shared";
 
 const EVENT_LABELS: Record<string, string> = {
   job_completed: "Any job completed",
@@ -77,9 +75,7 @@ function ChannelForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
-          Label
-        </span>
+        <span className="mb-1 block text-sm text-[var(--mm-text2)]">Label</span>
         <input
           type="text"
           className={mmEditableTextFieldClass}
@@ -93,7 +89,7 @@ function ChannelForm({
       </label>
 
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
+        <span className="mb-1 block text-sm text-[var(--mm-text2)]">
           Provider
         </span>
         <select
@@ -108,7 +104,7 @@ function ChannelForm({
       </label>
 
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
+        <span className="mb-1 block text-sm text-[var(--mm-text2)]">
           Webhook URL
         </span>
         <input
@@ -123,7 +119,7 @@ function ChannelForm({
       </label>
 
       <fieldset>
-        <legend className="mb-2 text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
+        <legend className="mb-2 text-sm text-[var(--mm-text2)]">
           Trigger events
         </legend>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -157,10 +153,7 @@ function ChannelForm({
       </label>
 
       {saveError ? (
-        <p
-          className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-          role="alert"
-        >
+        <p className="mm-status-text--failed text-sm" role="alert">
           {saveError}
         </p>
       ) : null}
@@ -376,10 +369,10 @@ export function SettingsNotificationsTab() {
           !showAddForm && editingId === null ? (
             <button
               type="button"
-              className={mmActionButtonClass({ variant: "secondary" })}
+              className="mm-quiet-link"
               onClick={() => setShowAddForm(true)}
             >
-              Add notification channel
+              Add notification channel →
             </button>
           ) : null
         }
@@ -424,10 +417,7 @@ export function SettingsNotificationsTab() {
                       editingId === channel.id ? (
                         <tr key={channel.id}>
                           <td colSpan={3} data-label="">
-                            <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
-                              <p className="text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
-                                Edit channel
-                              </p>
+                            <QuietFieldGroup title="Edit channel">
                               <ChannelForm
                                 initial={{
                                   label: channel.label,
@@ -450,7 +440,7 @@ export function SettingsNotificationsTab() {
                                     : null
                                 }
                               />
-                            </div>
+                            </QuietFieldGroup>
                           </td>
                         </tr>
                       ) : (
@@ -477,10 +467,7 @@ export function SettingsNotificationsTab() {
         )}
 
         {showAddForm ? (
-          <div className={`${SUITE_SETTINGS_PREMIUM_PANEL_CLASS} mt-4`}>
-            <p className="text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
-              New channel
-            </p>
+          <QuietFieldGroup title="New channel" className="mt-6">
             <ChannelForm
               supportedEvents={supportedEvents}
               onSave={handleCreate}
@@ -494,7 +481,7 @@ export function SettingsNotificationsTab() {
                   : null
               }
             />
-          </div>
+          </QuietFieldGroup>
         ) : null}
       </SettingsQuietSection>
 

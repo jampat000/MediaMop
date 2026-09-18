@@ -10,7 +10,7 @@ import type { ProcessingFile } from "../../lib/processing/files-api";
 import * as librariesApi from "../../lib/processing/libraries-api";
 import * as statsApi from "../../lib/processing/overview-stats-api";
 import * as readinessApi from "../../lib/system/readiness-api";
-import { InHandPage } from "./in-hand-page";
+import { HomePage } from "./home-page";
 
 function file(over: Partial<ProcessingFile> = {}): ProcessingFile {
   return {
@@ -115,7 +115,7 @@ function mount(
       <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   );
-  render(<InHandPage />, { wrapper });
+  render(<HomePage />, { wrapper });
 }
 
 afterEach(() => {
@@ -125,7 +125,9 @@ afterEach(() => {
 it("says where the files are, without claiming to know the library", async () => {
   mount([file()], { unprocessed: 12, processing: 3 });
 
-  expect(await screen.findByText("In hand")).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "Home" }),
+  ).toBeInTheDocument();
   expect(screen.getByText("Arriving")).toBeInTheDocument();
   expect(screen.getByText("Handed back today")).toBeInTheDocument();
   // The subject is custody. "Your library" is a claim this product cannot make.
@@ -135,7 +137,7 @@ it("says where the files are, without claiming to know the library", async () =>
 it("sizes each band stage by the number of files sitting in it", async () => {
   mount([file()], { unprocessed: 12, processing: 3, on_hold: 0 });
 
-  const stages = await screen.findAllByTestId("in-hand-band-stage");
+  const stages = await screen.findAllByTestId("home-band-stage");
   const share = (label: string) =>
     stages
       .find((s) => s.textContent?.startsWith(label))
@@ -157,10 +159,10 @@ it("sizes each band stage by the number of files sitting in it", async () => {
 it("says so in a sentence rather than drawing an empty band", async () => {
   mount([], {});
 
-  expect(await screen.findByTestId("in-hand-band-empty")).toBeInTheDocument();
-  expect(screen.queryByTestId("in-hand-band")).not.toBeInTheDocument();
+  expect(await screen.findByTestId("home-band-empty")).toBeInTheDocument();
+  expect(screen.queryByTestId("home-band")).not.toBeInTheDocument();
   // Folders are set, so today's numbers still render.
-  expect(screen.getByTestId("in-hand-today")).toBeInTheDocument();
+  expect(screen.getByTestId("home-today")).toBeInTheDocument();
 });
 
 it("groups files by library", async () => {
@@ -194,7 +196,7 @@ it("shows what a file is, from the probe", async () => {
 it("omits facts for a file nobody has probed yet", async () => {
   mount([file()]);
 
-  await screen.findByTestId("in-hand-row");
+  await screen.findByTestId("home-row");
   // Null means "not measured" and must not render as a zero.
   expect(screen.queryByText(/0 audio tracks/)).not.toBeInTheDocument();
 });
@@ -237,13 +239,13 @@ it("says what being stuck actually costs", async () => {
   ).toBeInTheDocument();
 });
 
-it("reads as finished rather than broken when nothing is in hand", async () => {
+it("reads as finished rather than broken when Weir is holding nothing", async () => {
   mount([]);
 
   await waitFor(() => {
-    expect(screen.getByText("Nothing in hand")).toBeInTheDocument();
+    expect(screen.getByText("Nothing held right now")).toBeInTheDocument();
   });
-  expect(screen.queryByTestId("in-hand-row")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("home-row")).not.toBeInTheDocument();
 });
 
 it("opens a file's story from its row", async () => {
@@ -310,7 +312,7 @@ it("shows the Direct Play badge on a row, and the full reasons in the file's sto
     }),
   ]);
 
-  const badge = await screen.findByTestId("in-hand-direct-play-1");
+  const badge = await screen.findByTestId("home-direct-play-1");
   expect(badge).toHaveTextContent(
     "Direct Play: Apple TV 4K ✓ yes · iPhone ✗ no (DTS audio, +1 more)",
   );
@@ -330,16 +332,16 @@ it("shows the Direct Play badge on a row, and the full reasons in the file's sto
 it("shows no Direct Play badge when no devices are chosen", async () => {
   mount([file({ id: 1, direct_play: [] })]);
 
-  await screen.findByTestId("in-hand-row");
-  expect(screen.queryByTestId("in-hand-direct-play-1")).not.toBeInTheDocument();
+  await screen.findByTestId("home-row");
+  expect(screen.queryByTestId("home-direct-play-1")).not.toBeInTheDocument();
   expect(screen.queryByText(/Direct Play/)).not.toBeInTheDocument();
 });
 
 it("asks nothing of a healthy install", async () => {
   mount([file()]);
 
-  await screen.findByTestId("in-hand-row");
-  expect(screen.queryByTestId("in-hand-notices")).not.toBeInTheDocument();
+  await screen.findByTestId("home-row");
+  expect(screen.queryByTestId("home-notices")).not.toBeInTheDocument();
 });
 
 it("says there is nothing to watch before any watched folder is set (#459)", async () => {
@@ -358,8 +360,8 @@ it("draws no band of zeroes before any watched folder is set", async () => {
 
   // A fresh install must not lead with six empty stages: the setup interrupt wins outright.
   await screen.findByText(/Nothing to watch yet/);
-  expect(screen.queryByTestId("in-hand-band")).not.toBeInTheDocument();
-  expect(screen.queryByTestId("in-hand-today")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("home-band")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("home-today")).not.toBeInTheDocument();
 });
 
 it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", async () => {

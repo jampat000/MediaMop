@@ -206,9 +206,7 @@ export function ServerFolderPickerButton({
                 <span className="font-mono">/media/tv</span>.
               </p>
               {notice ? (
-                <p className="mt-3 rounded-md border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
-                  {notice}
-                </p>
+                <p className="mm-status-text--warning mt-3 text-sm">{notice}</p>
               ) : null}
             </div>
             <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -217,7 +215,7 @@ export function ServerFolderPickerButton({
                   Loading folders...
                 </div>
               ) : error ? (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+                <div className="mm-status-text--failed text-sm" role="alert">
                   {error}
                 </div>
               ) : data && data.entries.length > 0 ? (

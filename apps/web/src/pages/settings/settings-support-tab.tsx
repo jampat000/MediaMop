@@ -47,7 +47,7 @@ export function SettingsSupportTab() {
           </p>
         ) : null}
         {SHOW_SUPPORT_URL_PLACEHOLDER ? (
-          <p className="mm-quiet-table__sub mt-3">
+          <p className="mt-3 text-[length:var(--mm-type-caption)] leading-[1.45] text-[var(--mm-text3)]">
             Development note: set <code>VITE_SUPPORT_URL</code> to show the
             support button.
           </p>

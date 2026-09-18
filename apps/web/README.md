@@ -48,7 +48,7 @@ Then set in this app:
 
 | Path | Purpose |
 |------|---------|
-| `/` | Authenticated app shell root (**In hand**, which #459 folded the old dashboard into), guarded by session + setup wizard checks |
+| `/` | Authenticated app shell root (**Home**, which #459 folded the old dashboard into), guarded by session + setup wizard checks |
 | `/setup` | First-run admin creation (`POST /api/v1/auth/bootstrap`) while allowed; otherwise redirects |
 | `/login` | Session login (`POST /api/v1/auth/login`) |
 | `/setup-wizard` | First-run setup wizard for signed-in users before normal module access |

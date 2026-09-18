@@ -173,21 +173,15 @@ export function SettingsLogsTab() {
           <>
             <button
               type="button"
-              className={mmActionButtonClass({
-                variant: "secondary",
-                disabled: logsQ.isFetching,
-              })}
+              className="mm-quiet-link"
               disabled={logsQ.isFetching}
               onClick={() => void logsQ.refetch()}
             >
-              {logsQ.isFetching ? "Refreshing..." : "Refresh"}
+              {logsQ.isFetching ? "Refreshing…" : "Refresh →"}
             </button>
             <button
               type="button"
-              className={mmActionButtonClass({
-                variant: "tertiary",
-                disabled: !logSearch.trim() && !logLevel && !tracebacksOnly,
-              })}
+              className="mm-quiet-link"
               disabled={!logSearch.trim() && !logLevel && !tracebacksOnly}
               onClick={() => {
                 setLogSearch("");
@@ -195,7 +189,7 @@ export function SettingsLogsTab() {
                 setTracebacksOnly(false);
               }}
             >
-              Clear filters
+              Clear filters →
             </button>
           </>
         }
@@ -206,7 +200,7 @@ export function SettingsLogsTab() {
         </p>
 
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,2fr)_220px_auto]">
-          <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+          <label className="flex flex-col gap-1 text-sm text-[var(--mm-text2)]">
             Search
             <input
               type="text"
@@ -216,7 +210,7 @@ export function SettingsLogsTab() {
               onChange={(e) => setLogSearch(e.target.value)}
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+          <label className="flex flex-col gap-1 text-sm text-[var(--mm-text2)]">
             Level
             <select
               className={mmEditableTextFieldClass}
@@ -229,7 +223,7 @@ export function SettingsLogsTab() {
               <option value="ERROR">Errors</option>
             </select>
           </label>
-          <div className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+          <div className="flex flex-col gap-1 text-sm text-[var(--mm-text2)]">
             <span>Tracebacks only</span>
             <div className="flex gap-2">
               <button

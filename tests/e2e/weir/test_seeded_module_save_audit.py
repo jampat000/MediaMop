@@ -52,7 +52,7 @@ def test_saved_state_persists_across_settings_and_processing(
             form.get_by_role("textbox", name="Watched folder").fill(str(tv_watch))
             form.get_by_role("textbox", name="Output folder").fill(str(tv_output))
             page.get_by_test_id("processing-library-save").click()
-            open_sidebar(page, "In hand")
+            open_sidebar(page, "Home")
             open_sidebar(page, "Processing")
             page.get_by_role("tab", name="Libraries", exact=True).click()
             expect(page.get_by_test_id("processing-libraries-section")).to_contain_text(str(tv_watch))
