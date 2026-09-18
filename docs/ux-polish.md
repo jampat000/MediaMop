@@ -11,6 +11,15 @@ This is the app-wide UX baseline for Weir. Use it when reviewing screens before 
 
 ## Layout
 
+**Superseded for page bodies:** [`design/content-language.md`](design/content-language.md)
+is the standing spec for what sits inside a workspace panel, page by page as each is
+converted. Its rule 3 forbids a card, panel, box or tile anywhere below a page's lead
+band and figure row — the three "card" bullets below describe the pre-redesign layout
+and apply only to what content-language.md's chrome-freeze leaves alone (the sidebar,
+top bar, page header and tab row) and to dialogs, not to a converted page's body.
+Until every page listed in that document has converted, some page bodies below still
+match the old bullets; treat content-language.md as the tie-breaker, not this file.
+
 - Cards in the same section should use consistent spacing, action placement, and visual weight.
 - Primary card actions should sit at the bottom of the card unless the control needs to remain inline for usability.
 - Settings cards should be grouped by user task, not backend implementation.

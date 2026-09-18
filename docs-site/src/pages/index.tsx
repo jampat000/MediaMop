@@ -10,7 +10,7 @@ const features = [
   {
     title: 'Processing',
     description:
-      'Keep the audio and subtitle tracks you want in each download and remove the rest, library by library, with configurable worker lanes.',
+      'Cleans new downloads, and files already in your library: keep the audio and subtitle tracks you want and remove the rest, library by library, with configurable worker lanes.',
     screenshot: '/Weir/img/processing.png',
   },
 ];

@@ -23,12 +23,27 @@ The band answers the first question a page exists to answer:
 | Page              | The band is                                                             |
 | ----------------- | ----------------------------------------------------------------------- |
 | Processing        | The pipeline: six file statuses, left to right, each a filter into Files |
-| In hand           | Where the files in hand are sitting right now                            |
-| Activity          | What has happened in the window being viewed, by outcome                 |
+| In hand           | The six statuses of the pool Weir is holding, left to right, each a filter into Files |
+| Activity          | No band. Shipped without one — see below                                 |
 | Settings          | No band. Settings has no "now" — it starts at rule 3                     |
 
 If you cannot name a "now" for your page, **do not invent one.** A page with no band
 starts at rule 3 and that is a correct outcome, not a shortcut.
+
+**Why Activity has no band.** This table once pencilled Activity in as "by outcome," and
+that turned out to be unbuildable as written (#596). The reason is not that outcome
+counts are unobtainable: `result` is a real stored column and an exact-match
+server-side filter on `GET /api/v1/activity/recent` already, and that endpoint's
+`total` is a genuine count over the whole filtered set — not just the page loaded — so
+six calls to it would give six honest, pagination-proof segment counts. It was
+rejected on **cost**. Activity is SSE-driven: `useActivityStreamInvalidation`
+invalidates the whole `["activity", "recent"]` query-key prefix on every activity
+event, so six always-mounted count queries would turn into a 7x refetch amplification
+on every event during a processing run. If that cost is ever paid down (a dedicated
+counts endpoint, a cheaper invalidation scope), a band becomes buildable again — but
+build it against that endpoint, not by aggregating the currently loaded page of rows
+client-side the way row tone is computed today, which would misrepresent itself the
+moment anyone pages.
 
 The band is the one place a page is allowed to be visually loud: a border, a filled
 surface, a 3px accent rule along the top of each segment, a 30px number. Nothing else
