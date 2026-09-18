@@ -10,6 +10,21 @@ Outputs (all committed):
   apps/web/public/favicon.svg, favicon.ico, apple-touch-icon.png
   packaging/windows/assets/weir-tray-icon.ico      (tray and installer icon)
   docs-site/static/img/favicon.ico, logo.svg, logo-dark.svg
+
+## Two optical sizes in one .ico (James's three-stream request, reopening #582)
+
+`weir-app-icon.svg` carries the three-stream primary mark and is the source for every frame
+24px and above, same as every other asset here. But a multi-resolution .ico is exactly the one
+place two different drawings of "the same icon" have to live side by side in a single file, and
+at 16px three streams cannot survive: a 1.85-unit band on a 24-unit grid is 1.23 device pixels
+there, sub-pixel by construction, so the arcs fuse into a smear. The 16px frame therefore
+renders from `weir-app-icon-small.svg` — the same tile with the two-stream fallback geometry —
+and every larger frame uses the three-stream `weir-app-icon.svg`. An earlier revision put the
+cutoff at 32px as well, on the theory that the crest softened under anti-aliasing there; the
+real rasters in `design-options/logos-round4/gate-16px.png` do not bear that out at 24 or 32 in
+any of the three renderings, and it cost the mark two of the three sizes a person actually sees. `favicon.svg` itself (the SVG
+favicon, not the .ico) is unaffected: browsers scale one vector for it, at whatever size they
+show it, so it is always the three-stream primary mark like every other SVG in this repo.
 """
 
 from __future__ import annotations
@@ -23,8 +38,16 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 BRAND = ROOT / "packaging" / "brand"
 APP_ICON = BRAND / "weir-app-icon.svg"
+APP_ICON_SMALL = BRAND / "weir-app-icon-small.svg"
 MARK_DARK = BRAND / "weir-mark.svg"
 MARK_LIGHT = BRAND / "weir-mark-light.svg"
+
+# At or below this size, .ico frames render from the two-stream fallback tile; above it, from
+# the three-stream primary tile. Only 16px falls back: design-options/logos-round4/gate-16px.png
+# shows three bands still separating cleanly at 24 and 32 in all three renderings, including the
+# single-colour tray case, and fusing into a grey smear only at 16, where a band is sub-pixel.
+# See the module docstring and packaging/brand/README.md.
+SMALL_ICON_MAX = 16
 
 
 def render_png(page, svg_path: Path, size: int) -> bytes:
@@ -53,10 +76,16 @@ def main() -> None:
     docs_img = ROOT / "docs-site" / "static" / "img"
     tray_ico = ROOT / "packaging" / "windows" / "assets" / "weir-tray-icon.ico"
 
+    icon_sizes = (16, 24, 32, 48, 64, 128, 256)
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(device_scale_factor=1)
-        frames = {n: render_png(page, APP_ICON, n) for n in (16, 24, 32, 48, 64, 128, 256)}
+        frames = {
+            n: render_png(page, APP_ICON_SMALL if n <= SMALL_ICON_MAX else APP_ICON, n)
+            for n in icon_sizes
+        }
+        # The touch icon (180px, iOS home screen) and favicon.svg are both well above the small
+        # cutoff and always the three-stream primary mark, rendered from the full-size tile.
         touch = render_png(page, APP_ICON, 180)
         browser.close()
 

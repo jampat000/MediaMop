@@ -167,31 +167,55 @@ def _tailrace() -> str:
     )
 
 
-#: Outermost stream first. `paths(3)` is the mark exactly as traced; `paths(2)`, the default,
-#: is the one that ships. See SHIPPED_STREAMS below.
+#: Outermost stream first. `paths(3)` is the mark exactly as traced, matching the Midjourney
+#: render James picked. `paths(2)` drops the middle band. See SHIPPED_STREAMS below for which one
+#: `paths()`'s default now returns, and why that is no longer the same question for every size.
 _ALL = [_stream(A_OUT, A_IN), _stream(B_OUT, B_IN), _tailrace()]
 
-#: THE 16px VERDICT.
+#: THE OPTICAL-SIZE SPLIT (#582, reopened by James after that PR shipped).
 #:
-#: Three streams do not survive 16px. At a 24 viewBox rendered into 16 device pixels a unit is
-#: 0.667px, so a 1.85-unit band is 1.23px and a 1.55-unit gap is 1.03px: three bands and two gaps
-#: have to land inside 7.8px. design-options/logos-round4/gate-16px.png shows the real rasters at
-#: 9x, and the three-stream row is a grey smear across the crest in all of dark, light and single
-#: colour — you cannot count the arcs, which is the one thing this mark is. No amount of tuning
-#: fixes it; the bands are sub-pixel by construction, and growing the mark to fill the whole 24
-#: grid would still only buy 1.5px bands.
+#: #582 shipped two streams everywhere, because three do not survive 16px: at a 24 viewBox
+#: rendered into 16 device pixels a unit is 0.667px, so a 1.85-unit band is 1.23px and a 1.55-unit
+#: gap is 1.03px — three bands and two gaps have to land inside 7.8px. gate-16px.png shows the
+#: real rasters at 9x, and the three-stream row is a grey smear across the crest in all of dark,
+#: light and single colour there — you cannot count the arcs, which is the one thing this mark is.
+#: No amount of tuning fixes that; the bands are sub-pixel by construction at 16px.
 #:
-#: Two streams do survive: the same sheet's second row keeps the crest, the step and the apron as
-#: three separate strokes at 16, and is crisp at 32. So the mark ships with two.
+#: But James looked at the two-stream mark shipped by #582 and asked for the three-stream original
+#: back — the version traced straight off his accepted Midjourney render, before the 16px argument
+#: trimmed a band out of it. He is right that it is a better logo: the two-stream mark is a
+#: simplification made for one hostile size, applied everywhere, including the 512px marketing
+#: mark and the in-app sidebar where there was never a legibility problem to solve.
 #:
-#: The middle stream is the right one to lose because it is the only one carrying no structure.
-#: The outer stream is the crest and the whole silhouette; the inner stream is the tailrace and
-#: the apron, which is what stops the mark reading as an arch. The middle one is a repeat.
-SHIPPED_STREAMS = 2
+#: The fix is an optical-size split, standard type-design practice (the same reason a typeface
+#: ships separate "text" and "display" masters): use the size where the trade-off actually bites,
+#: not the mark's identity, as the thing that changes. `paths()`'s default is now three streams —
+#: the primary mark, used everywhere it is seen large enough to read: packaging/brand/*.svg, the
+#: web favicon.svg, the app icon, the in-app logo, the docs logo, every 512/256/128/64 raster.
+#: Two streams survive only as the small-size fallback, generated from `paths(2)` and used
+#: nowhere except the 16px (and, per the 32px check below, also 32px) frames of the .ico files —
+#: see scripts/generate-brand-icons.py. It is still the same recorded geometry either way: no path
+#: here changed, only which one is the default and where each is used.
+#:
+#: 32px check: at 32 a unit is 1.333px, so bands are 2.47px and gaps 2.07px — wide enough that you
+#: can count three arcs, unlike at 16, but the crest is where the two outer arcs run closest
+#: together and anti-aliasing still softens that corner, most visibly in the single-colour (tray)
+#: rendering that is the actual use of the .ico's 32px frame. Two streams stay crisp at the same
+#: size with a clear gap at the crest. So 32px keeps the two-stream fallback too; only 48px and
+#: above switch to three. See packaging/brand/README.md for the full table.
+#:
+#: The middle stream is still the right one to drop at small sizes: it carries no structure of its
+#: own. The outer stream is the crest and the whole silhouette; the inner stream is the tailrace
+#: and the apron, which is what stops the mark reading as a plain arch. The middle one is a repeat
+#: of the outer, which is exactly why removing it is a size accommodation and not a redesign.
+SHIPPED_STREAMS = 3
+
+#: The small-size fallback used only inside .ico frames (16px, and 32px per the check above).
+SMALL_STREAMS = 2
 
 
 def paths(streams: int = SHIPPED_STREAMS) -> list[str]:
-    """Path data for the mark. `streams` is 3 (exactly as traced) or 2 (what ships)."""
+    """Path data for the mark. `streams` is 3 (the primary mark) or 2 (small-size .ico fallback)."""
     if streams == 3:
         return list(_ALL)
     if streams == 2:
