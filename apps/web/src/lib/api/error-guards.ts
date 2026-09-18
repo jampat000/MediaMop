@@ -6,6 +6,12 @@ import { ApiHttpError } from "./client";
  */
 
 export function isLikelyNetworkFailure(error: unknown): boolean {
+  // `apiFetch` (client.ts) already classifies its own `fetch` rejections at the source and
+  // rethrows them as an `ApiHttpError` carrying the friendly message — check that marker
+  // first so every screen built on `apiFetch` gets it without re-deriving the classification.
+  if (error instanceof ApiHttpError) {
+    return error.networkUnreachable;
+  }
   if (error instanceof TypeError) {
     return true;
   }

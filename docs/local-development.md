@@ -58,7 +58,7 @@ That loads **`.env`**, defaults **`WEIR_HOME`** to **`.local-dev-home`** in the 
 $env:WEIR_SESSION_SECRET = "<long random>"
 $env:WEIR_HOME = "$PWD\.local-dev-home"
 # $env:WEIR_CORS_ORIGINS = "http://127.0.0.1:8782"
-dotnet run --project apps/server/src/Weir.Host -- --host 127.0.0.1 --port 9347
+dotnet run --project apps/server/src/Weir.Host -- --host 127.0.0.1 --port 18788
 ```
 
 Forgot the local admin password? **`.\scripts\dev-reset-auth.ps1 --list`** shows the accounts and **`--yes`** clears users and sessions so **`/setup`** works again.

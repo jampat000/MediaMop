@@ -3,7 +3,7 @@
     "webHost": "127.0.0.1",
     "webPort": 8782,
     "apiHost": "127.0.0.1",
-    "apiPort": 9347
+    "apiPort": 18788
   },
   "production": {
     "publicHttpsPort": 443,

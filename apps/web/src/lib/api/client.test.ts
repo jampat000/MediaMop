@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ApiHttpError,
+  NETWORK_UNREACHABLE_MESSAGE,
   apiErrorDetailToString,
   apiFetch,
   apiResponseErrorMessage,
@@ -161,6 +162,53 @@ describe("apiFetch timeouts", () => {
       path: "/api/v1/suite/settings",
       timedOut: true,
       message: "Request timed out - the backend may be slow or unreachable.",
+    });
+  });
+});
+
+describe("apiFetch network failures", () => {
+  it("turns a rejected fetch (server unreachable) into the friendly message, not the raw browser text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
+
+    await expect(apiFetch("/api/v1/auth/bootstrap")).rejects.toMatchObject({
+      name: "ApiHttpError",
+      status: 0,
+      path: "/api/v1/auth/bootstrap",
+      networkUnreachable: true,
+      message: NETWORK_UNREACHABLE_MESSAGE,
+    });
+
+    // The exact wording never reaches a screen — only the guarded, plain-language message.
+    await expect(apiFetch("/api/v1/auth/bootstrap")).rejects.not.toMatchObject({
+      message: "Failed to fetch",
+    });
+  });
+
+  it("recognises browser-specific network rejection text (Safari, Firefox)", async () => {
+    for (const rawMessage of [
+      "Load failed",
+      "NetworkError when attempting to fetch resource.",
+    ]) {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error(rawMessage)));
+
+      await expect(apiFetch("/api/v1/auth/me")).rejects.toMatchObject({
+        networkUnreachable: true,
+        message: NETWORK_UNREACHABLE_MESSAGE,
+      });
+    }
+  });
+
+  it("leaves unrelated fetch rejections alone", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("boom, something else broke")),
+    );
+
+    await expect(apiFetch("/api/v1/auth/me")).rejects.toMatchObject({
+      message: "boom, something else broke",
     });
   });
 });
