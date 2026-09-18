@@ -84,7 +84,7 @@ function ConnectionStatusPanel({
 
   return (
     <div
-      className="mt-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3.5 text-sm text-[var(--mm-text2)]"
+      className="mt-3 text-sm text-[var(--mm-text2)]"
       data-testid="media-manager-status"
     >
       <p className={`text-sm font-medium ${tone}`}>{headline}</p>
@@ -276,7 +276,7 @@ function ConnectionCard({
       {/* The address and secret are needed once, when wiring the other app up.
           Folded away so the card answers "is it connected" at a glance. */}
       <details
-        className="group mt-4 rounded-md border border-[var(--mm-border)] bg-black/10 px-4 py-3 text-xs text-[var(--mm-text3)]"
+        className="group mt-4 border-t border-[var(--mm-border)] pt-3 text-xs text-[var(--mm-text3)]"
         data-testid="media-manager-setup-details"
       >
         <summary className="cursor-pointer list-none font-medium text-[var(--mm-text2)] marker:hidden [&::-webkit-details-marker]:hidden">
@@ -285,7 +285,7 @@ function ConnectionCard({
           </span>
         </summary>
 
-        <div className="mt-3 border-t border-[var(--mm-border)] pt-3">
+        <div className="mt-3">
           <p className="text-[var(--mm-text2)]">
             In {connection.name}, send files to this address:
           </p>

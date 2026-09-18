@@ -299,10 +299,9 @@ describe("SettingsPage (suite settings)", () => {
         "If Weir saves you time or keeps your downloads clean, you can support ongoing development.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Support Weir" })).toHaveAttribute(
-      "href",
-      "https://example.com/support",
-    );
+    expect(
+      screen.getByRole("link", { name: "Support Weir →" }),
+    ).toHaveAttribute("href", "https://example.com/support");
     expect(screen.queryByText("VITE_SUPPORT_URL")).not.toBeInTheDocument();
     expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/feature limits/i)).not.toBeInTheDocument();
@@ -566,11 +565,11 @@ describe("SettingsPage (suite settings)", () => {
     render(wrap(<SettingsPage />, qc));
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
 
-    // staleTime: Infinity means the pre-seeded data is fresh — button shows "Check again"
-    expect(screen.getByRole("button", { name: "Check again" })).toBeEnabled();
+    // staleTime: Infinity means the pre-seeded data is fresh — the link reads "Check again →"
+    expect(screen.getByRole("button", { name: "Check again →" })).toBeEnabled();
 
     // Trigger a manual refetch (mock never resolves)
-    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check again →" }));
 
     await waitFor(() => {
       expect(
@@ -578,7 +577,7 @@ describe("SettingsPage (suite settings)", () => {
       ).toBeDisabled();
     });
     expect(
-      screen.queryByRole("button", { name: "Check again" }),
+      screen.queryByRole("button", { name: "Check again →" }),
     ).not.toBeInTheDocument();
   });
 

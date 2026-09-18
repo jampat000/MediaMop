@@ -13,9 +13,10 @@ import {
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
 import {
+  SettingsFactTable,
+  SettingsQuietSection,
   SUITE_SETTINGS_PREMIUM_PANEL_CLASS,
-  SUITE_SETTINGS_PREMIUM_TILE_CLASS,
-  SUITE_SETTINGS_DASH_CARD_CLASS,
+  type SettingsFact,
 } from "./settings-shared";
 
 type SettingsUpgradeTabProps = {
@@ -102,8 +103,25 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
     }
   }
 
+  // Four coequal facts about this install — a version, a version, a kind, a state.
+  // None of them is a magnitude, so none of them is a hero (rule 2).
+  const installFacts: SettingsFact[] = updateStatusQ.data
+    ? [
+        { label: "Installed", value: updateStatusQ.data.current_version },
+        {
+          label: "Latest",
+          value: updateStatusQ.data.latest_version || "Unknown",
+        },
+        { label: "Install type", value: updateStatusQ.data.install_type },
+        {
+          label: "Status",
+          value: updateStatusQ.data.status.replaceAll("_", " "),
+        },
+      ]
+    : [];
+
   return (
-    <div data-testid="suite-settings-upgrade-tab" className="mm-bubble-stack">
+    <div data-testid="suite-settings-upgrade-tab" className="mm-quiet-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
           Check the installed version and see the latest release. Windows
@@ -111,31 +129,12 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
         </p>
       </div>
 
-      <section
-        className={SUITE_SETTINGS_DASH_CARD_CLASS}
-        data-testid="suite-settings-upgrade"
-        aria-labelledby="suite-settings-upgrade-heading"
-      >
-        <div>
-          <h3
-            id="suite-settings-upgrade-heading"
-            className="text-base font-semibold text-[var(--mm-text1)]"
-          >
-            Upgrade
-          </h3>
-          <p className="mt-1 text-sm text-[var(--mm-text2)]">
-            Check the running Weir version and see the latest release for this
-            install type.
-          </p>
-        </div>
-
+      <div className="mm-quiet-stack" data-testid="suite-settings-upgrade">
         {updateStatusQ.isPending ? (
-          <p className="text-sm text-[var(--mm-text3)]">
-            Checking for updates...
-          </p>
+          <p className="mm-quiet-note">Checking for updates...</p>
         ) : !updateStatusQ.data ? (
           <p
-            className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
+            className="text-sm text-[var(--mm-status-failed-text)]"
             role="alert"
           >
             {updateStatusQ.error instanceof Error
@@ -144,6 +143,8 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
           </p>
         ) : (
           <>
+            {/* The one thing on this tab that wants attention. It stays a filled,
+                colour-coded strip: the colour is functional, not decoration. */}
             <div
               className={`rounded-xl border p-4 ${
                 updateStatusQ.data.status === "update_available"
@@ -153,14 +154,14 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-[var(--mm-gold)] uppercase">
                     Release status
                   </p>
                   <h4 className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
                     {updateStatusQ.data.summary}
                   </h4>
                 </div>
-                <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs font-medium capitalize text-[var(--mm-text2)]">
+                <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs font-medium text-[var(--mm-text2)] capitalize">
                   {updateStatusQ.data.status.replaceAll("_", " ")}
                 </span>
               </div>
@@ -206,41 +207,55 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
               </div>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                  Installed
-                </div>
-                <div className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
-                  {updateStatusQ.data.current_version}
-                </div>
+            <SettingsQuietSection
+              headingId="suite-settings-upgrade-heading"
+              heading="Upgrade"
+              aside={
+                <>
+                  <button
+                    type="button"
+                    className="mm-quiet-link"
+                    disabled={updateStatusQ.isFetching}
+                    onClick={() => void updateStatusQ.refetch()}
+                  >
+                    {updateStatusQ.isFetching ? "Checking..." : "Check again →"}
+                  </button>
+                  {updateStatusQ.data.windows_installer_url ? (
+                    <a
+                      className="mm-quiet-link"
+                      href={updateStatusQ.data.windows_installer_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Download installer →
+                    </a>
+                  ) : null}
+                  {updateStatusQ.data.release_url ? (
+                    <a
+                      className="mm-quiet-link"
+                      href={updateStatusQ.data.release_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Release notes →
+                    </a>
+                  ) : null}
+                </>
+              }
+            >
+              <p className="mm-quiet-note">
+                Check the running Weir version and see the latest release for
+                this install type.
+              </p>
+              <div className="mt-4">
+                <SettingsFactTable
+                  caption="This Weir install"
+                  facts={installFacts}
+                />
               </div>
-              <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                  Latest
-                </div>
-                <div className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
-                  {updateStatusQ.data.latest_version || "Unknown"}
-                </div>
-              </div>
-              <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                  Install type
-                </div>
-                <div className="mt-1 text-base font-semibold capitalize text-[var(--mm-text1)]">
-                  {updateStatusQ.data.install_type}
-                </div>
-              </div>
-              <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                  Status
-                </div>
-                <div className="mt-1 text-base font-semibold capitalize text-[var(--mm-text1)]">
-                  {updateStatusQ.data.status.replaceAll("_", " ")}
-                </div>
-              </div>
-            </div>
+            </SettingsQuietSection>
 
+            {/* An input group with its own Save scope keeps its boundary. */}
             {updateStatusQ.data.install_type === "windows" ? (
               <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
                 <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
@@ -311,7 +326,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                       </label>
 
                       <label className="block text-sm text-[var(--mm-text2)]">
-                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+                        <span className="mb-1.5 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
                           Check interval
                         </span>
                         <select
@@ -390,65 +405,23 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
               </div>
             ) : updateStatusQ.data.install_type === "docker" &&
               updateStatusQ.data.docker_update_command ? (
-              <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
-                <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
-                  What happens next
-                </h4>
-                <div className="space-y-2">
-                  <p className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 font-mono text-xs text-[var(--mm-text3)]">
-                    {updateStatusQ.data.docker_update_command}
-                  </p>
-                  <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                    Keep the same WEIR_HOME volume and WEIR_SESSION_SECRET value
-                    across upgrades so browser sessions and setup state continue
-                    cleanly.
-                  </p>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mt-auto flex flex-wrap gap-2 border-t border-[var(--mm-border)] pt-4">
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "secondary",
-                  disabled: updateStatusQ.isFetching,
-                })}
-                disabled={updateStatusQ.isFetching}
-                onClick={() => void updateStatusQ.refetch()}
+              <SettingsQuietSection
+                headingId="suite-settings-upgrade-docker-heading"
+                heading="What happens next"
               >
-                {updateStatusQ.isFetching ? "Checking..." : "Check again"}
-              </button>
-              {updateStatusQ.data.windows_installer_url ? (
-                <a
-                  className={mmActionButtonClass({
-                    variant: "tertiary",
-                    disabled: false,
-                  })}
-                  href={updateStatusQ.data.windows_installer_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Download installer
-                </a>
-              ) : null}
-              {updateStatusQ.data.release_url ? (
-                <a
-                  className={mmActionButtonClass({
-                    variant: "tertiary",
-                    disabled: false,
-                  })}
-                  href={updateStatusQ.data.release_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Release notes
-                </a>
-              ) : null}
-            </div>
+                <p className="rounded-lg border border-[var(--mm-border)] px-3 py-2 font-mono text-xs text-[var(--mm-text3)]">
+                  {updateStatusQ.data.docker_update_command}
+                </p>
+                <p className="mm-quiet-note mt-2">
+                  Keep the same WEIR_HOME volume and WEIR_SESSION_SECRET value
+                  across upgrades so browser sessions and setup state continue
+                  cleanly.
+                </p>
+              </SettingsQuietSection>
+            ) : null}
           </>
         )}
-      </section>
+      </div>
     </div>
   );
 }

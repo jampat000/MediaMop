@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { SuiteLogEntry } from "../../lib/suite/types";
 
 export type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
@@ -6,8 +7,6 @@ export const SUITE_SETTINGS_DASH_CARD_CLASS =
   "mm-card mm-dash-card flex min-h-0 min-w-0 flex-col gap-5";
 export const SUITE_SETTINGS_PREMIUM_PANEL_CLASS =
   "flex min-h-0 min-w-0 flex-col gap-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 p-4 shadow-[var(--mm-shadow-card-inner)]";
-export const SUITE_SETTINGS_PREMIUM_TILE_CLASS =
-  "rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 px-4 py-3 shadow-[var(--mm-shadow-card-inner)]";
 export const CONFIGURATION_BACKUP_INTERVAL_HOURS = [
   6, 12, 24, 48, 72, 168,
 ] as const;
@@ -86,27 +85,17 @@ export function requestIssueSummary(
   return { value: "No request issues", detail };
 }
 
-export function logCardTone(level: string): string {
+/** Log severity as a colour on the level word. The quiet body has no tinted cards,
+ *  so the level itself is what carries the warning. */
+export function logLevelToneClass(level: string): string {
   switch (level.toUpperCase()) {
     case "ERROR":
     case "CRITICAL":
-      return "border-red-500/35 bg-red-950/20";
+      return "mm-status-text--failed";
     case "WARNING":
-      return "border-amber-400/35 bg-amber-950/20";
+      return "mm-status-text--warning";
     default:
-      return "border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50";
-  }
-}
-
-export function logLevelBadgeTone(level: string): string {
-  switch (level.toUpperCase()) {
-    case "ERROR":
-    case "CRITICAL":
-      return "border-red-500/40 bg-red-500/10 text-red-100";
-    case "WARNING":
-      return "border-amber-400/40 bg-amber-400/10 text-amber-100";
-    default:
-      return "border-[var(--mm-border)] bg-black/10 text-[var(--mm-text2)]";
+      return "";
   }
 }
 
@@ -121,11 +110,11 @@ export function renderLogTechnicalDetails(entry: SuiteLogEntry) {
     return null;
   }
   return (
-    <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-      <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">
-        Technical details
+    <details className="mt-2">
+      <summary className="mm-quiet-link cursor-pointer list-none">
+        Technical details →
       </summary>
-      <div className="mt-3 space-y-2 text-sm text-[var(--mm-text2)]">
+      <div className="mt-2 space-y-1.5 text-sm text-[var(--mm-text2)]">
         {entry.source ? (
           <p>
             <span className="font-medium text-[var(--mm-text1)]">Source:</span>{" "}
@@ -153,7 +142,9 @@ export function renderLogTechnicalDetails(entry: SuiteLogEntry) {
           </p>
         ) : null}
         {entry.traceback ? (
-          <pre className="overflow-auto rounded-md border border-[var(--mm-border)] bg-black/20 p-3 text-xs leading-5 text-[var(--mm-text2)] whitespace-pre-wrap">
+          // A traceback keeps its edge: the boundary says where the pasted text ends.
+          // It is a code block, not a card.
+          <pre className="overflow-auto rounded-md border border-[var(--mm-border)] p-3 text-xs leading-5 whitespace-pre-wrap text-[var(--mm-text2)]">
             {entry.traceback}
           </pre>
         ) : null}
@@ -162,26 +153,96 @@ export function renderLogTechnicalDetails(entry: SuiteLogEntry) {
   );
 }
 
-export function SettingsSummaryCard({
-  label,
-  value,
-  detail,
+/** Rule 3: a heading, its links, a hairline, then the content. Mirrors the shape the
+ *  Processing Overview reference uses (docs/design/content-language.md). */
+export function SettingsQuietSection({
+  headingId,
+  heading,
+  aside,
+  children,
+  id,
+  "data-testid": dataTestId,
 }: {
+  headingId: string;
+  heading: string;
+  aside?: ReactNode;
+  children: ReactNode;
+  id?: string;
+  "data-testid"?: string;
+}) {
+  return (
+    <section
+      className="mm-quiet-section"
+      aria-labelledby={headingId}
+      id={id}
+      data-testid={dataTestId}
+    >
+      <div className="mm-quiet-section__head">
+        <h3 id={headingId} className="mm-quiet-section__title">
+          {heading}
+        </h3>
+        {aside ? <div className="mm-quiet-section__aside">{aside}</div> : null}
+      </div>
+      <div className="mm-quiet-section__body">{children}</div>
+    </section>
+  );
+}
+
+export type SettingsFact = {
   label: string;
   value: string;
   detail?: string;
+  /** An existing mm-status-text--* class when the value itself is good or bad news. */
+  toneClass?: string;
+};
+
+/**
+ * Coequal facts, as a borderless label/value row rather than a grid of identical
+ * boxes. These are categorical answers to different questions — a policy, a version,
+ * a count — so none of them is a hero, and rule 2 does not apply. Below 760px the
+ * quiet table stacks each column into its own labelled line by itself.
+ */
+export function SettingsFactTable({
+  facts,
+  caption,
+  "data-testid": dataTestId,
+}: {
+  facts: readonly SettingsFact[];
+  caption: string;
+  "data-testid"?: string;
 }) {
   return (
-    <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
-        {value}
-      </p>
-      {detail ? (
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">{detail}</p>
-      ) : null}
-    </section>
+    <div className="mm-quiet-table-wrap">
+      <table className="mm-quiet-table" data-testid={dataTestId}>
+        <caption className="sr-only">{caption}</caption>
+        <thead>
+          <tr>
+            {facts.map((fact) => (
+              <th scope="col" key={fact.label}>
+                {fact.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            {facts.map((fact) => (
+              <td key={fact.label} data-label={fact.label}>
+                <span>
+                  <span
+                    className={`mm-quiet-table__strong${fact.toneClass ? ` ${fact.toneClass}` : ""}`}
+                  >
+                    {fact.value}
+                  </span>
+                  {fact.detail ? (
+                    <span className="mm-quiet-table__sub">{fact.detail}</span>
+                  ) : null}
+                </span>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }

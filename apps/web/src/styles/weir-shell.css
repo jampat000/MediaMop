@@ -200,30 +200,6 @@ body.mm-body {
   background: var(--mm-status-failed-bg);
 }
 
-.mm-security-fact {
-  min-width: 0;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius-sm);
-  background: color-mix(in srgb, var(--mm-surface-2) 64%, transparent);
-}
-
-.mm-security-fact dt {
-  color: var(--mm-text3);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.mm-security-fact dd {
-  margin: 0.35rem 0 0;
-  color: var(--mm-text1);
-  font-size: 0.86rem;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
 .mm-status-text--healthy {
   color: var(--mm-status-healthy-text) !important;
 }
@@ -234,17 +210,6 @@ body.mm-body {
 
 .mm-status-text--failed {
   color: var(--mm-status-failed-text) !important;
-}
-
-.mm-session-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius-sm);
-  background: color-mix(in srgb, var(--mm-surface-2) 58%, transparent);
 }
 
 /* Processing overview (pages/processing/processing-overview-tab.tsx). */
@@ -3051,11 +3016,6 @@ select.mm-input::-ms-expand {
   .mm-workspace-tabs__button {
     min-height: 2.35rem;
     padding-inline: 0.8rem;
-  }
-
-  .mm-session-row {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
 

@@ -15,7 +15,10 @@ import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
-import { SUITE_SETTINGS_DASH_CARD_CLASS } from "./settings-shared";
+import {
+  SettingsQuietSection,
+  SUITE_SETTINGS_PREMIUM_PANEL_CLASS,
+} from "./settings-shared";
 
 const EVENT_LABELS: Record<string, string> = {
   job_completed: "Any job completed",
@@ -73,7 +76,7 @@ function ChannelForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
           Label
         </span>
         <input
@@ -89,7 +92,7 @@ function ChannelForm({
       </label>
 
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
           Provider
         </span>
         <select
@@ -104,7 +107,7 @@ function ChannelForm({
       </label>
 
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
           Webhook URL
         </span>
         <input
@@ -119,7 +122,7 @@ function ChannelForm({
       </label>
 
       <fieldset>
-        <legend className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+        <legend className="mb-2 text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
           Trigger events
         </legend>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -193,7 +196,6 @@ function ChannelForm({
 
 type ChannelRowProps = {
   channel: NotificationChannelOut;
-  supportedEvents: string[];
   onEdit: () => void;
   onDelete: () => void;
   onTest: () => void;
@@ -202,6 +204,8 @@ type ChannelRowProps = {
   deleting: boolean;
 };
 
+/** One channel as a table row. The hairline under it is what says a Remove button
+ *  belongs to this channel and not its neighbour. */
 function ChannelRow({
   channel,
   onEdit,
@@ -212,32 +216,21 @@ function ChannelRow({
   deleting,
 }: ChannelRowProps) {
   return (
-    <div className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-[var(--mm-text1)]">
-              {channel.label}
-            </span>
-            <span className="rounded-full border border-[var(--mm-border)] px-2 py-0.5 text-xs text-[var(--mm-text3)]">
-              {channel.provider}
-            </span>
-            {!channel.enabled ? (
-              <span className="rounded-full border border-yellow-500/40 bg-yellow-950/20 px-2 py-0.5 text-xs text-yellow-300">
-                Disabled
-              </span>
-            ) : null}
-          </div>
-          <p className="break-all font-mono text-xs text-[var(--mm-text3)]">
-            {channel.url}
-          </p>
-          <p className="text-xs text-[var(--mm-text3)]">
-            Events:{" "}
-            {channel.events.length > 0
-              ? channel.events.map((e) => EVENT_LABELS[e] ?? e).join(", ")
-              : "None"}
-          </p>
-        </div>
+    <tr>
+      <th scope="row" className="mm-quiet-table__name">
+        <span>{channel.label}</span>
+        <span className="mm-quiet-badge">{channel.provider}</span>
+        {!channel.enabled ? (
+          <span className="mm-quiet-badge mm-quiet-badge--off">Disabled</span>
+        ) : null}
+        <span className="mm-quiet-table__sub font-mono">{channel.url}</span>
+      </th>
+      <td data-label="Events">
+        {channel.events.length > 0
+          ? channel.events.map((e) => EVENT_LABELS[e] ?? e).join(", ")
+          : "None"}
+      </td>
+      <td data-label="">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -273,22 +266,22 @@ function ChannelRow({
             {deleting ? "Removing..." : "Remove"}
           </button>
         </div>
-      </div>
-      {testResult ? (
-        <p
-          className={`mt-2 rounded-md border px-3 py-2 text-sm ${
-            testResult.ok
-              ? "border-emerald-500/30 bg-emerald-950/20 text-emerald-200"
-              : "border-red-500/40 bg-red-950/25 text-red-200"
-          }`}
-          role="alert"
-        >
-          {testResult.ok
-            ? "Test notification sent successfully."
-            : `Test failed: ${testResult.error ?? "Unknown error"}`}
-        </p>
-      ) : null}
-    </div>
+        {testResult ? (
+          <p
+            className={`mm-quiet-table__sub ${
+              testResult.ok
+                ? "mm-status-text--healthy"
+                : "mm-status-text--failed"
+            }`}
+            role="alert"
+          >
+            {testResult.ok
+              ? "Test notification sent successfully."
+              : `Test failed: ${testResult.error ?? "Unknown error"}`}
+          </p>
+        ) : null}
+      </td>
+    </tr>
   );
 }
 
@@ -352,8 +345,10 @@ export function SettingsNotificationsTab() {
     }
   };
 
+  const channels = channelsQ.data?.items ?? [];
+
   return (
-    <div data-testid="suite-settings-notifications" className="mm-bubble-stack">
+    <div data-testid="suite-settings-notifications" className="mm-quiet-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
           Send outbound webhook notifications when jobs complete or permanently
@@ -361,115 +356,11 @@ export function SettingsNotificationsTab() {
         </p>
       </div>
 
-      <section
-        className={SUITE_SETTINGS_DASH_CARD_CLASS}
-        aria-labelledby="suite-settings-notifications-heading"
-      >
-        <div className="mm-card-action-body">
-          <div>
-            <h3
-              id="suite-settings-notifications-heading"
-              className="text-base font-semibold text-[var(--mm-text1)]"
-            >
-              Notification channels
-            </h3>
-            <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Each channel routes job events to a webhook URL. Use &ldquo;Send
-              test&rdquo; to verify a channel before relying on it.
-            </p>
-          </div>
-
-          {channelsQ.isLoading ? (
-            <p className="text-sm text-[var(--mm-text3)]">
-              Loading channels...
-            </p>
-          ) : channelsQ.isError ? (
-            <p
-              className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-              role="alert"
-            >
-              {channelsQ.error instanceof Error
-                ? channelsQ.error.message
-                : "Could not load notification channels."}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {(channelsQ.data?.items.length ?? 0) === 0 && !showAddForm ? (
-                <p className="text-sm text-[var(--mm-text3)]">
-                  No notification channels configured yet.
-                </p>
-              ) : null}
-              {channelsQ.data?.items.map((channel) =>
-                editingId === channel.id ? (
-                  <div
-                    key={channel.id}
-                    className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4"
-                  >
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                      Edit channel
-                    </p>
-                    <ChannelForm
-                      initial={{
-                        label: channel.label,
-                        provider: channel.provider as "webhook",
-                        url: channel.url,
-                        events: channel.events,
-                        enabled: channel.enabled,
-                      }}
-                      supportedEvents={supportedEvents}
-                      onSave={(data) => handleUpdate(channel.id, data)}
-                      onCancel={() => setEditingId(null)}
-                      saving={updateMutation.isPending}
-                      saveError={
-                        updateMutation.isError
-                          ? updateMutation.error instanceof Error
-                            ? updateMutation.error.message
-                            : "Could not save."
-                          : null
-                      }
-                    />
-                  </div>
-                ) : (
-                  <ChannelRow
-                    key={channel.id}
-                    channel={channel}
-                    supportedEvents={supportedEvents}
-                    onEdit={() => setEditingId(channel.id)}
-                    onDelete={() => void handleDelete(channel.id)}
-                    onTest={() => void handleTest(channel.id)}
-                    testing={testingId === channel.id}
-                    testResult={testResults[channel.id] ?? null}
-                    deleting={deletingId === channel.id}
-                  />
-                ),
-              )}
-            </div>
-          )}
-
-          {showAddForm ? (
-            <div className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                New channel
-              </p>
-              <ChannelForm
-                supportedEvents={supportedEvents}
-                onSave={handleCreate}
-                onCancel={() => setShowAddForm(false)}
-                saving={createMutation.isPending}
-                saveError={
-                  createMutation.isError
-                    ? createMutation.error instanceof Error
-                      ? createMutation.error.message
-                      : "Could not create channel."
-                    : null
-                }
-              />
-            </div>
-          ) : null}
-        </div>
-
-        {!showAddForm && editingId === null ? (
-          <div className="mm-card-action-footer">
+      <SettingsQuietSection
+        headingId="suite-settings-notifications-heading"
+        heading="Notification channels"
+        aside={
+          !showAddForm && editingId === null ? (
             <button
               type="button"
               className={mmActionButtonClass({ variant: "secondary" })}
@@ -477,9 +368,119 @@ export function SettingsNotificationsTab() {
             >
               Add notification channel
             </button>
+          ) : null
+        }
+      >
+        <p className="mm-quiet-note">
+          Each channel routes job events to a webhook URL. Use &ldquo;Send
+          test&rdquo; to verify a channel before relying on it.
+        </p>
+
+        {channelsQ.isLoading ? (
+          <p className="mm-quiet-note mt-4">Loading channels...</p>
+        ) : channelsQ.isError ? (
+          <p
+            className="mt-4 text-sm text-[var(--mm-status-failed-text)]"
+            role="alert"
+          >
+            {channelsQ.error instanceof Error
+              ? channelsQ.error.message
+              : "Could not load notification channels."}
+          </p>
+        ) : (
+          <>
+            {channels.length === 0 && !showAddForm ? (
+              <p className="mm-quiet-note mt-4">
+                No notification channels configured yet.
+              </p>
+            ) : null}
+            {channels.length > 0 ? (
+              <div className="mm-quiet-table-wrap mt-4">
+                <table className="mm-quiet-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Channel</th>
+                      <th scope="col">Events</th>
+                      <th scope="col">
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {channels.map((channel) =>
+                      editingId === channel.id ? (
+                        <tr key={channel.id}>
+                          <td colSpan={3} data-label="">
+                            <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                              <p className="text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+                                Edit channel
+                              </p>
+                              <ChannelForm
+                                initial={{
+                                  label: channel.label,
+                                  provider: channel.provider as "webhook",
+                                  url: channel.url,
+                                  events: channel.events,
+                                  enabled: channel.enabled,
+                                }}
+                                supportedEvents={supportedEvents}
+                                onSave={(data) =>
+                                  handleUpdate(channel.id, data)
+                                }
+                                onCancel={() => setEditingId(null)}
+                                saving={updateMutation.isPending}
+                                saveError={
+                                  updateMutation.isError
+                                    ? updateMutation.error instanceof Error
+                                      ? updateMutation.error.message
+                                      : "Could not save."
+                                    : null
+                                }
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        <ChannelRow
+                          key={channel.id}
+                          channel={channel}
+                          onEdit={() => setEditingId(channel.id)}
+                          onDelete={() => void handleDelete(channel.id)}
+                          onTest={() => void handleTest(channel.id)}
+                          testing={testingId === channel.id}
+                          testResult={testResults[channel.id] ?? null}
+                          deleting={deletingId === channel.id}
+                        />
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {showAddForm ? (
+          <div className={`${SUITE_SETTINGS_PREMIUM_PANEL_CLASS} mt-4`}>
+            <p className="text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+              New channel
+            </p>
+            <ChannelForm
+              supportedEvents={supportedEvents}
+              onSave={handleCreate}
+              onCancel={() => setShowAddForm(false)}
+              saving={createMutation.isPending}
+              saveError={
+                createMutation.isError
+                  ? createMutation.error instanceof Error
+                    ? createMutation.error.message
+                    : "Could not create channel."
+                  : null
+              }
+            />
           </div>
         ) : null}
-      </section>
+      </SettingsQuietSection>
     </div>
   );
 }
