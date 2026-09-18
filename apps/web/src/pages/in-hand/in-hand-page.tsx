@@ -254,7 +254,8 @@ function FileRow({
   );
 }
 
-/** The band: where the files Weir is holding are sitting, each stage as wide as its count. */
+/** The band: where the files Weir is holding are sitting. In a row each stage is as wide as its
+ *  count; below that the primitive restacks them into a labelled list by itself. */
 function HoldingBand({
   counts,
 }: {
@@ -500,7 +501,7 @@ export function InHandPage(): React.ReactElement {
                 <span>
                   {holdingTotal === 0
                     ? "Weir picks a file up once your manager has finished writing it."
-                    : "Each stage is as wide as the number of files sitting in it; open one to see those files."}
+                    : "Open a stage to see the files sitting in it."}
                   {watchedFolder ? ` Files arrive in ${watchedFolder}.` : ""}
                 </span>
                 <span>

@@ -16,18 +16,54 @@
  * control that filters or opens the detail behind it.
  */
 
+/* The lead is the band's sizing context: the band asks it how much room there is, so the
+ * decision follows the panel rather than the window and is right with the sidebar at
+ * either size. A band outside a `.mm-lead` still never wraps — it just never stacks
+ * either, and scrolls instead. */
 .mm-lead {
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: 1.4rem;
+  container: mm-lead / inline-size;
 }
 
+/* The band never wraps.
+ *
+ * It used to: it was a wrapping flex row, and a flex line justifies itself
+ * independently of every other line, so a wrapped band compared segment widths only
+ * *within* a row. A count of 1 alone on the second line drew wider than a count of 2
+ * sharing the first — the band inverted the very comparison it exists to make. The
+ * measured worst case was Files at 1280: the ninth segment took a whole line to
+ * itself and drew a 1 nine times wider than a 2.
+ *
+ * So there are exactly two states, and both keep the promise:
+ *
+ *   Row    — one line, never wrapped, each segment's width its share of the total
+ *            (`--mm-flow-share` grows from a zero basis), floored at 6.5rem so a quiet
+ *            stage still reads as a stage. Both the proportional part and the floor rise
+ *            with the count, so a bigger number can never draw narrower than a smaller
+ *            one. `flex-wrap: nowrap` is what makes that structural rather than a
+ *            calculation that has to come out right: if the floors ever did not fit, the
+ *            band would scroll — fewer segments visible, but still never a segment that
+ *            looks bigger than a bigger number.
+ *   Stack  — when the band cannot give every segment that floor it stops pretending to
+ *            encode magnitude by width and becomes a labelled list, one segment per
+ *            line, the way `.mm-quiet-table` restacks below 760px. Every row is the
+ *            same width and the number is read directly.
+ *
+ * Which state applies is decided by the lead's width against how many segments the band
+ * holds — the `mm-lead` container query and the `:has()` ladder at the end of this
+ * section — so a page declares nothing but `--mm-flow-share`.
+ */
 .mm-lead-band {
   display: flex;
-  flex-wrap: wrap;
+  /* Row is the default, and it is the state that must never wrap. The ladder turns
+   * wrapping *on* to stack, which is the only time a segment takes its own line. */
+  flex-wrap: nowrap;
   align-items: stretch;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius);
   background: color-mix(in srgb, var(--mm-surface) 72%, transparent);
@@ -35,18 +71,35 @@
 }
 
 /* Segment width is the share of the total this segment holds, set per instance as
- * `style={{ "--mm-flow-share": n }}`. Zero-count segments still take a minimum
- * width so the band reads as a whole pipeline, not only its busy parts. */
+ * `style={{ "--mm-flow-share": n }}`. `--mm-band-stacked` is 0 in a row and 1 when the
+ * band has restacked; every difference between the two states is a calc on it, so the
+ * switch is one inherited number rather than a duplicated block per segment count. */
 .mm-lead-band__segment {
   position: relative;
-  min-width: 9rem;
-  flex: 1 1 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  /* 0 in a row, so widths are pure share; 100% when stacked, so each takes a line. */
+  flex-basis: calc(var(--mm-band-stacked) * 100%);
   flex-grow: var(--mm-flow-share);
-  padding: 1.05rem 0.9rem 2.4rem;
+  flex-shrink: 1;
+  /* The row floor: what the longest stage label the app uses needs, shrunk, plus this
+   * padding. A quarter-rem under the 6.75rem the ladder steps in at, which is the slack
+   * the segment borders need. A page must never override it — see content-language.md. */
+  min-width: calc((1 - var(--mm-band-stacked)) * 6.5rem);
+  column-gap: 0.75rem;
+  /* A label longer than its segment is clipped at its own edge rather than bleeding into
+   * the next one, which read as though it belonged to the neighbour. */
+  overflow: hidden;
+  padding: 1.05rem 0.9rem calc(2.4rem - var(--mm-band-stacked) * 1.45rem);
   border: 0;
-  border-left: 1px solid var(--mm-border);
+  border-top: 0 solid var(--mm-border);
+  border-left: 0 solid var(--mm-border);
+  border-top-width: calc(var(--mm-band-stacked) * 1px);
+  border-left-width: calc((1 - var(--mm-band-stacked)) * 1px);
   background: transparent;
   color: inherit;
+  container-type: inline-size;
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -54,16 +107,20 @@
 }
 
 .mm-lead-band__segment:first-child {
-  border-left: 0;
+  border-top-width: 0;
+  border-left-width: 0;
 }
 
+/* The accent rule: 3px across the top of a segment in a row, 3px down its left edge
+ * when stacked, because a stacked row's top edge already carries the hairline. */
 .mm-lead-band__segment::before {
   content: "";
   position: absolute;
   top: 0;
-  right: 0;
+  right: auto;
   left: 0;
-  height: 3px;
+  width: calc(100% - var(--mm-band-stacked) * (100% - 3px));
+  height: calc(3px + var(--mm-band-stacked) * (100% - 3px));
   background: var(--mm-gold-dim);
 }
 
@@ -90,8 +147,18 @@
   outline-offset: -2px;
 }
 
+/* In a row the label, the value and the hint each take a full line of the segment; when
+ * the band stacks, the label and the value share one line with the value pushed to the
+ * right and the hint runs under them. `min-width: 100%` is what forces the break, so
+ * the whole arrangement follows the same inherited 0-or-1 as everything else. */
 .mm-lead-band__label {
   display: flex;
+  min-width: calc((1 - var(--mm-band-stacked)) * 100%);
+  /* In a row, every label reserves two lines whether it needs them or not, so a stage
+   * whose name wraps does not push its number below the others: the numbers across the
+   * band have to sit on one line for the band to be read as a comparison at all. */
+  min-height: calc((1 - var(--mm-band-stacked)) * 2.45em);
+  flex-grow: 1;
   align-items: center;
   gap: 0.4rem;
   color: var(--mm-text3);
@@ -103,9 +170,10 @@
 
 .mm-lead-band__value {
   display: block;
-  margin-top: 0.5rem;
+  min-width: calc((1 - var(--mm-band-stacked)) * 100%);
+  margin-top: calc((1 - var(--mm-band-stacked)) * 0.5rem);
   color: var(--mm-text1);
-  font-size: 1.875rem;
+  font-size: calc(1.875rem - var(--mm-band-stacked) * 0.575rem);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.035em;
@@ -122,18 +190,21 @@
 
 .mm-lead-band__hint {
   display: block;
+  min-width: 100%;
   margin-top: 0.4rem;
   color: var(--mm-text3);
   font-size: var(--mm-type-caption);
   line-height: 1.4;
 }
 
+/* The "Filter →" reveal has no room in a stacked row, and it is `aria-hidden` decoration
+ * either way: the segment is a button and its label is the accessible name. */
 .mm-lead-band__go {
   position: absolute;
   bottom: 0.95rem;
   left: 0.9rem;
   color: var(--mm-accent);
-  font-size: var(--mm-type-eyebrow);
+  font-size: calc((1 - var(--mm-band-stacked)) * var(--mm-type-eyebrow));
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -142,6 +213,124 @@
   transition:
     opacity 0.16s ease,
     transform 0.16s ease;
+}
+
+/* Before the band gives up on a row it gives up on the supporting line: a segment near
+ * its floor keeps the stage name and the number, drops the sentence under them, and
+ * takes the label and the number down a step so the longest stage name still fits. The
+ * query is the segment's own width, so it needs no count and no page-side breakpoint;
+ * the padding stays put, because changing it would change what the query measures. */
+@container (max-width: 5.6rem) {
+  .mm-lead-band__hint {
+    display: none;
+  }
+
+  /* The live dot drops to the label's second line rather than being clipped off the end
+   * of a long stage name. The two lines are already reserved, so nothing moves. */
+  .mm-lead-band__label {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    font-size: 0.625rem;
+    letter-spacing: 0.05em;
+  }
+
+  .mm-lead-band__value {
+    font-size: 1.375rem;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* The stacking ladder. How many segments the band holds decides how much width a row
+ * needs — 6.75rem each, the segment floor plus the slack its border takes — and a
+ * container query cannot read a custom property, so it is written out: one rung per
+ * segment count, each saying "this many segments, and less room than they need, means
+ * stack". Turning `flex-wrap` on is what puts one segment on each line; every other
+ * difference follows from `--mm-band-stacked`, which the segments inherit. Any band
+ * wider than twelve segments stacks outright.
+ *
+ * A band outside a `.mm-lead` matches no rung and therefore never stacks. It also never
+ * wraps — it stays `nowrap` and scrolls — so the ordering the band promises holds for it
+ * too, which is the point of making the row state the default. */
+@container mm-lead (max-width: 13.5rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(2)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 20.25rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(3)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 27rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(4)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 33.75rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(5)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 40.5rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(6)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 47.25rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(7)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 54rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(8)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 60.75rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(9)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 67.5rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(10)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 74.25rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(11)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+@container mm-lead (max-width: 81rem) {
+  .mm-lead-band:has(> .mm-lead-band__segment:nth-child(12)) {
+    flex-wrap: wrap;
+    --mm-band-stacked: 1;
+  }
+}
+
+.mm-lead-band:has(> .mm-lead-band__segment:nth-child(13)) {
+  flex-wrap: wrap;
+  --mm-band-stacked: 1;
 }
 
 .mm-lead-band__pulse {
@@ -393,12 +582,6 @@
 
 .mm-quiet-link:hover {
   color: var(--mm-accent);
-}
-
-.mm-quiet-link:focus-visible {
-  outline: 2px solid var(--mm-accent-ring);
-  outline-offset: 2px;
-  border-radius: 4px;
 }
 
 .mm-quiet-note {

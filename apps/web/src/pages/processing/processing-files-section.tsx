@@ -426,8 +426,10 @@ function QuietSection({
 }
 
 /**
- * The lead: every state Weir files work into, each segment as wide as the number of files
- * in it, each one a filter into the list below.
+ * The lead: every state Weir files work into, each one a filter into the list below. In a
+ * row each segment is as wide as the number of files in it; where nine of them cannot fit
+ * one line the primitive restacks them into a labelled list by itself, and this page sets
+ * nothing but `--mm-flow-share` to get that.
  *
  * The counts come from `status_counts`, which the server computes with
  * `SELECT status, COUNT(*) FROM files [WHERE library_id = ?] GROUP BY status` — so it
@@ -478,17 +480,7 @@ function FileFlowBand({
             key={stage.status}
             type="button"
             className={`mm-lead-band__segment${modifier}`}
-            // Nine segments rather than Overview's six, so the floor has to come down from
-            // the primitive's 9rem: measured at 1440 the band is 1098px, and nine segments
-            // only share one line below about 121px each. That matters because a flex line
-            // justifies itself — a wrapped band compares widths only within a row, so a
-            // small count stranded on row two draws wider than a large one on row one.
-            // Inline because index.css imports Tailwind before weir-content.css, so a
-            // `min-w-*` utility loses the cascade to `.mm-lead-band__segment` at equal
-            // specificity. Below 1280 it still wraps, as the primitive is meant to.
-            style={
-              { "--mm-flow-share": share, minWidth: "6.75rem" } as CSSProperties
-            }
+            style={{ "--mm-flow-share": share } as CSSProperties}
             aria-pressed={selected}
             onClick={() => onSelect(selected ? undefined : stage.status)}
             data-testid={`processing-files-bucket-${stage.status}`}
@@ -901,8 +893,7 @@ export function ProcessingFilesSection() {
             data-testid="processing-files-flow-caption"
           >
             <span>
-              Each state is as wide as the number of files in it; click one to
-              filter the list, or click it again to clear.
+              Click a state to filter the list, or click it again to clear.
               {libraryId === undefined
                 ? ""
                 : " These counts are for the selected library."}
