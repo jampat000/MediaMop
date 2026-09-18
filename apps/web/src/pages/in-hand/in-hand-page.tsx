@@ -15,9 +15,15 @@
  * It is also the main screen, so it carries the few things the old dashboard did that
  * need a person (#459): no watched folder yet, workers that stopped, and jobs that failed.
  * Those appear only when they are true; a healthy install shows none of them.
+ *
+ * Laid out in the Weir content language — see docs/design/content-language.md. The lead band
+ * is where the files Weir is holding are sitting right now, one segment per status, each as
+ * wide as the number in it and each a filter into Files. The one figure row is today's
+ * hand-back, which is question 4. Everything below is borderless.
  */
 
 import { useCallback, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { DirectPlayLine } from "../../components/processing/direct-play-line";
 import { FileStoryPanel } from "../../components/processing/file-story-panel";
 import { Link } from "react-router-dom";
@@ -27,6 +33,7 @@ import { ApiEntryError } from "../../components/shared/api-entry-error";
 import {
   PROCESSING_FILE_STATUS_LABELS,
   type ProcessingFile,
+  type ProcessingFileStatus,
 } from "../../lib/processing/files-api";
 import {
   processingFilesKey,
@@ -56,6 +63,46 @@ const IN_HAND: ReadonlySet<string> = new Set([
 /** Statuses that mean the manager will not see this file until somebody acts. */
 const STUCK: ReadonlySet<string> = new Set(["processing_failed"]);
 
+/**
+ * The lead band: every place a file Weir is holding can be sitting, left to right, including
+ * the one place it can be stuck. Together these are one whole — everything in Weir's hands —
+ * so a segment's share of the band is honestly its share of the files. Each is a real file
+ * status, so clicking it opens Files filtered to exactly that status.
+ *
+ * The labels are this screen's own words for custody, not the Files tab's status names:
+ * "Arriving" rather than "Waiting", "Stuck" rather than "Failed".
+ */
+const HOLDING_STAGES: {
+  status: ProcessingFileStatus;
+  label: string;
+  hint: string;
+  live?: boolean;
+}[] = [
+  {
+    status: "unprocessed",
+    label: "Arriving",
+    hint: "Handed over, not started",
+  },
+  {
+    status: "processing",
+    label: "Working",
+    hint: "Being rewritten now",
+    live: true,
+  },
+  { status: "on_hold", label: "On hold", hint: "Waiting for a free lane" },
+  {
+    status: "out_of_schedule",
+    label: "Out of hours",
+    hint: "Outside its library's window",
+  },
+  {
+    status: "blocked_upstream",
+    label: "Held upstream",
+    hint: "Your manager still has it",
+  },
+  { status: "processing_failed", label: "Stuck", hint: "Needs a person" },
+];
+
 const FILES_QUERY = { limit: 200 } as const;
 const FAILED_JOBS_LIMIT = 100;
 // The screen moves as work does, so it follows the activity stream rather than a reload.
@@ -65,13 +112,19 @@ const LIVE_KEYS = [
   processingJobsInspectionQueryKey("failed", FAILED_JOBS_LIMIT),
 ] as const;
 
-type Notice = {
+/** One thing that is blocking or broken: a sentence and a way out, above the band. */
+type Interrupt = {
   key: string;
-  title: string;
-  body: string;
+  text: string;
   to: string;
   action: string;
 };
+
+function filesHref(status?: ProcessingFileStatus): string {
+  return status
+    ? `/processing?tab=files&status=${status}`
+    : "/processing?tab=files";
+}
 
 function formatBytes(bytes: number | null | undefined): string {
   if (bytes === null || bytes === undefined) return "—";
@@ -201,6 +254,88 @@ function FileRow({
   );
 }
 
+/** The band: where the files Weir is holding are sitting, each stage as wide as its count. */
+function HoldingBand({
+  counts,
+}: {
+  counts: Record<string, number>;
+}): React.ReactElement {
+  const stages = HOLDING_STAGES.map((stage) => ({
+    ...stage,
+    count: counts[stage.status] ?? 0,
+  }));
+  const total = stages.reduce((sum, stage) => sum + stage.count, 0);
+  return (
+    <div className="mm-lead-band" data-testid="in-hand-band">
+      {stages.map((stage) => {
+        const live = Boolean(stage.live) && stage.count > 0;
+        const modifier =
+          stage.count === 0
+            ? " mm-lead-band__segment--empty"
+            : live
+              ? " mm-lead-band__segment--live"
+              : "";
+        // Share of the band: the count itself, floored so an empty stage still reads
+        // as a stage rather than vanishing.
+        const share = total === 0 ? 1 : Math.max(stage.count, total * 0.06);
+        return (
+          <Link
+            key={stage.status}
+            className={`mm-lead-band__segment${modifier}`}
+            style={{ "--mm-flow-share": share } as CSSProperties}
+            to={filesHref(stage.status)}
+            data-testid="in-hand-band-stage"
+          >
+            <span className="mm-lead-band__label">
+              {stage.label}
+              {live ? (
+                <i className="mm-lead-band__pulse" aria-hidden="true" />
+              ) : null}
+            </span>
+            <span className="mm-lead-band__value">
+              {stage.count.toLocaleString()}
+            </span>
+            <span className="mm-lead-band__hint">{stage.hint}</span>
+            <span className="mm-lead-band__go" aria-hidden="true">
+              Filter →
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuietSection({
+  headingId,
+  heading,
+  ariaLabel,
+  aside,
+  children,
+}: {
+  headingId?: string;
+  heading: string;
+  ariaLabel?: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <section
+      className="mm-quiet-section"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabel ? undefined : headingId}
+    >
+      <div className="mm-quiet-section__head">
+        <h2 id={headingId} className="mm-quiet-section__title">
+          {heading}
+        </h2>
+        {aside ? <div className="mm-quiet-section__aside">{aside}</div> : null}
+      </div>
+      <div className="mm-quiet-section__body">{children}</div>
+    </section>
+  );
+}
+
 export function InHandPage(): React.ReactElement {
   useActivityStreamInvalidations(LIVE_KEYS, { exact: true, throttleMs: 1_500 });
   const files = useProcessingFilesQuery(FILES_QUERY);
@@ -261,31 +396,36 @@ export function InHandPage(): React.ReactElement {
   }
 
   const counts = files.data?.status_counts ?? {};
-  const waiting = counts.unprocessed ?? 0;
   const working = counts.processing ?? 0;
   const inHandTotal = [...IN_HAND].reduce((n, s) => n + (counts[s] ?? 0), 0);
+  const holdingTotal = HOLDING_STAGES.reduce(
+    (n, stage) => n + (counts[stage.status] ?? 0),
+    0,
+  );
   const watchedFolder = libraries.data?.[0]?.watched_folder ?? "";
   const outputFolder = libraries.data?.[0]?.output_folder ?? "";
 
-  const notices: Notice[] = [];
-  if (
+  // Nothing to watch is the strongest empty on this page: it wins outright, and the band
+  // and the figure row do not draw at all. A fresh install must never show a row of zeroes.
+  const noWatchedFolder = Boolean(
     libraries.data &&
-    !libraries.data.some((l) => l.enabled && l.watched_folder.trim())
-  ) {
-    notices.push({
+    !libraries.data.some((l) => l.enabled && l.watched_folder.trim()),
+  );
+
+  const interrupts: Interrupt[] = [];
+  if (noWatchedFolder) {
+    interrupts.push({
       key: "setup",
-      title: "Nothing to watch yet",
-      body: "Weir picks files up from a library's watched folder. Add one, or turn an existing library on.",
+      text: "Nothing to watch yet. Weir picks files up from a library's watched folder — add one, or turn an existing library on.",
       to: "/processing?tab=libraries",
       action: "Set up a library",
     });
   }
   for (const worker of readiness.data?.worker_health ?? []) {
     if (worker.status !== "degraded") continue;
-    notices.push({
+    interrupts.push({
       key: `worker-${worker.module}`,
-      title: "Background work has stopped",
-      body: worker.detail,
+      text: `Background work has stopped. ${worker.detail}`,
       to: "/processing?tab=jobs",
       action: "Open jobs",
     });
@@ -296,14 +436,26 @@ export function InHandPage(): React.ReactElement {
       failedJobCount >= FAILED_JOBS_LIMIT
         ? `${FAILED_JOBS_LIMIT}+`
         : String(failedJobCount);
-    notices.push({
+    interrupts.push({
       key: "failed-jobs",
-      title: failedJobCount === 1 ? "1 job failed" : `${shown} jobs failed`,
-      body: "Each one says what went wrong and what to do next.",
+      text: `${failedJobCount === 1 ? "1 job failed" : `${shown} jobs failed`}. Each one says what went wrong and what to do next.`,
       to: "/processing?tab=jobs&status=failed",
       action: "Review failed jobs",
     });
   }
+  if (stuck.length > 0) {
+    interrupts.push({
+      key: "stuck",
+      text:
+        stuck.length === 1
+          ? "1 file is stuck in Weir's hands, so your media manager is still missing it."
+          : `${stuck.length} files are stuck in Weir's hands, so your media manager is still missing them.`,
+      to: filesHref("processing_failed"),
+      action: "Open Files",
+    });
+  }
+
+  const stats = today.data;
 
   return (
     <div className="mm-page">
@@ -318,112 +470,186 @@ export function InHandPage(): React.ReactElement {
         </p>
       </header>
 
-      {/* Where Weir sits, made literal. Nobody should have to guess. */}
-      <section className="mm-inhand-flow" aria-label="Where these files are">
-        <div className="mm-inhand-flow__stage">
-          <p className="mm-inhand-flow__label">Arriving</p>
-          <p className="mm-inhand-flow__figure">{waiting}</p>
-          <p className="mm-inhand-flow__detail">
-            waiting{watchedFolder ? ` in ${watchedFolder}` : ""}
-          </p>
-        </div>
-        <div className="mm-inhand-flow__arrow" aria-hidden="true">
-          →
-        </div>
-        <div className="mm-inhand-flow__stage mm-inhand-flow__stage--active">
-          <p className="mm-inhand-flow__label">In Weir&rsquo;s hands</p>
-          <p className="mm-inhand-flow__figure">{inHandTotal}</p>
-          <p className="mm-inhand-flow__detail">
-            {working} being worked on right now
-          </p>
-        </div>
-        <div className="mm-inhand-flow__arrow" aria-hidden="true">
-          →
-        </div>
-        <div className="mm-inhand-flow__stage">
-          <p className="mm-inhand-flow__label">Handed back today</p>
-          <p className="mm-inhand-flow__figure mm-status-text--healthy">
-            {today.data?.files_processed ?? 0}
-          </p>
-          <p className="mm-inhand-flow__detail">
-            {today.data
-              ? `${formatBytes(today.data.net_space_saved_bytes)} saved${
-                  outputFolder ? ` · ${outputFolder}` : ""
-                }`
-              : "—"}
-          </p>
-        </div>
-      </section>
+      <div className="mm-quiet-stack">
+        <div className="mm-lead">
+          {interrupts.length > 0 ? (
+            <ul className="mm-interrupt" data-testid="in-hand-notices">
+              {interrupts.map((item) => (
+                <li key={item.key} className="mm-interrupt__item">
+                  <span className="mm-interrupt__text">{item.text}</span>
+                  <Link className="mm-quiet-link" to={item.to}>
+                    {item.action} →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
-      {notices.length > 0 ? (
-        <section
-          className="mm-inhand-notices"
-          aria-label="Needs you"
-          data-testid="in-hand-notices"
-        >
-          {notices.map((notice) => (
-            <div key={notice.key} className="mm-inhand-notice">
-              <p className="mm-inhand-notice__title">{notice.title}</p>
-              <p className="mm-inhand-notice__body">{notice.body}</p>
-              <Link className="mm-inhand-notice__link" to={notice.to}>
-                {notice.action}
+          {noWatchedFolder ? null : (
+            <>
+              {holdingTotal === 0 ? (
+                <p className="mm-quiet-note" data-testid="in-hand-band-empty">
+                  Weir has nothing in hand. Anything your manager drops in a
+                  watched folder shows up here after the next scan.
+                </p>
+              ) : (
+                <HoldingBand counts={counts} />
+              )}
+
+              <p className="mm-lead-caption" data-testid="in-hand-caption">
+                <span>
+                  {holdingTotal === 0
+                    ? "Weir picks a file up once your manager has finished writing it."
+                    : "Each stage is as wide as the number of files sitting in it; open one to see those files."}
+                  {watchedFolder ? ` Files arrive in ${watchedFolder}.` : ""}
+                </span>
+                <span>
+                  {working > 0
+                    ? `${working.toLocaleString()} being worked on right now.`
+                    : inHandTotal > 0
+                      ? `${inHandTotal.toLocaleString()} waiting their turn.`
+                      : "Nothing is waiting."}
+                </span>
+              </p>
+
+              <div className="mm-figure-row" data-testid="in-hand-today">
+                <section className="mm-figure mm-figure--hero">
+                  <div className="mm-figure__eyebrow">
+                    <span>Handed back today</span>
+                  </div>
+                  <div className="mm-figure__value">
+                    {stats ? stats.files_processed.toLocaleString() : "…"}
+                    <span className="mm-figure__unit">
+                      files back with your manager
+                    </span>
+                  </div>
+                  <p className="mm-figure__note">
+                    {outputFolder
+                      ? `Written to ${outputFolder} for your manager to import.`
+                      : "Written to each library's output folder for your manager to import."}
+                  </p>
+                  {stats ? (
+                    <div className="mm-figure__foot">
+                      <div>
+                        <span className="mm-figure__foot-value">
+                          {stats.output_written_count.toLocaleString()}
+                        </span>
+                        <span className="mm-figure__foot-label">Rewritten</span>
+                      </div>
+                      <div>
+                        <span className="mm-figure__foot-value">
+                          {stats.already_optimized_count.toLocaleString()}
+                        </span>
+                        <span className="mm-figure__foot-label">
+                          Already right
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+
+                <section className="mm-figure">
+                  <div className="mm-figure__eyebrow">
+                    <span>Reclaimed today</span>
+                  </div>
+                  <div className="mm-figure__value">
+                    {stats ? formatBytes(stats.net_space_saved_bytes) : "…"}
+                  </div>
+                  {stats && stats.net_space_saved_percent > 0 ? (
+                    <div
+                      className="mm-figure__meter"
+                      aria-hidden="true"
+                      style={
+                        {
+                          "--mm-meter-fill": `${Math.min(100, stats.net_space_saved_percent)}%`,
+                        } as CSSProperties
+                      }
+                    />
+                  ) : null}
+                  <p className="mm-figure__note">
+                    {stats && stats.net_space_saved_percent > 0
+                      ? `${stats.net_space_saved_percent}% smaller than what arrived`
+                      : "Net space saved by the tracks Weir removed"}
+                  </p>
+                </section>
+
+                <section
+                  className={`mm-figure${
+                    stats && stats.files_failed > 0 ? " mm-figure--warn" : ""
+                  }`}
+                >
+                  <div className="mm-figure__eyebrow">
+                    <span>Failed today</span>
+                  </div>
+                  <div className="mm-figure__value">
+                    {stats ? stats.files_failed.toLocaleString() : "…"}
+                  </div>
+                  <p className="mm-figure__note">
+                    {!stats
+                      ? "Files Weir could not finish"
+                      : stats.files_failed === 0
+                        ? "Nothing failed today"
+                        : "Weir could not finish these, and kept the originals"}
+                  </p>
+                </section>
+              </div>
+            </>
+          )}
+        </div>
+
+        {stuck.length > 0 ? (
+          <QuietSection
+            headingId="in-hand-stuck"
+            heading="Stuck in Weir's hands"
+            aside={
+              <Link
+                className="mm-quiet-link"
+                to={filesHref("processing_failed")}
+              >
+                Open Files to deal with them →
               </Link>
-            </div>
-          ))}
-        </section>
-      ) : null}
-
-      {stuck.length > 0 ? (
-        <section className="mm-inhand-stuck" aria-labelledby="in-hand-stuck">
-          <h2 id="in-hand-stuck" className="mm-inhand-stuck__title">
-            {stuck.length === 1
-              ? "1 file is stuck in Weir's hands"
-              : `${stuck.length} files are stuck in Weir's hands`}
-          </h2>
-          <p className="mm-inhand-stuck__body">
-            Your media manager will not see these until they are dealt with. The
-            originals are untouched in the watched folder.
-          </p>
-          <ul className="mm-inhand-list">
-            {stuck.map((file) => (
-              <FileRow key={file.id} file={file} onOpen={openStory} />
-            ))}
-          </ul>
-          <Link className="mm-inhand-stuck__link" to="/processing?tab=files">
-            Open Files to deal with them
-          </Link>
-        </section>
-      ) : null}
-
-      {grouped.length === 0 ? (
-        <section className="mm-inhand-empty">
-          <h2 className="mm-inhand-empty__title">Nothing in hand</h2>
-          <p className="mm-inhand-empty__body">
-            Every file your manager handed over has been dealt with and passed
-            back. New arrivals in a watched folder will show up here.
-          </p>
-        </section>
-      ) : (
-        grouped.map(([libraryName, rows]) => (
-          <section
-            key={libraryName}
-            className="mm-inhand-group"
-            aria-label={libraryName}
+            }
           >
-            <h2 className="mm-inhand-group__title">
-              {libraryName}
-              <span className="mm-inhand-group__count">
-                {rows.length === 1 ? "1 file" : `${rows.length} files`}
-              </span>
-            </h2>
+            <p className="mm-quiet-note">
+              Your media manager will not see these until they are dealt with.
+              The originals are untouched in the watched folder.
+            </p>
             <ul className="mm-inhand-list">
-              {rows.map((file) => (
+              {stuck.map((file) => (
                 <FileRow key={file.id} file={file} onOpen={openStory} />
               ))}
             </ul>
-          </section>
-        ))
-      )}
+          </QuietSection>
+        ) : null}
+
+        {grouped.length === 0 && stuck.length === 0 ? (
+          <QuietSection headingId="in-hand-empty" heading="Nothing in hand">
+            <p className="mm-quiet-note">
+              Every file your manager handed over has been dealt with and passed
+              back. New arrivals in a watched folder will show up here.
+            </p>
+          </QuietSection>
+        ) : (
+          grouped.map(([libraryName, rows]) => (
+            <QuietSection
+              key={libraryName}
+              heading={libraryName}
+              ariaLabel={libraryName}
+              aside={
+                <p className="mm-quiet-note">
+                  {rows.length === 1 ? "1 file" : `${rows.length} files`}
+                </p>
+              }
+            >
+              <ul className="mm-inhand-list">
+                {rows.map((file) => (
+                  <FileRow key={file.id} file={file} onOpen={openStory} />
+                ))}
+              </ul>
+            </QuietSection>
+          ))
+        )}
+      </div>
 
       <FileStoryPanel
         open={storyFile !== null}
