@@ -33,8 +33,10 @@ const KINDS: MediaManagerKind[] = ["radarr", "sonarr", "deluno", "native"];
 
 /** What choosing each one means, without naming what Weir does internally. */
 const KIND_BLURBS: Record<MediaManagerKind, string> = {
-  radarr: "Tells Weir when it has added a film.",
-  sonarr: "Tells Weir when it has added an episode.",
+  radarr:
+    "Lets Weir check what Radarr is still importing, and download a film again.",
+  sonarr:
+    "Lets Weir check what Sonarr is still importing, and download an episode again.",
   deluno: "Hands a file to Weir to work on, and waits to be told it is ready.",
   native: "Anything else that can send Weir a message.",
 };
