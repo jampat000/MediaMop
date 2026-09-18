@@ -63,7 +63,7 @@ public sealed class ProcessingLibraryDiscoveryApiTests
         return (server, client, manager);
     }
 
-    private static async Task<long> CreateConnectionAsync(ApiTestClient client, string baseUrl = "http://10.1.1.142:5099", string? apiKey = "deluno_secret_key")
+    private static async Task<long> CreateConnectionAsync(ApiTestClient client, string baseUrl = "http://192.0.2.10:5099", string? apiKey = "deluno_secret_key")
     {
         var body = new Dictionary<string, object?>
         {

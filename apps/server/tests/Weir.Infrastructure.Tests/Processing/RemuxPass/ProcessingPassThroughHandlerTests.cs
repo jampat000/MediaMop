@@ -118,7 +118,7 @@ public sealed class ProcessingPassThroughHandlerTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(_folders.Out("file.mkv"))!);
         File.WriteAllText(_folders.Out("file.mkv"), "already there");
         await FileRowAsync(library, "file.mkv");
-        await _fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        await _fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await _fixture.Db(async uow => { await _fixture.Ledger.RecordReceivedAsync(uow, "deluno", "hskip", library, "file.mkv"); return 0; });
         var payload = $$$"""{"relative_media_path":"file.mkv","library_id":{{{library}}},"trigger":"worker","origin":{"source_key":"deluno","handoff_id":"hskip","callback_path":"{{{EventsPath}}}"}}""";
 
@@ -137,7 +137,7 @@ public sealed class ProcessingPassThroughHandlerTests : IDisposable
         var library = await LibraryAsync();
         _folders.Source(Path.Join("Film", "film.mkv"));
         await FileRowAsync(library, "Film/film.mkv");
-        await _fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        await _fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await _fixture.Db(async uow => { await _fixture.Ledger.RecordReceivedAsync(uow, "deluno", "h1", library, "Film/film.mkv"); return 0; });
         var payload = $$$"""{"relative_media_path":"Film/film.mkv","library_id":{{{library}}},"trigger":"worker","origin":{"source_key":"deluno","handoff_id":"h1","callback_path":"{{{EventsPath}}}"}}""";
 

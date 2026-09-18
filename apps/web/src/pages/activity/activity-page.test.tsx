@@ -269,7 +269,7 @@ describe("ActivityPage", () => {
 
   it("keeps long activity titles wrappable while preserving the full title", () => {
     const fileName =
-      "Fantastic.Beasts.The.Secrets.of.Dumbledore.2022.UHD.BluRay.2160p.TrueHD.Atmos.FraMeSToR.mkv";
+      "An.Example.Feature.With.A.Very.Long.Release.Name.2024.UHD.BluRay.2160p.TrueHD.Atmos.EXAMPLE.mkv";
     const longTitle = `${fileName} was processed successfully`;
     mocks.useActivityRecentQuery.mockReturnValue(
       recentResult([

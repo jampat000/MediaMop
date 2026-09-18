@@ -108,13 +108,13 @@ public sealed class MediaManagerServiceTests
         var service = new MediaManagerConnectionService(fixture.Store.Options, noSecretCipher, fixture.Ports);
 
         var created = await Assert.ThrowsAsync<MediaManagerConnectionException>(
-            () => fixture.Db(uow => service.CreateAsync(uow, "radarr", "No Secret", "http://10.1.1.5:7878", "some-api-key")));
+            () => fixture.Db(uow => service.CreateAsync(uow, "radarr", "No Secret", "http://192.0.2.20:7878", "some-api-key")));
         Assert.Equal(Core.Security.CredentialCipher.MissingSecretMessage, created.Message);
         Assert.Contains("WEIR_CREDENTIALS_SECRET", created.Message, StringComparison.Ordinal);
         Assert.Contains("WEIR_SESSION_SECRET", created.Message, StringComparison.Ordinal);
 
         // A connection with no key at all is unaffected: nothing needs encrypting.
-        var id = await fixture.Db(uow => service.CreateAsync(uow, "radarr", "No Key Needed", "http://10.1.1.6:7878"));
+        var id = await fixture.Db(uow => service.CreateAsync(uow, "radarr", "No Key Needed", "http://192.0.2.21:7878"));
         Assert.True(id > 0);
 
         var row = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, id)))!;
@@ -173,8 +173,8 @@ public sealed class MediaManagerServiceTests
     public async Task Several_enabled_connections_of_one_kind_each_authenticate_with_their_own_secret()
     {
         using var fixture = new MediaManagerFixture();
-        var id1 = await fixture.AddConnectionAsync("radarr", "1080p", "http://10.1.1.5:7878");
-        var id2 = await fixture.AddConnectionAsync("radarr", "4K", "http://10.1.1.6:7878");
+        var id1 = await fixture.AddConnectionAsync("radarr", "1080p", "http://192.0.2.20:7878");
+        var id2 = await fixture.AddConnectionAsync("radarr", "4K", "http://192.0.2.21:7878");
         var row1 = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, id1)))!;
         var row2 = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, id2)))!;
         var secret1 = await fixture.Db(uow => fixture.Connections.RotateWebhookSecretAsync(uow, row1));
@@ -205,9 +205,9 @@ public sealed class MediaManagerServiceTests
     public async Task Connections_validate_names_addresses_and_keep_or_clear_the_key()
     {
         using var fixture = new MediaManagerFixture();
-        var id = await fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.142:5099/", "deluno_secret_key");
+        var id = await fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.10:5099/", "deluno_secret_key");
         var saved = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, id)))!;
-        Assert.Equal("http://10.1.1.142:5099", saved.BaseUrl);
+        Assert.Equal("http://192.0.2.10:5099", saved.BaseUrl);
         Assert.Equal(["missing", "upgrade"], saved.Lanes.Select(l => l.Lane));
         Assert.Equal("deluno_secret_key", fixture.Cipher.Decrypt(saved.ApiKeyCiphertext));
 
@@ -280,11 +280,11 @@ public sealed class MediaManagerServiceTests
     {
         using var fixture = new MediaManagerFixture();
         fixture.Http.Route(HttpMethod.Post, "/api/integrations/processors/events", _ => FakeManagerHttp.Response(HttpStatusCode.OK));
-        await fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        await fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         var status = await Report(fixture, DelunoPayload, """{"ok":true,"outcome":"live_output_written","output_file":"/out/b.mkv","relative_media_path":"Film/film.mkv"}""");
         Assert.Equal("reported completed to Deluno", status);
         var post = Assert.Single(fixture.Http.RequestsTo(HttpMethod.Post, "/api/integrations/processors/events"));
-        Assert.Equal("http://10.1.1.9:5099/api/integrations/processors/events", post.Uri.ToString());
+        Assert.Equal("http://192.0.2.30:5099/api/integrations/processors/events", post.Uri.ToString());
         Assert.Equal("k1", post.Headers["X-Api-Key"]);
         Assert.False(post.FollowRedirects);
         Assert.Equal(
@@ -297,7 +297,7 @@ public sealed class MediaManagerServiceTests
     public async Task An_unreachable_or_refusing_manager_is_reported_not_raised()
     {
         using var fixture = new MediaManagerFixture();
-        await fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099");
+        await fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099");
         const string ok = """{"ok":true,"outcome":"live_output_written","output_file":"/out/b.mkv"}""";
         Assert.StartsWith("failed: could not reach Deluno", await Report(fixture, HandoffPayload, ok), StringComparison.Ordinal);
         fixture.Http.Json(HttpMethod.Post, "/api/integrations/processors/events", string.Empty, HttpStatusCode.Conflict);
@@ -312,7 +312,7 @@ public sealed class MediaManagerServiceTests
     public async Task A_failure_that_is_not_final_is_not_reported(string flag, string expected)
     {
         using var fixture = new MediaManagerFixture();
-        await fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        await fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         var status = await Report(fixture, DelunoPayload, $$"""{"ok":false,"outcome":"failed_execution","reason":"ffmpeg failed","{{flag}}":true}""");
         Assert.StartsWith("skipped:", status, StringComparison.Ordinal);
         Assert.Contains(expected, status, StringComparison.Ordinal);
@@ -324,7 +324,7 @@ public sealed class MediaManagerServiceTests
     {
         using var fixture = new MediaManagerFixture();
         fixture.Http.Json(HttpMethod.Post, "/api/integrations/processors/events", "{}", HttpStatusCode.Accepted);
-        await fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        await fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await fixture.Db(async uow => { await fixture.Ledger.RecordReceivedAsync(uow, "deluno", "h1", null, "Film/film.mkv"); return 0; });
         var status = await Report(fixture, DelunoPayload, """{"ok":false,"outcome":"failed_execution","reason":"ffmpeg failed","retry_scheduled":false,"pass_through_queued":false,"failure_class":"execution"}""");
         Assert.Equal("reported failed to Deluno", status);
@@ -341,7 +341,7 @@ public sealed class MediaManagerServiceTests
         fixture.Http
             .Json(HttpMethod.Post, "/api/integrations/processors/events", "{}", HttpStatusCode.Accepted)
             .Json(HttpMethod.Get, "/api/integrations/external/manifest", """{"libraries":[{"id":"lib-tv","mediaType":"tv","importWorkflow":"refine-before-import","processorOutputPath":"/data/tv-refined"},{"id":"lib-movies","mediaType":"movie","importWorkflow":"refine-before-import","processorOutputPath":"/data/refined"}]}""");
-        await fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        await fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         var result = new PyDict().Set("ok", true).Set("outcome", "live_output_written")
             .Set("output_file", Path.Join(local, "Film", "film.mkv")).Set("processing_output_folder_resolved", local);
         var status = await fixture.Db(uow => fixture.Reporter.ReportHandoffCompletionAsync(uow, DelunoPayload, result), commit: false);

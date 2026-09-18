@@ -215,8 +215,8 @@ def test_two_radarr_connections_each_authenticate_with_their_own_secret(operator
     the presented secret is matched against every enabled connection of the kind.
     """
 
-    row_1080p = _create(operator, kind="radarr", name="1080p", base_url="http://10.1.1.5:7878")
-    row_4k = _create(operator, kind="radarr", name="4K", base_url="http://10.1.1.6:7878")
+    row_1080p = _create(operator, kind="radarr", name="1080p", base_url="http://192.0.2.20:7878")
+    row_4k = _create(operator, kind="radarr", name="4K", base_url="http://192.0.2.21:7878")
     secret_1080p = operator.post_csrf(f"{API}/media-managers/connections/{row_1080p['id']}/webhook-secret").json()[
         "webhook_secret"
     ]

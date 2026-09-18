@@ -30,7 +30,7 @@ def create_connection(client: WeirClient, **overrides: Any) -> httpx.Response:
     body: dict[str, Any] = {
         "kind": "deluno",
         "name": "Deluno",
-        "base_url": "http://10.1.1.142:5099",
+        "base_url": "http://192.0.2.10:5099",
         "api_key": "deluno_secret_key",
     }
     body.update(overrides)

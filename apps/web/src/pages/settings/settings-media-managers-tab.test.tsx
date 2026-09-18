@@ -15,7 +15,7 @@ function connection(
     kind: "deluno",
     name: "Deluno",
     enabled: true,
-    base_url: "http://10.1.1.142:5099",
+    base_url: "http://192.0.2.10:5099",
     api_key_is_saved: true,
     webhook_secret_is_set: false,
     webhook_url_path: "/api/v1/intake/webhook/deluno",
@@ -220,7 +220,7 @@ describe("SettingsMediaManagersTab", () => {
       target: { value: "Deluno" },
     });
     fireEvent.change(screen.getByTestId("media-manager-base-url"), {
-      target: { value: "http://10.1.1.142:5099" },
+      target: { value: "http://192.0.2.10:5099" },
     });
     fireEvent.click(screen.getByTestId("media-manager-save"));
 
@@ -229,7 +229,7 @@ describe("SettingsMediaManagersTab", () => {
         expect.objectContaining({
           kind: "deluno",
           name: "Deluno",
-          base_url: "http://10.1.1.142:5099",
+          base_url: "http://192.0.2.10:5099",
         }),
       ),
     );

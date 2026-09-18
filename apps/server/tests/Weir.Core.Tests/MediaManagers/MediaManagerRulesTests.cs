@@ -19,7 +19,7 @@ public sealed class MediaManagerRulesTests
     [InlineData("D:\\Handoff", "D:\\Handoff\\Film\\film.mkv", "Film/film.mkv")]
     [InlineData("D:/Handoff", "D:\\Handoff\\Film\\film.mkv", "Film/film.mkv")]
     [InlineData("D:\\handoff", "D:\\HANDOFF\\Film\\film.mkv", "Film/film.mkv")]
-    [InlineData(@"\\storage-city\Data\Media\Handoff", @"\\storage-city\data\media\handoff\a\b.mkv", "a/b.mkv")]
+    [InlineData(@"\\media-nas\Data\Media\Handoff", @"\\media-nas\data\media\handoff\a\b.mkv", "a/b.mkv")]
     [InlineData("/w", "/w/a/b/c/d.mkv", "a/b/c/d.mkv")]
     public void Paths_inside_the_watched_folder_resolve(string watched, string file, string expected)
     {

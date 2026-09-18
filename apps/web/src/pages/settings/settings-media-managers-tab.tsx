@@ -159,7 +159,7 @@ function AddConnectionForm({ onCancel }: { onCancel: () => void }) {
             data-testid="media-manager-base-url"
             className={mmEditableTextFieldClass}
             value={form.base_url}
-            placeholder="http://10.1.1.142:5099"
+            placeholder="http://192.0.2.10:5099"
             onChange={(e) => setForm({ ...form, base_url: e.target.value })}
           />
           <span className="text-xs text-[var(--mm-text2)]">
