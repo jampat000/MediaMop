@@ -3,6 +3,8 @@
  * the #502 "try on a file" preview endpoint (`POST .../preview` with the file's absolute path) rather than a
  * second implementation of the same explanation — so the row an operator opens here says exactly what the
  * rule-set editor's own preview would say about it.
+ *
+ * Rule 3 of docs/design/content-language.md: `.mm-quiet-table`, like every other table on this tab.
  */
 import { useQuery } from "@tanstack/react-query";
 
@@ -48,8 +50,8 @@ export function LibraryFilePreview({
 
   const result = preview.data;
   return (
-    <div className="space-y-2" data-testid="library-file-preview">
-      <p className="text-sm text-[var(--mm-text2)]">
+    <div className="space-y-3" data-testid="library-file-preview">
+      <p className="mm-quiet-note">
         {result.remux_required
           ? "These rules would change this file:"
           : "These rules would leave this file exactly as it is."}
@@ -57,44 +59,35 @@ export function LibraryFilePreview({
           ? ` About ${formatBytes(result.estimated_size_reduction_bytes)} smaller (an estimate).`
           : ""}
       </p>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[32rem] text-left text-sm">
+      <div className="mm-quiet-table-wrap">
+        <table className="mm-quiet-table min-w-[32rem] max-[760px]:min-w-0">
           <thead>
-            <tr className="border-b border-[var(--mm-border)] text-[var(--mm-text3)]">
-              <th className="py-1 font-medium" scope="col">
-                Track
-              </th>
-              <th className="py-1 font-medium" scope="col">
-                Language
-              </th>
-              <th className="py-1 font-medium" scope="col">
-                Codec
-              </th>
-              <th className="py-1 font-medium" scope="col">
-                What the rules do
-              </th>
+            <tr>
+              <th scope="col">Track</th>
+              <th scope="col">Language</th>
+              <th scope="col">Codec</th>
+              <th scope="col">What the rules do</th>
             </tr>
           </thead>
           <tbody>
             {result.tracks.map((track) => (
               <tr
                 key={`${track.type}-${track.index}`}
-                className="border-b border-[var(--mm-border)]/50 align-top"
                 data-testid="library-file-preview-track"
               >
-                <td className="py-1.5 text-[var(--mm-text2)]">
+                <th scope="row" className="mm-quiet-table__name">
                   {track.type}
                   {track.default ? " · default" : ""}
                   {track.forced ? " · forced" : ""}
-                </td>
-                <td className="py-1.5">
+                </th>
+                <td data-label="Language">
                   {processingStreamLanguageLabel(track.language)}
                 </td>
-                <td className="py-1.5 text-[var(--mm-text2)]">
+                <td data-label="Codec">
                   {track.codec}
                   {track.channels ? ` · ${track.channels}ch` : ""}
                 </td>
-                <td className="py-1.5">
+                <td data-label="What the rules do">
                   <span
                     className={
                       track.action === "keep"

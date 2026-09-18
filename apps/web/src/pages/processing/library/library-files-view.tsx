@@ -6,6 +6,12 @@
  *
  * Sorting, filtering and paging are all the server's: the query string goes straight to the endpoint, which
  * answers with one page. Nothing here ever holds a whole library in memory.
+ *
+ * Rule 3 of docs/design/content-language.md: no box around any of it, and the table is `.mm-quiet-table`.
+ * The sub-view is one thing, so it takes no invented heading. Below 760px the primitive stacks each row and
+ * reads its column names from `data-label` — nine columns no longer run off the side of a phone, at the cost
+ * of the header row, and with it the sort controls and the select-all box. Both are pointer-width
+ * conveniences; the filters, the per-row checkboxes, paging and Clean are not, and all still work there.
  */
 import { Fragment, useMemo, useState } from "react";
 
@@ -34,10 +40,10 @@ import {
 } from "../../../lib/ui/mm-control-roles";
 import { LibraryFilePreview } from "./library-file-preview";
 
-const COLUMNS: { key: LibraryFileSort; label: string; numeric?: boolean }[] = [
+const COLUMNS: { key: LibraryFileSort; label: string }[] = [
   { key: "title", label: "Title" },
   { key: "path", label: "Path" },
-  { key: "size", label: "Size", numeric: true },
+  { key: "size", label: "Size" },
   { key: "video", label: "Video" },
   { key: "audio", label: "Audio" },
   { key: "subtitles", label: "Subtitles" },
@@ -128,7 +134,7 @@ export function LibraryFilesView({
 
   return (
     <section
-      className="mm-bubble space-y-3 p-4"
+      className="flex w-full min-w-0 flex-col gap-4"
       data-testid="library-files-section"
     >
       <div className="flex flex-wrap items-end gap-2">
@@ -252,10 +258,7 @@ export function LibraryFilesView({
       ) : null}
 
       {files ? (
-        <p
-          className="text-sm text-[var(--mm-text2)]"
-          data-testid="library-files-summary"
-        >
+        <p className="mm-quiet-note" data-testid="library-files-summary">
           {files.summary.matches} match the rules, {files.summary.would_change}{" "}
           would change, {files.summary.cannot_process} cannot be processed.
           Estimated size saved if all &quot;would change&quot; files were
@@ -271,11 +274,11 @@ export function LibraryFilesView({
       {files && rows.length === 0 ? emptyState : null}
 
       {files && rows.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[54rem] text-left text-sm">
+        <div className="mm-quiet-table-wrap">
+          <table className="mm-quiet-table min-w-[58rem] max-[760px]:min-w-0">
             <thead>
-              <tr className="border-b border-[var(--mm-border)] text-[var(--mm-text3)]">
-                <th className="w-8 py-1" scope="col">
+              <tr>
+                <th scope="col">
                   {editable ? (
                     <input
                       type="checkbox"
@@ -292,7 +295,6 @@ export function LibraryFilesView({
                 {COLUMNS.map((column) => (
                   <th
                     key={column.key}
-                    className={`py-1 font-medium ${column.numeric ? "text-right" : ""}`}
                     scope="col"
                     aria-sort={
                       files.sort === column.key
@@ -318,7 +320,7 @@ export function LibraryFilesView({
                     </button>
                   </th>
                 ))}
-                <th className="w-24 py-1" scope="col">
+                <th scope="col">
                   <span className="sr-only">Details</span>
                 </th>
               </tr>
@@ -326,11 +328,8 @@ export function LibraryFilesView({
             <tbody>
               {rows.map((file) => (
                 <Fragment key={file.path}>
-                  <tr
-                    className="border-b border-[var(--mm-border)]/50 align-top"
-                    data-testid="library-file-row"
-                  >
-                    <td className="py-2">
+                  <tr data-testid="library-file-row">
+                    <td data-label="">
                       <input
                         type="checkbox"
                         className={mmCheckboxControlClass}
@@ -342,46 +341,47 @@ export function LibraryFilesView({
                         aria-label={`Select ${file.path}`}
                       />
                     </td>
-                    <td className="py-2 text-[var(--mm-text1)]">
+                    <th scope="row" className="mm-quiet-table__name">
                       {file.manager_title ?? "Unmatched"}
                       {file.manager_title && file.manager_kind ? (
-                        <span className="text-xs text-[var(--mm-text3)]">
+                        <span className="text-xs font-normal text-[var(--mm-text3)]">
                           {" "}
                           ({file.manager_kind})
                         </span>
                       ) : null}
-                    </td>
-                    <td className="py-2 break-all text-[var(--mm-text2)]">
+                    </th>
+                    <td data-label="Path" className="[overflow-wrap:anywhere]">
                       {file.path}
                     </td>
-                    <td className="py-2 text-right tabular-nums">
+                    <td
+                      data-label="Size"
+                      className="tabular-nums whitespace-nowrap"
+                    >
                       {formatBytes(file.size_bytes)}
                     </td>
-                    <td className="py-2 text-[var(--mm-text2)]">
-                      {videoCell(file)}
-                    </td>
-                    <td className="py-2 text-[var(--mm-text2)]">
+                    <td data-label="Video">{videoCell(file)}</td>
+                    <td data-label="Audio">
                       {file.audio_summary ?? "Unknown"}
                     </td>
-                    <td className="py-2 text-[var(--mm-text2)]">
+                    <td data-label="Subtitles">
                       {file.subtitle_summary ?? "None"}
                     </td>
-                    <td className="py-2">
-                      <div>
+                    <td data-label="State">
+                      <span className="mm-quiet-table__strong">
                         {
                           LIBRARY_FILE_CLASSIFICATION_LABELS[
                             file.classification
                           ]
                         }
-                      </div>
-                      <div className="text-xs text-[var(--mm-text3)]">
+                      </span>
+                      <span className="mm-quiet-table__sub">
                         {file.summary ?? file.reason ?? ""}
-                      </div>
+                      </span>
                     </td>
-                    <td className="py-2 text-right">
+                    <td data-label="">
                       <button
                         type="button"
-                        className={mmActionButtonClass({ variant: "tertiary" })}
+                        className="mm-quiet-link"
                         aria-expanded={expanded === file.path}
                         onClick={() =>
                           setExpanded(expanded === file.path ? null : file.path)
@@ -392,8 +392,8 @@ export function LibraryFilesView({
                     </td>
                   </tr>
                   {expanded === file.path ? (
-                    <tr className="border-b border-[var(--mm-border)]/50">
-                      <td colSpan={COLUMNS.length + 2} className="px-2 py-3">
+                    <tr>
+                      <td colSpan={COLUMNS.length + 2} data-label="">
                         <LibraryFilePreview
                           libraryId={libraryId}
                           path={file.path}
