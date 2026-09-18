@@ -16,6 +16,12 @@ export class ApiHttpError extends Error {
   readonly path: string;
   readonly detail: unknown;
   readonly timedOut: boolean;
+  /**
+   * True when this error was synthesised from a `fetch` rejection because the server
+   * could not be reached at all — as opposed to the server answering with an HTTP
+   * error, or the request timing out. See {@link NETWORK_UNREACHABLE_MESSAGE}.
+   */
+  readonly networkUnreachable: boolean;
 
   constructor(
     path: string,
@@ -23,6 +29,7 @@ export class ApiHttpError extends Error {
     message: string,
     detail?: unknown,
     timedOut = false,
+    networkUnreachable = false,
   ) {
     super(message);
     this.name = "ApiHttpError";
@@ -30,7 +37,41 @@ export class ApiHttpError extends Error {
     this.path = path;
     this.detail = detail;
     this.timedOut = timedOut;
+    this.networkUnreachable = networkUnreachable;
   }
+}
+
+/**
+ * Plain-language message for when `fetch` rejects because the server could not be reached
+ * at all (connection refused, DNS failure, offline, the process exited mid-session) — not
+ * because the server answered with an error. Browsers report this case as a bare
+ * `TypeError` whose text is an implementation detail ("Failed to fetch" in Chromium,
+ * "NetworkError when attempting to fetch resource." in Firefox, "Load failed" in Safari)
+ * that tells a user nothing. See docs/design/content-language.md.
+ */
+export const NETWORK_UNREACHABLE_MESSAGE =
+  "Can't reach Weir. Check it's still running, then try again.";
+
+/**
+ * True for the `TypeError` (or equivalent) a rejected `fetch` throws when the request
+ * never reached a server — never true for a `Response` that came back with an error
+ * status, which is a different situation with its own handling in
+ * {@link apiResponseErrorMessage}.
+ */
+function isNetworkUnreachableError(error: unknown): boolean {
+  if (error instanceof TypeError) {
+    return true;
+  }
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const m = error.message;
+  return (
+    m === "Failed to fetch" ||
+    m.includes("NetworkError") ||
+    m.includes("Load failed") ||
+    m.includes("Failed to retrieve")
+  );
 }
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
@@ -133,6 +174,16 @@ export async function apiFetch(
         0,
         "Request timed out - the backend may be slow or unreachable.",
         undefined,
+        true,
+      );
+    }
+    if (isNetworkUnreachableError(error)) {
+      throw new ApiHttpError(
+        path,
+        0,
+        NETWORK_UNREACHABLE_MESSAGE,
+        undefined,
+        false,
         true,
       );
     }

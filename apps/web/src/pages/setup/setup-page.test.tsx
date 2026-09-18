@@ -4,10 +4,15 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  NETWORK_UNREACHABLE_MESSAGE,
+  ApiHttpError,
+} from "../../lib/api/client";
 import { SetupPage } from "./setup-page";
 
 const navigateMock = vi.fn();
 const mutateAsyncMock = vi.fn();
+let bootstrapMutationError: unknown = null;
 
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router-dom")>();
@@ -26,8 +31,8 @@ vi.mock("../../lib/auth/queries", () => ({
   }),
   useBootstrapMutation: () => ({
     isPending: false,
-    isError: false,
-    error: null,
+    isError: bootstrapMutationError !== null,
+    error: bootstrapMutationError,
     mutateAsync: mutateAsyncMock,
   }),
 }));
@@ -47,6 +52,7 @@ describe("SetupPage", () => {
   beforeEach(() => {
     navigateMock.mockReset();
     mutateAsyncMock.mockReset();
+    bootstrapMutationError = null;
   });
 
   it("blocks bootstrap submit when password is shorter than 8 characters", async () => {
@@ -88,5 +94,22 @@ describe("SetupPage", () => {
         replace: true,
       });
     });
+  });
+
+  it("shows the friendly can't-reach-it message, never the raw browser text, when the server is unreachable", () => {
+    bootstrapMutationError = new ApiHttpError(
+      "/api/v1/auth/bootstrap",
+      0,
+      NETWORK_UNREACHABLE_MESSAGE,
+      undefined,
+      false,
+      true,
+    );
+
+    render(wrap(<SetupPage />));
+
+    const banner = screen.getByRole("alert");
+    expect(banner).toHaveTextContent(NETWORK_UNREACHABLE_MESSAGE);
+    expect(banner).not.toHaveTextContent("Failed to fetch");
   });
 });

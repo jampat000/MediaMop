@@ -23,6 +23,38 @@ describe("error-guards", () => {
     expect(isLikelyNetworkFailure(new Error("me: 503"))).toBe(false);
   });
 
+  it("treats an ApiHttpError marked networkUnreachable as network, regardless of its message", () => {
+    const error = new ApiHttpError(
+      "/api/v1/auth/bootstrap",
+      0,
+      "Can't reach Weir. Check it's still running, then try again.",
+      undefined,
+      false,
+      true,
+    );
+    expect(isLikelyNetworkFailure(error)).toBe(true);
+  });
+
+  it("does not treat a timeout ApiHttpError as network-unreachable", () => {
+    const error = new ApiHttpError(
+      "/api/v1/auth/bootstrap",
+      0,
+      "Request timed out - the backend may be slow or unreachable.",
+      undefined,
+      true,
+    );
+    expect(isLikelyNetworkFailure(error)).toBe(false);
+  });
+
+  it("does not treat an ordinary ApiHttpError (e.g. 503 from a live API) as network", () => {
+    const error = new ApiHttpError(
+      "/api/v1/auth/bootstrap",
+      503,
+      "Service unavailable",
+    );
+    expect(isLikelyNetworkFailure(error)).toBe(false);
+  });
+
   it("detects HTTP errors from auth-api throws", () => {
     expect(
       isHttpErrorFromApi(
