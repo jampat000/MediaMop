@@ -6,28 +6,43 @@ type Props = {
 };
 
 /**
- * The Weir mark: a low wall with water spilling over its crest. Drawn inline so it follows the
- * theme tokens (`--mm-brand-*`). The same geometry lives in `packaging/brand/weir-mark.svg`, the
- * source for the favicon, tray icon and docs logo (`scripts/generate-brand-icons.py`).
+ * The Weir mark (#581): water turning over a weir crest into the tailrace, with the apron
+ * below it. It replaces the hand-drawn "low wall with water over it" placeholder from #564.
+ *
+ * The geometry is generated, not hand-drawn. `design-options/logos-round4/build/trace.py`
+ * thresholds the accepted source render to two colours and fits circles to every band edge;
+ * `mark.py` regularises those measurements onto a 24-unit grid and emits these exact two paths
+ * into `packaging/brand/weir-mark.svg`, which is in turn the source for the favicon, tray icon
+ * and docs logo (`scripts/generate-brand-icons.py`). Drawn inline here rather than as an <img>
+ * so it follows the theme tokens.
+ *
+ * Two paths, both one colour. The mark used to be two tones — gold water over a stone wall — but
+ * the Windows tray icon is a single-colour mask and cannot carry a second tone, so a two-tone
+ * mark meant the tray never matched the app. If you change the geometry, change it in mark.py
+ * and re-run `python design-options/logos-round4/build/build.py`, which rewrites the brand SVGs
+ * and prints the path data to paste here. Do not edit the `d` attributes by hand.
  */
 function WeirMark({ className }: { className?: string }) {
   return (
     <svg
       className={["mm-logo-mark", className].filter(Boolean).join(" ")}
-      viewBox="0 0 32 32"
+      viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
     >
-      <g transform="translate(0 -3)">
-        <path
-          className="mm-logo-mark__wall"
-          d="M5 19H13C16.3 19 17.4 20.7 18 23.4L18.6 26.2C18.8 27.1 18.2 28 17.2 28H5C3.9 28 3 27.1 3 26V21C3 19.9 3.9 19 5 19Z"
-        />
-        <path
-          className="mm-logo-mark__water"
-          d="M3 13.2C5.4 11.2 7.8 11.2 10.2 13.2C12 14.7 13.4 14.4 15 14C19.6 13 21.3 15.6 22.2 19.6C23 23.2 24.4 25.6 29 25.6"
-        />
-      </g>
+      {/* The outer stream: the vertical approach, the turn over the crest, and the flat cut
+          where it tips into the tailrace. This one carries the whole silhouette. */}
+      <path
+        className="mm-logo-mark__stream"
+        d="M3.65 16.55L3.65 13.7A9.65 9.65 0 0 1 21.889 9.3L19.74 9.3A7.8 7.8 0 0 0 5.5 13.7L5.5 16.55Z"
+      />
+      {/* The inner stream, its quarter turn into the tailrace bar, and the apron running back
+          out to the left: one outline, because a shared edge between two shapes shows up as a
+          hairline seam at fractional raster sizes. */}
+      <path
+        className="mm-logo-mark__stream"
+        d="M10.45 13.7L10.45 18.1L2.1 18.1L2.1 19.95L12.3 19.95L12.3 13.7A1 1 0 0 1 13.3 12.7L21.889 12.7L21.889 10.85L13.3 10.85A2.85 2.85 0 0 0 10.45 13.7Z"
+      />
     </svg>
   );
 }

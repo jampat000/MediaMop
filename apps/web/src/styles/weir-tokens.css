@@ -101,9 +101,9 @@
   --mm-button-quiet-bg: rgba(27, 45, 56, 0.38);
   /* Tailwind `bg-black/10`-style wells are tuned for dark; light remaps them (weir-shell.css). */
   --mm-well-bg: rgba(0, 0, 0, 0.16);
-  /* Brand mark (components/brand/weir-logo.tsx; packaging/brand/weir-mark.svg). */
+  /* Brand mark (components/brand/weir-logo.tsx; packaging/brand/weir-mark.svg). The mark is a
+     single tone now (#581), so `--mm-brand-wall` went with the two-tone mark it belonged to. */
   --mm-brand-water: #3ed7c8;
-  --mm-brand-wall: #e8f1f4;
   --mm-brand-wordmark: #e8f1f4;
 }
 
@@ -168,7 +168,6 @@ html[data-mm-theme="light"] {
   --mm-well-bg: rgba(17, 36, 43, 0.045);
   /* packaging/brand/weir-mark-light.svg; wordmark #11242b is 14.4:1 on the light page. */
   --mm-brand-water: #0d6f68;
-  --mm-brand-wall: #11242b;
   --mm-brand-wordmark: #11242b;
 }
 
