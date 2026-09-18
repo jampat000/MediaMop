@@ -16,7 +16,13 @@ then read that component, then convert your page.
 ### 1. The page leads with what is happening now, as a band across the top
 
 Not a grid of cards. One bordered band, full width, whose segments are as wide as the
-number each carries, and each segment is a control that opens the detail behind it.
+number each carries — and where it is too narrow for that, a labelled list of the same
+stages rather than a lie about their sizes. Each segment is a control that opens the
+detail behind it.
+
+**The band's caption must stay true at every width.** "Each stage is as wide as the
+number of files in it" was in both captions and is false the moment the band restacks;
+say what a segment *does* ("Click a stage to open Files filtered to it") instead.
 
 The band answers the first question a page exists to answer:
 
@@ -83,6 +89,39 @@ This is where most of a page lives, and it should be the quietest part of it.
 
 ---
 
+## A Tailwind utility cannot override a `weir-*.css` class
+
+This one has cost several people an afternoon, so read it before you debug a style that
+"does nothing".
+
+`apps/web/src/index.css` starts with `@import "tailwindcss"`, and Tailwind v4 emits every
+utility inside `@layer utilities`. The `weir-*.css` files are imported after it and are
+**unlayered**. Cascade layers are resolved *before* specificity, and an unlayered
+declaration outranks a declaration in any layer — so a Tailwind utility on an element that
+also carries a `weir-*` class simply never applies to a property that class sets, and does
+so silently. This is why a `min-w-[7.25rem]` on a `.mm-lead-band__segment` did nothing.
+
+Measured against the built stylesheet: the rule for `.mm-quiet-stack` is unlayered and the
+rule for `.min-w-0` is in `utilities`. On a bare element, `.block` computes `display:
+block` and `.mm-quiet-stack` computes `display: flex`; on an element carrying **both**, it
+computes `flex`.
+
+Three things follow, and the third is the one to reach for:
+
+- **Adding specificity does not help.** The layer decides it first. `.a .block` still loses.
+- **Reordering the imports does not help either.** It is layering, not source order.
+- **The property belongs in the `weir-*` class.** If a page needs a different value, the
+  primitive is either missing a modifier or being used for something it is not. Add the
+  modifier here. Tailwind's `!` suffix (`block!`) does win, because an important
+  declaration beats a normal one whatever the layers — but reaching for it means the
+  primitive and the page disagree, and the next person cannot see that from the markup.
+
+Utilities are still fine for anything no `weir-*` class touches — `min-w-0` on a plain
+`div`, the layout inside a table cell, spacing between two `.mm-quiet-link`s. The trap is
+only the overlap.
+
+---
+
 ## Two standing rules that override the three above
 
 ### The chrome is frozen
@@ -126,10 +165,11 @@ and if it does, add it here as another page-neutral primitive.
 Two new custom properties, both layout-only, both defined in `weir-tokens.css`. No
 colour and no font was added, and none may be.
 
-| Token             | Default | Set where                     | For                                                     |
-| ----------------- | ------- | ----------------------------- | ------------------------------------------------------- |
-| `--mm-flow-share` | `1`     | Inline, per band segment      | That segment's share of the band's width (unitless)      |
-| `--mm-meter-fill` | `0%`    | Inline, per `.mm-figure__meter` | How full the bar is                                    |
+| Token               | Default | Set where                       | For                                                     |
+| ------------------- | ------- | ------------------------------- | ------------------------------------------------------- |
+| `--mm-flow-share`   | `1`     | Inline, per band segment        | That segment's share of the band's width (unitless)      |
+| `--mm-meter-fill`   | `0%`    | Inline, per `.mm-figure__meter` | How full the bar is                                      |
+| `--mm-band-stacked` | `0`     | `weir-content.css` only         | `1` once the band has restacked. Every difference between a row and a stack is a calc on it, so the band has one switch instead of a rule per segment count. **Never set this from a page.** |
 
 Everything else is an existing `--mm-*` token. `apps/web/scripts/check-design-tokens.mjs`
 fails the build on any `var(--mm-…)` that `weir-tokens.css` does not define, so a new
@@ -140,7 +180,7 @@ token means a line in that file and a reason beside it.
 | Class                            | Element                  | For                                                         |
 | -------------------------------- | ------------------------ | ----------------------------------------------------------- |
 | `.mm-lead`                       | `div`                    | Wraps the whole lead: interrupts, band, caption, figure row   |
-| `.mm-lead-band`                  | `div`                    | The band. Wraps to more rows on narrow panels, by itself      |
+| `.mm-lead-band`                  | `div`                    | The band. One proportional row, or a stacked list — by itself |
 | `.mm-lead-band__segment`         | `button`                 | One segment. Set `--mm-flow-share` inline                     |
 | `.mm-lead-band__segment--empty`  | modifier                 | Count is zero: grey rule, dimmed value                        |
 | `.mm-lead-band__segment--live`   | modifier                 | Something is happening here now: accent rule and value        |
@@ -157,6 +197,36 @@ focus ring, the `→` reveal and keyboard use all hang off that.
 **Weighting.** Share is the raw count, floored at 6% of the band's total so an empty
 stage still reads as a stage:
 `share = total === 0 ? 1 : Math.max(count, total * 0.06)`. Reuse that formula.
+
+**The band never wraps, and a page never says anything about that.** Rule 1 only means
+something if a wider segment always carries a bigger number, so the primitive has two
+states and both keep that promise:
+
+| State     | When                                                      | What it is                                                                       |
+| --------- | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Row**   | The band can give every segment `6rem`                     | One line. Width is share of the total, floored at `6rem`. Both the proportional part and the floor rise with the count, so a bigger number can never draw narrower. |
+| **Stack** | It cannot                                                  | A labelled list, one segment per line, the way `.mm-quiet-table` restacks below 760px. Width stops encoding magnitude rather than encoding it wrongly; the number is read directly. |
+
+It is decided from the band's own width against how many segments it holds — a
+container query on the band and a `:has()` ladder in `weir-content.css` — so it follows
+the *panel*, not the window, and is right with the sidebar at either size. Before it
+gives up the row a segment near the floor drops its `.mm-lead-band__hint`, from its own
+container query. A page sets `--mm-flow-share` and nothing else.
+
+**This is why a page must not set a segment's `min-width`.** The floor and the ladder
+are one number, and raising the floor on one page puts the two out of step: the ladder
+keeps the band in a row at a width where the floors no longer fit on one line, it wraps,
+and a wrapped band compares widths only *within* a row — which is the bug this design
+exists to prevent. Measured on Files with nine segments and a `6.75rem` inline floor: the
+band wrapped at every width from 1320 to 1390. If a page's labels genuinely need more
+room than the floor gives them, shorten the labels or carry fewer segments.
+
+Before this, `.mm-lead-band` was a wrapping flex row. A flex line justifies itself
+independently of every other line, so a count of 1 alone on the second line drew wider
+than a count of 2 sharing the first. Swept 390–1600 in 10px steps, Processing Overview
+inverted the comparison at 63 of 122 widths with six segments and counts of only 0, 1
+and 2; In hand at 3 of 122; Files put its ninth segment on a line by itself at 1280 and
+drew a 1 nine times wider than a 2.
 
 **Honesty.** If the band draws a fixed set of states and the data has others, count
 them and say so in the caption ("5 more in states the band does not show"). Do not
@@ -276,6 +346,11 @@ suppression, the scan-interval wording.
 11. **Do not widen a `data-testid`'s meaning.** Keep the ids the E2E suite uses
     (`tests/e2e/weir/test_app_navigation_audit.py` and friends) pointing at the same
     thing they pointed at before.
+12. **Do not give a band segment a `min-width`, inline or otherwise.** The floor and the
+    stacking threshold are one number and the primitive owns both; overriding one of them
+    makes the band wrap again. See rule 1.
+13. **Do not reach for a Tailwind utility to change something a `weir-*` class already
+    sets.** It will be ignored without a word. See the section above.
 
 ---
 
@@ -288,3 +363,9 @@ bundle budget). From the repo root: `node scripts/check-dead-code.mjs` and
 
 Then look at the page. Dark and light, 1440 and 1024 wide, with data and on a fresh
 empty install. Unit tests have let a blank page ship in this repo before.
+
+If your page carries a band, look at it narrow as well — 390, and the width either side
+of where it restacks — and check the claim rule 1 makes by measuring it, not by eye: at
+every width, every segment's rendered width is at least that of every segment carrying a
+smaller count, and the band is either one line or one line per segment. A band that is
+neither is a wrapped band, and a wrapped band compares widths only within a row.

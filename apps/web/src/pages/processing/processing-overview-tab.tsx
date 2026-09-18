@@ -264,7 +264,8 @@ function AttentionList({
   );
 }
 
-/** The lead: six pipeline stages, each as wide as the number of files in it. */
+/** The lead: six pipeline stages. In a row each is as wide as the number of files in it;
+ *  too narrow for that and the primitive restacks them into a labelled list by itself. */
 function FlowBand({
   counts,
   onOpenFiles,
@@ -447,10 +448,9 @@ export function ProcessingOverviewTab({
             data-testid="processing-overview-flow-caption"
           >
             <span>
-              Each stage is as wide as the number of files in it; click one to
-              open Files filtered to it. A file is picked up once it has not
-              changed for {settings.min_file_age_seconds} seconds. Up to{" "}
-              {settings.max_concurrent_files} at once.
+              Click a stage to open Files filtered to it. A file is picked up
+              once it has not changed for {settings.min_file_age_seconds}{" "}
+              seconds. Up to {settings.max_concurrent_files} at once.
             </span>
             <span>
               {flowSummary()}
