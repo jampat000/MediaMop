@@ -239,9 +239,32 @@ jobs:
           zip -r "$GITHUB_WORKSPACE/weir-web-dist.zip" dist
 
       - name: Contract suite, required areas (dotnet)
+        id: contract
         env:
           WEIR_CONTRACT_SERVER: dotnet
         run: python -m pytest tests/contract -q --tb=short -p no:cacheprovider --contract-required-only
+
+      # #586: this suite gates publication with no retry, so a flake here fails a tagged release
+      # build. The per-server logs the suite already writes (ServerUnderTest.logs_dir,
+      # tests/contract/support/launcher.py) live in pytest's basetemp outside the workspace; collect
+      # them so a failed release run carries the server-side evidence with it.
+      - name: Collect contract server logs
+        if: ${{ !cancelled() && steps.contract.outcome == 'failure' }}
+        run: |
+          shopt -s nullglob globstar
+          mkdir -p artifacts/contract-logs
+          for log in /tmp/pytest-of-*/pytest-*/**/contract-logs/server-*.log; do
+            cp "$log" "artifacts/contract-logs/$(printf '%s' "${log#/tmp/}" | tr '/' '_')"
+          done
+          ls -la artifacts/contract-logs
+
+      - name: Upload contract server logs
+        if: ${{ !cancelled() && steps.contract.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: weir-contract-logs
+          if-no-files-found: warn
+          path: artifacts/contract-logs/*
 
       - name: Weir E2E smoke (Playwright + real .NET server)
         env:

@@ -257,7 +257,30 @@ jobs:
 
       # Every area areas.json marks required for this server must pass (for dotnet: all of them).
       - name: Contract suite, required areas (${{ matrix.backend }})
+        id: contract
         run: python -m pytest tests/contract -q --tb=short -p no:cacheprovider --contract-required-only
+
+      # #586: the suite already writes one log per server it starts (ServerUnderTest.logs_dir,
+      # tests/contract/support/launcher.py), but they land in pytest's basetemp under the runner's
+      # temp dir, outside the workspace, and nothing ever collected them — so an intermittent
+      # failure left no server-side evidence at all. Copy them somewhere uploadable.
+      - name: Collect contract server logs
+        if: ${{ !cancelled() && steps.contract.outcome == 'failure' }}
+        run: |
+          shopt -s nullglob globstar
+          mkdir -p artifacts/contract-logs
+          for log in /tmp/pytest-of-*/pytest-*/**/contract-logs/server-*.log; do
+            cp "$log" "artifacts/contract-logs/$(printf '%s' "${log#/tmp/}" | tr '/' '_')"
+          done
+          ls -la artifacts/contract-logs
+
+      - name: Upload contract server logs
+        if: ${{ !cancelled() && steps.contract.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: weir-contract-logs-${{ matrix.backend }}
+          if-no-files-found: warn
+          path: artifacts/contract-logs/*
 
   docker-smoke:
     needs: changes
