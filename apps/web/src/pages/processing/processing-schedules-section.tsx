@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { PageLoading } from "../../components/shared/page-loading";
 import {
+  QuietSection,
+  quietActionRowClass,
+} from "../../components/shared/quiet-section";
+import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
 } from "../../lib/api/error-guards";
@@ -40,36 +44,38 @@ function LibraryScanNow({
   const watchedSet = Boolean(library.watched_folder.trim());
   const disabled = !canQueueManual || !watchedSet || queueScan.isPending;
   return (
-    <div
-      className="rounded-md border border-[var(--mm-border)] bg-black/10 p-4"
-      data-testid="processing-schedules-library-scan"
-    >
-      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+    <tr data-testid="processing-schedules-library-scan">
+      <th scope="row" className="mm-quiet-table__name">
         {library.name}
-      </p>
-      <p className="mt-1 text-xs text-[var(--mm-text3)]">
-        {PROCESSING_MEDIA_TYPE_LABELS[library.media_type]}. Checks this
-        library&apos;s watched folder now and queues any ready files.
-      </p>
-      {!watchedSet ? (
-        <p className="mt-2 text-xs text-amber-200/90">
-          Save a watched folder for {library.name} in Libraries before running
-          this scan.
-        </p>
-      ) : null}
-      {queueScan.isError ? (
-        <p className="mt-2 text-xs text-red-300" role="alert">
-          {queueScan.error instanceof Error
-            ? queueScan.error.message
-            : `The scan for ${library.name} could not be queued.`}
-        </p>
-      ) : null}
-      {queueScan.isSuccess ? (
-        <p className="mt-2 text-xs text-[var(--mm-text3)]">
-          Queued scan job #{queueScan.data.job_id} for {library.name}.
-        </p>
-      ) : null}
-      <div className="mt-3">
+      </th>
+      <td data-label="What it does">
+        <span className="mm-quiet-table__sub">
+          {PROCESSING_MEDIA_TYPE_LABELS[library.media_type]}. Checks this
+          library&apos;s watched folder now and queues any ready files.
+        </span>
+        {!watchedSet ? (
+          <span className="mt-1 block text-xs text-[var(--mm-status-warning-text)]">
+            Save a watched folder for {library.name} in Libraries before running
+            this scan.
+          </span>
+        ) : null}
+        {queueScan.isError ? (
+          <span
+            className="mt-1 block text-xs text-[var(--mm-status-failed-text)]"
+            role="alert"
+          >
+            {queueScan.error instanceof Error
+              ? queueScan.error.message
+              : `The scan for ${library.name} could not be queued.`}
+          </span>
+        ) : null}
+        {queueScan.isSuccess ? (
+          <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+            Queued scan job #{queueScan.data.job_id} for {library.name}.
+          </span>
+        ) : null}
+      </td>
+      <td data-label="Run">
         <button
           type="button"
           aria-label={`Scan ${library.name} now`}
@@ -85,8 +91,106 @@ function LibraryScanNow({
         >
           {queueScan.isPending ? "Starting scan..." : "Scan now"}
         </button>
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * One watched-folder window. TV and Movies are two different forms of equal weight,
+ * so they sit side by side as peers — there is no hero here to make one of them wider.
+ */
+function ScheduleWindow({
+  headingId,
+  heading,
+  intro,
+  idPrefix,
+  switchId,
+  hoursLimited,
+  onHoursLimited,
+  days,
+  onDays,
+  start,
+  onStart,
+  end,
+  onEnd,
+  disabled,
+  saveDisabled,
+  saveLabel,
+  saving,
+  onSave,
+}: {
+  headingId: string;
+  heading: string;
+  intro: string;
+  idPrefix: string;
+  switchId: string;
+  hoursLimited: boolean;
+  onHoursLimited: (next: boolean) => void;
+  days: string;
+  onDays: (next: string) => void;
+  start: string;
+  onStart: (next: string) => void;
+  end: string;
+  onEnd: (next: string) => void;
+  disabled: boolean;
+  saveDisabled: boolean;
+  saveLabel: string;
+  saving: boolean;
+  onSave: () => void;
+}) {
+  return (
+    <QuietSection headingId={headingId} heading={heading}>
+      <p className="mm-quiet-note">{intro}</p>
+      <div className="mt-5 space-y-4">
+        <div>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">
+            Schedule window
+          </span>
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">
+            {MM_SCHEDULE_TIME_WINDOW_HELPER}
+          </p>
+        </div>
+        <MmOnOffSwitch
+          id={switchId}
+          label="Limit to these hours"
+          enabled={hoursLimited}
+          disabled={disabled}
+          onChange={onHoursLimited}
+        />
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-[var(--mm-text1)]">
+            Days
+          </span>
+          <MmScheduleDayChips
+            scheduleDaysCsv={days}
+            disabled={disabled}
+            onChangeCsv={onDays}
+          />
+        </div>
+        <MmScheduleTimeFields
+          idPrefix={idPrefix}
+          start={start}
+          end={end}
+          disabled={disabled}
+          onStart={onStart}
+          onEnd={onEnd}
+        />
       </div>
-    </div>
+      <div className={`${quietActionRowClass} mt-6`}>
+        <button
+          type="button"
+          className={mmActionButtonClass({
+            variant: "primary",
+            disabled: saveDisabled,
+          })}
+          disabled={saveDisabled}
+          onClick={onSave}
+        >
+          {saving ? "Saving…" : saveLabel}
+        </button>
+      </div>
+    </QuietSection>
   );
 }
 
@@ -181,161 +285,71 @@ export function ProcessingSchedulesSection() {
   );
 
   return (
-    <section
-      className="mm-bubble-stack mm-module-surface w-full min-w-0"
-      data-testid="processing-schedules-section"
-    >
-      <div className="mm-dash-grid">
-        <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col">
-          <div className="mm-card-action-body flex-1 min-h-0">
-            <div>
-              <h3 className="text-base font-semibold text-[var(--mm-text1)]">
-                TV watched-folder window
-              </h3>
-              <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                Optional window for TV watched-folder checks from Libraries.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm font-medium text-[var(--mm-text1)]">
-                  Schedule window
-                </span>
-                <p className="mt-1 text-xs text-[var(--mm-text3)]">
-                  {MM_SCHEDULE_TIME_WINDOW_HELPER}
-                </p>
-              </div>
-              <div className="space-y-4">
-                <MmOnOffSwitch
-                  id="processing-schedule-tv-hours-limited"
-                  label="Limit to these hours"
-                  enabled={tvHoursLimited}
-                  disabled={!editable || saveTvSchedule.isPending}
-                  onChange={setTvHoursLimited}
-                />
-                <div className="space-y-2">
-                  <span className="text-sm font-medium text-[var(--mm-text1)]">
-                    Days
-                  </span>
-                  <MmScheduleDayChips
-                    scheduleDaysCsv={tvDays}
-                    disabled={!editable || saveTvSchedule.isPending}
-                    onChangeCsv={setTvDays}
-                  />
-                </div>
-                <MmScheduleTimeFields
-                  idPrefix="processing-schedule-tv-window"
-                  start={tvStart}
-                  end={tvEnd}
-                  disabled={!editable || saveTvSchedule.isPending}
-                  onStart={setTvStart}
-                  onEnd={setTvEnd}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mm-card-action-footer">
-            <button
-              type="button"
-              className={`${mmActionButtonClass({
-                variant: "primary",
-                disabled: !editable || !tvDirty || saveTvSchedule.isPending,
-              })} w-full`}
-              disabled={!editable || !tvDirty || saveTvSchedule.isPending}
-              onClick={() =>
-                saveTvSchedule.mutate({
-                  tv_schedule_enabled: q.data.tv_schedule_enabled,
-                  tv_schedule_hours_limited: tvHoursLimited,
-                  tv_schedule_days: tvDays,
-                  tv_schedule_start: tvStart,
-                  tv_schedule_end: tvEnd,
-                })
-              }
-            >
-              {saveTvSchedule.isPending ? "Saving…" : "Save TV schedule window"}
-            </button>
-          </div>
-        </section>
-        <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col">
-          <div className="mm-card-action-body flex-1 min-h-0">
-            <div>
-              <h3 className="text-base font-semibold text-[var(--mm-text1)]">
-                Movies watched-folder window
-              </h3>
-              <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                Optional window for Movies watched-folder checks from Libraries.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <span className="text-sm font-medium text-[var(--mm-text1)]">
-                  Schedule window
-                </span>
-                <p className="mt-1 text-xs text-[var(--mm-text3)]">
-                  {MM_SCHEDULE_TIME_WINDOW_HELPER}
-                </p>
-              </div>
-              <div className="space-y-4">
-                <MmOnOffSwitch
-                  id="processing-schedule-movie-hours-limited"
-                  label="Limit to these hours"
-                  enabled={movieHoursLimited}
-                  disabled={!editable || saveMovieSchedule.isPending}
-                  onChange={setMovieHoursLimited}
-                />
-                <div className="space-y-2">
-                  <span className="text-sm font-medium text-[var(--mm-text1)]">
-                    Days
-                  </span>
-                  <MmScheduleDayChips
-                    scheduleDaysCsv={movieDays}
-                    disabled={!editable || saveMovieSchedule.isPending}
-                    onChangeCsv={setMovieDays}
-                  />
-                </div>
-                <MmScheduleTimeFields
-                  idPrefix="processing-schedule-movie-window"
-                  start={movieStart}
-                  end={movieEnd}
-                  disabled={!editable || saveMovieSchedule.isPending}
-                  onStart={setMovieStart}
-                  onEnd={setMovieEnd}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mm-card-action-footer">
-            <button
-              type="button"
-              className={`${mmActionButtonClass({
-                variant: "primary",
-                disabled:
-                  !editable || !movieDirty || saveMovieSchedule.isPending,
-              })} w-full`}
-              disabled={!editable || !movieDirty || saveMovieSchedule.isPending}
-              onClick={() =>
-                saveMovieSchedule.mutate({
-                  movie_schedule_enabled: q.data.movie_schedule_enabled,
-                  movie_schedule_hours_limited: movieHoursLimited,
-                  movie_schedule_days: movieDays,
-                  movie_schedule_start: movieStart,
-                  movie_schedule_end: movieEnd,
-                })
-              }
-            >
-              {saveMovieSchedule.isPending
-                ? "Saving…"
-                : "Save Movies schedule window"}
-            </button>
-          </div>
-        </section>
+    <div className="mm-quiet-stack" data-testid="processing-schedules-section">
+      <div className="grid min-w-0 gap-10 xl:grid-cols-2 xl:gap-x-14">
+        <ScheduleWindow
+          headingId="processing-schedules-tv-heading"
+          heading="TV watched-folder window"
+          intro="Optional window for TV watched-folder checks from Libraries."
+          idPrefix="processing-schedule-tv-window"
+          switchId="processing-schedule-tv-hours-limited"
+          hoursLimited={tvHoursLimited}
+          onHoursLimited={setTvHoursLimited}
+          days={tvDays}
+          onDays={setTvDays}
+          start={tvStart}
+          onStart={setTvStart}
+          end={tvEnd}
+          onEnd={setTvEnd}
+          disabled={!editable || saveTvSchedule.isPending}
+          saveDisabled={!editable || !tvDirty || saveTvSchedule.isPending}
+          saveLabel="Save TV schedule window"
+          saving={saveTvSchedule.isPending}
+          onSave={() =>
+            saveTvSchedule.mutate({
+              tv_schedule_enabled: q.data.tv_schedule_enabled,
+              tv_schedule_hours_limited: tvHoursLimited,
+              tv_schedule_days: tvDays,
+              tv_schedule_start: tvStart,
+              tv_schedule_end: tvEnd,
+            })
+          }
+        />
+        <ScheduleWindow
+          headingId="processing-schedules-movies-heading"
+          heading="Movies watched-folder window"
+          intro="Optional window for Movies watched-folder checks from Libraries."
+          idPrefix="processing-schedule-movie-window"
+          switchId="processing-schedule-movie-hours-limited"
+          hoursLimited={movieHoursLimited}
+          onHoursLimited={setMovieHoursLimited}
+          days={movieDays}
+          onDays={setMovieDays}
+          start={movieStart}
+          onStart={setMovieStart}
+          end={movieEnd}
+          onEnd={setMovieEnd}
+          disabled={!editable || saveMovieSchedule.isPending}
+          saveDisabled={!editable || !movieDirty || saveMovieSchedule.isPending}
+          saveLabel="Save Movies schedule window"
+          saving={saveMovieSchedule.isPending}
+          onSave={() =>
+            saveMovieSchedule.mutate({
+              movie_schedule_enabled: q.data.movie_schedule_enabled,
+              movie_schedule_hours_limited: movieHoursLimited,
+              movie_schedule_days: movieDays,
+              movie_schedule_start: movieStart,
+              movie_schedule_end: movieEnd,
+            })
+          }
+        />
       </div>
 
-      <section className="mm-card mm-dash-card p-5 sm:p-6">
-        <h3 className="text-base font-semibold text-[var(--mm-text1)]">
-          Run now
-        </h3>
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">
+      <QuietSection
+        headingId="processing-schedules-run-now-heading"
+        heading="Run now"
+      >
+        <p className="mm-quiet-note">
           Run a scan immediately without waiting for the next folder poll or
           window.
         </p>
@@ -344,14 +358,25 @@ export function ProcessingSchedulesSection() {
             Add a library under Libraries to scan it here.
           </p>
         ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {orderedLibraries.map((library) => (
-              <LibraryScanNow
-                key={library.id}
-                library={library}
-                canQueueManual={canQueueManual}
-              />
-            ))}
+          <div className="mm-quiet-table-wrap mt-5">
+            <table className="mm-quiet-table">
+              <thead>
+                <tr>
+                  <th scope="col">Library</th>
+                  <th scope="col">What it does</th>
+                  <th scope="col">Run</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orderedLibraries.map((library) => (
+                  <LibraryScanNow
+                    key={library.id}
+                    library={library}
+                    canQueueManual={canQueueManual}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
         {!canQueueManual ? (
@@ -359,21 +384,22 @@ export function ProcessingSchedulesSection() {
             Operators and admins can queue manual scans.
           </p>
         ) : null}
-      </section>
+      </QuietSection>
+
       {saveTvSchedule.isError ? (
-        <p className="mt-3 text-sm text-red-300" role="alert">
+        <p className="text-sm text-red-300" role="alert">
           {saveTvSchedule.error instanceof Error
             ? saveTvSchedule.error.message
             : "Save TV schedule window failed."}
         </p>
       ) : null}
       {saveMovieSchedule.isError ? (
-        <p className="mt-3 text-sm text-red-300" role="alert">
+        <p className="text-sm text-red-300" role="alert">
           {saveMovieSchedule.error instanceof Error
             ? saveMovieSchedule.error.message
             : "Save Movies schedule window failed."}
         </p>
       ) : null}
-    </section>
+    </div>
   );
 }

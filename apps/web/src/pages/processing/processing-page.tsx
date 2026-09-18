@@ -163,10 +163,8 @@ export function ProcessingPage() {
         ) : null}
 
         {tab === "libraries" ? (
-          <div className="mm-bubble-stack flex w-full min-w-0 flex-col">
-            <p className="max-w-prose text-sm leading-6 text-[var(--mm-text2)]">
-              {PROCESSING_CAPABILITY_NOTE}
-            </p>
+          <div className="mm-quiet-stack">
+            <p className="mm-quiet-note">{PROCESSING_CAPABILITY_NOTE}</p>
             <ProcessingLibrariesSection />
             <ProcessingProcessSettingsSection />
             <ProcessingDirectPlaySection />

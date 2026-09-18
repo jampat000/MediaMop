@@ -5,6 +5,11 @@ import {
 } from "../../components/ui/mm-listbox-picker";
 import { PageLoading } from "../../components/shared/page-loading";
 import {
+  QuietFieldGroup,
+  QuietSection,
+  quietActionRowClass,
+} from "../../components/shared/quiet-section";
+import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
 } from "../../lib/api/error-guards";
@@ -190,54 +195,60 @@ export function ProcessingProcessSettingsSection() {
     checked: boolean,
     setChecked: (next: boolean) => void,
     warning = false,
-  ) => (
-    <label
-      className={`flex items-start gap-3 rounded-lg border px-3 py-3 ${
-        warning && checked
-          ? "border-[var(--mm-warning-border)] bg-[var(--mm-status-warning-bg)]"
-          : "border-[var(--mm-border)] bg-[var(--mm-card-bg)]"
-      }`}
-    >
-      <input
-        type="checkbox"
-        className="mt-1"
-        checked={checked}
-        disabled={!editable || save.isPending}
-        onChange={(event) => setChecked(event.target.checked)}
-      />
-      <span>
-        <span className="block font-medium text-[var(--mm-text1)]">
-          {label}
+  ) => {
+    const flagged = warning && checked;
+    return (
+      <label
+        className={`flex items-start gap-3 border-b border-[var(--mm-border)] py-3 last:border-b-0 ${
+          flagged ? "border-l-2 border-l-[var(--mm-warning-border)] pl-3" : ""
+        }`}
+      >
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={checked}
+          disabled={!editable || save.isPending}
+          onChange={(event) => setChecked(event.target.checked)}
+        />
+        <span>
+          <span
+            className={`block font-medium ${
+              flagged
+                ? "text-[var(--mm-status-warning-text)]"
+                : "text-[var(--mm-text1)]"
+            }`}
+          >
+            {label}
+          </span>
+          <span
+            className={`mt-0.5 block text-xs leading-5 ${
+              flagged
+                ? "text-[var(--mm-status-warning-text)]"
+                : "text-[var(--mm-text3)]"
+            }`}
+          >
+            {detail}
+          </span>
         </span>
-        <span className="mt-0.5 block text-xs leading-5 text-[var(--mm-text3)]">
-          {detail}
-        </span>
-      </span>
-    </label>
-  );
+      </label>
+    );
+  };
 
   return (
-    <section className="mm-module-surface flex w-full min-w-0 flex-col rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7">
-      <p className="mm-page__eyebrow">All libraries</p>
-      <h2 className="mt-1 text-lg font-semibold text-[var(--mm-text)]">
-        Processing, safety and records
-      </h2>
-      <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
+    <QuietSection
+      headingId="processing-process-settings-heading"
+      heading="Processing, safety and records"
+    >
+      <p className="mm-quiet-note">
         These defaults apply to every library. Each library can still narrow its
         own intake, schedule and concurrency above.
       </p>
-      <div className="mm-card-action-body mt-6 flex-1 min-h-0">
-        <div className="grid gap-4 xl:grid-cols-2">
-          <section className="space-y-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-4">
-            <div>
-              <h3 className="font-semibold text-[var(--mm-text1)]">
-                Throughput budget
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-[var(--mm-text3)]">
-                Files consume runner units by resolution. Work starts only when
-                both a file slot and enough units are available.
-              </p>
-            </div>
+      <div className="mt-6 text-sm leading-relaxed text-[var(--mm-text2)]">
+        <div className="grid gap-10 xl:grid-cols-2 xl:gap-x-14">
+          <QuietFieldGroup
+            title="Throughput budget"
+            detail="Files consume runner units by resolution. Work starts only when both a file slot and enough units are available."
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="block min-w-0">
                 <span
@@ -284,18 +295,12 @@ export function ProcessingProcessSettingsSection() {
                 },
               )}
             </div>
-          </section>
+          </QuietFieldGroup>
 
-          <section className="space-y-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-4">
-            <div>
-              <h3 className="font-semibold text-[var(--mm-text1)]">
-                Admission safety
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-[var(--mm-text3)]">
-                Final guardrails before Weir probes or writes a file. Keep
-                downloader limits too; these protect the processing host.
-              </p>
-            </div>
+          <QuietFieldGroup
+            title="Admission safety"
+            detail="Final guardrails before Weir probes or writes a file. Keep downloader limits too; these protect the processing host."
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               {numberField(
                 "Minimum unchanged age (seconds)",
@@ -318,18 +323,13 @@ export function ProcessingProcessSettingsSection() {
                 },
               )}
             </div>
-          </section>
+          </QuietFieldGroup>
 
-          <section className="space-y-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-4 xl:col-span-2">
-            <div>
-              <h3 className="font-semibold text-[var(--mm-text1)]">
-                Records and cleanup
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-[var(--mm-text3)]">
-                Choose how much diagnostic history to keep and how Weir treats
-                its own temporary data after work finishes or fails.
-              </p>
-            </div>
+          <QuietFieldGroup
+            className="xl:col-span-2"
+            title="Records and cleanup"
+            detail="Choose how much diagnostic history to keep and how Weir treats its own temporary data after work finishes or fails."
+          >
             <div className="grid gap-4 lg:grid-cols-3">
               {numberField(
                 "Processing-record retention (days)",
@@ -337,7 +337,7 @@ export function ProcessingProcessSettingsSection() {
                 setFileLogRetentionDays,
                 { max: 3650, hint: "0 keeps file records forever." },
               )}
-              <div className="space-y-3 lg:col-span-2">
+              <div className="lg:col-span-2">
                 {toggleField(
                   "Reclaim stale temporary files",
                   "Safely removes old files from Weir's private work area. Recommended and enabled by default.",
@@ -365,7 +365,7 @@ export function ProcessingProcessSettingsSection() {
                 )}
               </div>
             </div>
-          </section>
+          </QuietFieldGroup>
         </div>
         {save.isError ? (
           <p className="mt-3 text-sm text-red-300" role="alert">
@@ -373,7 +373,7 @@ export function ProcessingProcessSettingsSection() {
           </p>
         ) : null}
       </div>
-      <div className="mm-card-action-footer">
+      <div className={`${quietActionRowClass} mt-8`}>
         <button
           type="button"
           className={mmActionButtonClass({
@@ -404,6 +404,6 @@ export function ProcessingProcessSettingsSection() {
           {save.isPending ? "Saving…" : "Save processing settings"}
         </button>
       </div>
-    </section>
+    </QuietSection>
   );
 }

@@ -2,11 +2,17 @@ import { useState } from "react";
 
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { PageLoading } from "../../components/shared/page-loading";
+import {
+  QuietFieldGroup,
+  QuietSection,
+  quietActionRowClass,
+} from "../../components/shared/quiet-section";
 import { ScheduleGridEditor } from "./schedule-grid-editor";
 import { useMeQuery } from "../../lib/auth/queries";
 import { useMediaManagerConnectionsQuery } from "../../lib/media-managers/queries";
 import {
   PROCESSING_MEDIA_TYPE_LABELS,
+  processingMediaTypeBadge,
   type ProcessingFailurePolicy,
   type ProcessingLibrary,
   type ProcessingLibraryWrite,
@@ -496,7 +502,7 @@ export function ProcessingLibrariesSection() {
 
   const toggle = (label: string, key: BooleanFormKey, hint?: string) => (
     <label
-      className="flex items-start gap-2 rounded-lg border border-[var(--mm-border)] px-3 py-2 text-sm text-[var(--mm-text2)]"
+      className="flex items-start gap-2 border-b border-[var(--mm-border)] py-2.5 text-sm text-[var(--mm-text2)]"
       key={key}
     >
       <input
@@ -531,27 +537,10 @@ export function ProcessingLibrariesSection() {
   );
 
   return (
-    <div className="space-y-4" data-testid="processing-libraries-section">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-[var(--mm-text2)]">
-          Each library has its own folders, file types and schedule. Add as many
-          as you need — a 4K library and a kids library are separate libraries.
-        </p>
-        {editable ? (
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary" })}
-            onClick={startAdd}
-            data-testid="processing-library-add"
-          >
-            Add library
-          </button>
-        ) : null}
-      </div>
-
+    <div className="mm-quiet-stack" data-testid="processing-libraries-section">
       {notice ? (
         <p
-          className="rounded border border-[var(--mm-border)] px-3 py-2 text-sm text-[var(--mm-text1)]"
+          className="text-sm font-medium text-[var(--mm-text1)]"
           role="status"
           data-testid="processing-library-notice"
         >
@@ -559,19 +548,177 @@ export function ProcessingLibrariesSection() {
         </p>
       ) : null}
 
-      {editable && (connections.data?.length ?? 0) > 0 ? (
-        <section className="space-y-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-          <div>
-            <h3 className="font-medium text-[var(--mm-text1)]">
-              Import from a media manager
-            </h3>
-            <p className="text-sm text-[var(--mm-text3)]">
-              Ask a connected manager which libraries it owns. Comparisons
-              report path differences and never change an existing watched
-              folder.
-            </p>
+      <QuietSection
+        headingId="processing-libraries-heading"
+        heading="Libraries"
+        aside={
+          editable ? (
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary" })}
+              onClick={startAdd}
+              data-testid="processing-library-add"
+            >
+              Add library
+            </button>
+          ) : null
+        }
+      >
+        <p className="mm-quiet-note">
+          Each library has its own folders, file types and schedule. Add as many
+          as you need — a 4K library and a kids library are separate libraries.
+        </p>
+        {rows.length === 0 ? (
+          <p className="mm-quiet-note mt-4">
+            No libraries yet. Add one to tell Weir which folder to watch.
+          </p>
+        ) : (
+          <div className="mm-quiet-table-wrap mt-5">
+            <table className="mm-quiet-table">
+              <thead>
+                <tr>
+                  <th scope="col">Library</th>
+                  <th scope="col">Watched folder</th>
+                  <th scope="col">Manager</th>
+                  <th scope="col">Controls</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...rows]
+                  .sort((a, b) => a.display_order - b.display_order)
+                  .map((library, index, ordered) => (
+                    <tr
+                      key={library.id}
+                      data-testid={`processing-library-${library.id}`}
+                    >
+                      <th scope="row" className="mm-quiet-table__name">
+                        <span>{library.name}</span>
+                        {processingMediaTypeBadge(library) ? (
+                          <span className="mm-quiet-badge">
+                            {processingMediaTypeBadge(library)}
+                          </span>
+                        ) : null}
+                      </th>
+                      <td data-label="Watched folder">
+                        <span className="mm-quiet-table__strong">
+                          {library.watched_folder || "no watched folder yet"}
+                        </span>
+                        {library.active_job_count > 0 ? (
+                          <span className="mm-quiet-table__sub">
+                            {library.active_job_count} in progress
+                          </span>
+                        ) : null}
+                        {library.discovered_from_connection_id ? (
+                          <span className="mm-quiet-table__sub">
+                            Linked to{" "}
+                            {connections.data?.find(
+                              (item) =>
+                                item.id ===
+                                library.discovered_from_connection_id,
+                            )?.name ||
+                              `manager #${library.discovered_from_connection_id}`}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td data-label="Manager">
+                        <span
+                          className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${managerCoverageClass(library.manager_coverage)}`}
+                        >
+                          {managerCoverageLabel(library.manager_coverage)}
+                        </span>
+                        <span className="mm-quiet-table__sub">
+                          {library.manager_coverage_detail}
+                        </span>
+                      </td>
+                      <td data-label="Controls">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <MmOnOffSwitch
+                            id={`processing-library-enabled-${library.id}`}
+                            label={`${library.name} enabled`}
+                            enabled={library.enabled}
+                            disabled={!editable}
+                            onChange={() => void toggleEnabled(library)}
+                          />
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "tertiary",
+                              disabled: !editable || index === 0,
+                            })}
+                            onClick={() => void move(library, -1)}
+                            disabled={!editable || index === 0}
+                            aria-label={`Move ${library.name} up`}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "tertiary",
+                              disabled:
+                                !editable || index === ordered.length - 1,
+                            })}
+                            onClick={() => void move(library, 1)}
+                            disabled={!editable || index === ordered.length - 1}
+                            aria-label={`Move ${library.name} down`}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "secondary",
+                              disabled: !editable,
+                            })}
+                            onClick={() => startEdit(library)}
+                            disabled={!editable}
+                          >
+                            Edit
+                          </button>
+                          {library.discovered_from_connection_id ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "secondary",
+                              })}
+                              onClick={() => void unlink(library)}
+                              disabled={unlinkDiscovered.isPending}
+                            >
+                              Unlink
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "tertiary",
+                              disabled: !editable,
+                            })}
+                            onClick={() => void removeLibrary(library)}
+                            disabled={!editable}
+                            data-testid={`processing-library-remove-${library.id}`}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
-          <div className="flex flex-wrap items-end gap-2">
+        )}
+      </QuietSection>
+
+      {editable && (connections.data?.length ?? 0) > 0 ? (
+        <QuietSection
+          headingId="processing-libraries-import-heading"
+          heading="Import from a media manager"
+        >
+          <p className="mm-quiet-note">
+            Ask a connected manager which libraries it owns. Comparisons report
+            path differences and never change an existing watched folder.
+          </p>
+          <div className="mt-5 flex flex-wrap items-end gap-2">
             <label className="min-w-64 flex-1 text-sm">
               <span className="text-[var(--mm-text2)]">Media manager</span>
               <select
@@ -611,7 +758,7 @@ export function ProcessingLibrariesSection() {
           </div>
 
           {discover.data ? (
-            <div className="space-y-2" aria-label="Discovered libraries">
+            <div className="mt-5" aria-label="Discovered libraries">
               {discover.data.length === 0 ? (
                 <p className="text-sm text-[var(--mm-text3)]">
                   That manager did not report any libraries.
@@ -625,7 +772,7 @@ export function ProcessingLibrariesSection() {
                   return (
                     <label
                       key={item.key}
-                      className="flex items-start gap-3 rounded-lg border border-[var(--mm-border)] px-3 py-2"
+                      className="-mx-2 flex items-start gap-3 border-b border-[var(--mm-border)] px-2 py-2.5 hover:bg-[var(--mm-card-bg)] focus-within:outline focus-within:outline-2 focus-within:outline-[var(--mm-accent-ring)]"
                     >
                       <input
                         type="checkbox"
@@ -670,7 +817,7 @@ export function ProcessingLibrariesSection() {
               )}
               <button
                 type="button"
-                className={mmActionButtonClass({ variant: "primary" })}
+                className={`${mmActionButtonClass({ variant: "primary" })} mt-4`}
                 onClick={() => void importSelectedLibraries()}
                 disabled={
                   selectedDiscoveredKeys.length === 0 ||
@@ -683,7 +830,7 @@ export function ProcessingLibrariesSection() {
           ) : null}
 
           {drift.data ? (
-            <div className="space-y-2" aria-label="Library comparison">
+            <div className="mt-6" aria-label="Library comparison">
               <h4 className="text-sm font-medium text-[var(--mm-text1)]">
                 Comparison result
               </h4>
@@ -695,7 +842,7 @@ export function ProcessingLibrariesSection() {
                 drift.data.map((item, index) => (
                   <div
                     key={`${item.kind}-${item.library_id ?? "new"}-${index}`}
-                    className="rounded-lg border border-[var(--mm-border)] px-3 py-2"
+                    className="border-b border-[var(--mm-border)] py-2.5"
                   >
                     <p className="text-sm font-medium text-[var(--mm-text1)]">
                       {item.library_name}
@@ -714,546 +861,415 @@ export function ProcessingLibrariesSection() {
               )}
             </div>
           ) : null}
-        </section>
+        </QuietSection>
       ) : null}
-
-      {rows.length === 0 ? (
-        <p className="text-sm text-[var(--mm-text3)]">
-          No libraries yet. Add one to tell Weir which folder to watch.
-        </p>
-      ) : null}
-
-      <ul className="space-y-3">
-        {[...rows]
-          .sort((a, b) => a.display_order - b.display_order)
-          .map((library, index, ordered) => (
-            <li
-              key={library.id}
-              className="rounded border border-[var(--mm-border)] p-3"
-              data-testid={`processing-library-${library.id}`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-[var(--mm-text1)]">
-                    {library.name}
-                  </p>
-                  <p className="text-xs text-[var(--mm-text3)]">
-                    {PROCESSING_MEDIA_TYPE_LABELS[library.media_type]} ·{" "}
-                    {library.watched_folder || "no watched folder yet"}
-                    {library.active_job_count > 0
-                      ? ` · ${library.active_job_count} in progress`
-                      : ""}
-                  </p>
-                  {library.discovered_from_connection_id ? (
-                    <p className="text-xs text-[var(--mm-text3)]">
-                      Linked to{" "}
-                      {connections.data?.find(
-                        (item) =>
-                          item.id === library.discovered_from_connection_id,
-                      )?.name ||
-                        `manager #${library.discovered_from_connection_id}`}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--mm-text2)]">
-                    <span
-                      className={`rounded-full border px-2 py-0.5 font-medium ${managerCoverageClass(library.manager_coverage)}`}
-                    >
-                      Manager: {managerCoverageLabel(library.manager_coverage)}
-                    </span>
-                    <span>{library.manager_coverage_detail}</span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MmOnOffSwitch
-                    id={`processing-library-enabled-${library.id}`}
-                    label={`${library.name} enabled`}
-                    enabled={library.enabled}
-                    disabled={!editable}
-                    onChange={() => void toggleEnabled(library)}
-                  />
-                  <button
-                    type="button"
-                    className={mmActionButtonClass({
-                      variant: "tertiary",
-                      disabled: !editable || index === 0,
-                    })}
-                    onClick={() => void move(library, -1)}
-                    disabled={!editable || index === 0}
-                    aria-label={`Move ${library.name} up`}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className={mmActionButtonClass({
-                      variant: "tertiary",
-                      disabled: !editable || index === ordered.length - 1,
-                    })}
-                    onClick={() => void move(library, 1)}
-                    disabled={!editable || index === ordered.length - 1}
-                    aria-label={`Move ${library.name} down`}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    className={mmActionButtonClass({
-                      variant: "secondary",
-                      disabled: !editable,
-                    })}
-                    onClick={() => startEdit(library)}
-                    disabled={!editable}
-                  >
-                    Edit
-                  </button>
-                  {library.discovered_from_connection_id ? (
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({ variant: "secondary" })}
-                      onClick={() => void unlink(library)}
-                      disabled={unlinkDiscovered.isPending}
-                    >
-                      Unlink
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={mmActionButtonClass({
-                      variant: "tertiary",
-                      disabled: !editable,
-                    })}
-                    onClick={() => void removeLibrary(library)}
-                    disabled={!editable}
-                    data-testid={`processing-library-remove-${library.id}`}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-      </ul>
 
       {adding || editingId !== null ? (
-        <div
-          className="space-y-3 rounded border border-[var(--mm-border)] p-3"
+        <QuietSection
+          headingId="processing-library-form-heading"
+          heading={editingId !== null ? "Edit library" : "Add library"}
           data-testid="processing-library-form"
         >
-          <h3 className="text-sm font-medium text-[var(--mm-text1)]">
-            {editingId !== null ? "Edit library" : "Add library"}
-          </h3>
-          <section className="space-y-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-            <div>
-              <h4 className="font-medium text-[var(--mm-text1)]">
-                Identity and folders
-              </h4>
-              <p className="text-xs text-[var(--mm-text3)]">
-                One watched folder, one safe work area, and one finished output.
-              </p>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {field("Name", "name", "Movies 4K")}
-              <label className="block text-sm">
-                <span className="text-[var(--mm-text2)]">Media type</span>
-                <select
-                  className={mmSelectFieldClass}
-                  value={form.media_type}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      media_type: event.target.value as ProcessingMediaType,
-                    })
-                  }
-                  disabled={!editable}
-                >
-                  {MEDIA_TYPES.map((scope) => (
-                    <option key={scope} value={scope}>
-                      {PROCESSING_MEDIA_TYPE_LABELS[scope]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-sm">
-                <span className="text-[var(--mm-text2)]">
-                  Audio, subtitle and metadata rules
-                </span>
-                <select
-                  className={mmSelectFieldClass}
-                  value={form.rule_set_id}
-                  onChange={(event) =>
-                    setForm({ ...form, rule_set_id: event.target.value })
-                  }
-                  disabled={!editable}
-                >
-                  <option value="">Use scope defaults</option>
-                  {(ruleSets.data ?? []).map((ruleSet) => (
-                    <option key={ruleSet.id} value={ruleSet.id}>
-                      {ruleSet.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-1 block text-xs text-[var(--mm-text3)]">
-                  Create and edit reusable rule sets under Audio & subtitles.
-                </span>
-              </label>
-              {field(
-                "Watched folder",
-                "watched_folder",
-                "/srv/media/movies-4k",
-              )}
-              {field(
-                "Output folder",
-                "output_folder",
-                "/srv/media/movies-4k-out",
-              )}
-              {field(
-                "Work folder",
-                "work_folder",
-                "",
-                "Leave empty to use Weir's private temporary folder.",
-              )}
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-            <div>
-              <h4 className="font-medium text-[var(--mm-text1)]">
-                Intake rules
-              </h4>
-              <p className="text-xs text-[var(--mm-text3)]">
-                Decide which files belong here before Weir spends time probing
-                or processing them. A maximum of 0 means no limit.
-              </p>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {field("File types", "media_extensions_csv", ".mkv,.mp4")}
-              {field(
-                "Downloader folders to ignore",
-                "exclude_markers_csv",
-                "__admin__,incomplete",
-                "Comma-separated folder names used while a download is incomplete.",
-              )}
-              {field(
-                "Path must match",
-                "include_patterns_csv",
-                "*feature*,Movies/*",
-                "Optional comma-separated wildcards. Empty accepts every path.",
-              )}
-              {field(
-                "Path must not match",
-                "exclude_patterns_csv",
-                "*sample*,*trailer*",
-                "Optional comma-separated wildcards.",
-              )}
-              {field("Minimum file size (MB)", "min_file_size_mb", "0")}
-              {field("Maximum file size (MB)", "max_file_size_mb", "0")}
-              <div className="space-y-2 rounded-lg border border-[var(--mm-border)] p-3 lg:col-span-2">
-                <div>
-                  <p className="text-sm font-medium text-[var(--mm-text1)]">
-                    Created and modified windows
-                  </p>
-                  <p className="text-xs leading-5 text-[var(--mm-text3)]">
-                    Optional. Leave a side blank for no limit. Times are shown
-                    in this browser&apos;s timezone and saved as UTC. Windows
-                    uses the file creation time; Linux and Docker use the best
-                    filesystem birth/change time available.
-                  </p>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {dateTimeField("Created after", "created_after")}
-                  {dateTimeField("Created before", "created_before")}
-                  {dateTimeField("Modified after", "modified_after")}
-                  {dateTimeField("Modified before", "modified_before")}
-                </div>
+          <div className="mm-quiet-stack">
+            <QuietFieldGroup
+              title="Identity and folders"
+              detail="One watched folder, one safe work area, and one finished output."
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                {field("Name", "name", "Movies 4K")}
+                <label className="block text-sm">
+                  <span className="text-[var(--mm-text2)]">Media type</span>
+                  <select
+                    className={mmSelectFieldClass}
+                    value={form.media_type}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        media_type: event.target.value as ProcessingMediaType,
+                      })
+                    }
+                    disabled={!editable}
+                  >
+                    {MEDIA_TYPES.map((scope) => (
+                      <option key={scope} value={scope}>
+                        {PROCESSING_MEDIA_TYPE_LABELS[scope]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  <span className="text-[var(--mm-text2)]">
+                    Audio, subtitle and metadata rules
+                  </span>
+                  <select
+                    className={mmSelectFieldClass}
+                    value={form.rule_set_id}
+                    onChange={(event) =>
+                      setForm({ ...form, rule_set_id: event.target.value })
+                    }
+                    disabled={!editable}
+                  >
+                    <option value="">Use scope defaults</option>
+                    {(ruleSets.data ?? []).map((ruleSet) => (
+                      <option key={ruleSet.id} value={ruleSet.id}>
+                        {ruleSet.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+                    Create and edit reusable rule sets under Audio & subtitles.
+                  </span>
+                </label>
+                {field(
+                  "Watched folder",
+                  "watched_folder",
+                  "/srv/media/movies-4k",
+                )}
+                {field(
+                  "Output folder",
+                  "output_folder",
+                  "/srv/media/movies-4k-out",
+                )}
+                {field(
+                  "Work folder",
+                  "work_folder",
+                  "",
+                  "Leave empty to use Weir's private temporary folder.",
+                )}
               </div>
-              <label className="block text-sm">
-                <span className="text-[var(--mm-text2)]">
-                  When a file is rejected
+            </QuietFieldGroup>
+
+            <QuietFieldGroup
+              title="Intake rules"
+              detail="Decide which files belong here before Weir spends time probing or processing them. A maximum of 0 means no limit."
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                {field("File types", "media_extensions_csv", ".mkv,.mp4")}
+                {field(
+                  "Downloader folders to ignore",
+                  "exclude_markers_csv",
+                  "__admin__,incomplete",
+                  "Comma-separated folder names used while a download is incomplete.",
+                )}
+                {field(
+                  "Path must match",
+                  "include_patterns_csv",
+                  "*feature*,Movies/*",
+                  "Optional comma-separated wildcards. Empty accepts every path.",
+                )}
+                {field(
+                  "Path must not match",
+                  "exclude_patterns_csv",
+                  "*sample*,*trailer*",
+                  "Optional comma-separated wildcards.",
+                )}
+                {field("Minimum file size (MB)", "min_file_size_mb", "0")}
+                {field("Maximum file size (MB)", "max_file_size_mb", "0")}
+                <div className="space-y-2 lg:col-span-2">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--mm-text1)]">
+                      Created and modified windows
+                    </p>
+                    <p className="text-xs leading-5 text-[var(--mm-text3)]">
+                      Optional. Leave a side blank for no limit. Times are shown
+                      in this browser&apos;s timezone and saved as UTC. Windows
+                      uses the file creation time; Linux and Docker use the best
+                      filesystem birth/change time available.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {dateTimeField("Created after", "created_after")}
+                    {dateTimeField("Created before", "created_before")}
+                    {dateTimeField("Modified after", "modified_after")}
+                    {dateTimeField("Modified before", "modified_before")}
+                  </div>
+                </div>
+                <label className="block text-sm">
+                  <span className="text-[var(--mm-text2)]">
+                    When a file is rejected
+                  </span>
+                  <select
+                    className={mmSelectFieldClass}
+                    value={form.rejected_file_action}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        rejected_file_action: event.target.value as
+                          "leave" | "delete_file",
+                      })
+                    }
+                    disabled={!editable}
+                  >
+                    <option value="leave">Leave the file in place</option>
+                    <option value="delete_file">
+                      Delete only the rejected file
+                    </option>
+                  </select>
+                  <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+                    Applies after readiness checks to size and path-rule
+                    rejections. Weir never deletes a populated parent folder
+                    here.
+                  </span>
+                </label>
+              </div>
+              <div className="grid gap-x-10 lg:grid-cols-2">
+                {toggle("Skip hidden files", "exclude_hidden")}
+                {toggle("Only inspect the top folder", "top_level_only")}
+              </div>
+            </QuietFieldGroup>
+
+            <QuietFieldGroup
+              title="File readiness"
+              detail="These checks prevent Weir from starting while a downloader, recorder, or media manager still owns the file."
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                {field(
+                  "Minimum unchanged age (seconds)",
+                  "min_file_age_seconds",
+                )}
+                {field("Hold every new file (minutes)", "hold_minutes")}
+                {field(
+                  "Size must stay stable (seconds)",
+                  "file_detection_interval_seconds",
+                )}
+                {field(
+                  "Fallback scan interval (seconds)",
+                  "scan_interval_seconds",
+                )}
+              </div>
+              <div className="grid gap-x-10 lg:grid-cols-2">
+                {toggle(
+                  "Watch this folder for changes",
+                  "file_system_events_enabled",
+                  "The periodic scan remains as a backstop for Docker, SMB, and NFS.",
+                )}
+                {toggle(
+                  "Ignore size changes",
+                  "ignore_size_changes",
+                  "Use only when another system guarantees the file is complete.",
+                )}
+                {toggle(
+                  "Skip read and write tests",
+                  "skip_access_tests",
+                  "Less safe: locked sources and unwritable outputs may fail after queueing.",
+                )}
+              </div>
+            </QuietFieldGroup>
+
+            <QuietFieldGroup
+              title="Output safety"
+              detail="Control sidecars, timestamps, and what happens when the destination already exists."
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                {field(
+                  "Sidecar file types",
+                  "sidecar_patterns_csv",
+                  ".srt,.nfo,.jpg",
+                )}
+                <label className="block text-sm">
+                  <span className="text-[var(--mm-text2)]">
+                    Existing output
+                  </span>
+                  <select
+                    className={mmSelectFieldClass}
+                    value={form.output_collision_policy}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        output_collision_policy: event.target.value,
+                      })
+                    }
+                    disabled={!editable}
+                  >
+                    <option value="replace">Replace it</option>
+                    <option value="skip">Keep it and skip this file</option>
+                    <option value="keep_both">Keep both</option>
+                    <option value="replace_if_larger">
+                      Replace only if new output is larger
+                    </option>
+                    <option value="replace_if_newer">
+                      Replace only if source is newer
+                    </option>
+                  </select>
+                </label>
+              </div>
+              <div className="grid gap-x-10 lg:grid-cols-2">
+                {toggle(
+                  "Preserve original timestamps",
+                  "preserve_original_timestamps",
+                )}
+              </div>
+            </QuietFieldGroup>
+
+            <QuietFieldGroup
+              title="Capacity and recovery"
+              detail="Priority is relative: higher-numbered libraries are offered work first."
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                {field("Files at once", "max_concurrent_files", "1")}
+                {field("Queue priority", "priority", "0")}
+                {field("Maximum automatic attempts", "max_attempts", "3")}
+                {field(
+                  "First retry delay (seconds)",
+                  "retry_backoff_seconds",
+                  "300",
+                )}
+              </div>
+              <div className="grid gap-x-10 lg:grid-cols-2">
+                {toggle(
+                  "Retry processing failures",
+                  "retry_execution_failures",
+                )}
+                {toggle(
+                  "Retry preflight rejections",
+                  "retry_preflight_failures",
+                  "Usually leave this off: retrying does not repair an unsupported or malformed file.",
+                )}
+              </div>
+              <label className="block space-y-1">
+                <span className="text-sm text-[var(--mm-text2)]">
+                  When retries run out
                 </span>
                 <select
                   className={mmSelectFieldClass}
-                  value={form.rejected_file_action}
+                  value={form.failure_policy}
                   onChange={(event) =>
                     setForm({
                       ...form,
-                      rejected_file_action: event.target.value as
-                        "leave" | "delete_file",
+                      failure_policy: event.target
+                        .value as ProcessingFailurePolicy,
                     })
                   }
                   disabled={!editable}
                 >
-                  <option value="leave">Leave the file in place</option>
-                  <option value="delete_file">
-                    Delete only the rejected file
+                  <option value="pass_through">
+                    Hand the original back unchanged
+                  </option>
+                  <option value="hold">Keep it until someone acts</option>
+                  <option
+                    value="reject"
+                    disabled={
+                      !rejectAvailable && form.failure_policy !== "reject"
+                    }
+                  >
+                    Reject the release so a different one is found
                   </option>
                 </select>
-                <span className="mt-1 block text-xs text-[var(--mm-text3)]">
-                  Applies after readiness checks to size and path-rule
-                  rejections. Weir never deletes a populated parent folder here.
+                <span className="block text-xs text-[var(--mm-text3)]">
+                  {form.failure_policy === "pass_through"
+                    ? "Your media manager still gets the file, exactly as it arrived. The original stays in the watched folder."
+                    : form.failure_policy === "hold"
+                      ? "The file stays with Weir and will not reach your media manager until you deal with it."
+                      : "Weir tells your media manager the release is bad and removes the download once the manager accepts, so it can find a different one. If that cannot be done safely, the original is handed back unchanged instead."}
+                </span>
+                <span
+                  className="block text-xs text-[var(--mm-text3)]"
+                  data-testid="reject-support"
+                >
+                  {rejectSupport.isLoading
+                    ? "Checking whether Reject is available…"
+                    : rejectSupport.data
+                      ? `Reject: ${rejectSupport.data.reason}`
+                      : null}
                 </span>
               </label>
-            </div>
-            <div className="grid gap-2 lg:grid-cols-2">
-              {toggle("Skip hidden files", "exclude_hidden")}
-              {toggle("Only inspect the top folder", "top_level_only")}
-            </div>
-          </section>
+            </QuietFieldGroup>
 
-          <section className="space-y-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-            <div>
-              <h4 className="font-medium text-[var(--mm-text1)]">
-                File readiness
-              </h4>
-              <p className="text-xs text-[var(--mm-text3)]">
-                These checks prevent Weir from starting while a downloader,
-                recorder, or media manager still owns the file.
+            <details>
+              <summary className="cursor-pointer border-b border-[var(--mm-line)] pb-[0.55rem] text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
+                Hardware and compatibility
+              </summary>
+              <p className="mt-3 max-w-prose text-[length:var(--mm-type-caption)] leading-5 text-[var(--mm-text3)]">
+                Software processing is the safest default. Hardware failures
+                fall back to software and are recorded.
               </p>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {field("Minimum unchanged age (seconds)", "min_file_age_seconds")}
-              {field("Hold every new file (minutes)", "hold_minutes")}
-              {field(
-                "Size must stay stable (seconds)",
-                "file_detection_interval_seconds",
-              )}
-              {field(
-                "Fallback scan interval (seconds)",
-                "scan_interval_seconds",
-              )}
-            </div>
-            <div className="grid gap-2 lg:grid-cols-2">
-              {toggle(
-                "Watch this folder for changes",
-                "file_system_events_enabled",
-                "The periodic scan remains as a backstop for Docker, SMB, and NFS.",
-              )}
-              {toggle(
-                "Ignore size changes",
-                "ignore_size_changes",
-                "Use only when another system guarantees the file is complete.",
-              )}
-              {toggle(
-                "Skip read and write tests",
-                "skip_access_tests",
-                "Less safe: locked sources and unwritable outputs may fail after queueing.",
-              )}
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-            <div>
-              <h4 className="font-medium text-[var(--mm-text1)]">
-                Output safety
-              </h4>
-              <p className="text-xs text-[var(--mm-text3)]">
-                Control sidecars, timestamps, and what happens when the
-                destination already exists.
-              </p>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {field(
-                "Sidecar file types",
-                "sidecar_patterns_csv",
-                ".srt,.nfo,.jpg",
-              )}
-              <label className="block text-sm">
-                <span className="text-[var(--mm-text2)]">Existing output</span>
-                <select
-                  className={mmSelectFieldClass}
-                  value={form.output_collision_policy}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      output_collision_policy: event.target.value,
-                    })
-                  }
-                  disabled={!editable}
-                >
-                  <option value="replace">Replace it</option>
-                  <option value="skip">Keep it and skip this file</option>
-                  <option value="keep_both">Keep both</option>
-                  <option value="replace_if_larger">
-                    Replace only if new output is larger
-                  </option>
-                  <option value="replace_if_newer">
-                    Replace only if source is newer
-                  </option>
-                </select>
-              </label>
-            </div>
-            <div className="grid gap-2 lg:grid-cols-2">
-              {toggle(
-                "Preserve original timestamps",
-                "preserve_original_timestamps",
-              )}
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-            <div>
-              <h4 className="font-medium text-[var(--mm-text1)]">
-                Capacity and recovery
-              </h4>
-              <p className="text-xs text-[var(--mm-text3)]">
-                Priority is relative: higher-numbered libraries are offered work
-                first.
-              </p>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-2">
-              {field("Files at once", "max_concurrent_files", "1")}
-              {field("Queue priority", "priority", "0")}
-              {field("Maximum automatic attempts", "max_attempts", "3")}
-              {field(
-                "First retry delay (seconds)",
-                "retry_backoff_seconds",
-                "300",
-              )}
-            </div>
-            <div className="grid gap-2 lg:grid-cols-2">
-              {toggle("Retry processing failures", "retry_execution_failures")}
-              {toggle(
-                "Retry preflight rejections",
-                "retry_preflight_failures",
-                "Usually leave this off: retrying does not repair an unsupported or malformed file.",
-              )}
-            </div>
-            <label className="block space-y-1">
-              <span className="text-sm text-[var(--mm-text2)]">
-                When retries run out
-              </span>
-              <select
-                className={mmSelectFieldClass}
-                value={form.failure_policy}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    failure_policy: event.target
-                      .value as ProcessingFailurePolicy,
-                  })
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <label className="block text-sm">
+                  <span className="text-[var(--mm-text2)]">
+                    Hardware decoding
+                  </span>
+                  <select
+                    className={mmSelectFieldClass}
+                    value={form.hardware_decode_mode}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        hardware_decode_mode: event.target.value,
+                      })
+                    }
+                    disabled={!editable}
+                  >
+                    <option value="off">Off</option>
+                    <option value="auto">Detect automatically</option>
+                    <option value="device">Use a specific method</option>
+                  </select>
+                </label>
+                {field(
+                  "Hardware method",
+                  "hardware_device",
+                  "cuda, qsv, vaapi",
+                )}
+                {field(
+                  "Never use these vendors",
+                  "hardware_disabled_vendors_csv",
+                  "nvidia,intel",
+                )}
+                <label className="block text-sm">
+                  <span className="text-[var(--mm-text2)]">
+                    FFmpeg compatibility
+                  </span>
+                  <select
+                    className={mmSelectFieldClass}
+                    value={form.ffmpeg_strictness}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        ffmpeg_strictness: event.target.value,
+                      })
+                    }
+                    disabled={!editable}
+                  >
+                    <option value="very">Very strict</option>
+                    <option value="strict">Strict</option>
+                    <option value="normal">Normal</option>
+                    <option value="unofficial">Allow unofficial</option>
+                    <option value="experimental">Allow experimental</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+            <QuietFieldGroup title="When this library may run">
+              <ScheduleGridEditor
+                value={form.schedule_grid}
+                onChange={(schedule_grid) =>
+                  setForm({ ...form, schedule_grid })
                 }
                 disabled={!editable}
+              />
+            </QuietFieldGroup>
+            <div className={quietActionRowClass}>
+              <button
+                type="button"
+                className={mmActionButtonClass({
+                  variant: "primary",
+                  disabled: !editable || !form.name.trim(),
+                })}
+                onClick={() => void save()}
+                disabled={!editable || !form.name.trim()}
+                data-testid="processing-library-save"
               >
-                <option value="pass_through">
-                  Hand the original back unchanged
-                </option>
-                <option value="hold">Keep it until someone acts</option>
-                <option
-                  value="reject"
-                  disabled={
-                    !rejectAvailable && form.failure_policy !== "reject"
-                  }
-                >
-                  Reject the release so a different one is found
-                </option>
-              </select>
-              <span className="block text-xs text-[var(--mm-text3)]">
-                {form.failure_policy === "pass_through"
-                  ? "Your media manager still gets the file, exactly as it arrived. The original stays in the watched folder."
-                  : form.failure_policy === "hold"
-                    ? "The file stays with Weir and will not reach your media manager until you deal with it."
-                    : "Weir tells your media manager the release is bad and removes the download once the manager accepts, so it can find a different one. If that cannot be done safely, the original is handed back unchanged instead."}
-              </span>
-              <span
-                className="block text-xs text-[var(--mm-text3)]"
-                data-testid="reject-support"
+                Save
+              </button>
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "tertiary" })}
+                onClick={cancel}
               >
-                {rejectSupport.isLoading
-                  ? "Checking whether Reject is available…"
-                  : rejectSupport.data
-                    ? `Reject: ${rejectSupport.data.reason}`
-                    : null}
-              </span>
-            </label>
-          </section>
-
-          <details className="rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-            <summary className="cursor-pointer font-medium text-[var(--mm-text1)]">
-              Hardware and compatibility
-            </summary>
-            <p className="mt-1 text-xs text-[var(--mm-text3)]">
-              Software processing is the safest default. Hardware failures fall
-              back to software and are recorded.
-            </p>
-            <div className="mt-3 grid gap-3 lg:grid-cols-2">
-              <label className="block text-sm">
-                <span className="text-[var(--mm-text2)]">
-                  Hardware decoding
-                </span>
-                <select
-                  className={mmSelectFieldClass}
-                  value={form.hardware_decode_mode}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      hardware_decode_mode: event.target.value,
-                    })
-                  }
-                  disabled={!editable}
-                >
-                  <option value="off">Off</option>
-                  <option value="auto">Detect automatically</option>
-                  <option value="device">Use a specific method</option>
-                </select>
-              </label>
-              {field("Hardware method", "hardware_device", "cuda, qsv, vaapi")}
-              {field(
-                "Never use these vendors",
-                "hardware_disabled_vendors_csv",
-                "nvidia,intel",
-              )}
-              <label className="block text-sm">
-                <span className="text-[var(--mm-text2)]">
-                  FFmpeg compatibility
-                </span>
-                <select
-                  className={mmSelectFieldClass}
-                  value={form.ffmpeg_strictness}
-                  onChange={(event) =>
-                    setForm({ ...form, ffmpeg_strictness: event.target.value })
-                  }
-                  disabled={!editable}
-                >
-                  <option value="very">Very strict</option>
-                  <option value="strict">Strict</option>
-                  <option value="normal">Normal</option>
-                  <option value="unofficial">Allow unofficial</option>
-                  <option value="experimental">Allow experimental</option>
-                </select>
-              </label>
+                Cancel
+              </button>
             </div>
-          </details>
-          <div className="space-y-2">
-            <span className="text-sm font-medium text-[var(--mm-text1)]">
-              When this library may run
-            </span>
-            <ScheduleGridEditor
-              value={form.schedule_grid}
-              onChange={(schedule_grid) => setForm({ ...form, schedule_grid })}
-              disabled={!editable}
-            />
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={mmActionButtonClass({
-                variant: "primary",
-                disabled: !editable || !form.name.trim(),
-              })}
-              onClick={() => void save()}
-              disabled={!editable || !form.name.trim()}
-              data-testid="processing-library-save"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "tertiary" })}
-              onClick={cancel}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        </QuietSection>
       ) : null}
     </div>
   );
