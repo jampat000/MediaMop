@@ -11,8 +11,8 @@ from typing import Any
 
 import pytest
 
-from tests.contract.media_managers._helpers import create_connection
 from tests.contract.libraries import _helpers as h
+from tests.contract.media_managers._helpers import create_connection
 from tests.contract.support.client import API, WeirClient
 
 LIBRARIES = f"{API}/processing/libraries"
