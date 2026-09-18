@@ -49,21 +49,29 @@ const BACKUP_INTERVAL_OPTIONS = [
 ] as const;
 
 function WizardSection({
+  headingId,
   title,
   description,
   children,
 }: {
+  headingId: string;
   title: string;
   description: string;
   children: ReactNode;
 }) {
   return (
-    <section className="mm-wizard-section">
-      <div className="mm-wizard-section__intro">
-        <h2 className="mm-wizard-section__title">{title}</h2>
-        <p className="mm-wizard-section__lead">{description}</p>
+    <section className="mm-quiet-section" aria-labelledby={headingId}>
+      <div className="mm-quiet-section__head">
+        <h2 id={headingId} className="mm-quiet-section__title">
+          {title}
+        </h2>
       </div>
-      <div className="mm-wizard-section__body">{children}</div>
+      <div className="mm-quiet-section__body">
+        <div className="flex flex-col gap-3">
+          <p className="mm-quiet-note">{description}</p>
+          {children}
+        </div>
+      </div>
     </section>
   );
 }
@@ -351,8 +359,9 @@ export function SetupWizardPage() {
             in Settings and Processing, and you can skip it for now.
           </p>
 
-          <div className="mm-wizard-sections">
+          <div className="mm-quiet-stack mt-5">
             <WizardSection
+              headingId="setup-wizard-basics-heading"
               title="Basics"
               description="The clock Weir uses, and how dense the screens are in this browser."
             >
@@ -407,6 +416,7 @@ export function SetupWizardPage() {
             </WizardSection>
 
             <WizardSection
+              headingId="setup-wizard-libraries-heading"
               title="Libraries"
               description="Where your downloader finishes files, and where Weir puts them once cleaned for your media manager to import. This fills in your first Movies and TV library; add more, and set their audio and subtitle rules, on the Processing page."
             >
@@ -457,6 +467,7 @@ export function SetupWizardPage() {
             </WizardSection>
 
             <WizardSection
+              headingId="setup-wizard-backups-heading"
               title="Automatic backups"
               description="Keep a rolling local copy of your Weir configuration."
             >
