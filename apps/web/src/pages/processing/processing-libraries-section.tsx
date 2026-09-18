@@ -8,6 +8,7 @@ import {
   quietActionRowClass,
 } from "../../components/shared/quiet-section";
 import { ScheduleGridEditor } from "./schedule-grid-editor";
+import { LibraryManagerSetup } from "./library/library-manager-setup";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
   mmStatusPillClass,
@@ -84,6 +85,7 @@ type FormState = {
   skip_access_tests: boolean;
   file_system_events_enabled: boolean;
   preserve_original_timestamps: boolean;
+  remove_original_after_success: boolean;
   retry_execution_failures: boolean;
   retry_preflight_failures: boolean;
   failure_policy: ProcessingFailurePolicy;
@@ -133,6 +135,7 @@ const EMPTY_FORM: FormState = {
   skip_access_tests: false,
   file_system_events_enabled: true,
   preserve_original_timestamps: false,
+  remove_original_after_success: true,
   retry_execution_failures: true,
   retry_preflight_failures: false,
   failure_policy: "pass_through",
@@ -196,6 +199,8 @@ function formFrom(library: ProcessingLibrary): FormState {
     skip_access_tests: library.skip_access_tests,
     file_system_events_enabled: library.file_system_events_enabled,
     preserve_original_timestamps: library.preserve_original_timestamps,
+    remove_original_after_success:
+      library.remove_original_after_success ?? true,
     retry_execution_failures: library.retry_execution_failures,
     retry_preflight_failures: library.retry_preflight_failures,
     failure_policy: library.failure_policy,
@@ -242,6 +247,7 @@ function writeFrom(
     priority: asNumber(form.priority, 0),
     sidecar_patterns_csv: form.sidecar_patterns_csv.trim(),
     preserve_original_timestamps: form.preserve_original_timestamps,
+    remove_original_after_success: form.remove_original_after_success,
     output_collision_policy: form.output_collision_policy,
     hardware_decode_mode: form.hardware_decode_mode,
     hardware_device: form.hardware_device.trim(),
@@ -941,6 +947,21 @@ export function ProcessingLibrariesSection() {
               </div>
             </QuietFieldGroup>
 
+            <LibraryManagerSetup
+              mediaType={form.media_type}
+              watchedFolder={form.watched_folder}
+              outputFolder={form.output_folder}
+              removeOriginal={form.remove_original_after_success}
+              editable={editable}
+              onUseFolders={(watched, output) =>
+                setForm((current) => ({
+                  ...current,
+                  watched_folder: watched ?? current.watched_folder,
+                  output_folder: output ?? current.output_folder,
+                }))
+              }
+            />
+
             <QuietFieldGroup
               title="Intake rules"
               detail="Decide which files belong here before Weir spends time probing or processing them. A maximum of 0 means no limit."
@@ -1099,6 +1120,11 @@ export function ProcessingLibrariesSection() {
                 {toggle(
                   "Preserve original timestamps",
                   "preserve_original_timestamps",
+                )}
+                {toggle(
+                  "After cleaning, remove the original download",
+                  "remove_original_after_success",
+                  "Turn off if your download client is still seeding it — Sonarr, Radarr or your client will clean it up.",
                 )}
               </div>
             </QuietFieldGroup>

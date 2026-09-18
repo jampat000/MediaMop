@@ -104,6 +104,7 @@ public sealed class SchemaMigrator
         new(7, "0042_library_file_facets", "Weir.Infrastructure.Migrations.0007_library_file_facets.sql"),
         new(8, "0043_remux_writer", "Weir.Infrastructure.Migrations.0008_remux_writer.sql"),
         new(9, "0044_drop_the_refiner_name", "Weir.Infrastructure.Migrations.0009_drop_the_refiner_name.sql"),
+        new(10, "0045_keep_original_download", "Weir.Infrastructure.Migrations.0010_keep_original_download.sql"),
     ];
 
     /// <summary>

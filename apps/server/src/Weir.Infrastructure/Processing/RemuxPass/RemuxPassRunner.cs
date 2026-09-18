@@ -444,6 +444,11 @@ public sealed class RemuxPassRunner
         }
 
         var relative = RemuxPassPaths.RelativeTo(src, watchedRoot)!;
+
+        // What this pass cleaned, as measured before any work started (the pass refuses to publish if it changed since).
+        // A successful pass records it on the file, so a library that keeps originals recognises the same file next scan.
+        output.Set("source_fingerprint_size", expected.SizeBytes);
+        output.Set("source_fingerprint_mtime_ns", expected.ModifiedTimeNs);
         var context = new PassContext(request, src, inspected, scope, watchedRoot, outDir, expected, audio.Count, duration, minAge, plan, probeJson, sourceWarnings);
         if (!remuxNeeded)
         {
@@ -979,6 +984,10 @@ public sealed class RemuxPassRunner
         }
     }
 
+    /// <summary>Why the source is still in the watched folder after a successful pass, when the library asks for that.</summary>
+    public const string KeptOriginalReason =
+        "This library keeps the original download after cleaning, so Weir left it in the watched folder for your download client.";
+
     private static void InitFolderCleanupFields(PyDict output)
     {
         OutputFolderCleanup.SetDefault(output, "source_folder_deleted", PyBool.False);
@@ -997,6 +1006,19 @@ public sealed class RemuxPassRunner
     /// </summary>
     private async Task HandleCleanupAfterSuccessAsync(PassContext context, PyDict output, string? finalOutputFile, CancellationToken cancellationToken)
     {
+        // The library keeps the original download (a torrent still seeding): nothing in the watched folder is touched —
+        // not the file, its release or season folder, nor its sidecars, which were copied, never moved. This is the one
+        // gate for every post-success source removal: Movies' release folder below and TV's season-folder cleanup.
+        if (!context.Request.Runtime.RemoveOriginalAfterSuccess)
+        {
+            InitFolderCleanupFields(output);
+            SkippedTvSeasonFolderCleanup.InitFields(output);
+            output.Set("source_deleted_after_success", false);
+            output.Set("source_kept_by_library_setting", true);
+            output.Set(context.Scope == "tv" ? "tv_season_folder_skip_reason" : "source_folder_skip_reason", KeptOriginalReason);
+            return;
+        }
+
         if (output.Get("sidecar_migration_blocked") is { IsTruthy: true })
         {
             InitFolderCleanupFields(output);

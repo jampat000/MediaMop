@@ -24,6 +24,9 @@ public sealed record ProcessingPathRuntime
 
     /// <summary>#548: rewrite with ffmpeg when the preferred writer cannot write or validate a file.</summary>
     public bool RewriteWithFfmpeg { get; init; } = true;
+
+    /// <summary>The library's <c>remove_original_after_success</c>: false leaves the source where it is after a successful pass.</summary>
+    public bool RemoveOriginalAfterSuccess { get; init; } = true;
 }
 
 /// <summary>The rejected-file deletion's outcome (<c>RejectedFileCleanupResult</c>).</summary>
@@ -227,6 +230,7 @@ public static class RemuxPassPaths
             FfmpegStrictness = string.IsNullOrEmpty(library.FfmpegStrictness) ? "normal" : library.FfmpegStrictness,
             RemuxWriter = Weir.Core.Media.RemuxWriterChoice.Normalize(library.RemuxWriter),
             RewriteWithFfmpeg = library.RewriteWithFfmpeg,
+            RemoveOriginalAfterSuccess = library.RemoveOriginalAfterSuccess,
         }, null);
     }
 

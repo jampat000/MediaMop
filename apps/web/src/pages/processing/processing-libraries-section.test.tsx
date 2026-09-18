@@ -37,6 +37,7 @@ function library(over: Partial<ProcessingLibrary> = {}): ProcessingLibrary {
     hold_minutes: 0,
     sidecar_patterns_csv: ".srt,.nfo",
     preserve_original_timestamps: false,
+    remove_original_after_success: true,
     output_collision_policy: "replace",
     hardware_decode_mode: "off",
     hardware_device: "",
@@ -360,4 +361,94 @@ it("lets an operator choose Reject when a linked manager supports it", async () 
       expect.objectContaining({ failure_policy: "reject" }),
     ),
   );
+});
+
+it("keeps the original download when told to, saves it, and asks the check about seeding with it", async () => {
+  asOperator();
+  const existing = library({ media_type: "tv", name: "TV" });
+  vi.spyOn(api, "fetchProcessingLibraries").mockResolvedValue([existing]);
+  const check = vi
+    .spyOn(api, "fetchProcessingManagerSetup")
+    .mockResolvedValue({ media_type: "tv", managers: [] });
+  const update = vi
+    .spyOn(api, "updateProcessingLibrary")
+    .mockResolvedValue(existing);
+
+  render(<ProcessingLibrariesSection />, { wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+  const toggle = screen.getByRole("checkbox", {
+    name: /After cleaning, remove the original download/,
+  });
+  expect(toggle).toBeChecked();
+  expect(
+    screen.getByText(
+      "Turn off if your download client is still seeding it — Sonarr, Radarr or your client will clean it up.",
+    ),
+  ).toBeInTheDocument();
+
+  fireEvent.click(toggle);
+  await waitFor(() =>
+    expect(check).toHaveBeenLastCalledWith(
+      "tv",
+      "/srv/movies/in",
+      "/srv/movies/out",
+      false,
+    ),
+  );
+  fireEvent.click(screen.getByTestId("processing-library-save"));
+
+  await waitFor(() =>
+    expect(update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ remove_original_after_success: false }),
+    ),
+  );
+});
+
+it("fills a library's folders from what Deluno reports, then saves them", async () => {
+  asOperator();
+  const existing = library({
+    media_type: "tv",
+    name: "TV",
+    watched_folder: "/media/tv",
+    output_folder: "",
+  });
+  vi.spyOn(api, "fetchProcessingLibraries").mockResolvedValue([existing]);
+  vi.spyOn(api, "fetchProcessingManagerSetup").mockResolvedValue({
+    media_type: "tv",
+    managers: [
+      {
+        connection_id: 5,
+        kind: "deluno",
+        name: "Deluno",
+        label: "Deluno",
+        flow: "handoff",
+        ready: false,
+        mapping: null,
+        suggested_watched_folder: "/media/downloads/complete/tv",
+        suggested_output_folder: "/media/downloads/weir/tv",
+        lines: [],
+      },
+    ],
+  });
+  const update = vi
+    .spyOn(api, "updateProcessingLibrary")
+    .mockResolvedValue(existing);
+
+  render(<ProcessingLibrariesSection />, { wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Use Deluno's folders" }),
+  );
+  fireEvent.click(screen.getByTestId("processing-library-save"));
+
+  await waitFor(() => {
+    expect(update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        watched_folder: "/media/downloads/complete/tv",
+        output_folder: "/media/downloads/weir/tv",
+      }),
+    );
+  });
 });

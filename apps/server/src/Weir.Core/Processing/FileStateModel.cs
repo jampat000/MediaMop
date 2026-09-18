@@ -78,6 +78,12 @@ public sealed record ProcessingFileRecord
     public PyDateTime? LastSeenAt { get; init; }
     public PyDateTime? LastAttemptAt { get; init; }
 
+    /// <summary>Size of the source the last successful pass cleaned; null before one, or before migration 0010.</summary>
+    public long? ProcessedSourceSize { get; init; }
+
+    /// <summary>Modification time (ns since the Unix epoch) of that source, as <c>SourceFiles.Fingerprint</c> measures it.</summary>
+    public long? ProcessedSourceMtimeNs { get; init; }
+
     public PyDateTime CreatedAt { get; init; }
     public PyDateTime UpdatedAt { get; init; }
 }
@@ -93,4 +99,22 @@ public sealed record ProcessingFileListFilter
 
     /// <summary><c>max(1, min(limit, 1000))</c>.</summary>
     public int ClampedLimit => Math.Max(1, Math.Min(Limit, 1000));
+}
+
+/// <summary>
+/// Whether a file on disk is the one a successful pass already cleaned (migration 0010). Used only for a library that
+/// keeps originals, whose sources stay in the watched folder after cleaning: without it every scan would queue the same
+/// finished file again. Size and modification time together, the same two facts the pass measured before it started
+/// (<c>SourceFiles.Fingerprint</c>), so a genuinely new or replaced file at the same path is processed again.
+/// </summary>
+public static class ProcessedSourceRules
+{
+    public static bool IsSameCleanedFile(ProcessingFileRecord? record, long sizeBytes, long? modifiedTimeNs) =>
+        record is { Status: ProcessingFileStatuses.Processed, ProcessedSourceSize: { } size, ProcessedSourceMtimeNs: { } mtime } &&
+        size == sizeBytes &&
+        modifiedTimeNs == mtime;
+
+    /// <summary>A pass recorded what it cleaned, so the fingerprint decides; older rows fall back to the pre-0010 checks.</summary>
+    public static bool HasFingerprint(ProcessingFileRecord? record) =>
+        record is { ProcessedSourceSize: not null, ProcessedSourceMtimeNs: not null };
 }

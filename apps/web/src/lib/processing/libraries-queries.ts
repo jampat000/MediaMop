@@ -7,6 +7,7 @@ import {
   deleteProcessingRuleSet,
   discoverProcessingLibraries,
   fetchProcessingLibraryDrift,
+  fetchProcessingManagerSetup,
   fetchProcessingRejectSupport,
   fetchProcessingLibraries,
   fetchProcessingRuleSets,
@@ -17,6 +18,7 @@ import {
   updateProcessingRuleSet,
   type ProcessingLibrary,
   type ProcessingLibraryCreate,
+  type ProcessingMediaType,
   type ProcessingLibraryWrite,
   type ProcessingRuleSet,
   type ProcessingRuleSetWrite,
@@ -36,6 +38,39 @@ export function useProcessingRejectSupportQuery(
     queryFn: () => fetchProcessingRejectSupport(connectionIds),
     enabled,
     staleTime: 60_000,
+  });
+}
+
+/**
+ * Asks each connected media manager whether it will pick up what a library with these folders writes.
+ * Only while the library editor is open, and keyed on the folders so a change is checked again.
+ */
+export function useProcessingManagerSetupQuery(
+  mediaType: ProcessingMediaType,
+  watchedFolder: string,
+  outputFolder: string,
+  removeOriginal: boolean,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [
+      "processing",
+      "manager-setup",
+      mediaType,
+      watchedFolder,
+      outputFolder,
+      removeOriginal,
+    ],
+    queryFn: () =>
+      fetchProcessingManagerSetup(
+        mediaType,
+        watchedFolder,
+        outputFolder,
+        removeOriginal,
+      ),
+    enabled,
+    staleTime: 30_000,
+    retry: false,
   });
 }
 

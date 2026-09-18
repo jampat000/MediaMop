@@ -26,6 +26,7 @@ public static class ProcessingLibraryEndpoints
         endpoints.MapV1("GET", "/processing/libraries", GetLibrariesAsync);
         endpoints.MapV1("POST", "/processing/libraries", PostLibraryAsync);
         endpoints.MapV1("GET", "/processing/reject-support", GetRejectSupportAsync);
+        endpoints.MapV1("GET", "/processing/manager-setup", GetManagerSetupAsync);
         endpoints.MapV1("GET", "/processing/libraries/discover/{connection_id}", GetDiscoverableLibrariesAsync);
         endpoints.MapV1("POST", "/processing/libraries/discover/{connection_id}/import", PostImportLibrariesAsync);
         endpoints.MapV1("GET", "/processing/libraries/discover/{connection_id}/drift", GetLibraryDriftAsync);
@@ -155,6 +156,7 @@ public static class ProcessingLibraryEndpoints
             .Set("priority", row.Priority)
             .Set("rule_set_id", row.RuleSetId)
             .Set("manager_connection_ids", new PyList(managerIds.Select(id => (PyJson)PyJson.Of(id))))
+            .Set("remove_original_after_success", row.RemoveOriginalAfterSuccess)
             .Set("manager_coverage", coverage)
             .Set("manager_coverage_detail", coverageDetail)
             .Set("discovered_from_connection_id", row.DiscoveredFromConnectionId)
@@ -252,6 +254,45 @@ public static class ProcessingLibraryEndpoints
     }
 
     /// <summary>
+    /// <c>GET /api/v1/processing/manager-setup</c>: for a library's media type and folders (saved or still being typed),
+    /// what each enabled Sonarr, Radarr or Deluno connection needs, and whether it already has it — the remote path
+    /// mapping Sonarr/Radarr must hold, or the folders Deluno reports. Read only: Weir never writes a manager's settings.
+    /// </summary>
+    private static async Task<ApiResult> GetManagerSetupAsync(ApiRequest request)
+    {
+        await request.RequireUserAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var mediaType = ProcessingMediaScopes.Movie;
+        if (request.Query("media_type") is not { } rawType)
+        {
+            issues.Add(new ValidationIssue("missing", ["query", "media_type"], "Field required", PyJson.Null));
+        }
+        else if (PydanticRules.TryLiteral(new PyStr(rawType), ["query", "media_type"], ProcessingMediaScopes.All, issues, out var parsedType))
+        {
+            mediaType = parsedType;
+        }
+
+        var watchedFolder = PyStrings.Slice(request.Query("watched_folder") ?? string.Empty, 4000);
+        var outputFolder = PyStrings.Slice(request.Query("output_folder") ?? string.Empty, 4000);
+        var removesOriginals = true;
+        if (request.Query("remove_original_after_success") is { } rawRemove)
+        {
+            if (PydanticRules.TryLiteral(new PyStr(rawRemove.ToLowerInvariant()), ["query", "remove_original_after_success"], ["true", "false"], issues, out var parsedRemove))
+            {
+                removesOriginals = parsedRemove == "true";
+            }
+        }
+
+        issues.ThrowIfAny();
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var managers = await request.Service<ManagerSetupCheck>()
+            .CheckAsync(uow, mediaType, watchedFolder, outputFolder, removesOriginals, request.Context.RequestAborted)
+            .ConfigureAwait(false);
+        return ApiRoutes.Ok(new PyDict().Set("media_type", mediaType).Set("managers", new PyList(managers.Select(item => (PyJson)item))));
+    }
+
+    /// <summary>
     /// <c>_refuse_unsupported_reject</c>: <c>reject</c> deletes downloads, so it cannot be saved for a library no manager
     /// can take one for. Called after the row is written (so the manager links it was just given are the ones checked)
     /// but before the transaction commits.
@@ -326,6 +367,7 @@ public static class ProcessingLibraryEndpoints
         var priority = model.Number("priority", 0, required: false, ge: -100, le: 100);
         var ruleSetId = model.OptionalInt("rule_set_id");
         var managerConnectionIds = model.IntList("manager_connection_ids");
+        var removeOriginalAfterSuccess = model.Bool("remove_original_after_success", defaultValue: true);
 
         return new ProcessingLibraryInput
         {
@@ -379,6 +421,7 @@ public static class ProcessingLibraryEndpoints
             Priority = priority,
             RuleSetId = ruleSetId,
             ManagerConnectionIds = managerConnectionIds,
+            RemoveOriginalAfterSuccess = removeOriginalAfterSuccess,
         };
     }
 
