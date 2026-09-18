@@ -5,10 +5,13 @@ title: Overview
 
 # Architecture Overview
 
-Weir is a self-hosted media processing stage. Processing is the application: it remuxes
-watched media into cleaner outputs. Around it, the platform provides activity history, logs,
-backups, upgrades, and security posture. The main screen, **In hand**, shows what Weir is
-holding right now and anything that needs a person.
+Weir is a self-hosted media processing stage: it cleans new downloads, and files already in your
+library. Processing is the application — it remuxes media into cleaner outputs, either as files
+arrive in a library's watched folder or as a pass over a library you already have. mkvmerge writes
+Matroska and ffmpeg writes everything else, and each library can be set to use ffmpeg for
+everything instead. Around it, the platform provides activity history, logs, backups, upgrades,
+and security posture. The main screen, **In hand**, shows what Weir is holding right now and
+anything that needs a person.
 
 ## Runtime shape
 
@@ -32,7 +35,7 @@ flowchart LR
 | Frontend | React 19 / Vite / TailwindCSS / TanStack Query |
 | Tray app | C# / .NET 9 WinForms tray |
 | Installer | Velopack |
-| Packaging | Docker (linux/amd64 + linux/arm64) + Windows installer |
+| Packaging | Docker (linux/amd64 + linux/arm64) + Windows installer, both carrying ffmpeg and mkvmerge (MKVToolNix) |
 
 ## Server map
 
@@ -42,7 +45,7 @@ The server lives in `apps/server` (solution `Weir.slnx`).
 |---------|---------------|
 | `src/Weir.Host` | The process itself: startup, configuration from `WEIR_*` variables, builds `Weir` / `Weir.exe` |
 | `src/Weir.Api` | HTTP endpoints under `/api/v1`, request and response behaviour, OpenAPI document, serving the web app |
-| `src/Weir.Infrastructure` | SQLite access with explicit SQL, numbered SQL migrations in `Migrations/`, filesystem work, the ffmpeg process runner, durable jobs and workers |
+| `src/Weir.Infrastructure` | SQLite access with explicit SQL, numbered SQL migrations in `Migrations/`, filesystem work, the ffmpeg and mkvmerge process runners, durable jobs and workers |
 | `src/Weir.Core` | Records and rules only — no disk, network or database access |
 | `tests/` | xUnit tests for each project |
 
@@ -86,7 +89,7 @@ timer and settling all stay in the scan handler that already owns them.
 
 ## Deployment model
 
-Weir 1.x supports a single-instance deployment:
+Weir supports a single-instance deployment:
 
 - One application process
 - One host or container
