@@ -10,6 +10,8 @@ namespace Weir.Infrastructure.Sqlite;
 /// One request's database work, with the transaction behaviour of the Python session
 /// (<c>get_db_session</c> over pysqlite): reads run outside a transaction until the first write,
 /// which begins one; the owner commits on success, and anything uncommitted is rolled back on dispose.
+/// That transaction is always <c>BEGIN IMMEDIATE</c> — see <see cref="EnsureTransaction"/> for why a
+/// deferred one could not survive another writer committing mid-unit (#586).
 /// </summary>
 public sealed class UnitOfWork : IAsyncDisposable
 {
@@ -49,7 +51,12 @@ public sealed class UnitOfWork : IAsyncDisposable
         (_afterCommit ??= []).Add(callback);
     }
 
-    /// <summary><c>BEGIN IMMEDIATE</c> (the bootstrap lock). Must be the first statement of the transaction.</summary>
+    /// <summary>
+    /// Begin the transaction now, before this unit has read or written anything (the bootstrap lock).
+    /// Every transaction here is <c>BEGIN IMMEDIATE</c> (see <see cref="EnsureTransaction"/>); this is
+    /// for a caller that wants the write lock held across its reads as well, and it must therefore come
+    /// before them.
+    /// </summary>
     public void BeginImmediate()
     {
         if (_transaction is not null)
@@ -57,12 +64,14 @@ public sealed class UnitOfWork : IAsyncDisposable
             throw new InvalidOperationException("A transaction is already open.");
         }
 
-        _transaction = Connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        EnsureTransaction();
     }
 
     /// <summary>
     /// The write transaction, begun now if this unit of work has not written yet: for code that issues its own
-    /// commands on <see cref="Connection"/> as part of this unit of work (the job queue's enqueue).
+    /// commands on <see cref="Connection"/> as part of this unit of work (the job queue's enqueue). Such code
+    /// may read before it writes, so this is the call that most depends on the transaction being immediate
+    /// (<see cref="EnsureTransaction"/>, #586); ask for it at the point of the write, not before.
     /// </summary>
     public SqliteTransaction WriteTransaction()
     {
@@ -182,9 +191,36 @@ public sealed class UnitOfWork : IAsyncDisposable
         await Connection.DisposeAsync().ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Begin this unit's transaction, once, as <c>BEGIN IMMEDIATE</c>.
+    /// </summary>
+    /// <remarks>
+    /// It was <c>BEGIN</c> (deferred) until #586. A deferred transaction takes the write lock at its first
+    /// write, so when its first statement is a read instead — which is what <see cref="WriteTransaction"/>
+    /// hands out, and what the job queue's enqueue does with it: look the dedupe key up, then insert — the
+    /// connection's WAL read snapshot is pinned at that read. If any other connection commits a real write
+    /// before the upgrade to a writer, SQLite refuses it with <c>SQLITE_BUSY_SNAPSHOT</c>. That is not a
+    /// wait-and-retry condition and <c>busy_timeout</c> cannot clear it: the snapshot is permanently stale,
+    /// so waiting can never make it current. Microsoft.Data.Sqlite nonetheless retries the statement until
+    /// the command timeout (<see cref="SqliteDatabase.BusyTimeoutMilliseconds"/>) expires, which is why a
+    /// single intervening commit — a real one; a write that changes no rows does not invalidate a snapshot —
+    /// turned a webhook POST into thirty seconds of nothing followed by <c>database is locked</c>.
+    ///
+    /// Taking the write lock at <c>BEGIN</c> removes the window rather than coping with it: while this unit
+    /// holds the lock nobody else can commit, so its snapshot cannot go stale and that error is unreachable.
+    /// It costs nothing on the common path, where the first statement of the transaction is the write that
+    /// began it and the lock would have been taken on the very next statement anyway; where it does move the
+    /// acquisition earlier, it is by the handful of rows a store reads before its first insert. Reads before
+    /// any transaction exists are untouched — they run in autocommit and still never take the write lock.
+    ///
+    /// Two writers both waiting at <c>BEGIN IMMEDIATE</c> cannot deadlock: SQLite has exactly one write lock
+    /// per database, it is acquired whole in one step rather than accumulated, and a waiter that does not get
+    /// it within <c>busy_timeout</c> fails instead of holding anything. Every other transaction in this server
+    /// is already immediate; this was the only deferred one left.
+    /// </remarks>
     private void EnsureTransaction()
     {
-        _transaction ??= Connection.BeginTransaction(IsolationLevel.Serializable, deferred: true);
+        _transaction ??= Connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
     }
 
     private SqliteCommand Create(string sql, (string Name, object? Value)[] parameters)
