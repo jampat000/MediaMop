@@ -2,7 +2,6 @@ import {
   Navigate,
   RouterProvider,
   createBrowserRouter,
-  useLocation,
 } from "react-router-dom";
 import { RouteErrorScreen } from "../components/error-boundary";
 import { AppShell } from "../layouts/app-shell";
@@ -11,12 +10,6 @@ import { RequireSetupWizard } from "./require-setup-wizard";
 import { AppHydrateFallback } from "./hydrate-fallback";
 
 const routeErrorElement = <RouteErrorScreen />;
-
-/** An old address that moved: keep the query (`?tab=…`) and hash so deep links still land. */
-function MovedTo({ path }: { path: string }) {
-  const location = useLocation();
-  return <Navigate to={`${path}${location.search}${location.hash}`} replace />;
-}
 
 const router = createBrowserRouter([
   {
@@ -81,15 +74,11 @@ const router = createBrowserRouter([
                 errorElement: routeErrorElement,
               },
               {
-                // "Refiner" became the whole app, so its page is now Processing.
-                path: "refiner",
-                element: <MovedTo path="/processing" />,
-              },
-              {
                 path: "processing",
                 lazy: async () => ({
-                  Component: (await import("../pages/refiner/refiner-page"))
-                    .RefinerPage,
+                  Component: (
+                    await import("../pages/processing/processing-page")
+                  ).ProcessingPage,
                 }),
                 errorElement: routeErrorElement,
               },

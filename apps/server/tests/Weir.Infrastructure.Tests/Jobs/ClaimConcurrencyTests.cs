@@ -13,7 +13,7 @@ namespace Weir.Infrastructure.Tests.Jobs;
 [Collection(SerialTestGroup.Name)]
 public sealed class ClaimConcurrencyTests : IDisposable
 {
-    private const string Kind = "refiner.test.parallel.v1";
+    private const string Kind = "processing.test.parallel.v1";
     private static readonly DateTimeOffset T0 = JobsTestDatabase.T0;
     private readonly JobsTestDatabase _db = new();
 
@@ -40,7 +40,7 @@ public sealed class ClaimConcurrencyTests : IDisposable
 
         Assert.Equal(jobs, claims.Count);
         Assert.Equal(jobs, claims.Select(c => c.Id).Distinct().Count());
-        Assert.Equal(jobs, _db.Count("SELECT count(*) FROM refiner_jobs WHERE status = 'leased' AND attempt_count = 1"));
+        Assert.Equal(jobs, _db.Count("SELECT count(*) FROM jobs WHERE status = 'leased' AND attempt_count = 1"));
         // The owner recorded on each row is the worker that got it back from the claim.
         var owners = claims.ToDictionary(c => c.Id, c => c.Owner);
         foreach (var row in await _db.Store.ListAsync())
@@ -72,14 +72,14 @@ public sealed class ClaimConcurrencyTests : IDisposable
 
         await Task.WhenAll(Enumerable.Range(0, workers).Select(index => Task.Run(async () =>
         {
-            var processor = new RefinerJobProcessor(
+            var processor = new ProcessingJobProcessor(
                 SeparateStore(),
                 new JobHandlerRegistry([handler]),
                 new RecordingActivityWriter(),
                 new NoUnhandledJobFailureRecorder(),
                 new NoJobNotifications(),
                 _db.Clock,
-                NullLogger<RefinerJobProcessor>.Instance);
+                NullLogger<ProcessingJobProcessor>.Instance);
             while (await processor.ProcessOneAsync($"w{index}", 3600, T0) == JobProcessOutcome.Processed)
             {
             }
@@ -88,7 +88,7 @@ public sealed class ClaimConcurrencyTests : IDisposable
         Assert.Equal(0, overlaps);
         Assert.Equal(jobs, runs.Count);
         Assert.All(runs.Values, count => Assert.Equal(1, count));
-        Assert.Equal(jobs, _db.Count("SELECT count(*) FROM refiner_jobs WHERE status = 'completed' AND attempt_count = 1"));
+        Assert.Equal(jobs, _db.Count("SELECT count(*) FROM jobs WHERE status = 'completed' AND attempt_count = 1"));
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public sealed class ClaimConcurrencyTests : IDisposable
         Assert.False(await dead.FailClaimedAsync(job.Id, "dead", "late", T0.AddSeconds(200)));
         Assert.False(await dead.FailLeasedAfterCompleteFailureAsync(job.Id, "dead", "late", T0.AddSeconds(200)));
         Assert.True(await alive.CompleteClaimedAsync(job.Id, "alive", T0.AddSeconds(302)));
-        Assert.Equal(RefinerJobStatus.Completed, (await _db.Store.GetAsync(job.Id))!.Status);
+        Assert.Equal(ProcessingJobStatus.Completed, (await _db.Store.GetAsync(job.Id))!.Status);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class ClaimConcurrencyTests : IDisposable
 
         Assert.Equal(jobs, claims.Count);
         Assert.Equal(jobs, claims.Distinct().Count());
-        Assert.Equal(jobs, _db.Count("SELECT count(*) FROM refiner_jobs WHERE attempt_count = 2 AND lease_owner <> 'crashed'"));
+        Assert.Equal(jobs, _db.Count("SELECT count(*) FROM jobs WHERE attempt_count = 2 AND lease_owner <> 'crashed'"));
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public sealed class ClaimConcurrencyTests : IDisposable
         await Task.WhenAll(producing);
         await Task.WhenAll(consuming);
 
-        Assert.Equal(producers * perProducer, _db.Count("SELECT count(*) FROM refiner_jobs"));
+        Assert.Equal(producers * perProducer, _db.Count("SELECT count(*) FROM jobs"));
         Assert.Equal(producers * perProducer, claims.Count);
         Assert.Equal(producers * perProducer, claims.Distinct().Count());
     }
@@ -192,7 +192,7 @@ public sealed class ClaimConcurrencyTests : IDisposable
     // pooling: false - each simulated worker gets its own real connection, not a share of one process-wide
     // pool keyed by this path, matching "as separate processes would be" and ruling out any pool-reuse
     // interaction between workers as a source of the flakiness this stress test is designed to catch.
-    private RefinerJobStore SeparateStore() => new(new SqliteDatabase(_db.DbPath, pooling: false), _db.Clock);
+    private ProcessingJobStore SeparateStore() => new(new SqliteDatabase(_db.DbPath, pooling: false), _db.Clock);
 
     private async Task EnqueueManyAsync(int count)
     {

@@ -6,14 +6,14 @@ using Weir.Core.Json;
 using Weir.Core.Library;
 using Weir.Core.LibraryMode;
 using Weir.Core.MediaManagers;
-using Weir.Core.Refiner;
+using Weir.Core.Processing;
 using Weir.Core.Rules;
 using Weir.Core.Validation;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.LibraryMode;
 using Weir.Infrastructure.MediaManagers;
-using Weir.Infrastructure.Refiner;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing;
+using Weir.Infrastructure.Processing.RemuxPass;
 
 namespace Weir.Api.Endpoints;
 
@@ -25,20 +25,20 @@ public static class LibraryModeEndpoints
 {
     public static IEndpointRouteBuilder MapLibraryModeEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-settings", GetSettingsAsync);
-        endpoints.MapV1("PUT", "/refiner/libraries/{library_id}/library-settings", PutSettingsAsync);
-        endpoints.MapV1("POST", "/refiner/libraries/{library_id}/library-scan", PostScanAsync);
-        endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-overview", GetOverviewAsync);
-        endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-problems", GetProblemsAsync);
-        endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-files", GetFilesAsync);
-        endpoints.MapV1("POST", "/refiner/libraries/{library_id}/library-files/clean", PostCleanAsync);
-        endpoints.MapV1("POST", "/refiner/libraries/{library_id}/library-schedule", PostScheduleAsync);
-        endpoints.MapV1("GET", "/refiner/libraries/{library_id}/library-redownloads", GetRedownloadsAsync);
-        endpoints.MapV1("POST", "/refiner/libraries/{library_id}/library-redownloads", PostRedownloadAsync);
+        endpoints.MapV1("GET", "/processing/libraries/{library_id}/library-settings", GetSettingsAsync);
+        endpoints.MapV1("PUT", "/processing/libraries/{library_id}/library-settings", PutSettingsAsync);
+        endpoints.MapV1("POST", "/processing/libraries/{library_id}/library-scan", PostScanAsync);
+        endpoints.MapV1("GET", "/processing/libraries/{library_id}/library-overview", GetOverviewAsync);
+        endpoints.MapV1("GET", "/processing/libraries/{library_id}/library-problems", GetProblemsAsync);
+        endpoints.MapV1("GET", "/processing/libraries/{library_id}/library-files", GetFilesAsync);
+        endpoints.MapV1("POST", "/processing/libraries/{library_id}/library-files/clean", PostCleanAsync);
+        endpoints.MapV1("POST", "/processing/libraries/{library_id}/library-schedule", PostScheduleAsync);
+        endpoints.MapV1("GET", "/processing/libraries/{library_id}/library-redownloads", GetRedownloadsAsync);
+        endpoints.MapV1("POST", "/processing/libraries/{library_id}/library-redownloads", PostRedownloadAsync);
         return endpoints;
     }
 
-    private static async Task<RefinerLibraryRecord> RequireLibraryAsync(Weir.Infrastructure.Sqlite.UnitOfWork uow, long id) =>
+    private static async Task<ProcessingLibraryRecord> RequireLibraryAsync(Weir.Infrastructure.Sqlite.UnitOfWork uow, long id) =>
         await LibraryStore.GetAsync(uow, id).ConfigureAwait(false)
         ?? throw new ApiException(StatusCodes.Status404NotFound, "No library with that id.");
 
@@ -129,7 +129,7 @@ public static class LibraryModeEndpoints
             return ApiRoutes.Ok(new PyDict().Set("job_id", active.JobId).Set("status", active.Status).Set("already_running", true));
         }
 
-        var jobStore = request.Service<RefinerJobStore>();
+        var jobStore = request.Service<ProcessingJobStore>();
         var job = await LibraryScanStore.RequestScanAsync(uow, jobStore, library.Id, "manual").ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
         return ApiRoutes.Ok(new PyDict().Set("job_id", job.Id).Set("status", job.Status).Set("already_running", false));
@@ -363,7 +363,7 @@ public static class LibraryModeEndpoints
     private static async Task<List<LibraryFilePreflightResult>> PreflightAsync(
         IEnumerable<LibraryScanFileEntry> files,
         LibrarySettings settings,
-        RefinerRulesConfig rules,
+        ProcessingRulesConfig rules,
         string mediaScope,
         IHardlinkInspector inspector,
         RedownloadRiskChecker riskChecker,
@@ -393,7 +393,7 @@ public static class LibraryModeEndpoints
 
     private static async Task<RedownloadRiskAssessment?> RedownloadRiskForFileAsync(
         LibraryScanFileEntry file,
-        RefinerRulesConfig rules,
+        ProcessingRulesConfig rules,
         string mediaScope,
         RedownloadRiskChecker riskChecker,
         IReadOnlyDictionary<long, ManagerConnection> connectionsById,
@@ -425,7 +425,7 @@ public static class LibraryModeEndpoints
     /// from its cached ffprobe JSON (the scan's own plan cache carries only a count, not the languages) — the same
     /// replan <see cref="LibraryCleanHandler"/> runs before actually touching the file.
     /// </summary>
-    private static List<string> RemovedAudioLanguages(LibraryScanFileEntry file, RefinerRulesConfig rules)
+    private static List<string> RemovedAudioLanguages(LibraryScanFileEntry file, ProcessingRulesConfig rules)
     {
         if (file.RemovedAudioCount == 0 || file.ProbeJson is not { Length: > 0 } probeJson)
         {
@@ -450,7 +450,7 @@ public static class LibraryModeEndpoints
         preflight.Where(r => r.Skip).Select(r => $"{Path.GetFileName(r.FilePath)}: {string.Join(" ", r.SkipReasons)}").ToList();
 
     /// <summary>The library's rules, exactly as the scan and clean handlers resolve them (no rule set = the defaults).</summary>
-    private static async Task<RefinerRulesConfig> RulesForAsync(Weir.Infrastructure.Sqlite.UnitOfWork uow, RefinerLibraryRecord library)
+    private static async Task<ProcessingRulesConfig> RulesForAsync(Weir.Infrastructure.Sqlite.UnitOfWork uow, ProcessingLibraryRecord library)
     {
         var ruleSet = library.RuleSetId is { } ruleSetId ? await LibraryStore.GetRuleSetAsync(uow, ruleSetId).ConfigureAwait(false) : null;
         return ruleSet is not null ? RemuxPassPaths.RulesConfigFor(ruleSet) : RuleSetConversion.ToRulesConfig(null);
@@ -523,7 +523,7 @@ public static class LibraryModeEndpoints
             return ConfirmationRequired(removingFiles, removingTracks, bytesSaved, PreflightWarningMessages(preflight.Values));
         }
 
-        var jobStore = request.Service<RefinerJobStore>();
+        var jobStore = request.Service<ProcessingJobStore>();
         var jobIds = new List<long>();
         var skipped = new List<string>();
         foreach (var entry in selected)

@@ -8,7 +8,7 @@ import {
   useActivityStreamInvalidation,
   useActivityStreamInvalidations,
 } from "./use-activity-stream-invalidation";
-import { refinerOverviewStatsQueryKey } from "../refiner/queries";
+import { processingOverviewStatsQueryKey } from "../processing/queries";
 
 class FakeEventSource {
   url: string;
@@ -67,7 +67,7 @@ describe("useActivityStreamInvalidation", () => {
     );
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
-    const keys = [refinerOverviewStatsQueryKey, activityRecentKey] as const;
+    const keys = [processingOverviewStatsQueryKey, activityRecentKey] as const;
 
     renderHook(
       () =>
@@ -85,7 +85,7 @@ describe("useActivityStreamInvalidation", () => {
 
     expect(spy).toHaveBeenCalledTimes(2);
     expect(spy).toHaveBeenCalledWith({
-      queryKey: refinerOverviewStatsQueryKey,
+      queryKey: processingOverviewStatsQueryKey,
       exact: true,
     });
     expect(spy).toHaveBeenCalledWith({
@@ -175,7 +175,7 @@ describe("useActivityStreamInvalidation", () => {
     const spy = vi.spyOn(qc, "invalidateQueries");
 
     renderHook(
-      () => useActivityStreamInvalidation(refinerOverviewStatsQueryKey),
+      () => useActivityStreamInvalidation(processingOverviewStatsQueryKey),
       {
         wrapper: withQueryClient(qc),
       },
@@ -185,7 +185,7 @@ describe("useActivityStreamInvalidation", () => {
     src.emit("activity.latest", JSON.stringify({ latest_event_id: 77 }));
 
     expect(spy).toHaveBeenCalledWith({
-      queryKey: refinerOverviewStatsQueryKey,
+      queryKey: processingOverviewStatsQueryKey,
     });
   });
 
@@ -204,7 +204,7 @@ describe("useActivityStreamInvalidation", () => {
       },
     );
     const second = renderHook(
-      () => useActivityStreamInvalidation(refinerOverviewStatsQueryKey),
+      () => useActivityStreamInvalidation(processingOverviewStatsQueryKey),
       {
         wrapper: withQueryClient(qc),
       },
@@ -216,7 +216,7 @@ describe("useActivityStreamInvalidation", () => {
 
     expect(spy).toHaveBeenCalledWith({ queryKey: activityRecentKey });
     expect(spy).toHaveBeenCalledWith({
-      queryKey: refinerOverviewStatsQueryKey,
+      queryKey: processingOverviewStatsQueryKey,
     });
 
     first.unmount();

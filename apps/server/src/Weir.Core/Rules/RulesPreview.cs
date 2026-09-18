@@ -5,7 +5,7 @@ namespace Weir.Core.Rules;
 
 /// <summary>
 /// Turns one <see cref="RemuxPlan"/> and the probe it was built from into the per-track rows the
-/// "Try on a file" preview (#502) shows: what Refiner would keep or drop, and why. Pure and
+/// "Try on a file" preview (#502) shows: what Processing would keep or drop, and why. Pure and
 /// read-only — it never touches the filesystem or the database, so a caller can run it against
 /// unsaved rule edits with no risk of writing anything.
 /// </summary>
@@ -225,7 +225,7 @@ public static partial class RulesPreview
         return any ? (long)(totalBits / 8.0 * duration) : null;
     }
 
-    /// <summary>As <c>refiner_remux_rules._read_bit_rate</c>: <c>"N/A"</c> and other unparsable text mean
+    /// <summary>As <c>processing_remux_rules._read_bit_rate</c>: <c>"N/A"</c> and other unparsable text mean
     /// unknown, not a failure.</summary>
     private static long ReadBitRate(ProbeStreamInfo stream)
     {

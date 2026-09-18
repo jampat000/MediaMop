@@ -20,7 +20,7 @@ public sealed record NotificationChannelRecord(
 /// <summary>Port of <c>weir.platform.notifications.model</c>, <c>ops</c> validation and <c>dispatch</c> payloads.</summary>
 public static class NotificationRules
 {
-    public static readonly IReadOnlyList<string> SupportedEvents = ["job_completed", "job_failed", "refiner_job_completed", "refiner_job_failed"];
+    public static readonly IReadOnlyList<string> SupportedEvents = ["job_completed", "job_failed", "processing_job_completed", "processing_job_failed"];
 
     public static readonly IReadOnlyList<string> SupportedProviders = ["webhook", "discord"];
 
@@ -127,12 +127,12 @@ public static class NotificationRules
 
     /// <summary>
     /// Display names for module keys whose plain capitalization would not read as a person expects. The
-    /// "refiner" module key is unchanged (it feeds the stored <c>{module}_job_{eventKind}</c> event name),
+    /// "processing" module key is unchanged (it feeds the stored <c>{module}_job_{eventKind}</c> event name),
     /// but the app that runs it is just called Weir now.
     /// </summary>
     private static readonly Dictionary<string, string> ModuleDisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["refiner"] = "Weir",
+        ["processing"] = "Weir",
     };
 
     /// <summary>

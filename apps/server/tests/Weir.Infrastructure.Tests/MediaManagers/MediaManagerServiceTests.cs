@@ -9,7 +9,7 @@ namespace Weir.Infrastructure.Tests.MediaManagers;
 
 /// <summary>
 /// Ports of <c>test_media_manager_binding.py</c>, <c>test_credentials_secret_crypto.py</c>, the reporting half of
-/// <c>test_media_manager_completion_callback.py</c>, the provider tests in <c>test_refiner_original_language.py</c>, and the
+/// <c>test_media_manager_completion_callback.py</c>, the provider tests in <c>test_processing_original_language.py</c>, and the
 /// intake, ledger and reconciliation behaviour behind the HTTP routes.
 /// </summary>
 public sealed class MediaManagerServiceTests
@@ -133,14 +133,14 @@ public sealed class MediaManagerServiceTests
     {
         using var fixture = new MediaManagerFixture();
         var libraryId = await fixture.LibraryAsync("movie", fixture.Store.Home.Join("movies"));
-        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'Foo_Bar/real.mkv', 'processed')");
+        await fixture.Store.Execute($"INSERT INTO files (library_id, relative_path, status) VALUES ({libraryId}, 'Foo_Bar/real.mkv', 'processed')");
         // Under SQL LIKE, "Foo_Bar/%" wildcards the "_" and matches this unrelated sibling folder too — an exact
         // prefix compare never does, on any platform.
-        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'FooXBar/other.mkv', 'processing')");
+        await fixture.Store.Execute($"INSERT INTO files (library_id, relative_path, status) VALUES ({libraryId}, 'FooXBar/other.mkv', 'processing')");
         // A pure case difference is not the wildcard bug: it follows the documented OS path-semantics decision
         // (case-insensitive on Windows, case-sensitive elsewhere), same as SQLite's LIKE default happened to give
         // for ASCII — kept, not changed, by this fix.
-        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'FOO_BAR/upper.mkv', 'processing')");
+        await fixture.Store.Execute($"INSERT INTO files (library_id, relative_path, status) VALUES ({libraryId}, 'FOO_BAR/upper.mkv', 'processing')");
 
         var row = new HandoffLedgerRow(1, "deluno", "h1", libraryId, "Foo_Bar", HandoffLedgerRules.Queued, null, null, null);
         var files = await fixture.Db(uow => HandoffLedgerStore.FileRowsAsync(uow, row));
@@ -154,14 +154,14 @@ public sealed class MediaManagerServiceTests
     {
         using var fixture = new MediaManagerFixture();
         await fixture.Store.Execute(
-            "INSERT INTO refiner_jobs (dedupe_key, job_kind) VALUES " +
-            "('refiner.file.remux_pass.v1:deluno:handoff:h_1:part1', 'refiner.file.remux_pass.v1'), " +
+            "INSERT INTO jobs (dedupe_key, job_kind) VALUES " +
+            "('processing.file.remux_pass.v1:deluno:handoff:h_1:part1', 'processing.file.remux_pass.v1'), " +
             // Under SQL LIKE, "...:handoff:h_1:%" wildcards the "_" and matches this other hand-off's job too.
-            "('refiner.file.remux_pass.v1:deluno:handoff:hX1:part2', 'refiner.file.remux_pass.v1')");
+            "('processing.file.remux_pass.v1:deluno:handoff:hX1:part2', 'processing.file.remux_pass.v1')");
 
         var row = new HandoffLedgerRow(1, "deluno", "h_1", null, "h_1", HandoffLedgerRules.Queued, null, null, null);
         var jobs = await fixture.Db(uow => HandoffLedgerStore.JobsForAsync(uow, row));
-        Assert.Equal(["refiner.file.remux_pass.v1:deluno:handoff:h_1:part1"], jobs.Select(j => j.DedupeKey));
+        Assert.Equal(["processing.file.remux_pass.v1:deluno:handoff:h_1:part1"], jobs.Select(j => j.DedupeKey));
     }
 
     /// <summary>
@@ -290,7 +290,7 @@ public sealed class MediaManagerServiceTests
         Assert.Equal(
             """{"handoffId":"h1","status":"completed","processorName":"Weir","libraryId":"lib-movies","outputPath":"/out/b.mkv","message":"Remux finished."}""",
             post.Body);
-        Assert.Equal(1, await fixture.Store.Scalar("SELECT count(*) FROM activity_events WHERE event_type = 'refiner.handoff_reported' AND title = 'Told Deluno that film.mkv is ready to import'"));
+        Assert.Equal(1, await fixture.Store.Scalar("SELECT count(*) FROM activity_events WHERE event_type = 'processing.handoff_reported' AND title = 'Told Deluno that film.mkv is ready to import'"));
     }
 
     [Fact]
@@ -343,7 +343,7 @@ public sealed class MediaManagerServiceTests
             .Json(HttpMethod.Get, "/api/integrations/external/manifest", """{"libraries":[{"id":"lib-tv","mediaType":"tv","importWorkflow":"refine-before-import","processorOutputPath":"/data/tv-refined"},{"id":"lib-movies","mediaType":"movie","importWorkflow":"refine-before-import","processorOutputPath":"/data/refined"}]}""");
         await fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
         var result = new PyDict().Set("ok", true).Set("outcome", "live_output_written")
-            .Set("output_file", Path.Join(local, "Film", "film.mkv")).Set("refiner_output_folder_resolved", local);
+            .Set("output_file", Path.Join(local, "Film", "film.mkv")).Set("processing_output_folder_resolved", local);
         var status = await fixture.Db(uow => fixture.Reporter.ReportHandoffCompletionAsync(uow, DelunoPayload, result), commit: false);
         Assert.Equal("reported completed to Deluno", status);
         Assert.Equal("/data/refined/Film/film.mkv", ((PyStr)((PyDict)fixture.Http.RequestsTo(HttpMethod.Post, "/api")[0].Json!)["outputPath"]).Value);
@@ -456,20 +456,20 @@ public sealed class MediaManagerServiceTests
         }
 
         var job = Assert.Single(await Jobs(fixture));
-        Assert.Equal("refiner.file.remux_pass.v1:deluno:handoff:h1:Blade.Runner.2049/Blade.Runner.2049.mkv", job.Key);
+        Assert.Equal("processing.file.remux_pass.v1:deluno:handoff:h1:Blade.Runner.2049/Blade.Runner.2049.mkv", job.Key);
         Assert.Equal(
             $$$"""{"relative_media_path":"Blade.Runner.2049/Blade.Runner.2049.mkv","media_scope":"movie","trigger":"webhook","library_id":{{{libraryId}}},"origin":{"source_key":"deluno","handoff_id":"h1","callback_path":"/api/integrations/processors/events","release_name":null,"library_id":"lib-1"}}""",
             job.Payload);
         Assert.Equal(1, await fixture.Store.Scalar("SELECT count(*) FROM media_manager_handoffs WHERE handoff_id = 'h1' AND state = 'queued' AND relative_path = 'Blade.Runner.2049'"));
         // #531: the handed-over file's size is known from the moment it arrives.
-        Assert.Equal(5, await fixture.Store.Scalar("SELECT size_bytes FROM refiner_files WHERE relative_path = 'Blade.Runner.2049/Blade.Runner.2049.mkv'"));
+        Assert.Equal(5, await fixture.Store.Scalar("SELECT size_bytes FROM files WHERE relative_path = 'Blade.Runner.2049/Blade.Runner.2049.mkv'"));
     }
 
     [Fact]
     public async Task Hand_offs_that_cannot_be_placed_are_refused_with_the_reason()
     {
         using var fixture = new MediaManagerFixture();
-        await fixture.Db(uow => uow.ExecuteAsync("UPDATE refiner_libraries SET watched_folder = ''"));
+        await fixture.Db(uow => uow.ExecuteAsync("UPDATE libraries SET watched_folder = ''"));
         var unset = await Assert.ThrowsAsync<IntakeRefusedException>(() => fixture.Db(uow => fixture.Intake.EnqueueRefineAsync(uow, Handoff("h", "/x/ep.mkv", "tv"))));
         Assert.Contains("watched folder is not set", unset.Message, StringComparison.Ordinal);
 
@@ -498,15 +498,15 @@ public sealed class MediaManagerServiceTests
 
         // #531: a failure with a retry still owed stays scheduled after its backoff has ended.
         var retryAt = fixture.Store.Clock.GetUtcNow().AddMinutes(-5).ToString("yyyy-MM-dd HH:mm:ss.ffffff", CultureInfo.InvariantCulture);
-        await fixture.Store.Execute("UPDATE refiner_jobs SET status = 'completed'");
-        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status, next_retry_at, failure_attempts, status_reason) VALUES ({libraryId}, 'Film/film.mkv', 'processing_failed', '{retryAt}', 1, 'ffmpeg died.')");
+        await fixture.Store.Execute("UPDATE jobs SET status = 'completed'");
+        await fixture.Store.Execute($"INSERT INTO files (library_id, relative_path, status, next_retry_at, failure_attempts, status_reason) VALUES ({libraryId}, 'Film/film.mkv', 'processing_failed', '{retryAt}', 1, 'ffmpeg died.')");
         var scheduled = await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row));
         Assert.Equal(("scheduled", "ffmpeg died."), (scheduled.State, scheduled.Message));
         Assert.NotNull(scheduled.ScheduledFor);
 
-        await fixture.Store.Execute("UPDATE refiner_files SET status = 'processed', next_retry_at = NULL");
+        await fixture.Store.Execute("UPDATE files SET status = 'processed', next_retry_at = NULL");
         Assert.Equal("completed", (await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row))).State);
-        await fixture.Store.Execute("DELETE FROM refiner_jobs; DELETE FROM refiner_files;");
+        await fixture.Store.Execute("DELETE FROM jobs; DELETE FROM files;");
         var pruned = (await fixture.Db(uow => HandoffLedgerStore.FindAsync(uow, "deluno", "h1")))!;
         Assert.Equal("completed", (await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, pruned))).State);
     }
@@ -521,24 +521,24 @@ public sealed class MediaManagerServiceTests
         using var fixture = new MediaManagerFixture();
         var watched = fixture.Store.Home.Join("movies");
         var libraryId = await fixture.LibraryAsync("movie", watched);
-        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'Film/film.mkv', 'processing_failed')");
+        await fixture.Store.Execute($"INSERT INTO files (library_id, relative_path, status) VALUES ({libraryId}, 'Film/film.mkv', 'processing_failed')");
         await fixture.Db(async uow => { await fixture.Ledger.RecordReceivedAsync(uow, "deluno", "h1", libraryId, "Film/film.mkv"); return 0; });
         var row = (await fixture.Db(uow => HandoffLedgerStore.FindAsync(uow, "deluno", "h1")))!;
 
-        var dedupe = $"refiner.file.pass_through.v1:{libraryId}:Film/film.mkv:10-123";
+        var dedupe = $"processing.file.pass_through.v1:{libraryId}:Film/film.mkv:10-123";
         await fixture.Store.Execute(
-            $"INSERT INTO refiner_jobs (dedupe_key, job_kind, payload_json, status) VALUES " +
-            $"('{dedupe}', 'refiner.file.pass_through.v1', '{{\"relative_media_path\":\"Film/film.mkv\",\"library_id\":{libraryId}}}', 'pending')");
+            $"INSERT INTO jobs (dedupe_key, job_kind, payload_json, status) VALUES " +
+            $"('{dedupe}', 'processing.file.pass_through.v1', '{{\"relative_media_path\":\"Film/film.mkv\",\"library_id\":{libraryId}}}', 'pending')");
 
         var pending = await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row));
         Assert.Equal("scheduled", pending.State);
         Assert.Null(pending.QueuePosition);
 
-        await fixture.Store.Execute($"UPDATE refiner_jobs SET status = 'leased' WHERE dedupe_key = '{dedupe}'");
+        await fixture.Store.Execute($"UPDATE jobs SET status = 'leased' WHERE dedupe_key = '{dedupe}'");
         var working = await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row));
         Assert.Equal("working", working.State);
 
-        await fixture.Store.Execute($"UPDATE refiner_jobs SET status = 'failed', last_error = 'Weir could not deliver the file: disk full.' WHERE dedupe_key = '{dedupe}'");
+        await fixture.Store.Execute($"UPDATE jobs SET status = 'failed', last_error = 'Weir could not deliver the file: disk full.' WHERE dedupe_key = '{dedupe}'");
         var failed = await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row));
         Assert.Equal("failed", failed.State);
         Assert.Equal("Weir could not deliver the file: disk full.", failed.Message);
@@ -557,7 +557,7 @@ public sealed class MediaManagerServiceTests
         Assert.True(cancelled);
         Assert.Equal(HandoffLedgerRules.CancelledMessage, sentence);
         var job = Assert.Single(await fixture.Jobs.ListAsync());
-        Assert.Equal(("cancelled", "refiner.file.remux_pass.v1:deluno:handoff:h1:cancelled:" + job.Id), (job.Status, job.DedupeKey));
+        Assert.Equal(("cancelled", "processing.file.remux_pass.v1:deluno:handoff:h1:cancelled:" + job.Id), (job.Status, job.DedupeKey));
 
         var cancelledRow = (await fixture.Db(uow => HandoffLedgerStore.FindAsync(uow, "deluno", "h1")))!;
         var refused = await fixture.Db(uow => fixture.Ledger.CancelAsync(uow, fixture.Jobs, cancelledRow), commit: false);
@@ -567,7 +567,7 @@ public sealed class MediaManagerServiceTests
         var restarted = (await fixture.Db(uow => HandoffLedgerStore.FindAsync(uow, "deluno", "h1")))!;
         Assert.Equal("queued", (await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, restarted))).State);
 
-        await fixture.Store.Execute("UPDATE refiner_jobs SET status = 'leased' WHERE status = 'pending'");
+        await fixture.Store.Execute("UPDATE jobs SET status = 'leased' WHERE status = 'pending'");
         var working = await fixture.Db(uow => fixture.Ledger.CancelAsync(uow, fixture.Jobs, restarted), commit: false);
         Assert.Equal((false, "This hand-off is working, so Weir did not cancel it."), working);
     }
@@ -604,20 +604,20 @@ public sealed class MediaManagerServiceTests
         Directory.CreateDirectory(work);
         var artifact = Path.Join(work, ".movie.mkv.partial");
         await File.WriteAllTextAsync(artifact, "partial");
-        await fixture.Db(uow => uow.ExecuteAsync("UPDATE refiner_libraries SET work_folder = $w, watched_folder = $missing WHERE media_type = 'movie'", ("$w", work), ("$missing", fixture.Store.Home.Join("gone"))));
+        await fixture.Db(uow => uow.ExecuteAsync("UPDATE libraries SET work_folder = $w, watched_folder = $missing WHERE media_type = 'movie'", ("$w", work), ("$missing", fixture.Store.Home.Join("gone"))));
 
         var report = await fixture.Db(ReconciliationService.BuildReportAsync);
         var issues = ((PyList)report["issues"]).Items.Cast<PyDict>().ToList();
         Assert.Contains(issues, issue => ((PyStr)issue["kind"]).Value == "configured_folder_missing" && ((PyStr)issue["message"]).Value.EndsWith("watched folder is configured but is not currently reachable on disk.", StringComparison.Ordinal));
-        Assert.Equal(["remove_refiner_temp_artifact"], ((PyList)report["repair_actions"]).Items.Select(item => ((PyStr)item).Value));
+        Assert.Equal(["remove_processing_temp_artifact"], ((PyList)report["repair_actions"]).Items.Select(item => ((PyStr)item).Value));
 
-        var refused = await Assert.ThrowsAsync<PyValueErrorException>(() => fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_refiner_temp_artifact", null, artifact, confirm: false)));
+        var refused = await Assert.ThrowsAsync<PyValueErrorException>(() => fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_processing_temp_artifact", null, artifact, confirm: false)));
         Assert.Contains("confirm=true", refused.Message, StringComparison.Ordinal);
         Assert.True(File.Exists(artifact));
-        await Assert.ThrowsAsync<PyValueErrorException>(() => fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_refiner_temp_artifact", null, Path.Join(work, "film.mkv"), confirm: true)));
-        Assert.True(((PyBool)(await fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_refiner_temp_artifact", null, artifact, confirm: true)))["applied"]).Value);
+        await Assert.ThrowsAsync<PyValueErrorException>(() => fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_processing_temp_artifact", null, Path.Join(work, "film.mkv"), confirm: true)));
+        Assert.True(((PyBool)(await fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_processing_temp_artifact", null, artifact, confirm: true)))["applied"]).Value);
         Assert.False(File.Exists(artifact));
-        Assert.False(((PyBool)(await fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_refiner_temp_artifact", null, artifact, confirm: true)))["applied"]).Value);
-        await Assert.ThrowsAsync<FileLifecycleException>(() => fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_refiner_temp_artifact", null, fixture.Store.Home.Join("elsewhere.tmp"), confirm: true)));
+        Assert.False(((PyBool)(await fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_processing_temp_artifact", null, artifact, confirm: true)))["applied"]).Value);
+        await Assert.ThrowsAsync<FileLifecycleException>(() => fixture.Db(uow => ReconciliationService.RepairAsync(uow, "remove_processing_temp_artifact", null, fixture.Store.Home.Join("elsewhere.tmp"), confirm: true)));
     }
 }

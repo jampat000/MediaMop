@@ -56,7 +56,7 @@ public sealed record AccelerationDecision
 }
 
 /// <summary>
-/// Hardware acceleration (<c>refiner_hardware_acceleration.py</c>): reading <c>ffmpeg -hwaccels</c>, and
+/// Hardware acceleration (<c>processing_hardware_acceleration.py</c>): reading <c>ffmpeg -hwaccels</c>, and
 /// choosing a decode method that always degrades to software with a reason rather than failing a file.
 /// </summary>
 public static class HardwareAcceleration

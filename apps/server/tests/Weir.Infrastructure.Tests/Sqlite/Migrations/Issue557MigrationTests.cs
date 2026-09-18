@@ -4,7 +4,7 @@ using Weir.Core.Rules;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Library;
 using Weir.Infrastructure.LibraryMode;
-using Weir.Infrastructure.Refiner;
+using Weir.Infrastructure.Processing;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Tests.Sqlite.Migrations;
@@ -133,7 +133,7 @@ public sealed class Issue557MigrationTests : IDisposable
         Assert.True(settings.CleanHardlinkedFiles);
         Assert.False(settings.SkipIfManagerWouldRedownload);
 
-        Assert.Equal(0L, Convert.ToInt64(Scalar("SELECT COUNT(*) FROM refiner_jobs WHERE job_kind = 'refiner.library.settings.v1'"), System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(0L, Convert.ToInt64(Scalar("SELECT COUNT(*) FROM jobs WHERE job_kind = 'processing.library.settings.v1'"), System.Globalization.CultureInfo.InvariantCulture));
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public sealed class Issue557MigrationTests : IDisposable
         Assert.Equal(789, file.EstimatedBytesSaved);
 
         // The bulky array is stripped from the job row; the small ok/generated_at/errors outcome stays.
-        var remainingPayload = (string)Scalar("SELECT payload_json FROM refiner_jobs WHERE dedupe_key = 'refiner.library.scan.v1:1:abc'")!;
+        var remainingPayload = (string)Scalar("SELECT payload_json FROM jobs WHERE dedupe_key = 'processing.library.scan.v1:1:abc'")!;
         Assert.DoesNotContain("\"files\"", remainingPayload, StringComparison.Ordinal);
         Assert.Contains("\"generated_at\":1700000000", remainingPayload, StringComparison.Ordinal);
     }
@@ -213,14 +213,14 @@ public sealed class Issue557MigrationTests : IDisposable
 
         Upgrade();
 
-        var journal = new RefinerJobSwapJournal(_database);
+        var journal = new ProcessingJobSwapJournal(_database);
         var unfinished = await journal.ListUnfinishedAsync();
         var entry = Assert.Single(unfinished);
         Assert.Equal(jobId, entry.JobId);
         Assert.Equal("/lib/film.mkv", entry.OriginalPath);
         Assert.Equal(SwapJournalState.Committed, entry.State);
 
-        var remainingPayload = (string)Scalar("SELECT payload_json FROM refiner_jobs WHERE id = @id", ("@id", jobId))!;
+        var remainingPayload = (string)Scalar("SELECT payload_json FROM jobs WHERE id = @id", ("@id", jobId))!;
         Assert.DoesNotContain("library_swap", remainingPayload, StringComparison.Ordinal);
         Assert.DoesNotContain("swap_committed", remainingPayload, StringComparison.Ordinal);
         Assert.Contains("\"path\":\"Movie/film.mkv\"", remainingPayload, StringComparison.Ordinal);
@@ -288,7 +288,7 @@ public sealed class Issue557MigrationTests : IDisposable
 
         // An aggressive retention window: everything terminal in refiner_jobs, and every refiner_file_logs
         // row, is due for pruning.
-        var jobStore = new RefinerJobStore(_database, TimeProvider.System);
+        var jobStore = new ProcessingJobStore(_database, TimeProvider.System);
         await JobRowsRetention.RunTickAsync(jobStore, jobRowsRetentionDays: 0, DateTimeOffset.UtcNow);
         await using (var pruneUow = await UnitOfWork.OpenAsync(_database))
         {

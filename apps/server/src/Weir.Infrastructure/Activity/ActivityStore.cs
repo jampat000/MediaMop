@@ -56,16 +56,16 @@ public static class OperationalHistoryStore
 {
     private const string TerminalStatuses = "('completed', 'failed', 'handler_ok_finalize_failed', 'cancelled')";
 
-    public sealed record ResetResult(long ActivityEventsDeleted, long RefinerJobsDeleted)
+    public sealed record ResetResult(long ActivityEventsDeleted, long ProcessingJobsDeleted)
     {
-        public long TotalDeleted => ActivityEventsDeleted + RefinerJobsDeleted;
+        public long TotalDeleted => ActivityEventsDeleted + ProcessingJobsDeleted;
     }
 
     public static async Task<ResetResult> PreviewAsync(UnitOfWork uow)
     {
         ArgumentNullException.ThrowIfNull(uow);
         var activity = await uow.CountAsync("SELECT count(*) FROM activity_events").ConfigureAwait(false);
-        var jobs = await uow.CountAsync($"SELECT count(*) FROM refiner_jobs WHERE refiner_jobs.status IN {TerminalStatuses}").ConfigureAwait(false);
+        var jobs = await uow.CountAsync($"SELECT count(*) FROM jobs WHERE jobs.status IN {TerminalStatuses}").ConfigureAwait(false);
         return new ResetResult(activity, jobs);
     }
 
@@ -74,7 +74,7 @@ public static class OperationalHistoryStore
         ArgumentNullException.ThrowIfNull(uow);
         var counts = await PreviewAsync(uow).ConfigureAwait(false);
         await uow.ExecuteAsync("DELETE FROM activity_events").ConfigureAwait(false);
-        await uow.ExecuteAsync($"DELETE FROM refiner_jobs WHERE refiner_jobs.status IN {TerminalStatuses}").ConfigureAwait(false);
+        await uow.ExecuteAsync($"DELETE FROM jobs WHERE jobs.status IN {TerminalStatuses}").ConfigureAwait(false);
         return counts;
     }
 }

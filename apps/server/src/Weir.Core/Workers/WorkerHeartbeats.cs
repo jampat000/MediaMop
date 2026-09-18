@@ -23,12 +23,12 @@ public sealed class WorkerHeartbeats
 
     /// <summary>
     /// Display names for module keys whose plain <see cref="TitleCase"/> would not read as a person
-    /// expects. The "refiner" module key is unchanged (it is a stored identifier other modules and the
+    /// expects. The "processing" module key is unchanged (it is a stored identifier other modules and the
     /// web app match on), but the app that runs it is just called Weir now.
     /// </summary>
     private static readonly Dictionary<string, string> ModuleDisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["refiner"] = "Weir",
+        ["processing"] = "Weir",
     };
 
     private readonly TimeProvider _time;

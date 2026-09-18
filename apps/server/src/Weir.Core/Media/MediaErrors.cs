@@ -1,7 +1,7 @@
 namespace Weir.Core.Media;
 
 /// <summary>
-/// A failure the reference raises as <c>RuntimeError</c> from <c>refiner_remux_mux.py</c>: ffprobe or
+/// A failure the reference raises as <c>RuntimeError</c> from <c>processing_remux_mux.py</c>: ffprobe or
 /// ffmpeg failed, returned nothing usable, or the output did not validate.
 /// </summary>
 public class MediaToolException : Exception

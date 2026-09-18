@@ -62,7 +62,7 @@ public sealed class HardlinkInspectorTests : IDisposable
 }
 
 /// <summary>
-/// A hard link, for tests only. Mirrors <c>Weir.Infrastructure.Refiner.RemuxPass.FileLifecycle.CreateHardLink</c>'s
+/// A hard link, for tests only. Mirrors <c>Weir.Infrastructure.Processing.RemuxPass.FileLifecycle.CreateHardLink</c>'s
 /// approach on the branches that already carry it (issue #522 part 3 / #506, neither on <c>main</c> yet) rather
 /// than depending on either. Classic <see cref="DllImportAttribute"/> here (not the source-generated
 /// <c>LibraryImportAttribute</c> production code uses) so this test-only helper needs no <c>AllowUnsafeBlocks</c>.

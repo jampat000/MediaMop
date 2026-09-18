@@ -21,31 +21,31 @@ public static class ActivityEventTypes
     public const string ArrLibraryConnectionTestSucceeded = "arr_library.connection_test_succeeded";
     public const string ArrLibraryConnectionTestFailed = "arr_library.connection_test_failed";
 
-    // Refiner durable families (refiner_jobs)
-    public const string RefinerFileProcessingProgress = "refiner.file_processing_progress";
-    public const string RefinerFileRemuxPassCompleted = "refiner.file_remux_pass_completed";
-    public const string RefinerWorkTempStaleSweepCompleted = "refiner.work_temp_stale_sweep_completed";
-    public const string RefinerFailureCleanupSweepCompleted = "refiner.failure_cleanup_sweep_completed";
-    public const string RefinerWorkerFailure = "refiner.worker_failure";
+    // Processing durable families (jobs)
+    public const string ProcessingFileProcessingProgress = "processing.file_processing_progress";
+    public const string ProcessingFileRemuxPassCompleted = "processing.file_remux_pass_completed";
+    public const string ProcessingWorkTempStaleSweepCompleted = "processing.work_temp_stale_sweep_completed";
+    public const string ProcessingFailureCleanupSweepCompleted = "processing.failure_cleanup_sweep_completed";
+    public const string ProcessingWorkerFailure = "processing.worker_failure";
 
     /// <summary>A file Weir could not process was handed back unmodified rather than kept (#465).</summary>
-    public const string RefinerFilePassedThrough = "refiner.file_passed_through";
-    public const string RefinerFilePassThroughFailed = "refiner.file_pass_through_failed";
+    public const string ProcessingFilePassedThrough = "processing.file_passed_through";
+    public const string ProcessingFilePassThroughFailed = "processing.file_pass_through_failed";
 
     /// <summary>The opt-in reject policy: the manager accepted the report.</summary>
-    public const string RefinerFileRejected = "refiner.file_rejected";
+    public const string ProcessingFileRejected = "processing.file_rejected";
 
     /// <summary>The opt-in reject policy: Weir handed the original back because rejecting could not be done safely.</summary>
-    public const string RefinerFileRejectFellBack = "refiner.file_reject_fell_back";
+    public const string ProcessingFileRejectFellBack = "processing.file_reject_fell_back";
 
     /// <summary>A report sent to the media manager that handed a file over.</summary>
-    public const string RefinerHandoffReported = "refiner.handoff_reported";
+    public const string ProcessingHandoffReported = "processing.handoff_reported";
 
     /// <summary>The manager cancelled a hand-off Weir had not started (#480).</summary>
-    public const string RefinerHandoffCancelled = "refiner.handoff_cancelled";
+    public const string ProcessingHandoffCancelled = "processing.handoff_cancelled";
 
     /// <summary>An operator queued a hand-picked track choice for a held file (#501).</summary>
-    public const string RefinerFileManualPlanQueued = "refiner.file_manual_plan_queued";
+    public const string ProcessingFileManualPlanQueued = "processing.file_manual_plan_queued";
 }
 
 /// <summary>

@@ -4,7 +4,7 @@
 
 Accepted — supersedes the module premise in
 [ADR-0007](ADR-0007-module-owned-worker-lanes.md), retires the last of the fixed scopes
-left by [ADR-0014](ADR-0014-refiner-libraries-replace-fixed-scopes.md), and moves the
+left by [ADR-0014](ADR-0014-processing-libraries-replace-fixed-scopes.md), and moves the
 retention half of [ADR-0015](ADR-0015-media-manager-port-outbound.md) out of this
 product entirely. [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) survives
 unchanged and is load-bearing here.
@@ -18,7 +18,7 @@ unchanged and is load-bearing here.
 Weir has been built as a suite: a platform with modules, a dashboard that aggregates
 across them, suite-wide settings, suite-wide pause, and worker lanes owned per module.
 Two of the three modules have since been deleted or hollowed out — Subber went in `0010`,
-Dashboard exists only to aggregate — and what is left is Refiner, which is the product,
+Dashboard exists only to aggregate — and what is left is Processing, which is the product,
 and Pruner, which is not.
 
 Three facts settle this, and the first one was wrong in our own heads for a long time.
@@ -54,7 +54,7 @@ media is not on their NAS, and the tool that took it is the reason.
 ## Decision
 
 1. **Weir is a single-purpose processing stage.** The `weir.modules.*` layer is
-   removed. Refiner stops being a module and becomes the application. Suite settings,
+   removed. Processing stops being a module and becomes the application. Suite settings,
    suite pause, module-owned lane boundaries and the aggregating Dashboard module go with
    it; one lane set serves the whole app.
 
@@ -115,8 +115,8 @@ media is not on their NAS, and the tool that took it is the reason.
    it chose not to do — in sentences an operator can read without knowing what a queue
    kind or an ffmpeg argv is. This is a product feature, not a debugging aid, and it is
    held to the existing [operator messaging standard](../operator-messaging-standard.md).
-   The material is already captured: `refiner_files.status_reason` is described in the
-   code as "a status and the sentence that explains it", and `refiner_file_log.detail_json`
+   The material is already captured: `files.status_reason` is described in the
+   code as "a status and the sentence that explains it", and `processing_file_log.detail_json`
    already stores admission decisions, probe results, the plan, the argv, cleanup gates,
    timings and sizes for every pass. None of it is currently narrated. The gap is
    presentation, not capture.

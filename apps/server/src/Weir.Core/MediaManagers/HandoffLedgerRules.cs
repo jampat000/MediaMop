@@ -50,7 +50,7 @@ public static class HandoffLedgerRules
 
     public const string CancelledMessage = "The media manager cancelled this hand-off before Weir started on it.";
 
-    /// <summary>After this many consecutive failures a file is held for a person (<c>REFINER_QUARANTINE_AFTER_FAILURES</c>).</summary>
+    /// <summary>After this many consecutive failures a file is held for a person (<c>PROCESSING_QUARANTINE_AFTER_FAILURES</c>).</summary>
     public const int QuarantineAfterFailures = 3;
 
     /// <summary>

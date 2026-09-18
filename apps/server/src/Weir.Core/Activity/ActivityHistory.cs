@@ -50,7 +50,7 @@ public static class ActivityHistory
     public const int ExportMaxRows = 50_000;
 
     /// <summary><c>_SYSTEM_MODULES</c>: <c>module=system</c> means every module but these.</summary>
-    public static readonly IReadOnlyList<string> SystemModules = ["refiner"];
+    public static readonly IReadOnlyList<string> SystemModules = ["processing"];
 
     /// <summary><c>_EXPORT_COLUMNS</c>.</summary>
     public static readonly IReadOnlyList<string> ExportColumns =

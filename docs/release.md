@@ -51,7 +51,7 @@ The `Release` workflow:
 - publishes `weir-web-dist.zip`
 - builds a local, unpushed Docker release candidate
 - runs the complete packaged browser/API audit against that candidate, including
-  a mounted disposable Refiner file that must pass through byte-identically into
+  a mounted disposable Processing file that must pass through byte-identically into
   the processed tree before its watched source is removed, and uploads screenshots
   plus JSON evidence
 - builds and pushes Docker tags for linux/amd64 and linux/arm64:

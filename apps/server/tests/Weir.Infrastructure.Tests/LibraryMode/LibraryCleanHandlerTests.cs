@@ -3,14 +3,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Weir.Core.Activity;
 using Weir.Core.Jobs;
 using Weir.Core.LibraryMode;
-using Weir.Core.Refiner.RemuxPass;
+using Weir.Core.Processing.RemuxPass;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.LibraryMode;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Tests.Media;
 using Weir.Infrastructure.Tests.MediaManagers;
-using Weir.Infrastructure.Tests.Refiner.RemuxPass;
+using Weir.Infrastructure.Tests.Processing.RemuxPass;
 
 namespace Weir.Infrastructure.Tests.LibraryMode;
 
@@ -36,7 +36,7 @@ public sealed class LibraryCleanHandlerTests : IDisposable
         var tools = new MediaTools(_media, new FixedResolver(), new ListLogger<MediaTools>(), TimeProvider.System);
         var swap = new SafeSwap(
             PhysicalSwapFileSystem.Instance,
-            new RefinerJobSwapJournal(_fixture.Store.Database),
+            new ProcessingJobSwapJournal(_fixture.Store.Database),
             new RemuxOutputSwapValidator(tools, NullLogger<RemuxOutputSwapValidator>.Instance),
             NullLogger<SafeSwap>.Instance);
         // No manager connections are configured in this fixture, so the real notifier finds nothing that owns
@@ -53,10 +53,10 @@ public sealed class LibraryCleanHandlerTests : IDisposable
     private async Task<long> LibraryAsync()
     {
         var ruleSetId = Convert.ToInt64(await _fixture.Db(uow => uow.ExecuteScalarWriteAsync(
-            "INSERT INTO refiner_rule_sets (name, primary_audio_lang, audio_preference_mode) " +
+            "INSERT INTO rule_sets (name, primary_audio_lang, audio_preference_mode) " +
             "VALUES ('English only', 'eng', 'preferred_langs_strict') RETURNING id")), CultureInfo.InvariantCulture);
         return Convert.ToInt64(await _fixture.Db(uow => uow.ExecuteScalarWriteAsync(
-            "INSERT INTO refiner_libraries (name, media_type, watched_folder, output_folder, work_folder, display_order, rule_set_id) " +
+            "INSERT INTO libraries (name, media_type, watched_folder, output_folder, work_folder, display_order, rule_set_id) " +
             "VALUES ('Movies library', 'movie', '/downloads/watched', '/downloads/output', '/downloads/work', 1, $rule_set_id) RETURNING id",
             ("$rule_set_id", ruleSetId))), CultureInfo.InvariantCulture);
     }
@@ -78,7 +78,7 @@ public sealed class LibraryCleanHandlerTests : IDisposable
 
     private Task<int> ReferencePolicyJobCountAsync() =>
         _fixture.Store.Scalar(
-                $"SELECT count(*) FROM refiner_jobs WHERE job_kind IN ('refiner.file.reject.v1', 'refiner.file.pass_through.v1')")
+                $"SELECT count(*) FROM jobs WHERE job_kind IN ('processing.file.reject.v1', 'processing.file.pass_through.v1')")
             .ContinueWith(t => (int)t.Result, TaskScheduler.Default);
 
     [Fact]

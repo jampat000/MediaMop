@@ -2,7 +2,7 @@ using Weir.Core.Jobs;
 
 namespace Weir.Core.Tests.Jobs;
 
-/// <summary>Ports of the grid and wall-clock assertions in <c>test_refiner_schedules_and_pause.py</c>.</summary>
+/// <summary>Ports of the grid and wall-clock assertions in <c>test_processing_schedules_and_pause.py</c>.</summary>
 public sealed class ScheduleGridTests
 {
     /// <summary>A Wednesday at 14:00 UTC.</summary>

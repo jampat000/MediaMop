@@ -171,13 +171,13 @@ try {
 
   $csrf = (Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/csrf" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15).csrf_token
   # The Direct Play device list is a data file; prove the packaged app can read it (#467).
-  $devices = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/direct-play/devices" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
+  $devices = Invoke-RestMethod -Uri "$baseUrl/api/v1/processing/direct-play/devices" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
   if (-not $devices.devices -or $devices.devices.Count -lt 1) {
     throw "The packaged app could not load its Direct Play device list."
   }
 
   # The server must find the ffmpeg bundled next to it (<app>\bin\ffmpeg); PATH was stripped of ffmpeg above.
-  $hardware = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/hardware" -WebSession $webSession -Headers $readHeaders -TimeoutSec 60
+  $hardware = Invoke-RestMethod -Uri "$baseUrl/api/v1/processing/hardware" -WebSession $webSession -Headers $readHeaders -TimeoutSec 60
   if ([string]$hardware.detail -match "could not find ffmpeg") {
     throw "The packaged server did not find its bundled ffmpeg: $($hardware.detail)"
   }
@@ -196,7 +196,7 @@ try {
   Write-Host "Packaged server found its bundled mkvmerge: $($mediaTools.mkvmerge)"
 
   # Configure the seeded Movies library directly (the path-settings route was retired in #460).
-  $libraries = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/libraries" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
+  $libraries = Invoke-RestMethod -Uri "$baseUrl/api/v1/processing/libraries" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
   $moviesLibrary = $libraries | Where-Object { $_.media_type -eq "movie" } | Select-Object -First 1
   if (-not $moviesLibrary) {
     throw "The packaged install has no Movies library to configure."
@@ -210,7 +210,7 @@ try {
     output_folder = $outputRoot
     manager_connection_ids = @($moviesLibrary.manager_connection_ids)
   } | ConvertTo-Json -Compress
-  Invoke-RestMethod -Method Put -Uri "$baseUrl/api/v1/refiner/libraries/$($moviesLibrary.id)" -WebSession $webSession -Headers $browserHeaders -Body $pathBody -TimeoutSec 15 | Out-Null
+  Invoke-RestMethod -Method Put -Uri "$baseUrl/api/v1/processing/libraries/$($moviesLibrary.id)" -WebSession $webSession -Headers $browserHeaders -Body $pathBody -TimeoutSec 15 | Out-Null
 
   $csrf = (Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/csrf" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15).csrf_token
   $enqueueBody = @{
@@ -219,7 +219,7 @@ try {
     media_scope = "movie"
     pass_through_unchanged = $true
   } | ConvertTo-Json -Compress
-  $job = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/refiner/jobs/file-remux-pass/enqueue" -WebSession $webSession -Headers $browserHeaders -Body $enqueueBody -TimeoutSec 15
+  $job = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/processing/jobs/file-remux-pass/enqueue" -WebSession $webSession -Headers $browserHeaders -Body $enqueueBody -TimeoutSec 15
   if (-not $job.job_id) {
     throw "Pass-through enqueue did not return a job id."
   }
@@ -229,7 +229,7 @@ try {
   $jobStatus = ""
   $lastError = ""
   do {
-    $inspection = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/jobs/inspection?limit=100" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
+    $inspection = Invoke-RestMethod -Uri "$baseUrl/api/v1/processing/jobs/inspection?limit=100" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
     $jobRow = $inspection.jobs | Where-Object { $_.id -eq $job.job_id } | Select-Object -First 1
     if ($jobRow) {
       $jobStatus = [string]$jobRow.status
@@ -258,7 +258,7 @@ try {
   if ($outputLength -ne $sourceLength -or $outputHash -ne $sourceHash) {
     throw "Pass-through output is not byte-identical to the source fixture."
   }
-  Write-Host "Packaged Refiner pass-through lifecycle passed: source cleaned after byte-identical processed output was validated."
+  Write-Host "Packaged Processing pass-through lifecycle passed: source cleaned after byte-identical processed output was validated."
 } catch {
   Write-Host "Packaged server smoke failed."
   if (Test-Path -LiteralPath $stdout) {

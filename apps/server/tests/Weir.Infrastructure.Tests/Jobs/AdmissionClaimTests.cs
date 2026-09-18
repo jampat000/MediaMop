@@ -5,13 +5,13 @@ using Weir.Infrastructure.Jobs;
 namespace Weir.Infrastructure.Tests.Jobs;
 
 /// <summary>
-/// Ports of the leasing assertions in <c>test_refiner_schedules_and_pause.py</c>: the schedule and the pause
+/// Ports of the leasing assertions in <c>test_processing_schedules_and_pause.py</c>: the schedule and the pause
 /// gate leasing, not only enqueue (#337), and a running job finishes.
 /// </summary>
 public sealed class AdmissionClaimTests : IDisposable
 {
-    private const string Remux = "refiner.file.remux_pass.v1";
-    private const string Scan = "refiner.watched_folder.remux_scan_dispatch.v1";
+    private const string Remux = "processing.file.remux_pass.v1";
+    private const string Scan = "processing.watched_folder.remux_scan_dispatch.v1";
     private static readonly DateTimeOffset Now = new(2026, 8, 26, 14, 0, 0, TimeSpan.Zero);
     private static readonly string Never = new('0', ScheduleGrid.SlotsPerWeek);
     private readonly JobsTestDatabase _db = new();
@@ -33,7 +33,7 @@ public sealed class AdmissionClaimTests : IDisposable
 
         Assert.Contains(library, admission.BlockedLibraryIds);
         Assert.Null(await ClaimAsync(admission));
-        Assert.Equal(RefinerJobStatus.Pending, (string?)_db.Scalar("SELECT status FROM refiner_jobs"));
+        Assert.Equal(ProcessingJobStatus.Pending, (string?)_db.Scalar("SELECT status FROM jobs"));
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public sealed class AdmissionClaimTests : IDisposable
         var claimed = await ClaimAsync(await EvaluateAsync(Now));
 
         Assert.NotNull(claimed);
-        Assert.Equal(RefinerJobStatus.Leased, claimed.Status);
+        Assert.Equal(ProcessingJobStatus.Leased, claimed.Status);
     }
 
     [Fact]
@@ -89,12 +89,12 @@ public sealed class AdmissionClaimTests : IDisposable
         await QueueAsync(Remux, library);
         Assert.NotNull(await ClaimAsync(await EvaluateAsync(Now)));
 
-        _db.Execute("UPDATE refiner_libraries SET schedule_grid = @grid", ("@grid", Never));
+        _db.Execute("UPDATE libraries SET schedule_grid = @grid", ("@grid", Never));
         var admission = await EvaluateAsync(Now);
 
         Assert.Contains(library, admission.BlockedLibraryIds);
         var still = (await _db.Store.ListAsync()).Single();
-        Assert.Equal(RefinerJobStatus.Leased, still.Status);
+        Assert.Equal(ProcessingJobStatus.Leased, still.Status);
         Assert.Equal("w1", still.LeaseOwner);
         Assert.Null(await ClaimAsync(admission, "w2"));
     }
@@ -175,7 +175,7 @@ public sealed class AdmissionClaimTests : IDisposable
     [Fact]
     public async Task A_job_costing_more_than_the_budget_left_waits_and_a_free_job_still_runs()
     {
-        _db.Execute("INSERT INTO refiner_operator_settings (id, runner_capacity) VALUES (1, 2)");
+        _db.Execute("INSERT INTO operator_settings (id, runner_capacity) VALUES (1, 2)");
         await _db.Store.EnqueueOrGetAsync("big-1", Remux, runnerCost: 2);
         await _db.Store.EnqueueOrGetAsync("big-2", Remux, runnerCost: 1);
         await _db.Store.EnqueueOrGetAsync("free", Remux, runnerCost: 0);
@@ -194,7 +194,7 @@ public sealed class AdmissionClaimTests : IDisposable
         await QueueAsync(Remux, library);
 
         Assert.Null(await _db.Store.ClaimNextAdmittedAsync("w", Now.AddHours(1), Now, kinds: null));
-        _db.Execute("UPDATE refiner_libraries SET schedule_grid = ''");
+        _db.Execute("UPDATE libraries SET schedule_grid = ''");
         Assert.NotNull(await _db.Store.ClaimNextAdmittedAsync("w", Now.AddHours(1), Now, kinds: null));
     }
 
@@ -202,10 +202,10 @@ public sealed class AdmissionClaimTests : IDisposable
     public async Task Detection_prefix_matching_is_exact_not_a_like_pattern()
     {
         // #540 item 3: Python's LIKE-based pause filter ignores ASCII case and treats '_' as a
-        // wildcard, so "refiner.watched-folder.remux-scan-dispatch" (hyphens, not underscores) also
+        // wildcard, so "processing.watched-folder.remux-scan-dispatch" (hyphens, not underscores) also
         // reads as the detection prefix and keeps running through a pause. Fixed here to compare the
         // literal prefix, so only the real detection kind survives a pause.
-        _db.InsertRawJob("odd", "refiner.watched-folder.remux-scan-dispatch.v1");
+        _db.InsertRawJob("odd", "processing.watched-folder.remux-scan-dispatch.v1");
         _db.Pause(scanWhilePaused: true);
 
         Assert.Null(await ClaimAsync(await EvaluateAsync(Now)));
@@ -214,10 +214,10 @@ public sealed class AdmissionClaimTests : IDisposable
     private Task<WorkAdmission> EvaluateAsync(DateTimeOffset now) =>
         _db.Store.InTransactionAsync((connection, transaction) => WorkAdmissionReader.Evaluate(connection, transaction, now));
 
-    private Task<RefinerJob?> ClaimAsync(WorkAdmission? admission, string owner = "w1") =>
+    private Task<ProcessingJob?> ClaimAsync(WorkAdmission? admission, string owner = "w1") =>
         _db.Store.ClaimNextAsync(owner, Now.AddHours(1), Now, admission);
 
-    private Task<RefinerJob> QueueAsync(string kind, long? libraryId, string key = "k")
+    private Task<ProcessingJob> QueueAsync(string kind, long? libraryId, string key = "k")
     {
         var payload = libraryId is { } id
             ? $"{{\"media_scope\": \"movie\", \"library_id\": {id}}}"

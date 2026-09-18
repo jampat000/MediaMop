@@ -29,7 +29,7 @@ public static class ReconciliationService
 
     /// <summary><c>build_reconciliation_report</c>.</summary>
     public static async Task<PyDict> BuildReportAsync(UnitOfWork uow) =>
-        ReconciliationRules.Report(await ScanRefinerPathsAsync(uow).ConfigureAwait(false));
+        ReconciliationRules.Report(await ScanProcessingPathsAsync(uow).ConfigureAwait(false));
 
     /// <summary><c>repair_reconciliation_issue</c>. Throws <see cref="PyValueErrorException"/> with the operator's sentence.</summary>
     public static async Task<PyDict> RepairAsync(UnitOfWork uow, string action, long? dbId, string? path, bool confirm)
@@ -93,7 +93,7 @@ public static class ReconciliationService
         throw new FileLifecycleException("Refusing to remove a file outside the authorized folder roots.");
     }
 
-    private static async Task<List<ReconciliationIssue>> ScanRefinerPathsAsync(UnitOfWork uow)
+    private static async Task<List<ReconciliationIssue>> ScanProcessingPathsAsync(UnitOfWork uow)
     {
         var libraries = await ListLibrariesAsync(uow).ConfigureAwait(false);
         if (libraries.Count == 0)
@@ -110,11 +110,11 @@ public static class ReconciliationService
                 {
                     issues.Add(new ReconciliationIssue(
                         "configured_folder_missing",
-                        "refiner",
+                        "processing",
                         "warning",
                         $"{library.Name} {role} folder is configured but is not currently reachable on disk.",
                         raw,
-                        "refiner_libraries",
+                        "libraries",
                         library.Id));
                 }
             }
@@ -143,7 +143,7 @@ public static class ReconciliationService
                 {
                     issues.Add(new ReconciliationIssue(
                         "partial_temp_artifact",
-                        "refiner",
+                        "processing",
                         "info",
                         "The work folder contains a temporary artifact from an interrupted operation.",
                         entry,
@@ -156,7 +156,7 @@ public static class ReconciliationService
         return issues;
     }
 
-    /// <summary><c>_configured_refiner_work_roots</c>: every library's work folder that exists, resolved.</summary>
+    /// <summary><c>_configured_processing_work_roots</c>: every library's work folder that exists, resolved.</summary>
     private static List<string> WorkRoots(IEnumerable<LibraryFolders> libraries)
     {
         var roots = new List<string>();
@@ -202,7 +202,7 @@ public static class ReconciliationService
     {
         ArgumentNullException.ThrowIfNull(uow);
         return uow.QueryAsync(
-            "SELECT id, name, watched_folder, output_folder, work_folder FROM refiner_libraries ORDER BY display_order, id",
+            "SELECT id, name, watched_folder, output_folder, work_folder FROM libraries ORDER BY display_order, id",
             reader => new LibraryFolders(
                 SqliteValues.GetInt64(reader, 0),
                 SqliteValues.GetString(reader, 1),

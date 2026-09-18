@@ -87,7 +87,7 @@ public static class ActivityHistoryStore
         return uow.CountAsync($"SELECT count(*) AS count_1 FROM activity_events{WhereText(where)}", [.. parameters]);
     }
 
-    /// <summary><c>count_system_activity_events</c>: everything outside Refiner, with the other filters that apply to it.</summary>
+    /// <summary><c>count_system_activity_events</c>: everything outside Processing, with the other filters that apply to it.</summary>
     public static Task<long> CountSystemAsync(UnitOfWork uow, ActivityFilter filter)
     {
         ArgumentNullException.ThrowIfNull(filter);
@@ -127,10 +127,10 @@ public static class ActivityHistoryStore
         var events = await uow.CountAsync($"SELECT count(*) AS count_1 FROM activity_events WHERE {clause}", parameters).ConfigureAwait(false);
         var (recordsClause, recordsParameters) = ProcessingRecordsClause(libraryId, relativePath);
         var records = await uow.CountAsync(
-            "SELECT count(*) AS count_1 FROM (SELECT refiner_file_logs.id AS id, refiner_file_logs.file_id AS file_id, " +
-            "refiner_file_logs.library_id AS library_id, refiner_file_logs.relative_path AS relative_path, " +
-            "refiner_file_logs.library_name AS library_name, refiner_file_logs.outcome AS outcome, refiner_file_logs.title AS title, " +
-            "refiner_file_logs.detail_json AS detail_json, refiner_file_logs.recorded_at AS recorded_at FROM refiner_file_logs " +
+            "SELECT count(*) AS count_1 FROM (SELECT file_logs.id AS id, file_logs.file_id AS file_id, " +
+            "file_logs.library_id AS library_id, file_logs.relative_path AS relative_path, " +
+            "file_logs.library_name AS library_name, file_logs.outcome AS outcome, file_logs.title AS title, " +
+            "file_logs.detail_json AS detail_json, file_logs.recorded_at AS recorded_at FROM file_logs " +
             $"WHERE {recordsClause}) AS anon_1",
             recordsParameters).ConfigureAwait(false);
         return new FileHistoryCounts(relativePath, events, records);
@@ -143,7 +143,7 @@ public static class ActivityHistoryStore
         var (clause, parameters) = FileHistoryClause(libraryId, relativePath);
         var events = await uow.ExecuteAsync($"DELETE FROM activity_events WHERE {clause}", parameters).ConfigureAwait(false);
         var (recordsClause, recordsParameters) = ProcessingRecordsClause(libraryId, relativePath);
-        var records = await uow.ExecuteAsync($"DELETE FROM refiner_file_logs WHERE {recordsClause}", recordsParameters).ConfigureAwait(false);
+        var records = await uow.ExecuteAsync($"DELETE FROM file_logs WHERE {recordsClause}", recordsParameters).ConfigureAwait(false);
         return new FileHistoryCounts(relativePath, events, records);
     }
 
@@ -252,9 +252,9 @@ public static class ActivityHistoryStore
     /// </summary>
     private static (string Clause, (string Name, object? Value)[] Parameters) ProcessingRecordsClause(long? libraryId, string relativePath) =>
         libraryId is { } id
-            ? ("refiner_file_logs.relative_path = @relative_path AND (refiner_file_logs.library_id = @library_id OR refiner_file_logs.library_id IS NULL)",
+            ? ("file_logs.relative_path = @relative_path AND (file_logs.library_id = @library_id OR file_logs.library_id IS NULL)",
                 [("@relative_path", relativePath), ("@library_id", id)])
-            : ("refiner_file_logs.relative_path = @relative_path", [("@relative_path", relativePath)]);
+            : ("file_logs.relative_path = @relative_path", [("@relative_path", relativePath)]);
 
     private static ActivityEventRow ReadRow(SqliteDataReader reader) => new(
         SqliteValues.GetInt64(reader, 0),

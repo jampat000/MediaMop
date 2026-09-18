@@ -45,21 +45,21 @@ def test_signed_in_navigation_covers_main_screens_and_tabs(weir_shell: str) -> N
 
             open_sidebar(page, "Processing")
             expect(page).to_have_url(re.compile(r".*/processing"))
-            expect(page.get_by_test_id("refiner-scope-page")).to_be_visible()
+            expect(page.get_by_test_id("processing-scope-page")).to_be_visible()
             page.get_by_role("tab", name="Libraries", exact=True).click()
-            expect(page.get_by_test_id("refiner-libraries-section")).to_be_visible()
+            expect(page.get_by_test_id("processing-libraries-section")).to_be_visible()
             page.get_by_role("tab", name="Audio & subtitles", exact=True).click()
-            expect(page.get_by_test_id("refiner-rule-set-workspace")).to_be_visible()
+            expect(page.get_by_test_id("processing-rule-set-workspace")).to_be_visible()
             page.get_by_role("tab", name="Schedules", exact=True).click()
-            expect(page.get_by_test_id("refiner-schedules-section")).to_be_visible()
+            expect(page.get_by_test_id("processing-schedules-section")).to_be_visible()
             page.get_by_role("tab", name="Jobs", exact=True).click()
-            expect(page.get_by_test_id("refiner-jobs-inspection-section")).to_be_visible()
+            expect(page.get_by_test_id("processing-jobs-inspection-section")).to_be_visible()
             page.get_by_role("tab", name="Overview", exact=True).click()
-            expect(page.get_by_test_id("refiner-overview-panel")).to_be_visible()
-            # Old /refiner links still land on the same tab.
-            page.goto(f"{base}/refiner?tab=jobs", wait_until="domcontentloaded")
+            expect(page.get_by_test_id("processing-overview-panel")).to_be_visible()
+            # Old /processing links still land on the same tab.
+            page.goto(f"{base}/processing?tab=jobs", wait_until="domcontentloaded")
             expect(page).to_have_url(re.compile(r".*/processing\?tab=jobs"))
-            expect(page.get_by_test_id("refiner-jobs-inspection-section")).to_be_visible()
+            expect(page.get_by_test_id("processing-jobs-inspection-section")).to_be_visible()
 
 
             open_sidebar(page, "Settings")

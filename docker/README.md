@@ -79,7 +79,7 @@ docker run --rm \
 `WEIR_DIR_MODE_OUTPUT` are read at startup by the .NET server itself (validated then, with a
 clear error for a malformed octal mode) and applied in-process to each output file or folder
 right after Weir writes or creates it — see `apps/server/README.md`, "Output ownership (#555)".
-This is a narrower, directly-applied replacement for the old Refiner path-ownership sweep, which
+This is a narrower, directly-applied replacement for the old Processing path-ownership sweep, which
 recursively chowned folders read from a path settings table that went away when folders moved
 onto libraries (#363), so it had already stopped changing anything before the move to .NET.
 
@@ -98,9 +98,9 @@ The image exposes `GET /health` and includes a Docker `HEALTHCHECK`.
 ## Hardware acceleration and device passthrough
 
 Weir stream-copies, so hardware decoding is rarely on the critical path today. It is
-switched **off** by default and nothing here is needed to run Refiner.
+switched **off** by default and nothing here is needed to run Processing.
 
-`GET /api/v1/refiner/hardware` reports what the ffmpeg inside the container was compiled
+`GET /api/v1/processing/hardware` reports what the ffmpeg inside the container was compiled
 with. That is not the same as what your host offers — a method being listed does not prove
 a device is present — and neither is visible to the container without passthrough.
 
@@ -142,7 +142,7 @@ that is present but wrong.
 > currently finds new files with the periodic watched-folder scan only, and readiness reports
 > no watched libraries. The rest of this section describes the watcher's intended behaviour.
 
-Refiner watches its watched folders so a new file becomes a candidate within seconds, and
+Processing watches its watched folders so a new file becomes a candidate within seconds, and
 runs its periodic scan as a backstop. **Bind mounts frequently deliver no inotify events**,
 and neither do most SMB and NFS shares — the events happen on the host, and nothing
 forwards them into the container.
@@ -157,10 +157,10 @@ That step stays `ready`. Falling back is slower, not broken, and failing readine
 take a working instance out of a load balancer over a delay.
 
 If you would rather not be told about it for a given library, switch off
-**Watch this folder for changes** on the Refiner Libraries tab. To turn the watcher off
-for the whole instance, set `WEIR_REFINER_WATCHER_ENABLED=0`.
+**Watch this folder for changes** on the Processing Libraries tab. To turn the watcher off
+for the whole instance, set `WEIR_PROCESSING_WATCHER_ENABLED=0`.
 
-When events *do* work, `WEIR_REFINER_WATCHER_DEBOUNCE_SECONDS` (default 3) controls how
+When events *do* work, `WEIR_PROCESSING_WATCHER_DEBOUNCE_SECONDS` (default 3) controls how
 long the tree must be quiet before a burst of writes becomes one scan.
 
 ## Release alignment

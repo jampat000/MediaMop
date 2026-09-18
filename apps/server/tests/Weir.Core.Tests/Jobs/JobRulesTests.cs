@@ -19,9 +19,9 @@ public sealed class JobRulesTests
     [InlineData(LegacyTrimmerJob, true)]
     [InlineData(LegacySubberJob, true)]
     [InlineData(LegacyPrunerJob, true)]
-    [InlineData("refiner.supplied_payload_evaluation.v1", true)]
-    [InlineData("refiner.candidate_gate.v1", true)]
-    [InlineData("refiner.file.remux_pass.v1", false)]
+    [InlineData("processing.supplied_payload_evaluation.v1", true)]
+    [InlineData("processing.candidate_gate.v1", true)]
+    [InlineData("processing.file.remux_pass.v1", false)]
     [InlineData("Trimmer.x", false)] // case-sensitive, like str.startswith
     [InlineData("bare.kind", false)]
     public void Retired_prefixes_are_recognised(string kind, bool retired)
@@ -33,39 +33,39 @@ public sealed class JobRulesTests
     public void Enqueue_refuses_retired_and_unprefixed_kinds_with_python_wording()
     {
         Assert.Equal(
-            "refiner_enqueue_or_get_job refuses a retired job_kind (got 'pruner.candidate_removal.preview.v1')",
+            "processing_enqueue_or_get_job refuses a retired job_kind (got 'pruner.candidate_removal.preview.v1')",
             Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateEnqueueJobKind(LegacyPrunerJob)).Message);
-        Assert.StartsWith("refiner_enqueue_or_get_job refuses", Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateEnqueueJobKind("trimmer.legacy.v1")).Message, StringComparison.Ordinal);
-        Assert.StartsWith("refiner_enqueue_or_get_job refuses", Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateEnqueueJobKind(LegacySubberJob)).Message, StringComparison.Ordinal);
+        Assert.StartsWith("processing_enqueue_or_get_job refuses", Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateEnqueueJobKind("trimmer.legacy.v1")).Message, StringComparison.Ordinal);
+        Assert.StartsWith("processing_enqueue_or_get_job refuses", Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateEnqueueJobKind(LegacySubberJob)).Message, StringComparison.Ordinal);
         Assert.Equal(
-            "refiner_enqueue_or_get_job requires job_kind to start with 'refiner.' (got 'bare.kind')",
+            "processing_enqueue_or_get_job requires job_kind to start with 'processing.' (got 'bare.kind')",
             Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateEnqueueJobKind("bare.kind")).Message);
         Assert.Equal(
-            "refiner_enqueue_or_get_job requires job_kind to start with 'refiner.' (got \"it's\")",
+            "processing_enqueue_or_get_job requires job_kind to start with 'processing.' (got \"it's\")",
             Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateEnqueueJobKind("it's")).Message);
-        JobKindGuard.ValidateEnqueueJobKind("refiner.test.harness.v1");
+        JobKindGuard.ValidateEnqueueJobKind("processing.test.harness.v1");
     }
 
     [Fact]
-    public void Handler_registry_keys_must_be_live_refiner_kinds()
+    public void Handler_registry_keys_must_be_live_processing_kinds()
     {
         Assert.Equal(
-            "Worker handler registry keys must start with 'refiner.' and must not use a retired prefix (offending keys: ['bare.kind', 'trimmer.x'])",
-            Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateHandlerRegistry(["bare.kind", "trimmer.x", "refiner.ok"])).Message);
+            "Worker handler registry keys must start with 'processing.' and must not use a retired prefix (offending keys: ['bare.kind', 'trimmer.x'])",
+            Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateHandlerRegistry(["bare.kind", "trimmer.x", "processing.ok"])).Message);
         Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateHandlerRegistry([LegacyPrunerJob]));
         Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateHandlerRegistry([LegacySubberJob]));
-        JobKindGuard.ValidateHandlerRegistry(["refiner.test.mechanics.v1"]);
+        JobKindGuard.ValidateHandlerRegistry(["processing.test.mechanics.v1"]);
     }
 
     [Fact]
     public void The_handler_registry_rejects_bad_and_duplicate_kinds_and_lists_its_kinds()
     {
         Assert.Throws<ArgumentException>(() => new JobHandlerRegistry([new NamedHandler(LegacyTrimmerJob)]));
-        Assert.Throws<ArgumentException>(() => new JobHandlerRegistry([new NamedHandler("refiner.a.v1"), new NamedHandler("refiner.a.v1")]));
-        var registry = new JobHandlerRegistry([new NamedHandler("refiner.b.v1"), new NamedHandler("refiner.a.v1")]);
-        Assert.Equal(["refiner.a.v1", "refiner.b.v1"], registry.JobKinds);
-        Assert.True(registry.Contains("refiner.a.v1"));
-        Assert.Null(registry.Find("refiner.c.v1"));
+        Assert.Throws<ArgumentException>(() => new JobHandlerRegistry([new NamedHandler("processing.a.v1"), new NamedHandler("processing.a.v1")]));
+        var registry = new JobHandlerRegistry([new NamedHandler("processing.b.v1"), new NamedHandler("processing.a.v1")]);
+        Assert.Equal(["processing.a.v1", "processing.b.v1"], registry.JobKinds);
+        Assert.True(registry.Contains("processing.a.v1"));
+        Assert.Null(registry.Find("processing.c.v1"));
         Assert.Empty(JobHandlerRegistry.Empty.JobKinds);
     }
 
@@ -86,7 +86,7 @@ public sealed class JobRulesTests
             "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: worker refused a retired job_kind: 'trimmer.radarr.cleanup_drive.v1' (row id=7); nothing runs this kind any more",
             WorkerFailures.RefusedJobError("Weir", WorkerFailures.RetiredKindReason(LegacyTrimmerJob, 7), willRetry: true));
         Assert.Equal(
-            "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: worker refused job_kind missing required refiner.* prefix: 'legacy.unprefixed' (row id=2); enqueue only refiner-owned kinds",
+            "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: worker refused job_kind missing required processing.* prefix: 'legacy.unprefixed' (row id=2); enqueue only processing-owned kinds",
             WorkerFailures.RefusedJobError("Weir", WorkerFailures.UnprefixedKindReason("legacy.unprefixed", 2), willRetry: false));
         Assert.Equal(
             "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: boom",
@@ -95,8 +95,8 @@ public sealed class JobRulesTests
             "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: boom",
             WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", FailureMessages.RuntimeError("boom"), willRetry: false)));
         Assert.Equal(
-            "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RefinerNoHandlerForJobKind: no job handler registered for job_kind='refiner.test.unknown.v1'",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", WorkerFailures.NoHandler("refiner.test.unknown.v1"), willRetry: true)));
+            "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: ProcessingNoHandlerForJobKind: no job handler registered for job_kind='processing.test.unknown.v1'",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", WorkerFailures.NoHandler("processing.test.unknown.v1"), willRetry: true)));
         // #540 item 7: Python's next-action fallback doubled "the" ("Re-enter the the provider
         // credentials...") when no provider is known; fixed here to say it once.
         Assert.Equal(
@@ -106,11 +106,11 @@ public sealed class JobRulesTests
             "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: AlreadyRecordedFailure: the output folder is not writable",
             WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", FailureMessages.FromDotNet(new AlreadyRecordedFailureException("the output folder is not writable")), willRetry: false)));
         Assert.Equal(
-            "Weir job failed: The job hit an unexpected error. The work ran, but Weir could not record that it finished. Technical detail: RuntimeError: complete_claimed_refiner_job refused (lease/state mismatch)",
+            "Weir job failed: The job hit an unexpected error. The work ran, but Weir could not record that it finished. Technical detail: RuntimeError: complete_claimed_processing_job refused (lease/state mismatch)",
             WorkerFailures.StoredError(FailureMessages.FromException(
                 "Weir",
                 "job",
-                FailureMessages.RuntimeError("complete_claimed_refiner_job refused (lease/state mismatch)"),
+                FailureMessages.RuntimeError("complete_claimed_processing_job refused (lease/state mismatch)"),
                 continuation: "The work ran, but Weir could not record that it finished.")));
         Assert.Equal(
             "Weir job failed: Weir could not use a file or folder it needed. This job is marked failed so it does not look successful. Next action: Check that the file or folder still exists and that Weir can read and write it. Technical detail: FileNotFoundError: gone",
@@ -163,9 +163,9 @@ public sealed class JobRulesTests
     {
         var at = new DateTimeOffset(2026, 4, 10, 12, 0, 0, TimeSpan.Zero);
         Assert.Equal(
-            "refiner_terminalization_failure: synthetic\n--- manual_recover_finalize_failure: marked completed at 2026-04-10T12:00:00Z by tester " +
+            "processing_terminalization_failure: synthetic\n--- manual_recover_finalize_failure: marked completed at 2026-04-10T12:00:00Z by tester " +
             "(handler was not re-run; row was handler_ok_finalize_failed).",
-            JobQueueRules.RecoveredFinalizeFailureError("refiner_terminalization_failure: synthetic", at, "tester"));
+            JobQueueRules.RecoveredFinalizeFailureError("processing_terminalization_failure: synthetic", at, "tester"));
         Assert.StartsWith("manual_recover_finalize_failure: marked completed at 2026-04-10T12:00:00.000500Z", JobQueueRules.RecoveredFinalizeFailureError("  ", at.AddTicks(5000), "x"), StringComparison.Ordinal);
     }
 
@@ -184,13 +184,13 @@ public sealed class JobRulesTests
         var now = new DateTimeOffset(2026, 4, 29, 12, 0, 0, TimeSpan.Zero);
 
         var requeue = StartupJobRecovery.Decide(1, 3, now);
-        Assert.Equal(RefinerJobStatus.Pending, requeue.Status);
+        Assert.Equal(ProcessingJobStatus.Pending, requeue.Status);
         Assert.Equal(
             "This job was interrupted by a Weir restart. Recovered at 2026-04-29T12:00:00+00:00 and queued for another safe attempt.",
             requeue.LastError);
 
         var failed = StartupJobRecovery.Decide(3, 3, now);
-        Assert.Equal(RefinerJobStatus.Failed, failed.Status);
+        Assert.Equal(ProcessingJobStatus.Failed, failed.Status);
         Assert.Equal(
             "This job was interrupted by a Weir restart after its final attempt. Recovered at 2026-04-29T12:00:00+00:00 and marked failed so the operator can inspect it.",
             failed.LastError);
@@ -203,14 +203,14 @@ public sealed class JobRulesTests
     [Fact]
     public void Worker_slot_count_and_schedule_intervals_clamp_like_python()
     {
-        Assert.Equal(1, WeirOptionsLoader.ClampRefinerWorkerCount(-1));
-        Assert.Equal(0, WeirOptionsLoader.ClampRefinerWorkerCount(0));
-        Assert.Equal(1, WeirOptionsLoader.ClampRefinerWorkerCount(1));
-        Assert.Equal(8, WeirOptionsLoader.ClampRefinerWorkerCount(8));
-        Assert.Equal(8, WeirOptionsLoader.ClampRefinerWorkerCount(9));
-        Assert.Equal(60, WeirOptionsLoader.ClampRefinerScheduleIntervalSeconds(5));
-        Assert.Equal(604_800, WeirOptionsLoader.ClampRefinerScheduleIntervalSeconds(10_000_000));
-        Assert.Equal(0, WeirOptionsLoader.ClampRefinerMinFileAgeSeconds(-5));
+        Assert.Equal(1, WeirOptionsLoader.ClampProcessingWorkerCount(-1));
+        Assert.Equal(0, WeirOptionsLoader.ClampProcessingWorkerCount(0));
+        Assert.Equal(1, WeirOptionsLoader.ClampProcessingWorkerCount(1));
+        Assert.Equal(8, WeirOptionsLoader.ClampProcessingWorkerCount(8));
+        Assert.Equal(8, WeirOptionsLoader.ClampProcessingWorkerCount(9));
+        Assert.Equal(60, WeirOptionsLoader.ClampProcessingScheduleIntervalSeconds(5));
+        Assert.Equal(604_800, WeirOptionsLoader.ClampProcessingScheduleIntervalSeconds(10_000_000));
+        Assert.Equal(0, WeirOptionsLoader.ClampProcessingMinFileAgeSeconds(-5));
     }
 
     [Fact]

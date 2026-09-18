@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Weir.Core.LibraryMode;
-using Weir.Infrastructure.Refiner;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing;
+using Weir.Infrastructure.Processing.RemuxPass;
 
 namespace Weir.Infrastructure.LibraryMode;
 

@@ -4,7 +4,7 @@ namespace Weir.Core.Rules;
 
 /// <summary>
 /// Human-readable language labels and audio/subtitle lines for the overview and activity
-/// (<c>refiner_remux_lang_display.py</c>, <c>refiner_remux_track_display.py</c>).
+/// (<c>processing_remux_lang_display.py</c>, <c>processing_remux_track_display.py</c>).
 /// </summary>
 public static class RemuxDisplay
 {
@@ -58,14 +58,14 @@ public static class RemuxDisplay
         return null;
     }
 
-    /// <summary><c>refiner_lang_display</c>: a label, the upper-cased code, or an em dash.</summary>
+    /// <summary><c>processing_lang_display</c>: a label, the upper-cased code, or an em dash.</summary>
     public static string LangDisplay(string? code)
     {
         var c = RemuxRules.NormalizeLang(code ?? string.Empty);
         return c.Length == 0 ? Dash : Label(c) ?? Py.Upper(c);
     }
 
-    /// <summary><c>refiner_lang_display_or_blank</c>: as <see cref="LangDisplay"/>, but empty for no code.</summary>
+    /// <summary><c>processing_lang_display_or_blank</c>: as <see cref="LangDisplay"/>, but empty for no code.</summary>
     public static string LangDisplayOrBlank(string? code)
     {
         var c = RemuxRules.NormalizeLang(code ?? string.Empty);

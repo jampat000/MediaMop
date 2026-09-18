@@ -38,8 +38,8 @@ public sealed class InMemoryRemovedTrackStore : IRemovedTrackStore
 /// <summary>
 /// The durable <see cref="IRemovedTrackStore"/> (#509 step 1): a real <c>removed_tracks</c> table, one row
 /// per removed track, added by #557's migration (0041_removed_tracks). Before #557 this reused
-/// <c>refiner_file_logs.detail_json</c> (an existing JSON-capable column) since the schema was frozen; that
-/// column has no retention exemption (<see cref="Weir.Infrastructure.Refiner.FileLogStore.PruneAsync"/> deletes any row past its
+/// <c>file_logs.detail_json</c> (an existing JSON-capable column) since the schema was frozen; that
+/// column has no retention exemption (<see cref="Weir.Infrastructure.Processing.FileLogStore.PruneAsync"/> deletes any row past its
 /// window regardless of outcome), so a removed-track record could disappear from under #509's "titles
 /// missing tracks your new rules keep" list. The dedicated table has no such exposure.
 /// </summary>

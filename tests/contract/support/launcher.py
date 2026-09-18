@@ -126,16 +126,16 @@ class ServerUnderTest:
             # watcher, and periodic scans that do not queue files. Scenarios turn workers on.
             # Periodic scan *jobs* are still queued for every enabled library with a watched folder by
             # default here (this env block does not set the switch below), so count only the jobs a
-            # test caused, or pass WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED=0
+            # test caused, or pass WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED=0
             # to turn the timer off outright (#533; asserted in
             # tests/contract/jobs/test_watched_folder_scan_schedule_toggle.py).
-            "WEIR_REFINER_WORKER_COUNT": "0",
-            "WEIR_REFINER_WATCHER_ENABLED": "0",
-            "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS": "0",
-            "WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED": "0",
-            "WEIR_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED": "0",
-            "WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED": "0",
-            "WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED": "0",
+            "WEIR_PROCESSING_WORKER_COUNT": "0",
+            "WEIR_PROCESSING_WATCHER_ENABLED": "0",
+            "WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS": "0",
+            "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED": "0",
+            "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED": "0",
+            "WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED": "0",
+            "WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED": "0",
         }
         for key in ("WEIR_CORS_ORIGINS", "WEIR_TRUSTED_BROWSER_ORIGINS", "WEIR_ENV"):
             # A developer shell's own settings must not leak into a contract run.

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FileStoryPanel } from "../../components/refiner/file-story-panel";
+import { FileStoryPanel } from "../../components/processing/file-story-panel";
 import { PageLoading } from "../../components/shared/page-loading";
 import {
-  REFINER_FILE_PROCESSING_PROGRESS_EVENT,
-  REFINER_FILE_REMUX_PASS_COMPLETED_EVENT,
-  RefinerFileProcessingProgressDetail,
-  RefinerFileRemuxPassActivityDetail,
-} from "../../lib/activity/refiner-file-remux-pass-detail";
+  PROCESSING_FILE_PROCESSING_PROGRESS_EVENT,
+  PROCESSING_FILE_REMUX_PASS_COMPLETED_EVENT,
+  ProcessingFileProcessingProgressDetail,
+  ProcessingFileRemuxPassActivityDetail,
+} from "../../lib/activity/processing-file-remux-pass-detail";
 import {
   activityRecentKey,
   useActivityRecentQuery,
@@ -31,9 +31,9 @@ import {
   removeActivityFileHistory,
 } from "../../lib/api/activity-api";
 import { useMeQuery } from "../../lib/auth/queries";
-import { fetchRefinerFiles } from "../../lib/refiner/files-api";
-import { useRefinerFileLog } from "../../lib/refiner/files-queries";
-import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
+import { fetchProcessingFiles } from "../../lib/processing/files-api";
+import { useProcessingFileLog } from "../../lib/processing/files-queries";
+import { useProcessingLibrariesQuery } from "../../lib/processing/libraries-queries";
 import { useSuiteOperationalHistoryResetMutation } from "../../lib/suite/queries";
 import { fetchSuiteOperationalHistoryPreview } from "../../lib/suite/suite-settings-api";
 import type { SuiteOperationalHistoryResetOut } from "../../lib/suite/types";
@@ -100,13 +100,14 @@ const EVENT_LABELS: Record<string, string> = {
   "system.reconciliation.repair": "System repair finished",
   "arr_library.connection_test_succeeded": "Connection check finished",
   "arr_library.connection_test_failed": "Connection check failed",
-  "refiner.supplied_payload_evaluation_completed":
+  "processing.supplied_payload_evaluation_completed":
     "Manual queue check finished",
-  "refiner.candidate_gate_completed": "Queue check finished",
-  "refiner.file_processing_progress": "File processing",
-  "refiner.file_remux_pass_completed": "File processing finished",
-  "refiner.work_temp_stale_sweep_completed": "Temporary files cleanup finished",
-  "refiner.failure_cleanup_sweep_completed": "Failed-remux cleanup finished",
+  "processing.candidate_gate_completed": "Queue check finished",
+  "processing.file_processing_progress": "File processing",
+  "processing.file_remux_pass_completed": "File processing finished",
+  "processing.work_temp_stale_sweep_completed":
+    "Temporary files cleanup finished",
+  "processing.failure_cleanup_sweep_completed": "Failed-remux cleanup finished",
 };
 
 function compactActivityTitle(text: string, maxLength = 92): string {
@@ -212,10 +213,10 @@ function chipToneClasses(tone: ActivityTone): string {
   }
 }
 
-function normalizeRefinerSummary(
+function normalizeProcessingSummary(
   ev: ActivityEventItem,
 ): ActivityDisplay | null {
-  if (ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT) {
+  if (ev.event_type === PROCESSING_FILE_PROCESSING_PROGRESS_EVENT) {
     const parsed = parseDetail(ev.detail);
     const status = asString(parsed?.status);
     const percent = asNumber(parsed?.percent);
@@ -251,7 +252,7 @@ function normalizeRefinerSummary(
       compact: false,
     };
   }
-  if (ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT) {
+  if (ev.event_type === PROCESSING_FILE_REMUX_PASS_COMPLETED_EVENT) {
     const parsed = parseDetail(ev.detail);
     const outcome = asString(parsed?.outcome);
     const remuxNeeded = asBoolean(parsed?.remux_required);
@@ -295,7 +296,7 @@ function normalizeRefinerSummary(
       compact: false,
     };
   }
-  if (ev.event_type === "refiner.supplied_payload_evaluation_completed") {
+  if (ev.event_type === "processing.supplied_payload_evaluation_completed") {
     return {
       title: "Manual queue check finished",
       summary: "Download queue safety check",
@@ -305,7 +306,7 @@ function normalizeRefinerSummary(
       compact: true,
     };
   }
-  if (ev.event_type === "refiner.candidate_gate_completed") {
+  if (ev.event_type === "processing.candidate_gate_completed") {
     return {
       title: "Queue check finished",
       summary: "Download queue safety check",
@@ -315,7 +316,7 @@ function normalizeRefinerSummary(
       compact: true,
     };
   }
-  if (ev.event_type === "refiner.work_temp_stale_sweep_completed") {
+  if (ev.event_type === "processing.work_temp_stale_sweep_completed") {
     return {
       title: "Temporary files cleanup finished",
       summary: "Background cleanup result",
@@ -325,7 +326,7 @@ function normalizeRefinerSummary(
       compact: true,
     };
   }
-  if (ev.event_type === "refiner.failure_cleanup_sweep_completed") {
+  if (ev.event_type === "processing.failure_cleanup_sweep_completed") {
     return {
       title: "Failed-remux cleanup finished",
       summary: "Background cleanup result",
@@ -360,8 +361,8 @@ function normalizeAuthSummary(ev: ActivityEventItem): ActivityDisplay | null {
 }
 
 function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
-  const refiner = normalizeRefinerSummary(ev);
-  if (refiner) return refiner;
+  const processing = normalizeProcessingSummary(ev);
+  if (processing) return processing;
   const auth = normalizeAuthSummary(ev);
   if (auth) return auth;
 
@@ -375,7 +376,7 @@ function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
         : "info";
   return {
     title: eventOptionLabel(ev.event_type),
-    summary: ev.module === "refiner" ? "Processing" : "System",
+    summary: ev.module === "processing" ? "Processing" : "System",
     detail: ev.detail ?? null,
     chip: null,
     tone,
@@ -405,8 +406,8 @@ function inlineDetailOf(
 ): string | null {
   if (!display.detail || display.compact) return null;
   if (
-    ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT ||
-    ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT
+    ev.event_type === PROCESSING_FILE_PROCESSING_PROGRESS_EVENT ||
+    ev.event_type === PROCESSING_FILE_REMUX_PASS_COMPLETED_EVENT
   ) {
     return null;
   }
@@ -422,10 +423,10 @@ function ActivityEventDetails({
 }) {
   if (!display.detail) return null;
   let body: ReactNode = null;
-  if (ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT) {
-    body = <RefinerFileProcessingProgressDetail detail={display.detail} />;
-  } else if (ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT) {
-    body = <RefinerFileRemuxPassActivityDetail detail={display.detail} />;
+  if (ev.event_type === PROCESSING_FILE_PROCESSING_PROGRESS_EVENT) {
+    body = <ProcessingFileProcessingProgressDetail detail={display.detail} />;
+  } else if (ev.event_type === PROCESSING_FILE_REMUX_PASS_COMPLETED_EVENT) {
+    body = <ProcessingFileRemuxPassActivityDetail detail={display.detail} />;
   } else {
     body = StructuredActivityDetails({ ev });
   }
@@ -625,7 +626,7 @@ function ActivityEventRow({
               {libraryName ? `${libraryName} · ` : ""}
               {path}
             </span>
-            {ev.module === "refiner" ? (
+            {ev.module === "processing" ? (
               <button
                 type="button"
                 className="mm-activity-item__link"
@@ -698,8 +699,8 @@ export function ActivityPage() {
   const navigate = useNavigate();
   const me = useMeQuery();
   const canRemove = me.data?.role === "operator" || me.data?.role === "admin";
-  const libraries = useRefinerLibrariesQuery();
-  const fileLog = useRefinerFileLog();
+  const libraries = useProcessingLibrariesQuery();
+  const fileLog = useProcessingFileLog();
   const resetHistory = useSuiteOperationalHistoryResetMutation();
 
   const queryFilters = useMemo(() => {
@@ -916,7 +917,7 @@ export function ActivityPage() {
     fileLog.reset();
     setStoryLookupError(null);
     try {
-      const page = await fetchRefinerFiles({
+      const page = await fetchProcessingFiles({
         library_id: ev.library_id ?? undefined,
         path_contains: path,
         limit: 50,
@@ -998,7 +999,7 @@ export function ActivityPage() {
       const out = await resetHistory.mutateAsync(confirm);
       setClearPreview(null);
       setNotice(
-        `History cleared. Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")} and ${plural(out.refiner_jobs_deleted, "finished job", "finished jobs")}. No media file was touched.`,
+        `History cleared. Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")} and ${plural(out.jobs_deleted, "finished job", "finished jobs")}. No media file was touched.`,
       );
       await refreshAfterRemoval();
     } catch (e) {

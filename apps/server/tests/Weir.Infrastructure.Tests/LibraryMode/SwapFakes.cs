@@ -1,6 +1,6 @@
 using Weir.Core.LibraryMode;
 using Weir.Infrastructure.LibraryMode;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing.RemuxPass;
 
 namespace Weir.Infrastructure.Tests.LibraryMode;
 

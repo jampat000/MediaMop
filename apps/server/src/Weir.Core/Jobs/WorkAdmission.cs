@@ -107,7 +107,7 @@ public sealed record RunnerBudget(int Capacity, IReadOnlyDictionary<string, int>
 /// <summary>The <c>suite_settings</c> fields admission reads.</summary>
 public sealed record SuitePauseSettings(string? AppTimezone, bool ProcessingPaused, PyDateTime? ProcessingPausedUntil, bool ScanWhilePaused);
 
-/// <summary>The <c>refiner_libraries</c> fields admission reads.</summary>
+/// <summary>The <c>libraries</c> fields admission reads.</summary>
 public sealed record LibraryAdmissionSnapshot(
     long Id,
     bool Enabled,
@@ -138,11 +138,11 @@ public sealed record WorkAdmission(
         !Pause.Paused || (WorkAdmissionRules.IsDetectionJobKind(jobKind) && Pause.ScanWhilePaused);
 }
 
-/// <summary>Pure rules of <c>weir.refiner.refiner_work_admission</c>.</summary>
+/// <summary>Pure rules of <c>weir.processing.processing_work_admission</c>.</summary>
 public static class WorkAdmissionRules
 {
     /// <summary>Detection job kinds keep running through a pause when "scan while paused" is on.</summary>
-    public static readonly IReadOnlyList<string> DetectionJobKindPrefixes = ["refiner.watched_folder.remux_scan_dispatch"];
+    public static readonly IReadOnlyList<string> DetectionJobKindPrefixes = ["processing.watched_folder.remux_scan_dispatch"];
 
     public static bool IsDetectionJobKind(string jobKind)
     {

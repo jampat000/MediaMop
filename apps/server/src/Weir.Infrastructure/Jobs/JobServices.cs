@@ -17,17 +17,17 @@ namespace Weir.Infrastructure.Jobs;
 /// <summary>Worker loop timings (Python's module constants), adjustable for tests.</summary>
 public sealed record WorkerLoopTimings
 {
-    /// <summary><c>REFINER_WORKER_IDLE_SLEEP_SECONDS</c>.</summary>
+    /// <summary><c>PROCESSING_WORKER_IDLE_SLEEP_SECONDS</c>.</summary>
     public TimeSpan IdleSleep { get; init; } = TimeSpan.FromSeconds(5);
 
-    /// <summary><c>REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS</c>.</summary>
+    /// <summary><c>PROCESSING_WORKER_TICK_ERROR_BACKOFF_SECONDS</c>.</summary>
     public TimeSpan TickErrorBackoff { get; init; } = TimeSpan.FromSeconds(1);
 
     /// <summary><c>_CONCURRENT_FILES_CACHE_TTL</c>: how long a slot trusts the saved files-at-once value.</summary>
     public TimeSpan ConcurrencyCacheTtl { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary><c>DEFAULT_REFINER_JOB_LEASE_SECONDS</c>.</summary>
-    public int LeaseSeconds { get; init; } = RefinerJobProcessor.DefaultLeaseSeconds;
+    /// <summary><c>DEFAULT_PROCESSING_JOB_LEASE_SECONDS</c>.</summary>
+    public int LeaseSeconds { get; init; } = ProcessingJobProcessor.DefaultLeaseSeconds;
 }
 
 /// <summary>
@@ -36,14 +36,14 @@ public sealed record WorkerLoopTimings
 /// </summary>
 public sealed class JobsStartupRecoveryService : IHostedService
 {
-    private readonly RefinerJobStore _store;
+    private readonly ProcessingJobStore _store;
     private readonly WeirOptions _options;
     private readonly TimeProvider _time;
     private readonly ILogger<JobsStartupRecoveryService> _logger;
     private readonly Weir.Infrastructure.LibraryMode.SwapRecoverySweep? _swapSweep;
 
     public JobsStartupRecoveryService(
-        RefinerJobStore store,
+        ProcessingJobStore store,
         WeirOptions options,
         TimeProvider time,
         ILogger<JobsStartupRecoveryService> logger,
@@ -104,30 +104,30 @@ public sealed class JobsStartupRecoveryService : IHostedService
 }
 
 /// <summary>
-/// The Refiner worker lane (port of <c>refiner_worker_run_forever</c> and
-/// <c>start_refiner_worker_background_tasks</c>): <c>WEIR_REFINER_WORKER_COUNT</c> slots, of which the
+/// The Processing worker lane (port of <c>processing_worker_run_forever</c> and
+/// <c>start_processing_worker_background_tasks</c>): <c>WEIR_PROCESSING_WORKER_COUNT</c> slots, of which the
 /// saved "Files at once" value decides how many take work. Each slot reports heartbeats for readiness.
 /// </summary>
-public sealed class RefinerWorkerService : BackgroundService
+public sealed class ProcessingWorkerService : BackgroundService
 {
-    public const string HeartbeatModule = "refiner";
+    public const string HeartbeatModule = "processing";
 
-    private readonly RefinerJobProcessor _processor;
-    private readonly RefinerJobStore _store;
+    private readonly ProcessingJobProcessor _processor;
+    private readonly ProcessingJobStore _store;
     private readonly WorkerHeartbeats _heartbeats;
     private readonly WeirOptions _options;
     private readonly WorkerLoopTimings _timings;
     private readonly TimeProvider _time;
-    private readonly ILogger<RefinerWorkerService> _logger;
+    private readonly ILogger<ProcessingWorkerService> _logger;
 
-    public RefinerWorkerService(
-        RefinerJobProcessor processor,
-        RefinerJobStore store,
+    public ProcessingWorkerService(
+        ProcessingJobProcessor processor,
+        ProcessingJobStore store,
         WorkerHeartbeats heartbeats,
         WeirOptions options,
         WorkerLoopTimings timings,
         TimeProvider time,
-        ILogger<RefinerWorkerService> logger)
+        ILogger<ProcessingWorkerService> logger)
     {
         _processor = processor;
         _store = store;
@@ -148,8 +148,8 @@ public sealed class RefinerWorkerService : BackgroundService
         // The shipped default is 8 slots; the saved files-at-once value gates how many are active (#329).
         _logger.LogDebug(
             "Worker slot cap is {SlotCap}; the saved files-at-once setting gates how many are active.",
-            _options.RefinerWorkerCount);
-        var slots = Enumerable.Range(0, _options.RefinerWorkerCount)
+            _options.ProcessingWorkerCount);
+        var slots = Enumerable.Range(0, _options.ProcessingWorkerCount)
             .Select(index => Task.Run(() => RunSlotAsync(index, stoppingToken), CancellationToken.None))
             .ToArray();
         await Task.WhenAll(slots).ConfigureAwait(false);
@@ -249,7 +249,7 @@ public sealed class RefinerWorkerService : BackgroundService
         _store.InTransactionAsync(
             (connection, transaction) =>
             {
-                var value = RefinerJobStore.Scalar(connection, transaction, "SELECT max_concurrent_files FROM refiner_operator_settings WHERE id = 1");
+                var value = ProcessingJobStore.Scalar(connection, transaction, "SELECT max_concurrent_files FROM operator_settings WHERE id = 1");
                 return value is null or DBNull ? 1 : (int)Math.Clamp(Convert.ToInt64(value, CultureInfo.InvariantCulture), int.MinValue, int.MaxValue);
             },
             cancellationToken);
@@ -261,12 +261,12 @@ public sealed class RefinerWorkerService : BackgroundService
 /// </summary>
 public sealed class JobRowsRetentionTask : IPeriodicTask
 {
-    private readonly RefinerJobStore _store;
+    private readonly ProcessingJobStore _store;
     private readonly WeirOptions _options;
     private readonly TimeProvider _time;
     private readonly ILogger<JobRowsRetentionTask> _logger;
 
-    public JobRowsRetentionTask(RefinerJobStore store, WeirOptions options, TimeProvider time, ILogger<JobRowsRetentionTask> logger)
+    public JobRowsRetentionTask(ProcessingJobStore store, WeirOptions options, TimeProvider time, ILogger<JobRowsRetentionTask> logger)
     {
         _store = store;
         _options = options;
@@ -292,8 +292,8 @@ public sealed class JobRowsRetentionTask : IPeriodicTask
         if (counts.Total > 0)
         {
             _logger.LogInformation(
-                "History retention pruned refiner jobs={RefinerJobs} activity events={ActivityEvents}",
-                counts.Refiner,
+                "History retention pruned processing jobs={ProcessingJobs} activity events={ActivityEvents}",
+                counts.Processing,
                 counts.Activity);
         }
     }
@@ -398,30 +398,30 @@ public sealed class PeriodicEnqueueService : BackgroundService
 /// <summary>Job kinds and dedupe keys of the periodic families (<c>*_job_kinds.py</c>).</summary>
 public static class PeriodicJobKinds
 {
-    public const string WorkTempStaleSweep = "refiner.work_temp_stale_sweep.v1";
-    public const string WorkTempStaleSweepDedupeKeyMovie = "refiner.work_temp_stale_sweep:v1:movie";
-    public const string WorkTempStaleSweepDedupeKeyTv = "refiner.work_temp_stale_sweep:v1:tv";
-    public const string MovieFailureCleanupSweep = "refiner.movie_failure_cleanup_sweep.v1";
-    public const string TvFailureCleanupSweep = "refiner.tv_failure_cleanup_sweep.v1";
-    public const string MovieFailureCleanupSweepDedupeKey = "refiner.movie_failure_cleanup_sweep:v1";
-    public const string TvFailureCleanupSweepDedupeKey = "refiner.tv_failure_cleanup_sweep:v1";
+    public const string WorkTempStaleSweep = "processing.work_temp_stale_sweep.v1";
+    public const string WorkTempStaleSweepDedupeKeyMovie = "processing.work_temp_stale_sweep:v1:movie";
+    public const string WorkTempStaleSweepDedupeKeyTv = "processing.work_temp_stale_sweep:v1:tv";
+    public const string MovieFailureCleanupSweep = "processing.movie_failure_cleanup_sweep.v1";
+    public const string TvFailureCleanupSweep = "processing.tv_failure_cleanup_sweep.v1";
+    public const string MovieFailureCleanupSweepDedupeKey = "processing.movie_failure_cleanup_sweep:v1";
+    public const string TvFailureCleanupSweepDedupeKey = "processing.tv_failure_cleanup_sweep:v1";
 }
 
 /// <summary>
-/// <c>enqueue_refiner_work_temp_stale_sweep_job</c> on a timer: one row per scope, deduped per scope.
-/// Enabled by <c>refiner_operator_settings.work_temp_stale_sweep_enabled</c>; an explicit
-/// <c>WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED=0</c> is a kill switch.
+/// <c>enqueue_processing_work_temp_stale_sweep_job</c> on a timer: one row per scope, deduped per scope.
+/// Enabled by <c>operator_settings.work_temp_stale_sweep_enabled</c>; an explicit
+/// <c>WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED=0</c> is a kill switch.
 /// </summary>
 public sealed class WorkTempStaleSweepEnqueuer : IPeriodicEnqueuer
 {
-    private readonly RefinerJobStore _store;
+    private readonly ProcessingJobStore _store;
     private readonly string _scope;
     private readonly bool _killSwitch;
 
-    public WorkTempStaleSweepEnqueuer(RefinerJobStore store, string mediaScope, TimeSpan interval, bool killSwitch)
+    public WorkTempStaleSweepEnqueuer(ProcessingJobStore store, string mediaScope, TimeSpan interval, bool killSwitch)
     {
         _store = store;
-        _scope = RefinerLibraryFolders.NormalizeMediaScope(mediaScope);
+        _scope = ProcessingLibraryFolders.NormalizeMediaScope(mediaScope);
         Interval = interval;
         _killSwitch = killSwitch;
     }
@@ -443,27 +443,27 @@ public sealed class WorkTempStaleSweepEnqueuer : IPeriodicEnqueuer
             cancellationToken: cancellationToken);
 
     /// <summary>A boolean column of the operator settings row; Python creates the row with its defaults when missing.</summary>
-    internal static Task<bool> OperatorSettingFlagAsync(RefinerJobStore store, string column, bool defaultValue, CancellationToken cancellationToken) =>
+    internal static Task<bool> OperatorSettingFlagAsync(ProcessingJobStore store, string column, bool defaultValue, CancellationToken cancellationToken) =>
         store.InTransactionAsync(
             (connection, transaction) =>
             {
-                var value = RefinerJobStore.Scalar(connection, transaction, $"SELECT {column} FROM refiner_operator_settings WHERE id = 1");
+                var value = ProcessingJobStore.Scalar(connection, transaction, $"SELECT {column} FROM operator_settings WHERE id = 1");
                 return value is null or DBNull ? defaultValue : WorkAdmissionReader.Bool(value);
             },
             cancellationToken);
 }
 
 /// <summary>
-/// <c>enqueue_refiner_failure_cleanup_sweep_job</c> on a timer. A sweep still queued or running is not
+/// <c>enqueue_processing_failure_cleanup_sweep_job</c> on a timer. A sweep still queued or running is not
 /// duplicated; a skipped Activity entry says so instead.
 /// </summary>
 public sealed class FailureCleanupSweepEnqueuer : IPeriodicEnqueuer
 {
-    private readonly RefinerJobStore _store;
+    private readonly ProcessingJobStore _store;
     private readonly string _scope;
     private readonly bool _killSwitch;
 
-    public FailureCleanupSweepEnqueuer(RefinerJobStore store, string mediaScope, TimeSpan interval, bool killSwitch)
+    public FailureCleanupSweepEnqueuer(ProcessingJobStore store, string mediaScope, TimeSpan interval, bool killSwitch)
     {
         _store = store;
         _scope = string.Equals(mediaScope.Trim(), "tv", StringComparison.OrdinalIgnoreCase) ? "tv" : "movie";
@@ -500,31 +500,31 @@ public sealed class FailureCleanupSweepEnqueuer : IPeriodicEnqueuer
                     SqliteActivityWriter.Record(
                         connection,
                         transaction,
-                        new ActivityEventDraft(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "refiner", $"Cleanup skipped for {label}", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)));
+                        new ActivityEventDraft(ActivityEventTypes.ProcessingFailureCleanupSweepCompleted, "processing", $"Cleanup skipped for {label}", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)));
                 }
 
                 return inserted;
             },
             cancellationToken);
 
-    internal static (RefinerJob Job, bool Inserted) EnqueueSweep(
+    internal static (ProcessingJob Job, bool Inserted) EnqueueSweep(
         Microsoft.Data.Sqlite.SqliteConnection connection,
         Microsoft.Data.Sqlite.SqliteTransaction transaction,
-        RefinerJobStore store,
+        ProcessingJobStore store,
         string scope,
         string trigger)
     {
         var jobKind = scope == "tv" ? PeriodicJobKinds.TvFailureCleanupSweep : PeriodicJobKinds.MovieFailureCleanupSweep;
         var dedupeBase = scope == "tv" ? PeriodicJobKinds.TvFailureCleanupSweepDedupeKey : PeriodicJobKinds.MovieFailureCleanupSweepDedupeKey;
-        var active = RefinerJobStore.Query(
+        var active = ProcessingJobStore.Query(
             connection,
             transaction,
             "SELECT id, dedupe_key, job_kind, payload_json, status, lease_owner, lease_expires_at, attempt_count, max_attempts, " +
-            "last_error, not_before, runner_cost, priority, created_at, updated_at FROM refiner_jobs " +
+            "last_error, not_before, runner_cost, priority, created_at, updated_at FROM jobs " +
             "WHERE job_kind = @kind AND status IN (@pending, @leased) ORDER BY id ASC LIMIT 1",
             ("@kind", jobKind),
-            ("@pending", RefinerJobStatus.Pending),
-            ("@leased", RefinerJobStatus.Leased)).FirstOrDefault();
+            ("@pending", ProcessingJobStatus.Pending),
+            ("@leased", ProcessingJobStatus.Leased)).FirstOrDefault();
         if (active is not null)
         {
             return (active, false);
@@ -551,25 +551,25 @@ public static class WeirJobs
         services.TryAddSingleton<IJobQueueMetrics>(NoJobQueueMetrics.Instance);
         services.TryAddSingleton<IJobNotifications, NoJobNotifications>();
         services.TryAddSingleton<IUnhandledJobFailureRecorder, NoUnhandledJobFailureRecorder>();
-        services.TryAddSingleton(new WorkerLoopTimings { LeaseSeconds = options.RefinerJobLeaseSeconds });
-        services.TryAddSingleton(sp => new RefinerJobStore(
+        services.TryAddSingleton(new WorkerLoopTimings { LeaseSeconds = options.ProcessingJobLeaseSeconds });
+        services.TryAddSingleton(sp => new ProcessingJobStore(
             sp.GetRequiredService<SqliteDatabase>(), sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<IJobQueueMetrics>()));
         services.TryAddSingleton(sp => new JobHandlerRegistry(sp.GetServices<IJobHandler>()));
-        services.TryAddSingleton<RefinerJobProcessor>();
+        services.TryAddSingleton<ProcessingJobProcessor>();
 
         // Kill switches: an explicitly set variable that reads as off wins over the saved setting.
-        const string sweepVariable = "WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED";
-        const string cleanupVariable = "WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED";
-        var sweepKilled = runtime.IsSet(sweepVariable) && !options.RefinerWorkTempStaleSweepMovieScheduleEnabled;
-        var cleanupKilled = runtime.IsSet(cleanupVariable) && !options.RefinerMovieFailureCleanupScheduleEnabled;
+        const string sweepVariable = "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED";
+        const string cleanupVariable = "WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED";
+        var sweepKilled = runtime.IsSet(sweepVariable) && !options.ProcessingWorkTempStaleSweepMovieScheduleEnabled;
+        var cleanupKilled = runtime.IsSet(cleanupVariable) && !options.ProcessingMovieFailureCleanupScheduleEnabled;
         services.AddSingleton<IPeriodicEnqueuer>(sp => new WorkTempStaleSweepEnqueuer(
-            sp.GetRequiredService<RefinerJobStore>(), "movie", TimeSpan.FromSeconds(options.RefinerWorkTempStaleSweepMovieScheduleIntervalSeconds), sweepKilled));
+            sp.GetRequiredService<ProcessingJobStore>(), "movie", TimeSpan.FromSeconds(options.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds), sweepKilled));
         services.AddSingleton<IPeriodicEnqueuer>(sp => new WorkTempStaleSweepEnqueuer(
-            sp.GetRequiredService<RefinerJobStore>(), "tv", TimeSpan.FromSeconds(options.RefinerWorkTempStaleSweepTvScheduleIntervalSeconds), sweepKilled));
+            sp.GetRequiredService<ProcessingJobStore>(), "tv", TimeSpan.FromSeconds(options.ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds), sweepKilled));
         services.AddSingleton<IPeriodicEnqueuer>(sp => new FailureCleanupSweepEnqueuer(
-            sp.GetRequiredService<RefinerJobStore>(), "movie", TimeSpan.FromSeconds(options.RefinerMovieFailureCleanupScheduleIntervalSeconds), cleanupKilled));
+            sp.GetRequiredService<ProcessingJobStore>(), "movie", TimeSpan.FromSeconds(options.ProcessingMovieFailureCleanupScheduleIntervalSeconds), cleanupKilled));
         services.AddSingleton<IPeriodicEnqueuer>(sp => new FailureCleanupSweepEnqueuer(
-            sp.GetRequiredService<RefinerJobStore>(), "tv", TimeSpan.FromSeconds(options.RefinerTvFailureCleanupScheduleIntervalSeconds), cleanupKilled));
+            sp.GetRequiredService<ProcessingJobStore>(), "tv", TimeSpan.FromSeconds(options.ProcessingTvFailureCleanupScheduleIntervalSeconds), cleanupKilled));
 
         // Hosted services start in this order: recovery completes before any worker claims.
         services.AddSingleton<JobsStartupRecoveryService>();
@@ -577,9 +577,9 @@ public static class WeirJobs
         services.AddSingleton<IPeriodicTask, JobRowsRetentionTask>();
         services.AddWeirPeriodicTasks();
         services.AddHostedService<PeriodicEnqueueService>();
-        if (options.RefinerWorkerCount > 0)
+        if (options.ProcessingWorkerCount > 0)
         {
-            services.AddHostedService<RefinerWorkerService>();
+            services.AddHostedService<ProcessingWorkerService>();
         }
 
         return services;

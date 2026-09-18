@@ -6,7 +6,7 @@ Each test asserts what ``/api/v1/activity/recent`` should do (the Activity secti
 Two things every test here works around:
 
 - ``seed.stopped`` restarts the server on a new port, so every client is created *after* the
-  seeding block, the way ``tests/contract/refiner/_helpers.py``'s ``ensure_viewer`` does — a client
+  seeding block, the way ``tests/contract/processing/_helpers.py``'s ``ensure_viewer`` does — a client
   built beforehand would still be pointed at the old, now-dead port.
 - The server's own activity-retention sweep prunes events older than 90 days (the default), and
   runs against real wall-clock time even in a test server, so seeded rows are dated close to
@@ -36,7 +36,7 @@ def test_recent_total_and_has_more_count_every_matching_row_with_no_filter(
     with seed.stopped(server) as conn:
         conn.execute("DELETE FROM activity_events")
         for offset in range(5):
-            insert_event(conn, event_type="a.event", module="refiner", title=f"row {offset}", created_at=now)
+            insert_event(conn, event_type="a.event", module="processing", title=f"row {offset}", created_at=now)
     client = client_factory(server)
     client.ensure_admin()
 

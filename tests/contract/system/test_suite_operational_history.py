@@ -20,19 +20,19 @@ def test_operational_history_reset_clears_history_but_keeps_active_work(server, 
     client_factory(server).ensure_admin()
     with seed.stopped(server) as conn:
         conn.execute("DELETE FROM activity_events")
-        conn.execute("DELETE FROM refiner_jobs")
+        conn.execute("DELETE FROM jobs")
         seed.insert_activity_event(
             conn,
-            event_type="refiner.file_remux_pass_completed",
-            module="refiner",
+            event_type="processing.file_remux_pass_completed",
+            module="processing",
             title="Finished file",
             detail=json.dumps({"outcome": "live_output_written"}),
         )
         now = seed.utc_text()
-        for key, status in (("refiner-done", "completed"), ("refiner-pending", "pending")):
+        for key, status in (("processing-done", "completed"), ("processing-pending", "pending")):
             conn.execute(
-                "INSERT INTO refiner_jobs (dedupe_key, job_kind, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-                (key, "refiner.file.remux_pass.v1", status, now, now),
+                "INSERT INTO jobs (dedupe_key, job_kind, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (key, "processing.file.remux_pass.v1", status, now, now),
             )
 
     admin = client_factory(server)
@@ -42,10 +42,10 @@ def test_operational_history_reset_clears_history_but_keeps_active_work(server, 
     body = r.json()
     assert body["status"] == "reset"
     assert body["activity_events_deleted"] >= 1
-    assert body["refiner_jobs_deleted"] == 1
+    assert body["jobs_deleted"] == 1
 
     with seed.stopped(server) as conn:
         assert seed.scalar(conn, "SELECT COUNT(*) FROM activity_events") == 0
-        keys = {row["dedupe_key"] for row in seed.rows(conn, "SELECT dedupe_key FROM refiner_jobs")}
-    assert "refiner-done" not in keys
-    assert "refiner-pending" in keys
+        keys = {row["dedupe_key"] for row in seed.rows(conn, "SELECT dedupe_key FROM jobs")}
+    assert "processing-done" not in keys
+    assert "processing-pending" in keys

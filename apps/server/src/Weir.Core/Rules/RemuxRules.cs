@@ -30,12 +30,12 @@ public static class RemuxRuleValues
 }
 
 /// <summary>
-/// The rules in force for one pass (<c>refiner_remux_rules.RefinerRulesConfig</c>).
+/// The rules in force for one pass (<c>processing_remux_rules.ProcessingRulesConfig</c>).
 /// <see cref="SubtitleMode"/> and <see cref="AudioPreferenceMode"/> stay strings: the planner
 /// treats any subtitle mode other than <c>remove_all</c> as keep-selected and normalizes an
 /// unknown policy to the default, exactly as the reference does.
 /// </summary>
-public sealed record RefinerRulesConfig
+public sealed record ProcessingRulesConfig
 {
     public required string PrimaryAudioLang { get; init; }
     public required string SecondaryAudioLang { get; init; }
@@ -107,7 +107,7 @@ public sealed record RefinerRulesConfig
     /// <see cref="OriginalLanguageNote"/> already flow straight into <see cref="RemuxRules.PlanRemux"/>
     /// unchanged; this just saves a caller from copying both fields by hand.
     /// </summary>
-    public RefinerRulesConfig WithOriginalLanguage(OriginalLanguageOutcome outcome)
+    public ProcessingRulesConfig WithOriginalLanguage(OriginalLanguageOutcome outcome)
     {
         ArgumentNullException.ThrowIfNull(outcome);
         return this with { PreferredAudioIndices = outcome.PreferredIndices, OriginalLanguageNote = outcome.Note };
@@ -174,7 +174,7 @@ public sealed record RemuxPlan
 public sealed record SplitProbeStreams(IReadOnlyList<ProbeStreamInfo> Video, IReadOnlyList<ProbeStreamInfo> Audio, IReadOnlyList<ProbeStreamInfo> Subtitles);
 
 /// <summary>
-/// Remux planning (<c>refiner_remux_rules.py</c>): stream splitting, audio candidate ranking under
+/// Remux planning (<c>processing_remux_rules.py</c>): stream splitting, audio candidate ranking under
 /// the three policies, subtitle retention, metadata stripping and whether a pass is needed.
 /// </summary>
 public static partial class RemuxRules
@@ -195,7 +195,7 @@ public static partial class RemuxRules
         new(StringComparer.Ordinal) { "flac", "truehd", "alac", "pcm_s16le", "pcm_s24le", "pcm_s32le", "wavpack" };
 
     /// <summary>
-    /// Containers Refiner can genuinely process. Raw elementary streams (<c>.h264</c>, <c>.h265</c>,
+    /// Containers Processing can genuinely process. Raw elementary streams (<c>.h264</c>, <c>.h265</c>,
     /// <c>.mpv</c>) stay out: they have no audio, so a plan fails and failure cleanup would delete the folder.
     /// </summary>
     public static IReadOnlySet<string> MediaExtensions { get; } = new HashSet<string>(StringComparer.Ordinal)
@@ -546,7 +546,7 @@ public static partial class RemuxRules
 
     private static bool IsLosslessAudio(string? codecName) => LosslessCodecs.Contains(Py.Lower(PyStrings.Strip(codecName ?? string.Empty)));
 
-    private static List<string> OrderedPreferenceLangs(RefinerRulesConfig config)
+    private static List<string> OrderedPreferenceLangs(ProcessingRulesConfig config)
     {
         var result = new List<string>();
         foreach (var raw in new[] { config.PrimaryAudioLang, config.SecondaryAudioLang, config.TertiaryAudioLang })
@@ -715,7 +715,7 @@ public static partial class RemuxRules
         return $"{lang} {c.CodecName} {channels} (stream {c.InputIndex})";
     }
 
-    private static AudioCandidate? SelectAudioWinner(RefinerRulesConfig config, List<AudioCandidate> candidates, List<string> notes)
+    private static AudioCandidate? SelectAudioWinner(ProcessingRulesConfig config, List<AudioCandidate> candidates, List<string> notes)
     {
         var policy = NormalizeAudioPreferenceMode(config.AudioPreferenceMode);
         var preferredList = OrderedPreferenceLangs(config);
@@ -866,7 +866,7 @@ public static partial class RemuxRules
     /// mode.
     /// </summary>
     private static (List<AudioCandidate> Kept, int DefaultIndex) SelectPerLanguageAudioTracks(
-        RefinerRulesConfig config, List<AudioCandidate> candidates, List<string> notes)
+        ProcessingRulesConfig config, List<AudioCandidate> candidates, List<string> notes)
     {
         var sorters = TrackSorters.Parse(config.AudioSortersJson);
         notes.Add($"Track ranking: {TrackSorters.Describe([.. sorters])}.");
@@ -1018,13 +1018,13 @@ public static partial class RemuxRules
     /// Issue #497: <c>subtitle_max_per_language</c> (0 = unlimited, today's behaviour). Groups the
     /// matched candidates by the configured language slot they matched (<see cref="SubtitleCandidate.Tier"/>,
     /// so a variant-specific slot and its base language are never conflated), keeps every forced
-    /// track preserved under <see cref="RefinerRulesConfig.PreserveForcedSubs"/> unconditionally
+    /// track preserved under <see cref="ProcessingRulesConfig.PreserveForcedSubs"/> unconditionally
     /// (it never counts toward the cap), and otherwise keeps only the best
-    /// <see cref="RefinerRulesConfig.SubtitleMaxPerLanguage"/> by <see cref="SubtitleQualityKey"/>,
+    /// <see cref="ProcessingRulesConfig.SubtitleMaxPerLanguage"/> by <see cref="SubtitleQualityKey"/>,
     /// noting each drop with the reason (e.g. "kept the text track over PGS").
     /// </summary>
     private static List<PlannedTrack> ApplySubtitleCap(
-        List<SubtitleCandidate> candidates, RefinerRulesConfig config, List<string> notes, List<string> removedSubtitleLabels)
+        List<SubtitleCandidate> candidates, ProcessingRulesConfig config, List<string> notes, List<string> removedSubtitleLabels)
     {
         if (config.SubtitleMaxPerLanguage <= 0)
         {
@@ -1089,7 +1089,7 @@ public static partial class RemuxRules
         IReadOnlyList<ProbeStreamInfo> video,
         IReadOnlyList<ProbeStreamInfo> audio,
         IReadOnlyList<ProbeStreamInfo> subtitles,
-        RefinerRulesConfig config,
+        ProcessingRulesConfig config,
         IReadOnlyList<ProbeStreamInfo>? attachments = null)
     {
         ArgumentNullException.ThrowIfNull(video);
@@ -1366,8 +1366,8 @@ public static partial class RemuxRules
         };
     }
 
-    /// <summary>Sane defaults for remux planning (<c>default_refiner_remux_rules_config</c>).</summary>
-    public static RefinerRulesConfig DefaultConfig() => new()
+    /// <summary>Sane defaults for remux planning (<c>default_processing_remux_rules_config</c>).</summary>
+    public static ProcessingRulesConfig DefaultConfig() => new()
     {
         PrimaryAudioLang = "eng",
         SecondaryAudioLang = "jpn",

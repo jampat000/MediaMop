@@ -81,7 +81,7 @@ public sealed record LibraryFilePlanResult(
 /// </summary>
 public static class LibraryFilePlanner
 {
-    public static LibraryFilePlanResult Classify(ProbeResult probe, RefinerRulesConfig rules)
+    public static LibraryFilePlanResult Classify(ProbeResult probe, ProcessingRulesConfig rules)
     {
         ArgumentNullException.ThrowIfNull(probe);
         ArgumentNullException.ThrowIfNull(rules);

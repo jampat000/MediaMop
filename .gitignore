@@ -63,3 +63,6 @@ docs-site/.docusaurus/
 
 # Scratch WEIR_CONTRACT_LEDGER files from local contract-suite runs
 .contract-ledger/
+
+# Contract-suite leftover-server ledgers (WEIR_CONTRACT_LEDGER), per worktree.
+.ledger*.json

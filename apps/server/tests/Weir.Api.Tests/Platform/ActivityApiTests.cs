@@ -38,7 +38,7 @@ public sealed class ActivityApiTests
     {
         await using var server = await SeededServerAsync();
         var client = await AdminAsync(server);
-        using var response = await client.GetAsync("/api/v1/activity/recent?module=refiner");
+        using var response = await client.GetAsync("/api/v1/activity/recent?module=processing");
         var body = await Json(response);
         Assert.Equal(90, body["retention_days"]!.GetValue<int>());
         Assert.NotNull(body["oldest_event_at"]);
@@ -58,14 +58,14 @@ public sealed class ActivityApiTests
     {
         await using var server = await SeededServerAsync();
         var client = await AdminAsync(server);
-        using var first = await client.GetAsync("/api/v1/activity/recent?module=refiner&limit=2");
+        using var first = await client.GetAsync("/api/v1/activity/recent?module=processing&limit=2");
         var page = await Json(first);
         Assert.True(page["has_more"]!.GetValue<bool>());
         Assert.Equal(4, page["total"]!.GetValue<int>());
         var ids = page["items"]!.AsArray().Select(item => item!["id"]!.GetValue<long>()).ToList();
         Assert.Equal(2, ids.Count);
 
-        using var next = await client.GetAsync($"/api/v1/activity/recent?module=refiner&limit=2&before_id={ids.Min()}");
+        using var next = await client.GetAsync($"/api/v1/activity/recent?module=processing&limit=2&before_id={ids.Min()}");
         var rest = (await Json(next))["items"]!.AsArray().Select(item => item!["id"]!.GetValue<long>()).ToList();
         Assert.All(rest, id => Assert.True(id < ids.Min()));
     }
@@ -80,7 +80,7 @@ public sealed class ActivityApiTests
         var client = await AdminAsync(server);
         using var response = await client.GetAsync("/api/v1/activity/recent?limit=2");
         var body = await Json(response);
-        Assert.Equal(5, body["total"]!.GetValue<int>()); // the 4 seeded refiner rows, plus the admin sign-in's own event
+        Assert.Equal(5, body["total"]!.GetValue<int>()); // the 4 seeded processing rows, plus the admin sign-in's own event
         Assert.True(body["has_more"]!.GetValue<bool>());
     }
 
@@ -105,7 +105,7 @@ public sealed class ActivityApiTests
         Assert.Equal(HttpStatusCode.BadRequest, badDate.StatusCode);
         Assert.Equal("Invalid date_from.", await Detail(badDate));
 
-        using var future = await client.GetAsync("/api/v1/activity/recent?module=refiner&date_from=2999-01-01T00:00:00Z");
+        using var future = await client.GetAsync("/api/v1/activity/recent?module=processing&date_from=2999-01-01T00:00:00Z");
         Assert.Empty((await Json(future))["items"]!.AsArray());
 
         using var missing = await client.GetAsync("/api/v1/activity/file-history");
@@ -127,11 +127,11 @@ public sealed class ActivityApiTests
         Assert.Equal("2", Header(csv, "X-Weir-Export-Rows"));
         var lines = (await csv.Content.ReadAsStringAsync()).Split("\r\n");
         Assert.Equal("id,created_at,module,event_type,trigger,result,library_id,relative_path,title,detail", lines[0]);
-        Assert.Contains(",refiner,refiner.file_remux_pass_completed,scheduled,success,1,Heat/heat.mkv,Heat was handed back,\"{\"\"trigger\"\": \"\"scheduled\"\"", lines[1], StringComparison.Ordinal);
+        Assert.Contains(",processing,processing.file_remux_pass_completed,scheduled,success,1,Heat/heat.mkv,Heat was handed back,\"{\"\"trigger\"\": \"\"scheduled\"\"", lines[1], StringComparison.Ordinal);
         Assert.Contains(",retry,failed,1,Heat/heat.mkv,Heat failed,", lines[2], StringComparison.Ordinal);
         Assert.Equal(string.Empty, lines[3]);
 
-        using var json = await client.GetAsync("/api/v1/activity/export?format=json&trigger=manual&module=refiner");
+        using var json = await client.GetAsync("/api/v1/activity/export?format=json&trigger=manual&module=processing");
         Assert.Equal("application/json", Header(json, "Content-Type"));
         var text = await json.Content.ReadAsStringAsync();
         Assert.StartsWith("[\n  {\n    \"id\": ", text, StringComparison.Ordinal);
@@ -167,8 +167,8 @@ public sealed class ActivityApiTests
         Assert.Equal("{\"relative_path\":\"Heat/heat.mkv\",\"activity_events_deleted\":2,\"processing_records_deleted\":1}", await removed.Content.ReadAsStringAsync());
 
         Assert.Equal(["Alien processed", "Show processed"], await TitlesAsync(client, string.Empty));
-        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM refiner_file_logs WHERE relative_path = 'Alien/alien.mkv'"));
-        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM refiner_file_logs"));
+        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM file_logs WHERE relative_path = 'Alien/alien.mkv'"));
+        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM file_logs"));
         Assert.Equal("not touched", await File.ReadAllTextAsync(media));
     }
 
@@ -319,11 +319,11 @@ public sealed class ActivityApiTests
         await TestDatabase.ExecuteAsync(server, "UPDATE suite_settings SET log_retention_days = 1");
         await TestDatabase.ExecuteAsync(
             server,
-            "INSERT INTO activity_events (created_at, event_type, module, title, detail, result) VALUES ($at, 'refiner.file_remux_pass_completed', 'refiner', 'Old Refiner result', '{}', 'success')",
+            "INSERT INTO activity_events (created_at, event_type, module, title, detail, result) VALUES ($at, 'processing.file_remux_pass_completed', 'processing', 'Old Processing result', '{}', 'success')",
             ("$at", DateTime.UtcNow.AddDays(-10).ToString("yyyy-MM-dd HH:mm:ss.ffffff", CultureInfo.InvariantCulture)));
         var client = await AdminAsync(server);
-        using var response = await client.GetAsync("/api/v1/activity/recent?limit=100&module=refiner");
-        Assert.Contains("Old Refiner result", (await Json(response))["items"]!.AsArray().Select(item => item!["title"]!.GetValue<string>()));
+        using var response = await client.GetAsync("/api/v1/activity/recent?limit=100&module=processing");
+        Assert.Contains("Old Processing result", (await Json(response))["items"]!.AsArray().Select(item => item!["title"]!.GetValue<string>()));
     }
 
     private static long Revision(string[] block)
@@ -356,7 +356,7 @@ public sealed class ActivityApiTests
         }
     }
 
-    /// <summary>The four Refiner results written through the server's own Activity writer, and two processing records.</summary>
+    /// <summary>The four Processing results written through the server's own Activity writer, and two processing records.</summary>
     private static async Task<WeirTestServer> SeededServerAsync()
     {
         var server = await StartServerAsync();
@@ -364,12 +364,12 @@ public sealed class ActivityApiTests
         var writer = server.Services.GetRequiredService<IActivityWriter>();
         foreach (var (title, detail) in HistoryRows)
         {
-            await writer.RecordAsync(new ActivityEventDraft(ActivityEventTypes.RefinerFileRemuxPassCompleted, "refiner", title, detail));
+            await writer.RecordAsync(new ActivityEventDraft(ActivityEventTypes.ProcessingFileRemuxPassCompleted, "processing", title, detail));
         }
 
         foreach (var path in new[] { "Heat/heat.mkv", "Alien/alien.mkv" })
         {
-            await TestDatabase.ExecuteAsync(server, "INSERT INTO refiner_file_logs (library_id, relative_path, title, recorded_at) VALUES (1, $p, 'pass', CURRENT_TIMESTAMP)", ("$p", path));
+            await TestDatabase.ExecuteAsync(server, "INSERT INTO file_logs (library_id, relative_path, title, recorded_at) VALUES (1, $p, 'pass', CURRENT_TIMESTAMP)", ("$p", path));
         }
 
         return server;
@@ -384,7 +384,7 @@ public sealed class ActivityApiTests
 
     private static async Task<List<string>> TitlesAsync(ApiTestClient client, string query)
     {
-        using var response = await client.GetAsync("/api/v1/activity/recent?module=refiner" + (query.Length > 0 ? "&" + query : string.Empty));
+        using var response = await client.GetAsync("/api/v1/activity/recent?module=processing" + (query.Length > 0 ? "&" + query : string.Empty));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return [.. (await Json(response))["items"]!.AsArray().Select(item => item!["title"]!.GetValue<string>()).Order(StringComparer.Ordinal)];
     }

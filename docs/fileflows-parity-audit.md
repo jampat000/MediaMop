@@ -1,13 +1,13 @@
-# Refiner / FileFlows parity audit
+# Processing / FileFlows parity audit
 
 Audit date: 2026-09-01
 
 This is the durable follow-up to closed epic
-[#347, Refiner — reach FileFlows and pass it](https://github.com/jampat000/Weir/issues/347).
+[#347, Processing — reach FileFlows and pass it](https://github.com/jampat000/Weir/issues/347).
 It answers two questions:
 
 1. Did every capability identified by the live FileFlows audit survive later
-   Refiner work?
+   Processing work?
 2. Did any closed issue leave a feature present in name but absent from the
    current runtime, UI, API, or tests?
 
@@ -27,27 +27,27 @@ It answers two questions:
 | Issue | Capability | Current evidence | Result |
 | --- | --- | --- | --- |
 | #328 | Dead-code removal | `scripts/check-dead-code.mjs`; no web dead-code allowlist entries | Present |
-| #329 | Settings match runtime | `refiner_operator_settings_service.py`, per-library schemas, and settings tests | Present |
+| #329 | Settings match runtime | `operator_settings_service.py`, per-library schemas, and settings tests | Present |
 | #330 | Migration lint/format | CI runs Ruff check and format over `alembic` | Present |
 | #331 | Subber-removal release | Published GitHub release `v2.4.3` | Present |
-| #332 | Library-model ADR | `docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md` | Present |
-| #333 | Per-library configuration | `refiner_library_model.py`, migration 0011, library API/read-path tests | Present |
-| #334 | Explicit file states and Files workbench | `refiner_file_state_service.py`, `refiner-files-section.tsx`, file-state/UI tests | Present |
-| #335 | Hold and size settling | `refiner_file_settling.py` and `test_refiner_file_settling.py` | Present |
-| #336 | Filesystem watcher plus scan backstop | `refiner_watched_folder_watcher.py` and watcher/periodic-enqueue tests | Present |
-| #337 | Schedules and suite pause | schedule/pause services, grid UI, and `test_refiner_schedules_and_pause.py` | Present |
+| #332 | Library-model ADR | `docs/adr/ADR-0014-processing-libraries-replace-fixed-scopes.md` | Present |
+| #333 | Per-library configuration | `processing_library_model.py`, migration 0011, library API/read-path tests | Present |
+| #334 | Explicit file states and Files workbench | `processing_file_state_service.py`, `processing-files-section.tsx`, file-state/UI tests | Present |
+| #335 | Hold and size settling | `processing_file_settling.py` and `test_processing_file_settling.py` | Present |
+| #336 | Filesystem watcher plus scan backstop | `processing_watched_folder_watcher.py` and watcher/periodic-enqueue tests | Present |
+| #337 | Schedules and suite pause | schedule/pause services, grid UI, and `test_processing_schedules_and_pause.py` | Present |
 | #338 | Weighted concurrency, caps, priority | runner-unit and job-claim services/tests; move-to-top in Files | Present |
 | #339 | Retry, requeue, terminal failure handling | retry/requeue service and API/UI tests | Present |
-| #340 | Durable per-file record and retention | file-log model/API/UI and `test_refiner_file_log.py` | Present |
-| #341 | Ordered track sorter | rule-set workspace and `test_refiner_track_sorters.py` | Present |
-| #342 | Metadata, artwork, attachment cleanup | metadata rule service/UI and `test_refiner_metadata_rules.py` | Present |
+| #340 | Durable per-file record and retention | file-log model/API/UI and `test_processing_file_log.py` | Present |
+| #341 | Ordered track sorter | rule-set workspace and `test_processing_track_sorters.py` | Present |
+| #342 | Metadata, artwork, attachment cleanup | metadata rule service/UI and `test_processing_metadata_rules.py` | Present |
 | #343 | Original-language selection | encrypted metadata-provider settings and original-language tests | Present |
 | #344 | Sidecars travel before source cleanup | sidecar migration service and failure-blocks-deletion tests | Present |
 | #345 | Hardware acceleration controls | hardware detection/decision service, UI, and hardware tests | Present |
-| #346 | Complete v1 API/OpenAPI surface | `test_refiner_api_surface.py` and generated OpenAPI/types | Present |
-| #348 | Full supported-container allowlist | media allowlist and `test_refiner_media_allowlist.py` | Present |
+| #346 | Complete v1 API/OpenAPI surface | `test_processing_api_surface.py` and generated OpenAPI/types | Present |
+| #348 | Full supported-container allowlist | media allowlist and `test_processing_media_allowlist.py` | Present |
 | #349 | Output collision policy | per-library policy, activity record, and collision tests | Present |
-| #350 | Manager-neutral integration | media-manager port/dialects and manager-neutral Refiner tests | Present |
+| #350 | Manager-neutral integration | media-manager port/dialects and manager-neutral Processing tests | Present |
 | #351 | Manager library discovery and drift | discovery API/UI, path translation, and discovery tests | Present |
 
 ## Additional features found outside the epic
@@ -57,7 +57,7 @@ It answers two questions:
 Weir already has both levels FileFlows operators expect:
 
 - a global conservative minimum input size and target-volume free-space guardrail
-  under Refiner processing settings;
+  under Processing processing settings;
 - per-library minimum and maximum sizes, include/exclude path rules, downloader
   folder markers, and created/modified windows;
 - a per-library **When a file is rejected** choice: leave it in place or delete
@@ -71,7 +71,7 @@ fingerprint, output validation, sidecar, and source-cleanup safety.
 ### Intentional edge-case bypass
 
 The Files workbench now provides **Pass through unchanged**. It preserves every
-stream, bypasses Refiner selection/metadata rules, places a validated unchanged
+stream, bypasses Processing selection/metadata rules, places a validated unchanged
 output in the library's processed-output tree, and then performs normal successful
 source cleanup. Pending ordinary work for the same file is converted in place so
 the explicit choice cannot race a duplicate job.
@@ -79,7 +79,7 @@ the explicit choice cannot race a duplicate job.
 ### Large unchanged files (#70)
 
 The audit found a real regression: the hardlink primitive still existed and had a
-unit test, but Refiner no longer called it, so every unchanged file performed a full
+unit test, but Processing no longer called it, so every unchanged file performed a full
 copy. The current implementation reconnects that fast path only on Windows, where
 the held source handle mandatorily denies writers for the complete pass. It creates
 a staged same-volume hardlink, validates it, then atomically publishes it. A

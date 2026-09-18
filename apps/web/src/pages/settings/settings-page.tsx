@@ -287,8 +287,13 @@ export function SettingsPage() {
         return;
       }
       const bundle = parsed as ConfigurationBundle;
-      if (bundle.format_version !== 1) {
-        setBackupErr("This file is not a supported Weir configuration export.");
+      // Only check that this looks like a bundle at all. Which format versions are
+      // supported is the server's to decide, and it answers 400 with a reason for one it
+      // cannot take (ConfigurationBundleStore.FormatVersion). Restating the number here is
+      // what broke this: the client insisted on 1 while the server had moved to 4, so every
+      // real export was rejected before it was ever sent.
+      if (typeof bundle.format_version !== "number") {
+        setBackupErr("This file is not a Weir configuration export.");
         return;
       }
       if (

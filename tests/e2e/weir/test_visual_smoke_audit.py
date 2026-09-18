@@ -225,9 +225,9 @@ def test_module_sections_share_themed_tabs_and_responsive_layout(
             for label, page_test_id, tabs_test_id, screenshot_name in (
                 (
                     "Processing",
-                    "refiner-scope-page",
-                    "refiner-section-tabs",
-                    "refiner-workspace",
+                    "processing-scope-page",
+                    "processing-section-tabs",
+                    "processing-workspace",
                 ),
             ):
                 open_sidebar(page, label)
@@ -263,7 +263,7 @@ def test_module_sections_share_themed_tabs_and_responsive_layout(
             browser.close()
 
 
-def test_refiner_audio_subtitles_editor_renders(weir_shell: str) -> None:
+def test_processing_audio_subtitles_editor_renders(weir_shell: str) -> None:
     """The full audio & subtitle profile editor remains readable at desktop width."""
     base = weir_shell.rstrip("/")
     with sync_playwright() as p:
@@ -275,7 +275,7 @@ def test_refiner_audio_subtitles_editor_renders(weir_shell: str) -> None:
 
             open_sidebar(page, "Processing")
             page.get_by_role("tab", name="Audio & subtitles", exact=True).click()
-            expect(page.get_by_test_id("refiner-rule-set-workspace")).to_be_visible()
+            expect(page.get_by_test_id("processing-rule-set-workspace")).to_be_visible()
             page.get_by_role("button", name="New profile", exact=True).click()
             expect(page.get_by_label("Profile name", exact=True)).to_be_visible()
             expect(page.get_by_text("Audio order", exact=True)).not_to_be_visible()
@@ -283,14 +283,14 @@ def test_refiner_audio_subtitles_editor_renders(weir_shell: str) -> None:
             _assert_document_owns_vertical_scroll(page)
             _assert_no_error_state(page)
             _scroll_to_top(page)
-            _save_screenshot(page, "refiner-audio-subtitles")
+            _save_screenshot(page, "processing-audio-subtitles")
             page.screenshot(
-                path=str(_SCREENSHOT_DIR / "refiner-audio-subtitles-full.png"),
+                path=str(_SCREENSHOT_DIR / "processing-audio-subtitles-full.png"),
                 full_page=True,
             )
             page.set_viewport_size({"width": 390, "height": 844})
             _scroll_to_top(page)
             page.wait_for_timeout(300)
-            _save_screenshot(page, "refiner-audio-subtitles-mobile")
+            _save_screenshot(page, "processing-audio-subtitles-mobile")
         finally:
             browser.close()

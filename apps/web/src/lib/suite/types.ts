@@ -90,7 +90,7 @@ export type UpdateStateOut = {
 export type SuiteOperationalHistoryResetOut = {
   status: "reset" | string;
   activity_events_deleted: number;
-  refiner_jobs_deleted: number;
+  jobs_deleted: number;
   total_deleted: number;
 };
 

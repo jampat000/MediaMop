@@ -18,7 +18,7 @@ function canEdit(role: string | undefined): boolean {
 /**
  * Pause processing, from anywhere in the app.
  *
- * It lives in the shell rather than on the Refiner page because the reason to reach for
+ * It lives in the shell rather than on the Processing page because the reason to reach for
  * it — the machine is busy and you want it back — has nothing to do with which screen
  * you happen to be on.
  */

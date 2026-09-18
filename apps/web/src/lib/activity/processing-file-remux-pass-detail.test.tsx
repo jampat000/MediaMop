@@ -1,0 +1,126 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import {
+  ProcessingFileProcessingProgressDetail,
+  ProcessingFileRemuxPassActivityDetail,
+  formatProcessingProcessingSpeed,
+} from "./processing-file-remux-pass-detail";
+
+describe("ProcessingFileRemuxPassActivityDetail", () => {
+  it("renders structured remux fields from JSON detail", () => {
+    const detail = JSON.stringify({
+      outcome: "live_output_written",
+      ok: true,
+      relative_media_path: "movies/a.mkv",
+      inspected_source_path: "/data/movies/a.mkv",
+      stream_counts: { video: 1, audio: 2, subtitle: 0 },
+      plan_summary: "video copy indices: [0] | audio out: #1 eng",
+      audio_before: "A before",
+      audio_after: "A after",
+      subs_before: "S before",
+      subs_after: "S after",
+      removed_audio: ["Director commentary", "Japanese stereo"],
+      removed_subtitles: ["spa", "fre"],
+      after_track_lines_meaning: "Planned only.",
+      remux_required: true,
+      ffmpeg_argv: ["/bin/ffmpeg", "-i", "a.mkv", "out.mkv"],
+    });
+    render(<ProcessingFileRemuxPassActivityDetail detail={detail} />);
+    expect(
+      screen.getByTestId("processing-remux-activity-detail"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Outcome")).toBeInTheDocument();
+    expect(screen.getByText("File processed")).toBeInTheDocument();
+    expect(
+      screen.getByText("Show track and cleanup details"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("/data/movies/a.mkv")).toBeInTheDocument();
+    expect(screen.getByText("Audio in file")).toBeInTheDocument();
+    expect(screen.getByText("A before")).toBeInTheDocument();
+    expect(screen.getByText("Director commentary")).toBeInTheDocument();
+    expect(screen.getByText("Japanese stereo")).toBeInTheDocument();
+    expect(screen.getByText("spa")).toBeInTheDocument();
+    expect(screen.queryByText("None removed")).not.toBeInTheDocument();
+    expect(screen.getByText(/ffmpeg command line/i)).toBeInTheDocument();
+  });
+
+  it("falls back to raw string when detail is not JSON", () => {
+    render(<ProcessingFileRemuxPassActivityDetail detail="not-json" />);
+    expect(
+      screen.getByTestId("processing-remux-activity-detail-raw"),
+    ).toHaveTextContent("not-json");
+  });
+
+  it("renders live Processing processing progress in plain language", () => {
+    const detail = JSON.stringify({
+      status: "processing",
+      relative_media_path: "movies/Caddyshack.mkv",
+      percent: 42.4,
+      eta_seconds: 71,
+      elapsed_seconds: 50,
+      processed_seconds: 1200,
+      duration_seconds: 2800,
+      speed: "16x",
+      message: "Weir is writing the cleaned-up file.",
+    });
+    render(<ProcessingFileProcessingProgressDetail detail={detail} />);
+    expect(
+      screen.getByTestId("processing-processing-progress-detail"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Processing")).toBeInTheDocument();
+    expect(screen.getByText("42%")).toBeInTheDocument();
+    expect(screen.getByText(/About 1m 11s left/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Processing speed 16x realtime/i),
+    ).toBeInTheDocument();
+  });
+
+  it("preserves full Processing speed precision and standardizes realtime units", () => {
+    expect(formatProcessingProcessingSpeed("123.456789x")).toBe(
+      "123.456789x realtime",
+    );
+    expect(formatProcessingProcessingSpeed(" 0.987654x ")).toBe(
+      "0.987654x realtime",
+    );
+    expect(formatProcessingProcessingSpeed("N/A")).toBe("N/A");
+  });
+
+  it("uses finished styling and copy when Processing progress completes", () => {
+    const detail = JSON.stringify({
+      status: "finished",
+      relative_media_path: "movies/Mickey 17.mkv",
+      percent: 100,
+      eta_seconds: 0,
+      elapsed_seconds: 183,
+      message: "Weir is writing the cleaned-up file.",
+    });
+    render(<ProcessingFileProcessingProgressDetail detail={detail} />);
+    const card = screen.getByTestId("processing-processing-progress-detail");
+
+    expect(card).toHaveClass("mm-activity-processing--finished");
+    expect(screen.getAllByText("Finished")).toHaveLength(2);
+    expect(
+      screen.getByText("Weir finished processing this file."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.queryByText(/About 0s left/i)).not.toBeInTheDocument();
+  });
+
+  it("uses failed styling when Processing progress stops", () => {
+    const detail = JSON.stringify({
+      status: "failed",
+      relative_media_path: "movies/Broken.mkv",
+      percent: 63,
+      reason: "ffmpeg stopped unexpectedly.",
+    });
+    render(<ProcessingFileProcessingProgressDetail detail={detail} />);
+
+    expect(
+      screen.getByTestId("processing-processing-progress-detail"),
+    ).toHaveClass("mm-activity-processing--failed");
+    expect(screen.getAllByText("Stopped")).toHaveLength(2);
+    expect(
+      screen.getByText("ffmpeg stopped unexpectedly."),
+    ).toBeInTheDocument();
+  });
+});

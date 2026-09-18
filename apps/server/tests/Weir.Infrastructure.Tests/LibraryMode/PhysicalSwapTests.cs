@@ -3,10 +3,10 @@ using System.Security.Principal;
 using Weir.Core.Json;
 using Weir.Core.LibraryMode;
 using Weir.Infrastructure.LibraryMode;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing.RemuxPass;
 using Weir.Infrastructure.Tests.Jobs;
 using Weir.Infrastructure.Tests.Media;
-using Weir.Infrastructure.Tests.Refiner.RemuxPass;
+using Weir.Infrastructure.Tests.Processing.RemuxPass;
 
 namespace Weir.Infrastructure.Tests.LibraryMode;
 
@@ -19,7 +19,7 @@ public sealed class PhysicalSwapTests : IDisposable
     private readonly string _library;
     private readonly string _original;
     private readonly long _jobId;
-    private readonly RefinerJobSwapJournal _journal;
+    private readonly ProcessingJobSwapJournal _journal;
     private readonly FakeValidator _validator = new();
     private readonly SafeSwap _swap;
 
@@ -31,10 +31,10 @@ public sealed class PhysicalSwapTests : IDisposable
         File.WriteAllText(_original, "original content");
         File.SetLastWriteTimeUtc(_original, OldTime);
         _db.Execute(
-            "INSERT INTO refiner_jobs (dedupe_key, job_kind, payload_json, status) VALUES ('library:1', 'refiner.library.clean.v1', $payload, 'leased')",
+            "INSERT INTO jobs (dedupe_key, job_kind, payload_json, status) VALUES ('library:1', 'processing.library.clean.v1', $payload, 'leased')",
             ("$payload", "{\"library_id\":1,\"relative_media_path\":\"Movie (2020)/Movie (2020).mkv\"}"));
-        _jobId = (long)_db.Scalar("SELECT id FROM refiner_jobs WHERE dedupe_key = 'library:1'")!;
-        _journal = new RefinerJobSwapJournal(_db.Database);
+        _jobId = (long)_db.Scalar("SELECT id FROM jobs WHERE dedupe_key = 'library:1'")!;
+        _journal = new ProcessingJobSwapJournal(_db.Database);
         _swap = new SafeSwap(PhysicalSwapFileSystem.Instance, _journal, _validator, new ListLogger<SafeSwap>());
     }
 
@@ -65,7 +65,7 @@ public sealed class PhysicalSwapTests : IDisposable
     private string[] FilesInLibrary() =>
         Directory.GetFiles(_library, "*", SearchOption.AllDirectories).Select(path => Path.GetRelativePath(_library, path)).Order(StringComparer.Ordinal).ToArray();
 
-    private PyDict Payload() => (PyDict)PyJsonParser.Parse((string)_db.Scalar("SELECT payload_json FROM refiner_jobs WHERE id = $id", ("$id", _jobId))!);
+    private PyDict Payload() => (PyDict)PyJsonParser.Parse((string)_db.Scalar("SELECT payload_json FROM jobs WHERE id = $id", ("$id", _jobId))!);
 
     private (string State, string OriginalPath, string TempPath, string BackupPath, bool Committed) SwapRow()
     {

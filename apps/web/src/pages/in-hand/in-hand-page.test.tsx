@@ -4,15 +4,15 @@ import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import * as filesApi from "../../lib/refiner/files-api";
-import * as jobsApi from "../../lib/refiner/jobs-inspection/api";
-import type { RefinerFile } from "../../lib/refiner/files-api";
-import * as librariesApi from "../../lib/refiner/libraries-api";
-import * as statsApi from "../../lib/refiner/overview-stats-api";
+import * as filesApi from "../../lib/processing/files-api";
+import * as jobsApi from "../../lib/processing/jobs-inspection/api";
+import type { ProcessingFile } from "../../lib/processing/files-api";
+import * as librariesApi from "../../lib/processing/libraries-api";
+import * as statsApi from "../../lib/processing/overview-stats-api";
 import * as readinessApi from "../../lib/system/readiness-api";
 import { InHandPage } from "./in-hand-page";
 
-function file(over: Partial<RefinerFile> = {}): RefinerFile {
+function file(over: Partial<ProcessingFile> = {}): ProcessingFile {
   return {
     id: 1,
     library_id: 1,
@@ -55,17 +55,17 @@ type Surroundings = {
 };
 
 function mount(
-  files: RefinerFile[],
+  files: ProcessingFile[],
   counts: Record<string, number> = {},
   surroundings: Surroundings = {},
 ): void {
-  vi.spyOn(filesApi, "fetchRefinerFiles").mockResolvedValue({
+  vi.spyOn(filesApi, "fetchProcessingFiles").mockResolvedValue({
     files,
     status_counts: counts,
     returned: files.length,
     limit: 200,
   });
-  vi.spyOn(statsApi, "fetchRefinerOverviewStats").mockResolvedValue({
+  vi.spyOn(statsApi, "fetchProcessingOverviewStats").mockResolvedValue({
     window_days: 1,
     files_processed: 48,
     files_failed: 0,
@@ -74,12 +74,12 @@ function mount(
     net_space_saved_bytes: 1024 * 1024 * 1024,
     net_space_saved_percent: 12.5,
   } as never);
-  vi.spyOn(librariesApi, "fetchRefinerLibraries").mockResolvedValue(
+  vi.spyOn(librariesApi, "fetchProcessingLibraries").mockResolvedValue(
     (surroundings.libraries ?? [
       { enabled: true, watched_folder: "/downloads/complete" },
     ]) as never,
   );
-  vi.spyOn(jobsApi, "fetchRefinerJobsInspection").mockResolvedValue({
+  vi.spyOn(jobsApi, "fetchProcessingJobsInspection").mockResolvedValue({
     jobs: Array.from({ length: surroundings.failedJobs ?? 0 }, (_, i) => ({
       id: i + 1,
       status: "failed",
@@ -95,7 +95,7 @@ function mount(
     worker_health: surroundings.workerDetail
       ? [
           {
-            module: "refiner",
+            module: "processing",
             expected_workers: 1,
             active_workers: 0,
             stale_workers: 1,
@@ -216,28 +216,31 @@ it("reads as finished rather than broken when nothing is in hand", async () => {
 });
 
 it("opens a file's story from its row", async () => {
-  const fetchLog = vi.spyOn(filesApi, "fetchRefinerFileLog").mockResolvedValue({
-    file_id: 1,
-    relative_path: "movies/Arrival.2016.2160p.mkv",
-    retention_days: 90,
-    entries: [
-      {
-        id: 1,
-        recorded_at: "2026-09-16T14:02:00Z",
-        outcome: "live_output_written",
-        title: "Remuxed Arrival",
-        library_name: "Films 4K",
-        detail: {},
-        story: [
-          {
-            heading: "Picked up",
-            sentence: "Weir took this file as a film in the Films 4K library.",
-            tone: "neutral",
-          },
-        ],
-      },
-    ],
-  });
+  const fetchLog = vi
+    .spyOn(filesApi, "fetchProcessingFileLog")
+    .mockResolvedValue({
+      file_id: 1,
+      relative_path: "movies/Arrival.2016.2160p.mkv",
+      retention_days: 90,
+      entries: [
+        {
+          id: 1,
+          recorded_at: "2026-09-16T14:02:00Z",
+          outcome: "live_output_written",
+          title: "Remuxed Arrival",
+          library_name: "Films 4K",
+          detail: {},
+          story: [
+            {
+              heading: "Picked up",
+              sentence:
+                "Weir took this file as a film in the Films 4K library.",
+              tone: "neutral",
+            },
+          ],
+        },
+      ],
+    });
   mount([file({ id: 1 })]);
 
   fireEvent.click(
@@ -250,7 +253,7 @@ it("opens a file's story from its row", async () => {
 });
 
 it("shows the Direct Play badge on a row, and the full reasons in the file's story", async () => {
-  vi.spyOn(filesApi, "fetchRefinerFileLog").mockResolvedValue({
+  vi.spyOn(filesApi, "fetchProcessingFileLog").mockResolvedValue({
     file_id: 1,
     relative_path: "movies/Arrival.2016.2160p.mkv",
     retention_days: 90,

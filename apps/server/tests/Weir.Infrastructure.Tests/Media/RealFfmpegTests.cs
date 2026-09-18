@@ -182,7 +182,7 @@ public sealed class RealFfmpegTests : IDisposable
 
         var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, [], updates.Add, ProbeOutput.DurationSeconds(probe));
 
-        Assert.StartsWith(Path.Combine(Path.GetFullPath(workDir), "fixture.refiner."), output, StringComparison.Ordinal);
+        Assert.StartsWith(Path.Combine(Path.GetFullPath(workDir), "fixture.processing."), output, StringComparison.Ordinal);
         var outputProbe = await tools.FfprobeJsonAsync(output);
         var audio = Assert.Single(Streams(outputProbe, "audio"));
         Assert.Equal("eng", audio.GetProperty("tags").GetProperty("language").GetString());

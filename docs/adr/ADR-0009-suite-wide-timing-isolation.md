@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — **hard rule** for Refiner, Pruner, Subber, and any future module-owned durable-job lanes.
+Accepted — **hard rule** for Processing, Pruner, Subber, and any future module-owned durable-job lanes.
 
 > **Update (2026-08-28): Subber moved to Deluno.** This ADR is left as it was written — an ADR records the decision, not the current file list — but wherever it names Subber, read it as an example rather than as a lane that still exists. The ``subber_jobs`` table is dropped by migration ``0010_drop_subber_tables``, and ``subber.`` is now an abandoned prefix refused on every remaining lane, alongside ``trimmer.``.
 >
@@ -37,7 +37,7 @@ These require per-family (and per-module) isolation when operators set expectati
 
 ### Worker count and leases
 
-- **`WEIR_REFINER_WORKER_COUNT`**, **`WEIR_PRUNER_WORKER_COUNT`**, and **`WEIR_SUBBER_WORKER_COUNT`** control **throughput and claim ordering** on their respective lanes. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
+- **`WEIR_PROCESSING_WORKER_COUNT`**, **`WEIR_PRUNER_WORKER_COUNT`**, and **`WEIR_SUBBER_WORKER_COUNT`** control **throughput and claim ordering** on their respective lanes. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
 
 ### Process-internal mechanics (out of scope for “shared contracts”)
 
@@ -49,16 +49,16 @@ When automatic missing/upgrade search was backed by a dedicated durable-job lane
 
 **Failed-import** cleanup drives: Radarr vs Sonarr use **separate** schedule interval settings and **separate** dedupe keys / job kinds — independent contracts.
 
-### Refiner (shipped durable families)
+### Processing (shipped durable families)
 
-Refiner owns ``refiner_jobs`` and in-process Refiner workers. **Each** durable ``refiner.*`` family that exposes operator-controlled timing must keep that timing on **family-local** settings and tasks (no cross-family coupling on the Refiner lane).
+Processing owns ``jobs`` and in-process Processing workers. **Each** durable ``processing.*`` family that exposes operator-controlled timing must keep that timing on **family-local** settings and tasks (no cross-family coupling on the Processing lane).
 
 Shipped today:
 
-- **`refiner.supplied_payload_evaluation.v1`** — optional periodic enqueue via ``WEIR_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_*`` (legacy ``WEIR_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_*`` still read when the new keys are absent) and ``refiner_supplied_payload_evaluation_schedule_enabled`` / ``refiner_supplied_payload_evaluation_schedule_interval_seconds`` on ``WeirSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”).
-- **`refiner.candidate_gate.v1`** — manual enqueue only in this product pass; **no** shared schedule/cooldown/last-run row with other Refiner families.
-- **`refiner.file.remux_pass.v1`** — manual enqueue only: per-file ffprobe + remux plan (+ optional ffmpeg when ``dry_run`` is false); **no** periodic schedule or shared timing row with other Refiner families. Activity rows carry a structured JSON ``detail`` (outcome, inspected path, plan summary, before/after track lines, ffmpeg argv preview) rendered readably on the Activity page for that event type only.
-- **`refiner.watched_folder.remux_scan_dispatch.v1`** — operator POST manual enqueue **and** optional Refiner-only periodic enqueue via ``WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` plus separate ``PERIODIC_ENQUEUE_REMUX_JOBS`` / ``PERIODIC_REMUX_DRY_RUN`` flags on ``WeirSettings`` (not shared with supplied payload evaluation timing). Each run walks the saved watched folder, applies the same ownership/upstream blocking truth as the candidate gate, optionally enqueues remux rows, and writes one activity summary (``scan_trigger``: ``manual`` vs ``periodic``). Periodic tick skips enqueue when a scan job is already ``pending`` or ``leased``.
+- **`processing.supplied_payload_evaluation.v1`** — optional periodic enqueue via ``WEIR_PROCESSING_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_*`` (legacy ``WEIR_PROCESSING_LIBRARY_AUDIT_PASS_SCHEDULE_*`` still read when the new keys are absent) and ``processing_supplied_payload_evaluation_schedule_enabled`` / ``processing_supplied_payload_evaluation_schedule_interval_seconds`` on ``WeirSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”).
+- **`processing.candidate_gate.v1`** — manual enqueue only in this product pass; **no** shared schedule/cooldown/last-run row with other Processing families.
+- **`processing.file.remux_pass.v1`** — manual enqueue only: per-file ffprobe + remux plan (+ optional ffmpeg when ``dry_run`` is false); **no** periodic schedule or shared timing row with other Processing families. Activity rows carry a structured JSON ``detail`` (outcome, inspected path, plan summary, before/after track lines, ffmpeg argv preview) rendered readably on the Activity page for that event type only.
+- **`processing.watched_folder.remux_scan_dispatch.v1`** — operator POST manual enqueue **and** optional Processing-only periodic enqueue via ``WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` plus separate ``PERIODIC_ENQUEUE_REMUX_JOBS`` / ``PERIODIC_REMUX_DRY_RUN`` flags on ``WeirSettings`` (not shared with supplied payload evaluation timing). Each run walks the saved watched folder, applies the same ownership/upstream blocking truth as the candidate gate, optionally enqueues remux rows, and writes one activity summary (``scan_trigger``: ``manual`` vs ``periodic``). Periodic tick skips enqueue when a scan job is already ``pending`` or ``leased``.
 
 ### Pruner (Phase 1)
 
@@ -68,7 +68,7 @@ Shipped today:
 
 - **Lane only** — ``subber_jobs`` and in-process workers; **TV vs Movies** use separate job kinds and separate ``subber_subtitle_state`` rows (never cross-updating scopes).
 - **Webhook + manual search** — immediate ``subber.subtitle_search.*.v1`` jobs; no shared timing with other modules.
-- **Library scan schedule** — optional periodic enqueue reads ``subber_settings`` (per-scope enable, interval, and optional wall-clock window) plus ``WEIR_SUBBER_LIBRARY_SCAN_SCHEDULE_*`` on ``WeirSettings`` for the asyncio tick cadence only — not shared with Refiner/Pruner schedules.
+- **Library scan schedule** — optional periodic enqueue reads ``subber_settings`` (per-scope enable, interval, and optional wall-clock window) plus ``WEIR_SUBBER_LIBRARY_SCAN_SCHEDULE_*`` on ``WeirSettings`` for the asyncio tick cadence only — not shared with Processing/Pruner schedules.
 
 Pruner and Subber packages point to ADR-0007 for lane ownership; **this ADR** is the timing addendum for scheduled/cooled families.
 
@@ -77,7 +77,7 @@ Pruner and Subber packages point to ADR-0007 for lane ownership; **this ADR** is
 | Area | Isolated? | Why |
 |------|-----------|-----|
 | *arr* automatic search four lanes | Yes | Per-lane fields on `arr_library_operator_settings` (and historical per-lane state where applicable), independent schedules and last-run semantics per lane. |
-| Refiner durable families (supplied payload evaluation, candidate gate, file remux pass, watched-folder remux scan dispatch) | Yes | Separate job kinds, handlers, and enqueue paths; supplied payload evaluation has its own optional schedule env + interval only for that family; watched-folder remux scan dispatch has its **own** optional schedule env + interval (and periodic remux flags), independent of supplied payload evaluation; candidate gate and file remux pass remain manual POST enqueue only. No shared last-run or cooldown row across those families. |
+| Processing durable families (supplied payload evaluation, candidate gate, file remux pass, watched-folder remux scan dispatch) | Yes | Separate job kinds, handlers, and enqueue paths; supplied payload evaluation has its own optional schedule env + interval only for that family; watched-folder remux scan dispatch has its **own** optional schedule env + interval (and periodic remux flags), independent of supplied payload evaluation; candidate gate and file remux pass remain manual POST enqueue only. No shared last-run or cooldown row across those families. |
 | Pruner lane (Phase 1) | Yes (no product families yet) | Queue/worker infrastructure only; no periodic Pruner tasks. |
 | Subber durable families (cue timeline constraint check) | Yes (manual-only) | Single shipped family; operator POST enqueue only — no Subber periodic task shares timing state with other modules. |
 

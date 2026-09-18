@@ -8,7 +8,7 @@ Operational events should use the shared diagnostics vocabulary in `weir.platfor
 
 Events should include the fields that apply:
 
-- `module`: `refiner`, `system`, or shared service name.
+- `module`: `processing`, `system`, or shared service name.
 - `provider`: upstream system such as Radarr, Sonarr, or Deluno.
 - `media_scope`: `tv`, `movies`, or both when the operation spans both.
 - `action`: scan, preview, apply, remux, cleanup, search, import, connection test, schedule run, or upgrade.

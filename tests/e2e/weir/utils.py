@@ -34,8 +34,8 @@ def clear_auth_tables_for_home(home: str) -> None:
     Auth tables (users, user_sessions, suite_settings) are cleared so the next test begins at the
     setup / login page.
 
-    Module configuration is also reset so that wizard skip and Refiner forms don't inherit stale
-    paths from a previous test. The migration-seeded Refiner libraries have their folders *cleared*
+    Module configuration is also reset so that wizard skip and Processing forms don't inherit stale
+    paths from a previous test. The migration-seeded Processing libraries have their folders *cleared*
     rather than being deleted, because they are the only path store now (#363) and a scope with no
     library at all has nowhere to resolve to.
     """
@@ -43,7 +43,7 @@ def clear_auth_tables_for_home(home: str) -> None:
     conn = _connect(home)
     try:
         with conn:
-            conn.execute("UPDATE refiner_libraries SET watched_folder = '', work_folder = '', output_folder = ''")
+            conn.execute("UPDATE libraries SET watched_folder = '', work_folder = '', output_folder = ''")
             conn.execute("DELETE FROM user_sessions")
             conn.execute("DELETE FROM users")
             conn.execute("DELETE FROM suite_settings")

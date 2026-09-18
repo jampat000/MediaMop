@@ -8,7 +8,7 @@ public enum RemovedTrackType
 }
 
 /// <summary>
-/// One track a Refiner pass removed from a file for good (issue #509, "getting a removed track back means
+/// One track a Processing pass removed from a file for good (issue #509, "getting a removed track back means
 /// downloading again"). Populated by <see cref="RemuxRules.PlanRemux"/> from the same source data its
 /// existing <see cref="RemuxPlan.RemovedAudio"/>/<see cref="RemuxPlan.RemovedSubtitles"/> display strings
 /// are built from, so it needs no fragile parsing of those sentences.

@@ -6,7 +6,7 @@ import {
   NavIconChevronLeft,
   NavIconChevronRight,
   NavIconHome,
-  NavIconRefiner,
+  NavIconProcessing,
   NavIconSettings,
   NavIconSignOut,
 } from "../components/shell/nav-icons";
@@ -113,7 +113,7 @@ export function AppShell() {
               onClick={() => setSidebarOpen(false)}
             >
               <span className="mm-sidebar-link-icon" aria-hidden="true">
-                <NavIconRefiner />
+                <NavIconProcessing />
               </span>
               <span className="mm-sidebar-link-label">Processing</span>
             </NavLink>

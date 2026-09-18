@@ -35,11 +35,11 @@ Weir uses cookie-based sessions with CSRF protection:
 | `/ready` | GET | No | Full readiness (DB, migrations) |
 | `/metrics` | GET | Token | Prometheus metrics |
 
-### Refiner
+### Processing
 
 | Prefix | Description |
 |--------|-------------|
-| `/api/v1/refiner/` | Libraries, files, rule sets, jobs, and maintenance |
+| `/api/v1/processing/` | Libraries, files, rule sets, jobs, and maintenance |
 | `/api/v1/pause` | The one pause switch for processing |
 
 ### Platform

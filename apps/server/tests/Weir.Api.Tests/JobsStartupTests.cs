@@ -14,24 +14,24 @@ public sealed class JobsStartupTests
         string? tempFile = null;
         string? operatorFile = null;
         await using var server = await WeirTestServer.StartAsync(
-            [("WEIR_REFINER_WORKER_COUNT", "1")],
+            [("WEIR_PROCESSING_WORKER_COUNT", "1")],
             prepareHome: home =>
             {
                 var dbPath = Path.Join(home, "data", "weir.sqlite3");
                 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
                 var database = new SqliteDatabase(dbPath);
                 new SchemaMigrator(database).EnsureAtHead();
-                var work = Path.Join(home, "refiner", "refiner-movie-work");
+                var work = Path.Join(home, "processing", "processing-movie-work");
                 Directory.CreateDirectory(work);
-                tempFile = Path.Join(work, "film.refiner.x1y2z3w4.mkv");
+                tempFile = Path.Join(work, "film.processing.x1y2z3w4.mkv");
                 operatorFile = Path.Join(work, "film.mkv");
                 File.WriteAllText(tempFile, "half-written");
                 File.WriteAllText(operatorFile, "not Weir's");
                 using var connection = database.Open();
                 using var command = connection.CreateCommand();
                 command.CommandText =
-                    "INSERT INTO refiner_jobs (dedupe_key, job_kind, payload_json, status, lease_owner, lease_expires_at, attempt_count) " +
-                    "VALUES ('crash', 'refiner.file.remux_pass.v1', '{\"media_scope\":\"movie\",\"relative_media_path\":\"Crash.Test.2020/film.mkv\"}', " +
+                    "INSERT INTO jobs (dedupe_key, job_kind, payload_json, status, lease_owner, lease_expires_at, attempt_count) " +
+                    "VALUES ('crash', 'processing.file.remux_pass.v1', '{\"media_scope\":\"movie\",\"relative_media_path\":\"Crash.Test.2020/film.mkv\"}', " +
                     "'leased', 'killed-host-1-w0', '2999-01-01 00:00:00+00:00', 1)";
                 command.ExecuteNonQuery();
                 database.ClearPool();
@@ -39,19 +39,19 @@ public sealed class JobsStartupTests
 
         var report = server.Services.GetRequiredService<JobsStartupRecoveryService>().LastReport;
         Assert.NotNull(report);
-        Assert.Equal(1, report.Jobs.RefinerRequeued);
+        Assert.Equal(1, report.Jobs.ProcessingRequeued);
         Assert.Equal(1, report.WorkTempFilesRemoved);
         Assert.False(File.Exists(tempFile));
         Assert.True(File.Exists(operatorFile));
 
         // The remux pass is ported (#522 part 3), so a running .NET worker claims the recovered row and runs it to the end.
-        var store = server.Services.GetRequiredService<RefinerJobStore>();
+        var store = server.Services.GetRequiredService<ProcessingJobStore>();
         var deadline = DateTime.UtcNow.AddSeconds(30);
-        RefinerJob job;
+        ProcessingJob job;
         while (true)
         {
-            job = (await store.ListAsync()).Single(row => row.JobKind == "refiner.file.remux_pass.v1");
-            if (job.Status == RefinerJobStatus.Completed || DateTime.UtcNow > deadline)
+            job = (await store.ListAsync()).Single(row => row.JobKind == "processing.file.remux_pass.v1");
+            if (job.Status == ProcessingJobStatus.Completed || DateTime.UtcNow > deadline)
             {
                 break;
             }
@@ -59,7 +59,7 @@ public sealed class JobsStartupTests
             await Task.Delay(100);
         }
 
-        Assert.Equal(RefinerJobStatus.Completed, job.Status);
+        Assert.Equal(ProcessingJobStatus.Completed, job.Status);
         Assert.Equal(2, job.AttemptCount);
         Assert.Null(job.LeaseOwner);
     }

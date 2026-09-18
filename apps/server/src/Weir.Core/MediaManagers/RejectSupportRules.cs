@@ -2,8 +2,8 @@ namespace Weir.Core.MediaManagers;
 
 /// <summary>
 /// The pure constants of the opt-in <c>reject</c> failure policy (port of the module-level values in
-/// <c>weir.refiner.refiner_reject</c>). The evaluation itself needs live manager ports, so it lives in
-/// Weir.Infrastructure (<c>RejectSupportEvaluator</c>, <c>RefinerRejectHandler</c>).
+/// <c>weir.processing.processing_reject</c>). The evaluation itself needs live manager ports, so it lives in
+/// Weir.Infrastructure (<c>RejectSupportEvaluator</c>, <c>ProcessingRejectHandler</c>).
 /// </summary>
 public static class RejectSupportRules
 {

@@ -2,7 +2,7 @@ using Weir.Core.Json;
 
 namespace Weir.Core.MediaManagers;
 
-/// <summary>Either a relative path Refiner can use, or the reason it cannot be produced.</summary>
+/// <summary>Either a relative path Processing can use, or the reason it cannot be produced.</summary>
 public sealed record HandoffPathResult(string? RelativeMediaPath, string? Problem)
 {
     public bool Ok => RelativeMediaPath is not null;

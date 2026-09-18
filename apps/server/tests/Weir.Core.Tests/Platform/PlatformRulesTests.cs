@@ -181,20 +181,20 @@ public sealed class PlatformRulesTests
     [Fact]
     public void Failure_messages_classify_like_python()
     {
-        var credentials = FailureMessages.FromException("Refiner", "connection test", new FailureSubject("RuntimeError", "api_key=secret was rejected", ExceptionCategory.Other), provider: "jellyfin");
+        var credentials = FailureMessages.FromException("Processing", "connection test", new FailureSubject("RuntimeError", "api_key=secret was rejected", ExceptionCategory.Other), provider: "jellyfin");
         Assert.Equal(FailureKind.Credential, credentials.Kind);
-        Assert.Contains("Refiner connection test for Jellyfin failed", credentials.Message, StringComparison.Ordinal);
+        Assert.Contains("Processing connection test for Jellyfin failed", credentials.Message, StringComparison.Ordinal);
         Assert.Contains("Re-enter the Jellyfin credentials", credentials.NextAction, StringComparison.Ordinal);
         Assert.Contains("api_key=[redacted]", credentials.TechnicalDetail, StringComparison.Ordinal);
 
-        var rate = FailureMessages.FromException("Refiner", "subtitle search", new FailureSubject("RuntimeError", "HTTP 429 rate limit", ExceptionCategory.Other), provider: "opensubtitles_com", recoverable: true);
+        var rate = FailureMessages.FromException("Processing", "subtitle search", new FailureSubject("RuntimeError", "HTTP 429 rate limit", ExceptionCategory.Other), provider: "opensubtitles_com", recoverable: true);
         Assert.Equal(FailureKind.RateLimit, rate.Kind);
         Assert.Contains("skipped and continued", rate.Message, StringComparison.Ordinal);
         Assert.Contains("continue with the next available provider", rate.WhatHappensNext, StringComparison.Ordinal);
 
         Assert.Equal(FailureKind.Filesystem, FailureMessages.Classify(FailureMessages.FromDotNet(new FileNotFoundException("D:/Downloads/film.mkv"))));
         Assert.Equal(FailureKind.Filesystem, FailureMessages.Classify(FailureMessages.FromDotNet(new UnauthorizedAccessException("denied"))));
-        var gone = FailureMessages.FromException("Refiner", "remux", FailureMessages.FromDotNet(new FileNotFoundException("gone")));
+        var gone = FailureMessages.FromException("Processing", "remux", FailureMessages.FromDotNet(new FileNotFoundException("gone")));
         Assert.Contains("file or folder", gone.Message + gone.NextAction, StringComparison.Ordinal);
         Assert.Equal(FailureKind.Network, FailureMessages.Classify(new FailureSubject("ConnectionRefusedError", "refused", ExceptionCategory.NetworkOrOs)));
         Assert.Equal(FailureKind.Validation, FailureMessages.Classify(new FailureSubject("ValueError", "bad", ExceptionCategory.Validation)));
@@ -208,28 +208,28 @@ public sealed class PlatformRulesTests
         Assert.Equal(FailureKind.NotFound, FailureMessages.Classify(FailureMessages.FromDotNet(new InvalidOperationException("file not found"))));
         Assert.Equal(FailureKind.Internal, FailureMessages.Classify(FailureMessages.FromDotNet(new InvalidOperationException("boom"))));
         Assert.Equal(FailureKind.RateLimit, FailureMessages.Classify(FailureMessages.RuntimeError("HTTP 429")));
-        Assert.Equal("PermissionError: denied", FailureMessages.FromException("Refiner", "job", FailureMessages.FromDotNet(new UnauthorizedAccessException("denied"))).TechnicalDetail);
+        Assert.Equal("PermissionError: denied", FailureMessages.FromException("Processing", "job", FailureMessages.FromDotNet(new UnauthorizedAccessException("denied"))).TechnicalDetail);
 
         // #540 item 7: a blank provider is not named, and the fallback no longer doubles "the" (was
         // "Re-enter the the provider credentials...").
-        var blank = FailureMessages.FromException("Refiner", "sync", new FailureSubject("RuntimeError", "401", ExceptionCategory.Other), provider: "   ");
-        Assert.Equal(("Refiner sync failed: The service from  rejected the credentials or permission level. This job is marked failed so it does not look successful.", "Re-enter the provider credentials and run the connection test again."), (blank.Message, blank.NextAction));
+        var blank = FailureMessages.FromException("Processing", "sync", new FailureSubject("RuntimeError", "401", ExceptionCategory.Other), provider: "   ");
+        Assert.Equal(("Processing sync failed: The service from  rejected the credentials or permission level. This job is marked failed so it does not look successful.", "Re-enter the provider credentials and run the connection test again."), (blank.Message, blank.NextAction));
     }
 
     [Fact]
     public void Diagnostics_and_operator_messages_keep_the_shared_shape()
     {
-        var safe = new DiagnosticEvent("refiner", "preview", "scheduled", "failed", Diagnostics.SeverityForResult("failed"), "Jellyfin", "movies", "job-123",
+        var safe = new DiagnosticEvent("processing", "preview", "scheduled", "failed", Diagnostics.SeverityForResult("failed"), "Jellyfin", "movies", "job-123",
             "Provider returned api_key=abc123 as rejected", "Re-enter the Jellyfin API key and run the connection test again.",
             [new("scanned", 4), new("failed", 1)]).AsSafeDict();
         Assert.Equal(
-            "{\"module\":\"refiner\",\"action\":\"preview\",\"trigger\":\"scheduled\",\"result\":\"failed\",\"severity\":\"error\",\"provider\":\"Jellyfin\",\"media_scope\":\"movies\",\"correlation_id\":\"job-123\",\"reason\":\"Provider returned api_key=[redacted] as rejected\",\"next_action\":\"Re-enter the Jellyfin API key and run the connection test again.\",\"counts\":{\"scanned\":4,\"failed\":1}}",
+            "{\"module\":\"processing\",\"action\":\"preview\",\"trigger\":\"scheduled\",\"result\":\"failed\",\"severity\":\"error\",\"provider\":\"Jellyfin\",\"media_scope\":\"movies\",\"correlation_id\":\"job-123\",\"reason\":\"Provider returned api_key=[redacted] as rejected\",\"next_action\":\"Re-enter the Jellyfin API key and run the connection test again.\",\"counts\":{\"scanned\":4,\"failed\":1}}",
             PyJsonWriter.Dumps(safe, PyJsonFormat.Response));
         Assert.Equal(["info", "info", "warning", "error"], new[] { "success", "skipped", "retrying", "failed" }.Select(Diagnostics.SeverityForResult));
         Assert.Equal(
-            "{\"module\":\"refiner\",\"action\":\"search\",\"trigger\":\"worker\",\"result\":\"skipped\",\"severity\":\"info\",\"provider\":\"opensubtitles\",\"media_scope_label\":\"Movies\",\"media_scope\":\"movies\",\"counts\":{\"checked\":1,\"downloaded\":0},\"user_message\":\"No subtitle was found.\"}",
+            "{\"module\":\"processing\",\"action\":\"search\",\"trigger\":\"worker\",\"result\":\"skipped\",\"severity\":\"info\",\"provider\":\"opensubtitles\",\"media_scope_label\":\"Movies\",\"media_scope\":\"movies\",\"counts\":{\"checked\":1,\"downloaded\":0},\"user_message\":\"No subtitle was found.\"}",
             PyJsonWriter.Dumps(
-                OperatorMessages.ActivityDetailEnvelope("refiner", "search", "worker", "skipped", "opensubtitles", "movies", [new("checked", 1), new("downloaded", 0), new("bad_flag", null)], "No subtitle was found."),
+                OperatorMessages.ActivityDetailEnvelope("processing", "search", "worker", "skipped", "opensubtitles", "movies", [new("checked", 1), new("downloaded", 0), new("bad_flag", null)], "No subtitle was found."),
                 PyJsonFormat.Response));
         Assert.Equal("{\"failed\":0,\"removed\":3}", PyJsonWriter.Dumps(OperatorMessages.CountSummary([new("failed", -5), new("removed", 3)]), PyJsonFormat.Response));
         Assert.Equal(("Jellyfin", "TV episodes"), (OperatorMessages.ProviderLabel("jellyfin"), OperatorMessages.MediaScopeLabel("tv")));
@@ -242,27 +242,27 @@ public sealed class PlatformRulesTests
     {
         var store = new RuntimeMetricsStore(new ManualTimeProvider());
         store.RecordRequest("GET", "/api/v1/health", 200, 12.5);
-        store.RecordRequest("POST", "/api/v1/refiner/jobs", 500, 33.0);
+        store.RecordRequest("POST", "/api/v1/processing/jobs", 500, 33.0);
         store.RecordLog("error");
-        store.RecordModuleJobEvent("refiner", "started");
-        store.RecordModuleJobEvent("refiner", "completed");
+        store.RecordModuleJobEvent("processing", "started");
+        store.RecordModuleJobEvent("processing", "completed");
         store.RecordModuleJobEvent("other", "failed");
-        store.SetModuleQueueDepth("refiner", 3);
+        store.SetModuleQueueDepth("processing", 3);
         store.SetModuleQueueDepth("other", 1);
         var output = store.RenderPrometheus();
-        Assert.Contains("weir_module_jobs_total{module=\"refiner\",event=\"started\"} 1", output, StringComparison.Ordinal);
+        Assert.Contains("weir_module_jobs_total{module=\"processing\",event=\"started\"} 1", output, StringComparison.Ordinal);
         Assert.Contains("weir_module_jobs_total{module=\"other\",event=\"failed\"} 1", output, StringComparison.Ordinal);
         Assert.Contains("weir_module_queue_depth{module=\"other\"} 1", output, StringComparison.Ordinal);
         Assert.Contains("weir_http_requests_total 2", output, StringComparison.Ordinal);
         Assert.Contains("weir_log_records_total{level=\"error\"} 1", output, StringComparison.Ordinal);
         Assert.DoesNotContain("weir_module_savings_bytes_total", output, StringComparison.Ordinal);
 
-        store.RecordModuleSavings("refiner", 12_345_678);
-        store.RecordModuleSavings("refiner", 0);
+        store.RecordModuleSavings("processing", 12_345_678);
+        store.RecordModuleSavings("processing", 0);
         store.RecordModuleSavings("other", 9_876_543);
         output = store.RenderPrometheus();
         Assert.Contains("# TYPE weir_module_savings_bytes_total counter", output, StringComparison.Ordinal);
-        Assert.Contains("weir_module_savings_bytes_total{module=\"refiner\"} 12345678", output, StringComparison.Ordinal);
+        Assert.Contains("weir_module_savings_bytes_total{module=\"processing\"} 12345678", output, StringComparison.Ordinal);
         var summary = PyJsonWriter.Dumps(store.SuiteMetricsOut(), PyJsonFormat.Response);
         Assert.Contains("\"error_log_count\":1,\"status_counts\":{\"2xx\":1,\"3xx\":0,\"4xx\":0,\"5xx\":1}", summary, StringComparison.Ordinal);
         Assert.Contains("{\"route\":\"GET /api/v1/health\",\"request_count\":1,\"average_response_ms\":12.5}", summary, StringComparison.Ordinal);
@@ -326,11 +326,11 @@ public sealed class PlatformRulesTests
         Assert.Equal("Blocked provider URL host: 10.0.0.1", Error("x", "discord", "http://10.0.0.1/x"));
         Assert.Equal("Blocked provider URL host: localhost", Error("x", "discord", "http://LOCALHOST:80/x", "job_failed"));
         Assert.Equal("Blocked provider URL scheme: ftp", Error("x", "discord", "ftp://example.com/x", "job_failed"));
-        Assert.Equal("Unknown events: nope. Supported: job_completed, job_failed, refiner_job_completed, refiner_job_failed", Error("x", "discord", "https://example.com/x", "nope"));
+        Assert.Equal("Unknown events: nope. Supported: job_completed, job_failed, processing_job_completed, processing_job_failed", Error("x", "discord", "https://example.com/x", "nope"));
         Assert.Equal("At least one event must be selected.", Error("x", "discord", "https://example.com/x"));
         Assert.Equal("Label must not be empty.", Error("  ", "discord", "https://example.com/x", "job_failed"));
         Assert.Equal("Invalid IPv6 URL", Error("x", "discord", "https://[::1/x", "job_failed"));
-        Assert.Equal("[\"job_failed\", \"refiner_job_completed\"]", NotificationRules.SerializeEvents(["job_failed", "refiner_job_completed"]));
+        Assert.Equal("[\"job_failed\", \"processing_job_completed\"]", NotificationRules.SerializeEvents(["job_failed", "processing_job_completed"]));
         Assert.Equal(["job_failed"], NotificationRules.ParseEvents("[\"job_failed\", 5]"));
         Assert.Empty(NotificationRules.ParseEvents("{bad"));
 
@@ -350,14 +350,14 @@ public sealed class PlatformRulesTests
         // attempt about to retry. Fixed here to say a retry is coming instead, using the same #488
         // vocabulary WorkerFailures already uses for the stored job error.
         Assert.Equal(
-            ("refiner_job_completed", "Weir job completed", "Job 5 (refiner.test.v1) finished successfully."),
-            NotificationRules.JobNotification("refiner", "completed", 5, "refiner.test.v1"));
+            ("processing_job_completed", "Weir job completed", "Job 5 (processing.test.v1) finished successfully."),
+            NotificationRules.JobNotification("processing", "completed", 5, "processing.test.v1"));
         Assert.Equal(
-            ("refiner_job_failed", "Weir job failed", "Job 5 (refiner.test.v1) exhausted all retry attempts."),
-            NotificationRules.JobNotification("refiner", "failed", 5, "refiner.test.v1"));
+            ("processing_job_failed", "Weir job failed", "Job 5 (processing.test.v1) exhausted all retry attempts."),
+            NotificationRules.JobNotification("processing", "failed", 5, "processing.test.v1"));
         Assert.Equal(
-            ("refiner_job_failed", "Weir job failed", "Job 5 (refiner.test.v1) failed. Weir will try this job again shortly."),
-            NotificationRules.JobNotification("refiner", "failed", 5, "refiner.test.v1", willRetry: true));
+            ("processing_job_failed", "Weir job failed", "Job 5 (processing.test.v1) failed. Weir will try this job again shortly."),
+            NotificationRules.JobNotification("processing", "failed", 5, "processing.test.v1", willRetry: true));
     }
 
     private static UserSessionRecord Session(DateTime now, DateTime absolute, DateTime lastSeen) =>

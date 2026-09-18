@@ -4,8 +4,8 @@ using Weir.Core.Media;
 namespace Weir.Core.Tests.Media;
 
 /// <summary>
-/// Ports of the pure assertions in <c>test_refiner_remux_mux_validation.py</c>, <c>test_refiner_probe_controls.py</c>
-/// and <c>test_refiner_ffprobe_log_levels.py</c>: staged-output duration checks, the integrity command line and
+/// Ports of the pure assertions in <c>test_processing_remux_mux_validation.py</c>, <c>test_processing_probe_controls.py</c>
+/// and <c>test_processing_ffprobe_log_levels.py</c>: staged-output duration checks, the integrity command line and
 /// failure, probe controls, unreadable-media classification and the twelve-hour projection stop.
 /// </summary>
 public sealed class ProbeOutputTests

@@ -81,13 +81,13 @@ function parseDetail(
 function entryOutcome(ev: ActivityEventItem): RunOutcome | null {
   const type = ev.event_type;
   if (
-    type === "refiner.file_passed_through" ||
-    type === "refiner.file_reject_fell_back"
+    type === "processing.file_passed_through" ||
+    type === "processing.file_reject_fell_back"
   )
     return "handed back";
-  if (type === "refiner.file_rejected") return "rejected";
+  if (type === "processing.file_rejected") return "rejected";
   if (ev.result === "failed") return "failed";
-  if (type === "refiner.file_remux_pass_completed") {
+  if (type === "processing.file_remux_pass_completed") {
     const detail = parseDetail(ev.detail);
     if (detail.pass_through_unchanged === true) return "handed back";
     if (detail.outcome === "live_skipped_not_required")

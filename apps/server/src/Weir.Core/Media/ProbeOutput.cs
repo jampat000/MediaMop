@@ -300,7 +300,7 @@ public static class ProbeOutput
 
     // --- log payloads ------------------------------------------------------------------
 
-    /// <summary>The <c>REFINER_FFPROBE_FILE_STATE</c> JSON.</summary>
+    /// <summary>The <c>PROCESSING_FFPROBE_FILE_STATE</c> JSON.</summary>
     public static string FileStateLogPayload(string path, string resolvedPath, bool exists, bool isFile, long sizeBytes, string suffix, double mtimeEpoch) =>
         PyJsonWriter.Dumps(
             new PyDict()
@@ -313,7 +313,7 @@ public static class ProbeOutput
             .Set("mtime_epoch", mtimeEpoch),
             PyJsonFormat.Default);
 
-    /// <summary>The <c>REFINER_FFPROBE_CALL</c> JSON.</summary>
+    /// <summary>The <c>PROCESSING_FFPROBE_CALL</c> JSON.</summary>
     public static string CallLogPayload(string path, IEnumerable<string> argv) =>
         PyJsonWriter.Dumps(
             new PyDict()
@@ -321,7 +321,7 @@ public static class ProbeOutput
             .Set("argv", new PyList(argv.Select(a => (PyJson)new PyStr(PyText.Clip(a, 256))))),
             PyJsonFormat.Default);
 
-    /// <summary>The <c>REFINER_FFPROBE_RESULT</c> JSON.</summary>
+    /// <summary>The <c>PROCESSING_FFPROBE_RESULT</c> JSON.</summary>
     public static string ResultLogPayload(string path, int returnCode, string stdout, string stderr) =>
         PyJsonWriter.Dumps(
             new PyDict()

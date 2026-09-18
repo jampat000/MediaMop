@@ -27,10 +27,10 @@ public static class LibraryModeServices
         services.TryAddSingleton<Processes.IProcessRunner, Processes.ProcessRunner>();
         services.TryAddSingleton<MediaTools>();
 
-        // The #506 safe swap: real files, real journal (refiner_jobs.payload_json — no new table), the #500 seam.
+        // The #506 safe swap: real files, real journal (jobs.payload_json — no new table), the #500 seam.
         services.TryAddSingleton<ISwapFileSystem>(_ => PhysicalSwapFileSystem.Instance);
-        services.TryAddSingleton(sp => new RefinerJobSwapJournal(sp.GetRequiredService<SqliteDatabase>()));
-        services.TryAddSingleton<ISwapJournal>(sp => sp.GetRequiredService<RefinerJobSwapJournal>());
+        services.TryAddSingleton(sp => new ProcessingJobSwapJournal(sp.GetRequiredService<SqliteDatabase>()));
+        services.TryAddSingleton<ISwapJournal>(sp => sp.GetRequiredService<ProcessingJobSwapJournal>());
         services.TryAddSingleton<ISwapOutputValidator, RemuxOutputSwapValidator>();
         services.TryAddSingleton<SafeSwap>();
         services.TryAddSingleton<SwapRecoverySweep>();
@@ -41,7 +41,7 @@ public static class LibraryModeServices
         services.TryAddSingleton<RedownloadRiskChecker>();
 
         // #509: what a clean removed for good, and asking a manager to redownload a title that is missing it.
-        // FileLogRemovedTrackStore is durable (refiner_file_logs.detail_json — no migration, ADR-0017); the
+        // FileLogRemovedTrackStore is durable (file_logs.detail_json — no migration, ADR-0017); the
         // redownload tracker stays in-memory (see its own remarks) since nothing yet calls its ClearAsync hook.
         services.TryAddSingleton<IRemovedTrackStore, FileLogRemovedTrackStore>();
         services.TryAddSingleton<IRedownloadTracker, InMemoryRedownloadTracker>();

@@ -4,11 +4,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Weir.Core.Activity;
 using Weir.Core.Configuration;
-using Weir.Core.Refiner;
+using Weir.Core.Processing;
 using Weir.Core.Time;
 using Weir.Core.Workers;
 using Weir.Infrastructure.Activity;
-using Weir.Infrastructure.Refiner;
+using Weir.Infrastructure.Processing;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Sqlite;
 

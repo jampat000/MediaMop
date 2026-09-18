@@ -14,7 +14,7 @@ public static partial class RemuxRules
         IReadOnlyList<ProbeStreamInfo> video,
         IReadOnlyList<ProbeStreamInfo> audio,
         IReadOnlyList<ProbeStreamInfo> subtitles,
-        RefinerRulesConfig config,
+        ProcessingRulesConfig config,
         IReadOnlyList<ProbeStreamInfo>? attachments = null)
     {
         ArgumentNullException.ThrowIfNull(video);

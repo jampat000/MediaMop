@@ -104,7 +104,7 @@ public sealed class SuiteApiTests
     {
         var catalog = new FakeReleaseCatalog();
         await using var server = await WeirTestServer.StartAsync(
-            [("WEIR_SESSION_SECRET", Secret), ("WEIR_REFINER_WORKER_COUNT", "0"), ("WEIR_VERSION", "1.0.0")],
+            [("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), ("WEIR_VERSION", "1.0.0")],
             configureServices: services => services.AddSingleton<IReleaseCatalogClient>(catalog));
         await TestDatabase.SeedAdminAsync(server);
         var client = new ApiTestClient(server);
@@ -240,10 +240,10 @@ public sealed class SuiteApiTests
         bad["format_version"] = 999;
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsync("/api/v1/system/suite-configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = bad })).StatusCode);
 
-        var python = JsonNode.Parse(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "Fixtures", "python-bundle-v4.json")));
-        using var fromPython = await client.PutAsync("/api/v1/system/suite-configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = python });
-        Assert.Equal(HttpStatusCode.OK, fromPython.StatusCode);
-        Assert.Equal("Exported By Python", (await Json(fromPython))["suite_settings"]!["product_display_name"]!.GetValue<string>());
+        var olderFormat = JsonNode.Parse(await File.ReadAllTextAsync(Path.Join(AppContext.BaseDirectory, "Fixtures", "bundle-v4.json")));
+        using var fromOlder = await client.PutAsync("/api/v1/system/suite-configuration-bundle", new { csrf_token = await client.CsrfAsync(), bundle = olderFormat });
+        Assert.Equal(HttpStatusCode.OK, fromOlder.StatusCode);
+        Assert.Equal("Exported By An Older Weir", (await Json(fromOlder))["suite_settings"]!["product_display_name"]!.GetValue<string>());
     }
 
     [Fact]
@@ -310,15 +310,15 @@ public sealed class SuiteApiTests
         Assert.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
         Assert.Contains("RESET", await Detail(wrong), StringComparison.Ordinal);
 
-        await TestDatabase.ExecuteAsync(server, "INSERT INTO refiner_jobs (dedupe_key, job_kind, status) VALUES ('refiner-done', 'refiner.file.remux_pass.v1', 'completed'), ('refiner-pending', 'refiner.file.remux_pass.v1', 'pending')");
+        await TestDatabase.ExecuteAsync(server, "INSERT INTO jobs (dedupe_key, job_kind, status) VALUES ('processing-done', 'processing.file.remux_pass.v1', 'completed'), ('processing-pending', 'processing.file.remux_pass.v1', 'pending')");
         using var reset = await client.PostAsync("/api/v1/suite/operational-history/reset", new { csrf_token = await client.CsrfAsync(), confirm = "RESET" });
         Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
         var body = await Json(reset);
         Assert.Equal("reset", body["status"]!.GetValue<string>());
         Assert.True(body["activity_events_deleted"]!.GetValue<int>() >= 1);
-        Assert.Equal(1, body["refiner_jobs_deleted"]!.GetValue<int>());
-        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM refiner_jobs WHERE dedupe_key = 'refiner-pending'"));
-        Assert.Equal(0, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM refiner_jobs WHERE dedupe_key = 'refiner-done'"));
+        Assert.Equal(1, body["jobs_deleted"]!.GetValue<int>());
+        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM jobs WHERE dedupe_key = 'processing-pending'"));
+        Assert.Equal(0, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM jobs WHERE dedupe_key = 'processing-done'"));
     }
 
     [Fact]

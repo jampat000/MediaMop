@@ -4,7 +4,7 @@ using Weir.Core.Time;
 
 namespace Weir.Core.Jobs;
 
-/// <summary>The pure rules behind <c>weir.refiner.jobs_ops</c>: retry backoff, dedupe tombstones and audit wording.</summary>
+/// <summary>The pure rules behind <c>weir.processing.jobs_ops</c>: retry backoff, dedupe tombstones and audit wording.</summary>
 public static class JobQueueRules
 {
     public const int DedupeKeyMaxLength = 512;
@@ -60,9 +60,9 @@ public static class JobQueueRules
 }
 
 /// <summary>What startup recovery did (port of <c>StartupJobRecoveryResult</c>).</summary>
-public sealed record StartupJobRecoveryResult(int RefinerRequeued, int RefinerFailed)
+public sealed record StartupJobRecoveryResult(int ProcessingRequeued, int ProcessingFailed)
 {
-    public int TotalRecovered => RefinerRequeued + RefinerFailed;
+    public int TotalRecovered => ProcessingRequeued + ProcessingFailed;
 }
 
 /// <summary>The status and error a leased row gets when a restart finds it (port of <c>_recover_table</c>).</summary>
@@ -84,12 +84,12 @@ public static class StartupJobRecovery
         var iso = PyDateTime.FromDateTimeOffset(now).IsoFormat('T');
         return attempts >= max
             ? new StartupRecoveryDecision(
-                RefinerJobStatus.Failed,
+                ProcessingJobStatus.Failed,
                 "This job was interrupted by a Weir restart after its final attempt. " +
                 $"Recovered at {iso} and marked failed so the operator can inspect it.",
                 Requeued: false)
             : new StartupRecoveryDecision(
-                RefinerJobStatus.Pending,
+                ProcessingJobStatus.Pending,
                 "This job was interrupted by a Weir restart. " +
                 $"Recovered at {iso} and queued for another safe attempt.",
                 Requeued: true);

@@ -201,10 +201,10 @@ describe("SettingsMediaManagersTab", () => {
     const { container } = render(<SettingsMediaManagersTab />, { wrapper });
     await screen.findByText(/Nothing is connected yet/i);
 
-    // The intro used to explain Radarr, Sonarr, Deluno and Refiner in one
+    // The intro used to explain Radarr, Sonarr, Deluno and Processing in one
     // breath. None of that helps someone deciding what this screen is for.
     const text = container.textContent ?? "";
-    expect(text).not.toContain("Refiner");
+    expect(text).not.toContain("Processing");
   });
 
   it("adds a manager of a kind that never had columns of its own", async () => {

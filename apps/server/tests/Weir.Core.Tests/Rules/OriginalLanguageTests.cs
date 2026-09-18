@@ -3,7 +3,7 @@ using Weir.Core.Rules;
 namespace Weir.Core.Tests.Rules;
 
 /// <summary>
-/// Ported from <c>apps/backend/tests/test_refiner_original_language.py</c>: the selection and
+/// Ported from <c>apps/backend/tests/test_processing_original_language.py</c>: the selection and
 /// language-code mapping tests. The TMDb provider tests (HTTP, caching, SSRF refusal) belong to
 /// the metadata provider port and are not here.
 /// </summary>

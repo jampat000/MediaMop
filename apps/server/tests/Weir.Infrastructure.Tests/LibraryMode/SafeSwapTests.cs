@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Weir.Core.LibraryMode;
 using Weir.Infrastructure.LibraryMode;
-using Weir.Infrastructure.Refiner.RemuxPass;
+using Weir.Infrastructure.Processing.RemuxPass;
 using Weir.Infrastructure.Tests.Media;
 
 namespace Weir.Infrastructure.Tests.LibraryMode;

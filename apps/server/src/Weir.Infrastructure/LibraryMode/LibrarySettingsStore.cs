@@ -4,10 +4,10 @@ using Weir.Infrastructure.Sqlite;
 namespace Weir.Infrastructure.LibraryMode;
 
 /// <summary>
-/// Per-library #505 settings (<see cref="LibrarySettings"/>): real columns on <c>refiner_libraries</c>
+/// Per-library #505 settings (<see cref="LibrarySettings"/>): real columns on <c>libraries</c>
 /// (<c>library_schedule_enabled</c>, <c>clean_hardlinked_files</c>, <c>skip_if_manager_would_redownload</c>)
 /// plus the <c>library_folders</c> table, since #557's migration (0038_library_mode_settings) moved this off
-/// the one permanent <c>refiner_jobs</c> row per library that job-row retention could otherwise prune.
+/// the one permanent <c>jobs</c> row per library that job-row retention could otherwise prune.
 /// </summary>
 public static class LibrarySettingsStore
 {
@@ -25,7 +25,7 @@ public static class LibrarySettingsStore
     {
         ArgumentNullException.ThrowIfNull(uow);
         var rows = await uow.QueryAsync(
-            "SELECT library_schedule_enabled, clean_hardlinked_files, skip_if_manager_would_redownload FROM refiner_libraries WHERE id = @id",
+            "SELECT library_schedule_enabled, clean_hardlinked_files, skip_if_manager_would_redownload FROM libraries WHERE id = @id",
             reader => (
                 ScheduleEnabled: SqliteValues.GetBool(reader, 0),
                 CleanHardlinkedFiles: SqliteValues.GetBool(reader, 1),
@@ -46,7 +46,7 @@ public static class LibrarySettingsStore
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(settings);
         await uow.ExecuteAsync(
-            "UPDATE refiner_libraries SET library_schedule_enabled = @schedule, clean_hardlinked_files = @clean_hardlinked, " +
+            "UPDATE libraries SET library_schedule_enabled = @schedule, clean_hardlinked_files = @clean_hardlinked, " +
             "skip_if_manager_would_redownload = @skip_redownload, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
             ("@schedule", settings.ScheduleEnabled ? 1 : 0),
             ("@clean_hardlinked", settings.CleanHardlinkedFiles ? 1 : 0),
@@ -63,16 +63,16 @@ public static class LibrarySettingsStore
     }
 
     /// <summary>Removes a library's scan-history rows (the library itself is being deleted; its settings and folder
-    /// rows go with it automatically — <c>library_folders</c>/<c>library_files</c> both cascade from <c>refiner_libraries</c>).</summary>
+    /// rows go with it automatically — <c>library_folders</c>/<c>library_files</c> both cascade from <c>libraries</c>).</summary>
     public static async Task DeleteAllForLibraryAsync(UnitOfWork uow, long libraryId)
     {
         ArgumentNullException.ThrowIfNull(uow);
         await uow.ExecuteAsync(
-            "DELETE FROM refiner_jobs WHERE job_kind = @scanKind AND dedupe_key LIKE @prefix ESCAPE '\\'",
+            "DELETE FROM jobs WHERE job_kind = @scanKind AND dedupe_key LIKE @prefix ESCAPE '\\'",
             ("@scanKind", LibraryModeJobKinds.ScanKind),
             ("@prefix", EscapeLike(LibraryModeJobKinds.ScanDedupeKeyPrefix(libraryId)) + "%")).ConfigureAwait(false);
         await uow.ExecuteAsync(
-            "DELETE FROM refiner_jobs WHERE job_kind = @cleanKind AND dedupe_key LIKE @prefix ESCAPE '\\'",
+            "DELETE FROM jobs WHERE job_kind = @cleanKind AND dedupe_key LIKE @prefix ESCAPE '\\'",
             ("@cleanKind", LibraryModeJobKinds.CleanKind),
             ("@prefix", EscapeLike($"{LibraryModeJobKinds.CleanKind}:{libraryId}:") + "%")).ConfigureAwait(false);
     }

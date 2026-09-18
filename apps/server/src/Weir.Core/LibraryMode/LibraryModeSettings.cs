@@ -1,5 +1,5 @@
 using Weir.Core.Json;
-using Weir.Core.Refiner;
+using Weir.Core.Processing;
 
 namespace Weir.Core.LibraryMode;
 
@@ -9,10 +9,10 @@ namespace Weir.Core.LibraryMode;
 /// <remarks>
 /// Built while ADR-0017 froze the SQLite schema, so #505's state originally lived on job rows rather than
 /// new tables. Issue #557 (after the freeze ended with #523) moved the per-library settings
-/// (<see cref="LibrarySettings"/>) onto real <c>refiner_libraries</c> columns and the <c>library_folders</c>
+/// (<see cref="LibrarySettings"/>) onto real <c>libraries</c> columns and the <c>library_folders</c>
 /// table, and the scan index onto <c>library_files</c> — see <c>Weir.Infrastructure.LibraryMode.LibrarySettingsStore</c>/
 /// <c>LibraryScanStore</c> and <c>apps/server/README.md</c>, "Library mode" for the current storage.
-/// <see cref="ScanKind"/> is still an ordinary <c>refiner_jobs</c> row (a scan is real, visible work with a
+/// <see cref="ScanKind"/> is still an ordinary <c>jobs</c> row (a scan is real, visible work with a
 /// lifecycle); only its bulky per-file payload moved to <c>library_files</c>.
 /// </remarks>
 public static class LibraryModeJobKinds
@@ -23,10 +23,10 @@ public static class LibraryModeJobKinds
     /// <c>library_files</c> (see <c>LibraryScanStore</c>). The latest completed row for a library is read
     /// as that library's current scan status.
     /// </summary>
-    public const string ScanKind = "refiner.library.scan.v1";
+    public const string ScanKind = "processing.library.scan.v1";
 
     /// <summary>One row per file Weir is asked to clean in place. Runs the remux pass in <c>mode: library</c>, then the #506 safe swap.</summary>
-    public const string CleanKind = "refiner.library.clean.v1";
+    public const string CleanKind = "processing.library.clean.v1";
 
     public static string ScanDedupeKey(long libraryId) => $"{ScanKind}:{libraryId}:{Guid.NewGuid():N}";
 
@@ -35,7 +35,7 @@ public static class LibraryModeJobKinds
 
     public static string CleanDedupeKey(long libraryId, string path)
     {
-        // Bounded and filesystem-agnostic: refiner_jobs.dedupe_key is VARCHAR(512), and a path can contain
+        // Bounded and filesystem-agnostic: jobs.dedupe_key is VARCHAR(512), and a path can contain
         // anything. The hash keeps one row per (library, path) without ever running long or needing escaping.
         var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path)));
         return $"{CleanKind}:{libraryId}:{hash}";
@@ -44,7 +44,7 @@ public static class LibraryModeJobKinds
 
 /// <summary>
 /// Library jobs (scan and clean) always sort after every download-pipeline job: #505 says "library jobs queue behind download
-/// jobs". <c>refiner_jobs.priority</c> is claimed highest-first (<c>ORDER BY priority DESC, id ASC</c>), and a stuck job's
+/// jobs". <c>jobs.priority</c> is claimed highest-first (<c>ORDER BY priority DESC, id ASC</c>), and a stuck job's
 /// priority is only ever bumped upward to <c>max(pending) + 1</c>, so a library job at this very low, fixed priority is always
 /// claimed after any real download-pipeline job, however long those have waited.
 /// </summary>
@@ -92,7 +92,7 @@ public sealed record LibrarySettings(
     }
 }
 
-/// <summary>A library folder failed validation (mirrors <see cref="RefinerLibraryException"/> for the same family of checks).</summary>
+/// <summary>A library folder failed validation (mirrors <see cref="ProcessingLibraryException"/> for the same family of checks).</summary>
 public sealed class LibraryModeException : Exception
 {
     public LibraryModeException(string message)
@@ -114,7 +114,7 @@ public static class LibraryFolderRules
     /// may deliberately be the same folders a media manager (or another Weir library) already watches — #505 says so
     /// explicitly ("These may be the same folders a manager uses, or not").
     /// </summary>
-    public static IReadOnlyList<string> Validate(IReadOnlyList<string> folders, RefinerLibraryRecord library)
+    public static IReadOnlyList<string> Validate(IReadOnlyList<string> folders, ProcessingLibraryRecord library)
     {
         ArgumentNullException.ThrowIfNull(folders);
         ArgumentNullException.ThrowIfNull(library);

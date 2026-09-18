@@ -506,8 +506,8 @@ public static class MediaManagerEndpoints
         }
 
         await SqliteActivityWriter.RecordAsync(uow, new ActivityEventDraft(
-            ActivityEventTypes.RefinerHandoffCancelled,
-            "refiner",
+            ActivityEventTypes.ProcessingHandoffCancelled,
+            "processing",
             IntakeRules.CancelledTitle(key, row.RelativePath, OperatingSystem.IsWindows()),
             IntakeRules.CancelledDetail(key, row.HandoffId, row.RelativePath, row.LibraryId, sentence))).ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);

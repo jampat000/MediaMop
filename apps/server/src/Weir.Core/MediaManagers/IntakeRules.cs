@@ -11,14 +11,14 @@ public sealed record IntakeLibrary(long Id, string MediaType, string WatchedFold
 /// <summary>The rules of <c>intake_api</c> that do not touch the database or filesystem.</summary>
 public static partial class IntakeRules
 {
-    /// <summary><c>REFINER_FILE_REMUX_PASS_JOB_KIND</c>.</summary>
-    public const string RemuxPassJobKind = "refiner.file.remux_pass.v1";
+    /// <summary><c>PROCESSING_FILE_REMUX_PASS_JOB_KIND</c>.</summary>
+    public const string RemuxPassJobKind = "processing.file.remux_pass.v1";
 
-    /// <summary><c>REFINER_FILE_PASS_THROUGH_JOB_KIND</c>.</summary>
-    public const string PassThroughJobKind = "refiner.file.pass_through.v1";
+    /// <summary><c>PROCESSING_FILE_PASS_THROUGH_JOB_KIND</c>.</summary>
+    public const string PassThroughJobKind = "processing.file.pass_through.v1";
 
-    /// <summary><c>REFINER_FILE_REJECT_JOB_KIND</c>.</summary>
-    public const string RejectJobKind = "refiner.file.reject.v1";
+    /// <summary><c>PROCESSING_FILE_REJECT_JOB_KIND</c>.</summary>
+    public const string RejectJobKind = "processing.file.reject.v1";
 
     public const string MissingSecretDetail = "Invalid or missing X-Webhook-Secret header.";
     public const string NeedsSecretDetail = "Set a webhook secret in Weir so a media manager can ask about hand-offs.";
@@ -110,7 +110,7 @@ public static partial class IntakeRules
     [GeneratedRegex("(^|[^a-z0-9])sample([^a-z0-9]|$)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     public static partial Regex SamplePart();
 
-    /// <summary><c>is_refiner_media_candidate</c> on a name: the pathlib suffix, lower-cased, in the allowlist.</summary>
+    /// <summary><c>is_processing_media_candidate</c> on a name: the pathlib suffix, lower-cased, in the allowlist.</summary>
     public static bool IsMediaCandidateName(string fileName) =>
         RemuxRules.MediaExtensions.Contains(MediaPathNames.Suffix(fileName, windows: false).ToLowerInvariant());
 

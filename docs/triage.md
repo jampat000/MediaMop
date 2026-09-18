@@ -7,7 +7,7 @@ Weir issues should stay practical and reproducible. Every issue needs a clear us
 - `type: bug` - something is broken or behaves incorrectly.
 - `type: enhancement` - a new feature or workflow improvement.
 - `type: docs` - documentation, screenshots, release notes, or support text.
-- `area: refiner` - file remuxing, folder paths, processing events, or Refiner settings.
+- `area: processing` - file remuxing, folder paths, processing events, or Processing settings.
 - `area: dashboard` - overview, module health, runtime health, and summary metrics.
 - `area: installer` - Windows setup, startup behavior, tray app, or upgrade flow.
 - `area: docker` - image build, runtime config, ports, volumes, or container startup.

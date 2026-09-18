@@ -1,6 +1,6 @@
 # Weir — local development (server + web)
 
-This **Weir** repository contains **`apps/server`** (the C# / .NET 10 server: HTTP API, **SQLite**, cookie sessions, the job queue and Refiner), **`apps/web`** (React/Vite) and **`apps/tray`** (the Windows tray app). Media manager connections (Radarr, Sonarr, Deluno, or anything posting Weir's own payload) live under **Settings -> Media managers**; inbound events all arrive at `POST /api/v1/intake/webhook/{source}`. Library automation and failed-import tooling ship as part of the **Refiner** surface, not as separate dashboard apps. See [ADR-0013](adr/ADR-0013-media-managers-are-kinds-not-products.md).
+This **Weir** repository contains **`apps/server`** (the C# / .NET 10 server: HTTP API, **SQLite**, cookie sessions, the job queue and Processing), **`apps/web`** (React/Vite) and **`apps/tray`** (the Windows tray app). Media manager connections (Radarr, Sonarr, Deluno, or anything posting Weir's own payload) live under **Settings -> Media managers**; inbound events all arrive at `POST /api/v1/intake/webhook/{source}`. Library automation and failed-import tooling ship as part of the **Processing** surface, not as separate dashboard apps. See [ADR-0013](adr/ADR-0013-media-managers-are-kinds-not-products.md).
 
 **Local web/API ports** are versioned in **`scripts/dev-ports.json`**; the policy is summarized in **[`docs/ports.md`](ports.md)**.
 

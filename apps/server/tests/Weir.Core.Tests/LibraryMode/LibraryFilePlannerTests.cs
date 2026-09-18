@@ -14,7 +14,7 @@ public sealed class LibraryFilePlannerTests
     private const string NoVideo =
         """{"format":{"duration":"120.0"},"streams":[{"index":0,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"}}]}""";
 
-    private static RefinerRulesConfig EnglishOnlyRules() => new()
+    private static ProcessingRulesConfig EnglishOnlyRules() => new()
     {
         PrimaryAudioLang = "eng",
         SecondaryAudioLang = string.Empty,

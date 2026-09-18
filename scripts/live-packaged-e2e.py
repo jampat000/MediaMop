@@ -379,22 +379,22 @@ class LiveAudit:
             "/api/v1/media-managers/connections",
             "/api/v1/media-managers/connections/999999",
             "/api/v1/pause",
-            "/api/v1/refiner/files?limit=5",
-            "/api/v1/refiner/files/999999/log",
-            "/api/v1/refiner/files/999999/log/download",
-            "/api/v1/refiner/files/999999/why-held",
-            "/api/v1/refiner/hardware",
-            "/api/v1/refiner/jobs/inspection?limit=5",
-            "/api/v1/refiner/libraries",
-            "/api/v1/refiner/libraries/999999",
-            "/api/v1/refiner/libraries/discover/999999",
-            "/api/v1/refiner/libraries/discover/999999/drift",
-            "/api/v1/refiner/maintenance",
-            "/api/v1/refiner/metadata-provider",
-            "/api/v1/refiner/operator-settings",
-            "/api/v1/refiner/overview-stats",
-            "/api/v1/refiner/rule-sets",
-            "/api/v1/refiner/runtime-settings",
+            "/api/v1/processing/files?limit=5",
+            "/api/v1/processing/files/999999/log",
+            "/api/v1/processing/files/999999/log/download",
+            "/api/v1/processing/files/999999/why-held",
+            "/api/v1/processing/hardware",
+            "/api/v1/processing/jobs/inspection?limit=5",
+            "/api/v1/processing/libraries",
+            "/api/v1/processing/libraries/999999",
+            "/api/v1/processing/libraries/discover/999999",
+            "/api/v1/processing/libraries/discover/999999/drift",
+            "/api/v1/processing/maintenance",
+            "/api/v1/processing/metadata-provider",
+            "/api/v1/processing/operator-settings",
+            "/api/v1/processing/overview-stats",
+            "/api/v1/processing/rule-sets",
+            "/api/v1/processing/runtime-settings",
             "/api/v1/suite/configuration-backups",
             "/api/v1/suite/configuration-backups/999999/download",
             "/api/v1/suite/configuration-bundle",
@@ -572,50 +572,50 @@ class LiveAudit:
         self.screenshot("activity")
         self.record("Activity feed, filters, bounded refresh state, and clear action")
 
-    def refiner(self) -> None:
+    def processing(self) -> None:
         self.open_sidebar("Processing")
-        self.visible(self.page.get_by_test_id("refiner-scope-page"), "Processing page")
+        self.visible(self.page.get_by_test_id("processing-scope-page"), "Processing page")
         expected = {
-            "Overview": "refiner-overview-panel",
-            "Libraries": "refiner-libraries-section",
-            "Audio & subtitles": "refiner-rule-set-workspace",
-            "Schedules": "refiner-schedules-section",
-            "Files": "refiner-files-section",
-            "Jobs": "refiner-jobs-inspection-section",
-            "Maintenance": "refiner-maintenance-section",
+            "Overview": "processing-overview-panel",
+            "Libraries": "processing-libraries-section",
+            "Audio & subtitles": "processing-rule-set-workspace",
+            "Schedules": "processing-schedules-section",
+            "Files": "processing-files-section",
+            "Jobs": "processing-jobs-inspection-section",
+            "Maintenance": "processing-maintenance-section",
         }
         for tab, test_id in expected.items():
             self.click(
                 self.page.get_by_role("tab", name=tab, exact=True),
-                f"open Refiner {tab} tab",
+                f"open Processing {tab} tab",
             )
-            self.visible(self.page.get_by_test_id(test_id), f"Refiner {tab} panel")
+            self.visible(self.page.get_by_test_id(test_id), f"Processing {tab} panel")
 
             if tab == "Libraries":
                 edit_buttons = self.page.get_by_role("button", name="Edit", exact=True)
                 if edit_buttons.count():
-                    self.click(edit_buttons.first, "open Refiner library editor")
+                    self.click(edit_buttons.first, "open Processing library editor")
                     self.visible(
-                        self.page.get_by_test_id("refiner-library-form"),
-                        "Refiner library form",
+                        self.page.get_by_test_id("processing-library-form"),
+                        "Processing library form",
                     )
                     cancel = self.page.get_by_role("button", name="Cancel", exact=True)
                     if cancel.count():
-                        self.click(cancel.last, "cancel Refiner library editor")
+                        self.click(cancel.last, "cancel Processing library editor")
             elif tab == "Schedules":
                 self.require(
                     self.page.get_by_text(
                         "TV watched-folder window", exact=True
                     ).count()
                     > 0,
-                    "Refiner TV schedule controls missing",
+                    "Processing TV schedule controls missing",
                 )
                 self.require(
                     self.page.get_by_text(
                         "Movies watched-folder window", exact=True
                     ).count()
                     > 0,
-                    "Refiner Movies schedule controls missing",
+                    "Processing Movies schedule controls missing",
                 )
             elif tab == "Files":
                 self.page.get_by_placeholder("part of a file or folder name").fill(
@@ -623,7 +623,7 @@ class LiveAudit:
                 )
                 self.click(
                     self.page.get_by_role("button", name=re.compile(r"All \(")),
-                    "filter Refiner files",
+                    "filter Processing files",
                 )
             elif tab == "Maintenance":
                 self.require(
@@ -631,12 +631,12 @@ class LiveAudit:
                         "What this instance is running with", exact=True
                     ).count()
                     > 0,
-                    "Refiner runtime settings are missing",
+                    "Processing runtime settings are missing",
                 )
 
-        self.screenshot("refiner")
+        self.screenshot("processing")
         self.record(
-            "Refiner overview, libraries, remux, schedules, files, jobs, and maintenance tabs"
+            "Processing overview, libraries, remux, schedules, files, jobs, and maintenance tabs"
         )
 
     def settings_general_and_setup(self) -> None:
@@ -979,20 +979,20 @@ class LiveAudit:
             "media-manager create, secret generation, enable/disable, connection test, and remove"
         )
 
-    def refiner_pass_through_lifecycle(self) -> None:
+    def processing_pass_through_lifecycle(self) -> None:
         """Prove an unchanged file reaches output before its watched source is removed."""
 
         configured = bool(FIXTURE_HOST_ROOT_RAW or FIXTURE_SERVER_ROOT)
         if not configured:
             self.record(
-                "Refiner pass-through lifecycle skipped (no controlled fixture mount)"
+                "Processing pass-through lifecycle skipped (no controlled fixture mount)"
             )
             return
         self.require(
             bool(FIXTURE_HOST_ROOT_RAW and FIXTURE_SERVER_ROOT),
-            "both Refiner fixture host and server roots are required",
+            "both Processing fixture host and server roots are required",
         )
-        self.require(bool(FIXTURE_FFMPEG), "Refiner fixture FFmpeg command is required")
+        self.require(bool(FIXTURE_FFMPEG), "Processing fixture FFmpeg command is required")
 
         host_root = Path(FIXTURE_HOST_ROOT_RAW).expanduser().resolve()
         host_root.mkdir(parents=True, exist_ok=True)
@@ -1054,7 +1054,7 @@ class LiveAudit:
             return root + server_separator + server_separator.join(parts)
 
         # The seeded Movies library is configured directly; the path-settings route was retired in #460.
-        libraries = self.browser_api("GET", "/api/v1/refiner/libraries")
+        libraries = self.browser_api("GET", "/api/v1/processing/libraries")
         movies = next(
             (row for row in (libraries.get("payload") or []) if row.get("media_type") == "movie"),
             None,
@@ -1062,7 +1062,7 @@ class LiveAudit:
         self.require(movies is not None, "the install has no Movies library to configure")
         path_result = self.browser_api(
             "PUT",
-            f"/api/v1/refiner/libraries/{movies['id']}",
+            f"/api/v1/processing/libraries/{movies['id']}",
             {
                 "csrf_token": self.csrf_token(),
                 "name": movies["name"],
@@ -1079,7 +1079,7 @@ class LiveAudit:
         )
         enqueue = self.browser_api(
             "POST",
-            "/api/v1/refiner/jobs/file-remux-pass/enqueue",
+            "/api/v1/processing/jobs/file-remux-pass/enqueue",
             {
                 "csrf_token": self.csrf_token(),
                 "relative_media_path": "ForeignFilm/foreign-only.mkv",
@@ -1100,7 +1100,7 @@ class LiveAudit:
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             inspection = self.browser_api(
-                "GET", "/api/v1/refiner/jobs/inspection?limit=100"
+                "GET", "/api/v1/processing/jobs/inspection?limit=100"
             )
             self.require(
                 inspection["status"] == 200,
@@ -1151,7 +1151,7 @@ class LiveAudit:
             json.dumps(proof, indent=2), encoding="utf-8"
         )
         self.record(
-            "Refiner pass-through placed byte-identical output before cleaning the watched source"
+            "Processing pass-through placed byte-identical output before cleaning the watched source"
         )
 
     def settings_history_and_navigation(self) -> None:
@@ -1238,12 +1238,12 @@ def run(playwright: Playwright) -> dict[str, Any]:
         audit.shell_and_responsive()
         audit.in_hand()
         audit.activity()
-        audit.refiner()
+        audit.processing()
         audit.settings_general_and_setup()
         audit.settings_backup_upgrade_logs_security()
         audit.settings_notifications()
         audit.settings_media_managers()
-        audit.refiner_pass_through_lifecycle()
+        audit.processing_pass_through_lifecycle()
         audit.settings_history_and_navigation()
         return audit.finish()
     except Exception:

@@ -7,15 +7,15 @@ import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
-  writeFromRefinerLibrary,
-  type RefinerLibrary,
-  type RefinerMediaType,
-} from "../../lib/refiner/libraries-api";
+  writeFromProcessingLibrary,
+  type ProcessingLibrary,
+  type ProcessingMediaType,
+} from "../../lib/processing/libraries-api";
 import {
-  useCreateRefinerLibrary,
-  useRefinerLibrariesQuery,
-  useUpdateRefinerLibrary,
-} from "../../lib/refiner/libraries-queries";
+  useCreateProcessingLibrary,
+  useProcessingLibrariesQuery,
+  useUpdateProcessingLibrary,
+} from "../../lib/processing/libraries-queries";
 import {
   curatedTimezoneOptionsSorted,
   CURATED_TIMEZONE_ID_SET,
@@ -70,9 +70,9 @@ function WizardSection({
 
 /** The library the wizard edits for a media type: the first one, when any exist. */
 function firstLibraryOfType(
-  libraries: RefinerLibrary[] | undefined,
-  mediaType: RefinerMediaType,
-): RefinerLibrary | undefined {
+  libraries: ProcessingLibrary[] | undefined,
+  mediaType: ProcessingMediaType,
+): ProcessingLibrary | undefined {
   return (libraries ?? [])
     .filter((library) => library.media_type === mediaType)
     .sort((a, b) => a.display_order - b.display_order)[0];
@@ -82,10 +82,10 @@ export function SetupWizardPage() {
   const navigate = useNavigate();
   const me = useMeQuery();
   const settingsQ = useSuiteSettingsQuery();
-  const refinerQ = useRefinerLibrariesQuery();
+  const processingQ = useProcessingLibrariesQuery();
   const saveSuite = useSuiteSettingsSaveMutation();
-  const createLibrary = useCreateRefinerLibrary();
-  const updateLibrary = useUpdateRefinerLibrary();
+  const createLibrary = useCreateProcessingLibrary();
+  const updateLibrary = useUpdateProcessingLibrary();
 
   const [appTimezone, setAppTimezone] = useState<string>("UTC");
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
@@ -101,7 +101,7 @@ export function SetupWizardPage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const seededSettings = useRef(false);
-  const seededRefiner = useRef(false);
+  const seededProcessing = useRef(false);
 
   useEffect(() => {
     if (!settingsQ.data || seededSettings.current) {
@@ -121,20 +121,21 @@ export function SetupWizardPage() {
   }, [settingsQ.data]);
 
   useEffect(() => {
-    if (!refinerQ.data || seededRefiner.current) {
+    if (!processingQ.data || seededProcessing.current) {
       return;
     }
-    seededRefiner.current = true;
-    const movies = firstLibraryOfType(refinerQ.data, "movie");
-    const tv = firstLibraryOfType(refinerQ.data, "tv");
+    seededProcessing.current = true;
+    const movies = firstLibraryOfType(processingQ.data, "movie");
+    const tv = firstLibraryOfType(processingQ.data, "tv");
     setMovieWatchedFolder(movies?.watched_folder ?? "");
     setMovieOutputFolder(movies?.output_folder ?? "");
     setTvWatchedFolder(tv?.watched_folder ?? "");
     setTvOutputFolder(tv?.output_folder ?? "");
-  }, [refinerQ.data]);
+  }, [processingQ.data]);
 
   useEffect(() => {
-    const isLoading = me.isPending || settingsQ.isPending || refinerQ.isPending;
+    const isLoading =
+      me.isPending || settingsQ.isPending || processingQ.isPending;
     const wState = (settingsQ.data?.setup_wizard_state || "pending")
       .trim()
       .toLowerCase();
@@ -144,7 +145,12 @@ export function SetupWizardPage() {
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [me.isPending, settingsQ.isPending, settingsQ.data, refinerQ.isPending]);
+  }, [
+    me.isPending,
+    settingsQ.isPending,
+    settingsQ.data,
+    processingQ.isPending,
+  ]);
 
   const wizardState = (settingsQ.data?.setup_wizard_state || "pending")
     .trim()
@@ -158,7 +164,7 @@ export function SetupWizardPage() {
     [],
   );
 
-  const loading = me.isPending || settingsQ.isPending || refinerQ.isPending;
+  const loading = me.isPending || settingsQ.isPending || processingQ.isPending;
 
   if (loading) {
     return <PageLoading label="Loading setup wizard" />;
@@ -237,9 +243,9 @@ export function SetupWizardPage() {
    * adds one, but only if a folder was entered: an empty library would do nothing.
    */
   async function saveWizardLibrary(
-    libraries: RefinerLibrary[],
+    libraries: ProcessingLibrary[],
     step: {
-      mediaType: RefinerMediaType;
+      mediaType: ProcessingMediaType;
       name: string;
       watchedFolder: string;
       outputFolder: string;
@@ -256,7 +262,7 @@ export function SetupWizardPage() {
       await updateLibrary.mutateAsync({
         id: existing.id,
         data: {
-          ...writeFromRefinerLibrary(existing),
+          ...writeFromProcessingLibrary(existing),
           watched_folder: step.watchedFolder,
           output_folder: step.outputFolder,
         },
@@ -277,7 +283,7 @@ export function SetupWizardPage() {
   async function saveWizardState(nextState: "skipped" | "completed") {
     setStatusMessage(null);
     const current = settingsQ.data!;
-    const librariesCurrent = refinerQ.data;
+    const librariesCurrent = processingQ.data;
 
     if (tvWatchedFolder.trim() && !tvOutputFolder.trim()) {
       setStatusMessage(

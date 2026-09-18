@@ -55,7 +55,7 @@ def ensure_viewer(conn: sqlite3.Connection) -> None:
         seed.insert_user(conn, username=VIEWER_USERNAME, password=VIEWER_PASSWORD, role="viewer")
 
 
-# The four Refiner results the history tests filter on, with the facts the server lifts from each detail.
+# The four Processing results the history tests filter on, with the facts the server lifts from each detail.
 HISTORY_ROWS: tuple[tuple[str, dict[str, Any], dict[str, Any]], ...] = (
     (
         "Heat was handed back",
@@ -81,16 +81,16 @@ HISTORY_ROWS: tuple[tuple[str, dict[str, Any], dict[str, Any]], ...] = (
 
 
 def seed_history(conn: sqlite3.Connection) -> None:
-    """Replace all activity and per-file processing records with the four Refiner results."""
+    """Replace all activity and per-file processing records with the four Processing results."""
 
     now = datetime.now(UTC)
     conn.execute("DELETE FROM activity_events")
-    conn.execute("DELETE FROM refiner_file_logs")
+    conn.execute("DELETE FROM file_logs")
     for offset, (title, detail, facts) in enumerate(HISTORY_ROWS):
         insert_event(
             conn,
-            event_type="refiner.file_remux_pass_completed",
-            module="refiner",
+            event_type="processing.file_remux_pass_completed",
+            module="processing",
             title=title,
             detail=detail,
             created_at=now - timedelta(seconds=10 - offset),
@@ -98,7 +98,7 @@ def seed_history(conn: sqlite3.Connection) -> None:
         )
     for path in ("Heat/heat.mkv", "Alien/alien.mkv"):
         conn.execute(
-            "INSERT INTO refiner_file_logs (library_id, relative_path, title, recorded_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO file_logs (library_id, relative_path, title, recorded_at) VALUES (?, ?, ?, ?)",
             (1, path, "pass", seed.utc_text(now)),
         )
     ensure_viewer(conn)

@@ -158,8 +158,8 @@ public sealed class HandoffCompletionReporter
         }
 
         return SqliteActivityWriter.RecordAsync(uow, new ActivityEventDraft(
-            ActivityEventTypes.RefinerHandoffReported,
-            "refiner",
+            ActivityEventTypes.ProcessingHandoffReported,
+            "processing",
             title,
             PyStrings.Slice(PyJsonWriter.Dumps(detail, PyJsonFormat.Compact), 10_000)));
     }
@@ -260,7 +260,7 @@ public sealed class HandoffCompletionReporter
     /// <summary><c>_manager_output_path</c>: the output as the manager will see it, or null to fall back to the local path.</summary>
     private async Task<string?> ManagerOutputPathAsync(ManagerConnection connection, HandoffOrigin origin, PyDict result, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(origin.LibraryId) || result.Get("output_file") is not PyStr outputFile || result.Get("refiner_output_folder_resolved") is not PyStr localFolder)
+        if (string.IsNullOrEmpty(origin.LibraryId) || result.Get("output_file") is not PyStr outputFile || result.Get("processing_output_folder_resolved") is not PyStr localFolder)
         {
             return null;
         }

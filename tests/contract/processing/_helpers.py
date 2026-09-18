@@ -22,9 +22,9 @@ from tests.contract.support.polling import wait_until
 T = TypeVar("T")
 
 WEBHOOK_SECRET = "contract-webhook-secret-0123456789"
-REMUX_KIND = "refiner.file.remux_pass.v1"
-PASS_THROUGH_KIND = "refiner.file.pass_through.v1"
-REJECT_KIND = "refiner.file.reject.v1"
+REMUX_KIND = "processing.file.remux_pass.v1"
+PASS_THROUGH_KIND = "processing.file.pass_through.v1"
+REJECT_KIND = "processing.file.reject.v1"
 DELUNO_LIBRARY_KEY = "5f2c0a9e"
 DELUNO_OUTPUT_ROOT = "/deluno/processed/movies"
 EVENTS_PATH = "/api/integrations/processors/events"
@@ -35,7 +35,7 @@ def working_env(fake_ffmpeg: FakeFfmpeg, **extra: str) -> dict[str, str]:
 
     return {
         **fake_ffmpeg.env,
-        "WEIR_REFINER_WORKER_COUNT": "1",
+        "WEIR_PROCESSING_WORKER_COUNT": "1",
         "WEIR_MEDIA_MANAGER_WEBHOOK_SECRET": WEBHOOK_SECRET,
         **extra,
     }
@@ -59,8 +59,8 @@ def relax_operator_guards(admin: WeirClient) -> None:
     """No minimum age, size or free space, so a small fresh fixture file is processed at once."""
 
     r = admin.put_csrf(
-        f"{API}/refiner/operator-settings",
-        {"min_file_age_seconds": 0, "refiner_min_input_file_size_mb": 0, "minimum_free_disk_space_mb": 0},
+        f"{API}/processing/operator-settings",
+        {"min_file_age_seconds": 0, "min_input_file_size_mb": 0, "minimum_free_disk_space_mb": 0},
     )
     assert r.status_code == 200, r.text
 
@@ -78,16 +78,16 @@ def create_library(admin: WeirClient, folders: Folders, **overrides: Any) -> dic
         "retry_backoff_seconds": 1,
         **overrides,
     }
-    r = admin.post_csrf(f"{API}/refiner/libraries", body)
+    r = admin.post_csrf(f"{API}/processing/libraries", body)
     assert r.status_code == 201, r.text
     return r.json()
 
 
 def update_library(admin: WeirClient, library: dict[str, Any], **changes: Any) -> dict[str, Any]:
-    r = admin.get(f"{API}/refiner/libraries/{library['id']}")
+    r = admin.get(f"{API}/processing/libraries/{library['id']}")
     assert r.status_code == 200, r.text
     current = r.json()
-    r = admin.put_csrf(f"{API}/refiner/libraries/{library['id']}", _library_put_body(current, changes))
+    r = admin.put_csrf(f"{API}/processing/libraries/{library['id']}", _library_put_body(current, changes))
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -209,7 +209,7 @@ def wait_for_handoff_state(client: WeirClient, handoff_id: str, state: str, *, t
 
 
 def jobs(admin: WeirClient, *, kind: str | None = None) -> list[dict[str, Any]]:
-    r = admin.get(f"{API}/refiner/jobs/inspection", params={"limit": 100})
+    r = admin.get(f"{API}/processing/jobs/inspection", params={"limit": 100})
     assert r.status_code == 200, r.text
     rows = r.json()["jobs"]
     return [row for row in rows if kind is None or row["job_kind"] == kind]
@@ -219,7 +219,7 @@ def files(admin: WeirClient, *, library_id: int | None = None) -> list[dict[str,
     params: dict[str, Any] = {"limit": 1000}
     if library_id is not None:
         params["library_id"] = library_id
-    r = admin.get(f"{API}/refiner/files", params=params)
+    r = admin.get(f"{API}/processing/files", params=params)
     assert r.status_code == 200, r.text
     return r.json()["files"]
 
@@ -243,7 +243,7 @@ def wait_for_file_status(
 
 def enqueue_scan(admin: WeirClient, library: dict[str, Any], *, enqueue_remux_jobs: bool = True) -> int:
     r = admin.post_csrf(
-        f"{API}/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue",
+        f"{API}/processing/jobs/watched-folder-remux-scan-dispatch/enqueue",
         {"media_scope": library["media_type"], "library_id": library["id"], "enqueue_remux_jobs": enqueue_remux_jobs},
     )
     assert r.status_code == 200, r.text
@@ -323,24 +323,24 @@ def failure_attempts_reach(
 
 def _scan_pending(admin: WeirClient) -> bool:
     return any(
-        job["status"] in ("pending", "leased") and job["job_kind"].startswith("refiner.watched_folder")
+        job["status"] in ("pending", "leased") and job["job_kind"].startswith("processing.watched_folder")
         for job in jobs(admin)
     )
 
 
 def file_state_after_stop(server: ServerUnderTest, library_id: int, relative_path: str) -> dict[str, Any]:
-    """The ``refiner_files`` row, read from SQLite with the server stopped (and started again).
+    """The ``files`` row, read from SQLite with the server stopped (and started again).
 
-    Used where ``GET /refiner/files`` cannot answer: it fails with HTTP 500 for any page that contains a
+    Used where ``GET /processing/files`` cannot answer: it fails with HTTP 500 for any page that contains a
     ``passed_through`` or ``rejected`` row, because its response schema does not list those statuses
     (#530; the correct behaviour is asserted in
-    ``tests/contract/refiner/test_refiner_files_pass_through_reject_status.py``).
+    ``tests/contract/processing/test_files_pass_through_reject_status.py``).
     """
 
     with seed.stopped(server) as conn:
         found = seed.rows(
             conn,
-            "SELECT * FROM refiner_files WHERE library_id = ? AND relative_path = ?",
+            "SELECT * FROM files WHERE library_id = ? AND relative_path = ?",
             (library_id, relative_path),
         )
     assert len(found) == 1, found

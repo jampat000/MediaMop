@@ -21,12 +21,12 @@ public sealed record LibraryScanJobRow(long JobId, string Status, string? Payloa
 public static class LibraryScanStore
 {
     /// <summary>
-    /// Enqueues the scan on <paramref name="uow"/>'s own connection and transaction (<see cref="RefinerJobStore.EnqueueOrGet"/>),
-    /// not <see cref="RefinerJobStore.EnqueueOrGetAsync"/>: that opens its own connection, which — called while an API
+    /// Enqueues the scan on <paramref name="uow"/>'s own connection and transaction (<see cref="ProcessingJobStore.EnqueueOrGet"/>),
+    /// not <see cref="ProcessingJobStore.EnqueueOrGetAsync"/>: that opens its own connection, which — called while an API
     /// endpoint's write <see cref="UnitOfWork"/> is still open, as here — can deadlock against it, exactly the trap
-    /// <see cref="Weir.Infrastructure.Refiner.RequeueStore"/> already documents for the same reason.
+    /// <see cref="Weir.Infrastructure.Processing.RequeueStore"/> already documents for the same reason.
     /// </summary>
-    public static Task<RefinerJob> RequestScanAsync(UnitOfWork uow, RefinerJobStore jobs, long libraryId, string trigger)
+    public static Task<ProcessingJob> RequestScanAsync(UnitOfWork uow, ProcessingJobStore jobs, long libraryId, string trigger)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(jobs);
@@ -48,7 +48,7 @@ public static class LibraryScanStore
     /// transaction for the same reason <see cref="RequestScanAsync"/> does. Public so the API layer (a different assembly)
     /// can request a clean without risking the same-connection deadlock.
     /// </summary>
-    public static Task<RefinerJob> EnqueueCleanAsync(UnitOfWork uow, RefinerJobStore jobs, long libraryId, string path, string trigger, bool confirmFinalRemoval)
+    public static Task<ProcessingJob> EnqueueCleanAsync(UnitOfWork uow, ProcessingJobStore jobs, long libraryId, string path, string trigger, bool confirmFinalRemoval)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(jobs);
@@ -74,7 +74,7 @@ public static class LibraryScanStore
     {
         ArgumentNullException.ThrowIfNull(uow);
         return await uow.QuerySingleAsync(
-            "SELECT id, status, last_error FROM refiner_jobs WHERE job_kind = @kind AND dedupe_key LIKE @prefix ESCAPE '\\' " +
+            "SELECT id, status, last_error FROM jobs WHERE job_kind = @kind AND dedupe_key LIKE @prefix ESCAPE '\\' " +
             "AND status IN ('pending', 'leased') ORDER BY id DESC LIMIT 1",
             reader => new LibraryScanJobView(reader.GetInt64(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2)),
             ("@kind", LibraryModeJobKinds.ScanKind),
@@ -86,7 +86,7 @@ public static class LibraryScanStore
     {
         ArgumentNullException.ThrowIfNull(uow);
         return await uow.QuerySingleAsync(
-            "SELECT id, status, payload_json FROM refiner_jobs WHERE job_kind = @kind AND dedupe_key LIKE @prefix ESCAPE '\\' " +
+            "SELECT id, status, payload_json FROM jobs WHERE job_kind = @kind AND dedupe_key LIKE @prefix ESCAPE '\\' " +
             "ORDER BY id DESC LIMIT 1",
             reader => new LibraryScanJobRow(reader.GetInt64(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2)),
             ("@kind", LibraryModeJobKinds.ScanKind),
@@ -105,7 +105,7 @@ public static class LibraryScanStore
     {
         var files = await FilesForLibraryAsync(uow, libraryId).ConfigureAwait(false);
         var latest = await LatestAsync(uow, libraryId).ConfigureAwait(false);
-        if (latest is not { Status: RefinerJobStatus.Completed })
+        if (latest is not { Status: ProcessingJobStatus.Completed })
         {
             // No completed job survives to say a scan ever ran. If library_files still has rows for this
             // library (its own tracking job was pruned), that is itself proof one did; otherwise, nothing
@@ -152,7 +152,7 @@ public static class LibraryScanStore
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(snapshot);
-        var existingJson = await uow.ScalarAsync("SELECT payload_json FROM refiner_jobs WHERE id = @id", ("@id", jobId)).ConfigureAwait(false);
+        var existingJson = await uow.ScalarAsync("SELECT payload_json FROM jobs WHERE id = @id", ("@id", jobId)).ConfigureAwait(false);
         PyDict payload;
         try
         {
@@ -173,7 +173,7 @@ public static class LibraryScanStore
             .Set("generated_at", snapshot.GeneratedAt.ToUnixTimeSeconds())
             .Set("errors", new PyList(snapshot.Errors.Select(e => (PyJson)new PyStr(e)))));
         await uow.ExecuteAsync(
-            "UPDATE refiner_jobs SET payload_json = @payload, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
+            "UPDATE jobs SET payload_json = @payload, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
             ("@payload", PyJsonWriter.Dumps(payload, PyJsonFormat.Compact)),
             ("@id", jobId)).ConfigureAwait(false);
 

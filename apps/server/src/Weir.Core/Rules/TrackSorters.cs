@@ -25,7 +25,7 @@ public sealed class TrackSorterException : Exception
 }
 
 /// <summary>
-/// One entry in the ordered sorter list (<c>refiner_track_sorters.TrackSorter</c>). A null
+/// One entry in the ordered sorter list (<c>processing_track_sorters.TrackSorter</c>). A null
 /// <see cref="Value"/> sorts by the field naturally; anything else is a match test.
 /// </summary>
 public sealed record TrackSorter(string Field, string? Value = null, bool Reversed = false)
@@ -143,8 +143,8 @@ public sealed class SortKeyComparer : IComparer<IReadOnlyList<long>>
 }
 
 /// <summary>
-/// The ordered, editable sorter list (<c>refiner_track_sorters.py</c>): key building, storage
-/// and the seeded default, which reproduces the ranking Refiner used to hardcode.
+/// The ordered, editable sorter list (<c>processing_track_sorters.py</c>): key building, storage
+/// and the seeded default, which reproduces the ranking Processing used to hardcode.
 /// </summary>
 public static partial class TrackSorters
 {

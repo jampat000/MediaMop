@@ -191,7 +191,7 @@ def test_hand_off_ledger_prefix_matching_is_exact_not_a_sql_wildcard(
         # Under SQL LIKE, "Foo_Bar/%" wildcards the "_" and matches this unrelated sibling folder's
         # file too — it is "mid-import" (processing), so a buggy match changes the reported state.
         conn.execute(
-            "INSERT INTO refiner_files (library_id, relative_path, status) VALUES (?, ?, 'processing')",
+            "INSERT INTO files (library_id, relative_path, status) VALUES (?, ?, 'processing')",
             (library_id, "FooXBar/other.mkv"),
         )
 

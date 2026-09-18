@@ -3,7 +3,7 @@ using Weir.Core.Media;
 namespace Weir.Core.Tests.Media;
 
 /// <summary>
-/// Ports of <c>tests/test_refiner_hardware_acceleration.py</c>. The rule every test checks: a device that is
+/// Ports of <c>tests/test_processing_hardware_acceleration.py</c>. The rule every test checks: a device that is
 /// busy, absent, or not compiled in falls back to software with a reason, and never fails a file. Detection
 /// against a fake runner lives in <c>Weir.Infrastructure.Tests</c>; here, reading ffmpeg's answer.
 /// </summary>

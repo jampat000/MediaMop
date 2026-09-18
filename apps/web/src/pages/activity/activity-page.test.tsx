@@ -27,8 +27,8 @@ const mocks = vi.hoisted(() => ({
   removeActivityFileHistory: vi.fn(),
   fetchSuiteOperationalHistoryPreview: vi.fn(),
   resetSuiteOperationalHistory: vi.fn(),
-  fetchRefinerFiles: vi.fn(),
-  fetchRefinerFileLog: vi.fn(),
+  fetchProcessingFiles: vi.fn(),
+  fetchProcessingFileLog: vi.fn(),
 }));
 
 vi.mock("../../lib/activity/queries", () => ({
@@ -51,8 +51,8 @@ vi.mock("../../lib/auth/queries", () => ({
   }),
 }));
 
-vi.mock("../../lib/refiner/libraries-queries", () => ({
-  useRefinerLibrariesQuery: () => ({
+vi.mock("../../lib/processing/libraries-queries", () => ({
+  useProcessingLibrariesQuery: () => ({
     data: [{ id: 3, name: "Movie downloads" }],
   }),
 }));
@@ -73,10 +73,10 @@ vi.mock("../../lib/suite/suite-settings-api", async (importOriginal) => ({
   resetSuiteOperationalHistory: mocks.resetSuiteOperationalHistory,
 }));
 
-vi.mock("../../lib/refiner/files-api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../lib/refiner/files-api")>()),
-  fetchRefinerFiles: mocks.fetchRefinerFiles,
-  fetchRefinerFileLog: mocks.fetchRefinerFileLog,
+vi.mock("../../lib/processing/files-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/processing/files-api")>()),
+  fetchProcessingFiles: mocks.fetchProcessingFiles,
+  fetchProcessingFileLog: mocks.fetchProcessingFileLog,
 }));
 
 beforeAll(() => {
@@ -93,8 +93,8 @@ function event(
 ): ActivityEventItem {
   return {
     created_at: "2026-09-16T22:00:00Z",
-    event_type: "refiner.work_temp_stale_sweep_completed",
-    module: "refiner",
+    event_type: "processing.work_temp_stale_sweep_completed",
+    module: "processing",
     title: "Temporary files cleanup finished",
     detail: null,
     trigger: null,
@@ -151,7 +151,7 @@ function lastQueryFilters(): Record<string, unknown> {
 
 const fileEvent = event({
   id: 40,
-  event_type: "refiner.file_remux_pass_completed",
+  event_type: "processing.file_remux_pass_completed",
   title: "Movie.mkv was processed successfully",
   detail: JSON.stringify({ outcome: "ok", relative_media_path: "Movie.mkv" }),
   library_id: 3,
@@ -250,7 +250,7 @@ describe("ActivityPage", () => {
           event_type: "system.reconciliation.repair",
           module: "system",
           title: "System repair action completed",
-          detail: "remove_refiner_temp_artifact: Removed the temp artifact.",
+          detail: "remove_processing_temp_artifact: Removed the temp artifact.",
         }),
       ]),
     );
@@ -262,7 +262,7 @@ describe("ActivityPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "remove_refiner_temp_artifact: Removed the temp artifact.",
+        "remove_processing_temp_artifact: Removed the temp artifact.",
       ),
     ).toBeInTheDocument();
   });
@@ -275,7 +275,7 @@ describe("ActivityPage", () => {
       recentResult([
         event({
           id: 3,
-          event_type: "refiner.file_remux_pass_completed",
+          event_type: "processing.file_remux_pass_completed",
           title: longTitle,
           detail: JSON.stringify({
             outcome: "ok",
@@ -355,7 +355,7 @@ describe("ActivityPage", () => {
       id: number,
       path: string,
       detail: Record<string, unknown>,
-      eventType = "refiner.file_remux_pass_completed",
+      eventType = "processing.file_remux_pass_completed",
     ) =>
       event({
         id,
@@ -370,7 +370,7 @@ describe("ActivityPage", () => {
       recentResult([
         run(20, "a.mkv", { outcome: "ok" }),
         run(19, "b.mkv", { outcome: "live_skipped_not_required" }),
-        run(18, "c.mkv", {}, "refiner.file_passed_through"),
+        run(18, "c.mkv", {}, "processing.file_passed_through"),
         run(17, "d.mkv", { outcome: "ok" }),
         event({
           id: 10,
@@ -531,13 +531,13 @@ describe("ActivityPage", () => {
     mocks.fetchSuiteOperationalHistoryPreview.mockResolvedValue({
       status: "preview",
       activity_events_deleted: 12,
-      refiner_jobs_deleted: 4,
+      jobs_deleted: 4,
       total_deleted: 16,
     });
     mocks.resetSuiteOperationalHistory.mockResolvedValue({
       status: "reset",
       activity_events_deleted: 12,
-      refiner_jobs_deleted: 4,
+      jobs_deleted: 4,
       total_deleted: 16,
     });
     renderPage();
@@ -593,7 +593,7 @@ describe("ActivityPage", () => {
 
   it("opens the file story for the matching tracked file", async () => {
     mocks.useActivityRecentQuery.mockReturnValue(recentResult([fileEvent]));
-    mocks.fetchRefinerFiles.mockResolvedValue({
+    mocks.fetchProcessingFiles.mockResolvedValue({
       files: [
         { id: 55, library_id: 3, relative_path: "Movies/Movie.mkv.bak" },
         { id: 56, library_id: 3, relative_path: "Movies/Movie.mkv" },
@@ -602,7 +602,7 @@ describe("ActivityPage", () => {
       returned: 2,
       limit: 50,
     });
-    mocks.fetchRefinerFileLog.mockResolvedValue({
+    mocks.fetchProcessingFileLog.mockResolvedValue({
       file_id: 56,
       relative_path: "Movies/Movie.mkv",
       retention_days: 90,
@@ -614,9 +614,9 @@ describe("ActivityPage", () => {
 
     expect(await screen.findByRole("dialog")).toHaveTextContent("Movie.mkv");
     await waitFor(() =>
-      expect(mocks.fetchRefinerFileLog).toHaveBeenCalledWith(56),
+      expect(mocks.fetchProcessingFileLog).toHaveBeenCalledWith(56),
     );
-    expect(mocks.fetchRefinerFiles).toHaveBeenCalledWith({
+    expect(mocks.fetchProcessingFiles).toHaveBeenCalledWith({
       library_id: 3,
       path_contains: "Movies/Movie.mkv",
       limit: 50,
@@ -674,7 +674,7 @@ describe("ActivityPage", () => {
     it("holds new entries while an entry is expanded", () => {
       const detailed = event({
         id: 5,
-        event_type: "refiner.custom_event",
+        event_type: "processing.custom_event",
         title: "Older entry",
         detail: "x".repeat(200),
       });

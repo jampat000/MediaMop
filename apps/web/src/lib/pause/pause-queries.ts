@@ -27,7 +27,7 @@ export function useSavePause() {
       qc.setQueryData(pauseKey(), data);
       // Pausing changes why files are in the state they are in, so the Files screen is
       // stale the moment this succeeds.
-      void qc.invalidateQueries({ queryKey: ["refiner", "files"] });
+      void qc.invalidateQueries({ queryKey: ["processing", "files"] });
     },
   });
 }

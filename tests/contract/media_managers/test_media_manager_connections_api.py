@@ -196,7 +196,7 @@ def test_the_intake_webhook_enforces_that_managers_own_secret(operator: WeirClie
         == 401
     )
     # The right secret gets past authorisation; the hand-off then fails on its own merits,
-    # because no Refiner watched folder is configured on this server.
+    # because no Processing watched folder is configured on this server.
     accepted = operator.post(f"{API}/intake/webhook/deluno", json=body, headers={"X-Webhook-Secret": secret})
     assert accepted.status_code == 400
     assert "watched folder" in accepted.json()["detail"]

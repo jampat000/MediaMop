@@ -2877,8 +2877,8 @@
             "default": [
               "job_completed",
               "job_failed",
-              "refiner_job_completed",
-              "refiner_job_failed"
+              "processing_job_completed",
+              "processing_job_failed"
             ],
             "items": {
               "type": "string"
@@ -3257,7 +3257,7 @@
         "title": "ReconciliationRepairIn",
         "type": "object"
       },
-      "RefinerFileForgetIn": {
+      "ProcessingFileForgetIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -3269,10 +3269,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerFileForgetIn",
+        "title": "ProcessingFileForgetIn",
         "type": "object"
       },
-      "RefinerFileLogEntryOut": {
+      "ProcessingFileLogEntryOut": {
         "description": "One completed pass over this file.",
         "properties": {
           "detail": {
@@ -3301,7 +3301,7 @@
           "story": {
             "description": "The same pass told in plain language. Rebuilt from the stored record on every request, so improving the wording improves past entries too.",
             "items": {
-              "$ref": "#/components/schemas/RefinerFileStoryStepOut"
+              "$ref": "#/components/schemas/ProcessingFileStoryStepOut"
             },
             "title": "Story",
             "type": "array"
@@ -3318,14 +3318,14 @@
           "title",
           "library_name"
         ],
-        "title": "RefinerFileLogEntryOut",
+        "title": "ProcessingFileLogEntryOut",
         "type": "object"
       },
-      "RefinerFileLogOut": {
+      "ProcessingFileLogOut": {
         "properties": {
           "entries": {
             "items": {
-              "$ref": "#/components/schemas/RefinerFileLogEntryOut"
+              "$ref": "#/components/schemas/ProcessingFileLogEntryOut"
             },
             "title": "Entries",
             "type": "array"
@@ -3350,10 +3350,10 @@
           "retention_days",
           "entries"
         ],
-        "title": "RefinerFileLogOut",
+        "title": "ProcessingFileLogOut",
         "type": "object"
       },
-      "RefinerFileMoveToTopIn": {
+      "ProcessingFileMoveToTopIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -3365,10 +3365,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerFileMoveToTopIn",
+        "title": "ProcessingFileMoveToTopIn",
         "type": "object"
       },
-      "RefinerFileMoveToTopOut": {
+      "ProcessingFileMoveToTopOut": {
         "description": "What happened, said in words the screen can show unchanged.",
         "properties": {
           "detail": {
@@ -3384,10 +3384,10 @@
           "moved",
           "detail"
         ],
-        "title": "RefinerFileMoveToTopOut",
+        "title": "ProcessingFileMoveToTopOut",
         "type": "object"
       },
-      "RefinerFileOut": {
+      "ProcessingFileOut": {
         "properties": {
           "audio_track_count": {
             "anyOf": [
@@ -3703,12 +3703,12 @@
           "created_at",
           "updated_at"
         ],
-        "title": "RefinerFileOut",
+        "title": "ProcessingFileOut",
         "type": "object"
       },
-      "RefinerFileRemuxPassManualEnqueueIn": {
+      "ProcessingFileRemuxPassManualEnqueueIn": {
         "additionalProperties": false,
-        "description": "Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved watched folder before this POST succeeds.",
+        "description": "Manual ``processing.file.remux_pass.v1`` enqueue — requires a saved watched folder before this POST succeeds.",
         "properties": {
           "csrf_token": {
             "minLength": 1,
@@ -3755,10 +3755,10 @@
           "csrf_token",
           "relative_media_path"
         ],
-        "title": "RefinerFileRemuxPassManualEnqueueIn",
+        "title": "ProcessingFileRemuxPassManualEnqueueIn",
         "type": "object"
       },
-      "RefinerFileRemuxPassManualEnqueueOut": {
+      "ProcessingFileRemuxPassManualEnqueueOut": {
         "additionalProperties": false,
         "properties": {
           "dedupe_key": {
@@ -3784,10 +3784,10 @@
           "dedupe_key",
           "job_kind"
         ],
-        "title": "RefinerFileRemuxPassManualEnqueueOut",
+        "title": "ProcessingFileRemuxPassManualEnqueueOut",
         "type": "object"
       },
-      "RefinerFileRequeueIn": {
+      "ProcessingFileRequeueIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -3799,10 +3799,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerFileRequeueIn",
+        "title": "ProcessingFileRequeueIn",
         "type": "object"
       },
-      "RefinerFileStoryStepOut": {
+      "ProcessingFileStoryStepOut": {
         "description": "One plain-language step in what happened to a file, built from the stored pass record.",
         "properties": {
           "heading": {
@@ -3824,10 +3824,10 @@
           "sentence",
           "tone"
         ],
-        "title": "RefinerFileStoryStepOut",
+        "title": "ProcessingFileStoryStepOut",
         "type": "object"
       },
-      "RefinerFileTrackOut": {
+      "ProcessingFileTrackOut": {
         "description": "One ffprobe stream on a held file, with what the saved rules would do to it and why (issue #501).",
         "properties": {
           "channels": {
@@ -3914,10 +3914,10 @@
           "rule_would_keep",
           "rule_reason"
         ],
-        "title": "RefinerFileTrackOut",
+        "title": "ProcessingFileTrackOut",
         "type": "object"
       },
-      "RefinerFileTracksOut": {
+      "ProcessingFileTracksOut": {
         "description": "A fresh ffprobe of a held file's source, and what the saved rules would do with it (issue #501).",
         "properties": {
           "file_id": {
@@ -3933,11 +3933,11 @@
             "type": "string"
           },
           "source_fingerprint": {
-            "$ref": "#/components/schemas/RefinerSourceFingerprintOut"
+            "$ref": "#/components/schemas/ProcessingSourceFingerprintOut"
           },
           "streams": {
             "items": {
-              "$ref": "#/components/schemas/RefinerFileTrackOut"
+              "$ref": "#/components/schemas/ProcessingFileTrackOut"
             },
             "title": "Streams",
             "type": "array"
@@ -3950,10 +3950,10 @@
           "source_fingerprint",
           "streams"
         ],
-        "title": "RefinerFileTracksOut",
+        "title": "ProcessingFileTracksOut",
         "type": "object"
       },
-      "RefinerFilesBulkRequeueIn": {
+      "ProcessingFilesBulkRequeueIn": {
         "additionalProperties": false,
         "description": "Requeue everything matching a filter, described the same way the list is filtered.",
         "properties": {
@@ -4020,15 +4020,15 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerFilesBulkRequeueIn",
+        "title": "ProcessingFilesBulkRequeueIn",
         "type": "object"
       },
-      "RefinerFilesPageOut": {
+      "ProcessingFilesPageOut": {
         "description": "A page of files plus the bucket counts shown above them.",
         "properties": {
           "files": {
             "items": {
-              "$ref": "#/components/schemas/RefinerFileOut"
+              "$ref": "#/components/schemas/ProcessingFileOut"
             },
             "title": "Files",
             "type": "array"
@@ -4055,10 +4055,10 @@
           "returned",
           "limit"
         ],
-        "title": "RefinerFilesPageOut",
+        "title": "ProcessingFilesPageOut",
         "type": "object"
       },
-      "RefinerHardwareOut": {
+      "ProcessingHardwareOut": {
         "properties": {
           "available_methods": {
             "description": "Acceleration methods this ffmpeg build was compiled with. Being listed does not prove a device is present or working — those are different facts.",
@@ -4106,10 +4106,10 @@
           "detected",
           "detail"
         ],
-        "title": "RefinerHardwareOut",
+        "title": "ProcessingHardwareOut",
         "type": "object"
       },
-      "RefinerJobCancelPendingIn": {
+      "ProcessingJobCancelPendingIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -4121,10 +4121,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerJobCancelPendingIn",
+        "title": "ProcessingJobCancelPendingIn",
         "type": "object"
       },
-      "RefinerJobCancelPendingOut": {
+      "ProcessingJobCancelPendingOut": {
         "additionalProperties": false,
         "properties": {
           "job_id": {
@@ -4146,11 +4146,11 @@
           "job_id",
           "status"
         ],
-        "title": "RefinerJobCancelPendingOut",
+        "title": "ProcessingJobCancelPendingOut",
         "type": "object"
       },
-      "RefinerJobInspectionRow": {
-        "description": "One persisted durable job row (lifecycle from ``refiner_jobs`` only).",
+      "ProcessingJobInspectionRow": {
+        "description": "One persisted durable job row (lifecycle from ``jobs`` only).",
         "properties": {
           "attempt_count": {
             "title": "Attempt Count",
@@ -4270,10 +4270,10 @@
           "created_at",
           "updated_at"
         ],
-        "title": "RefinerJobInspectionRow",
+        "title": "ProcessingJobInspectionRow",
         "type": "object"
       },
-      "RefinerJobRecoverFinalizeFailedIn": {
+      "ProcessingJobRecoverFinalizeFailedIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -4285,10 +4285,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerJobRecoverFinalizeFailedIn",
+        "title": "ProcessingJobRecoverFinalizeFailedIn",
         "type": "object"
       },
-      "RefinerJobRecoverFinalizeFailedOut": {
+      "ProcessingJobRecoverFinalizeFailedOut": {
         "additionalProperties": false,
         "properties": {
           "job_id": {
@@ -4310,12 +4310,12 @@
           "job_id",
           "status"
         ],
-        "title": "RefinerJobRecoverFinalizeFailedOut",
+        "title": "ProcessingJobRecoverFinalizeFailedOut",
         "type": "object"
       },
-      "RefinerJobsInspectionOut": {
+      "ProcessingJobsInspectionOut": {
         "additionalProperties": false,
-        "description": "Bounded list of ``refiner_jobs`` rows, newest ``updated_at`` first.",
+        "description": "Bounded list of ``jobs`` rows, newest ``updated_at`` first.",
         "properties": {
           "default_recent_slice": {
             "description": "True when no ``status`` filter was applied: the newest rows across all statuses. False when one or more ``status`` query params narrowed the query.",
@@ -4324,7 +4324,7 @@
           },
           "jobs": {
             "items": {
-              "$ref": "#/components/schemas/RefinerJobInspectionRow"
+              "$ref": "#/components/schemas/ProcessingJobInspectionRow"
             },
             "title": "Jobs",
             "type": "array"
@@ -4334,10 +4334,10 @@
           "jobs",
           "default_recent_slice"
         ],
-        "title": "RefinerJobsInspectionOut",
+        "title": "ProcessingJobsInspectionOut",
         "type": "object"
       },
-      "RefinerLibraryCreateIn": {
+      "ProcessingLibraryCreateIn": {
         "additionalProperties": false,
         "properties": {
           "created_after": {
@@ -4713,10 +4713,10 @@
           "name",
           "media_type"
         ],
-        "title": "RefinerLibraryCreateIn",
+        "title": "ProcessingLibraryCreateIn",
         "type": "object"
       },
-      "RefinerLibraryDeleteIn": {
+      "ProcessingLibraryDeleteIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -4728,10 +4728,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerLibraryDeleteIn",
+        "title": "ProcessingLibraryDeleteIn",
         "type": "object"
       },
-      "RefinerLibraryImportIn": {
+      "ProcessingLibraryImportIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -4753,10 +4753,10 @@
           "csrf_token",
           "keys"
         ],
-        "title": "RefinerLibraryImportIn",
+        "title": "ProcessingLibraryImportIn",
         "type": "object"
       },
-      "RefinerLibraryOut": {
+      "ProcessingLibraryOut": {
         "properties": {
           "active_job_count": {
             "default": 0,
@@ -5107,10 +5107,10 @@
           "max_concurrent_files",
           "priority"
         ],
-        "title": "RefinerLibraryOut",
+        "title": "ProcessingLibraryOut",
         "type": "object"
       },
-      "RefinerLibraryReorderIn": {
+      "ProcessingLibraryReorderIn": {
         "additionalProperties": false,
         "properties": {
           "csrf_token": {
@@ -5131,10 +5131,10 @@
           "csrf_token",
           "library_ids_in_order"
         ],
-        "title": "RefinerLibraryReorderIn",
+        "title": "ProcessingLibraryReorderIn",
         "type": "object"
       },
-      "RefinerLibraryUpdateIn": {
+      "ProcessingLibraryUpdateIn": {
         "additionalProperties": false,
         "description": "Same shape as create. A library is edited whole, so a partial save cannot half-apply.",
         "properties": {
@@ -5511,10 +5511,10 @@
           "name",
           "media_type"
         ],
-        "title": "RefinerLibraryUpdateIn",
+        "title": "ProcessingLibraryUpdateIn",
         "type": "object"
       },
-      "RefinerManualPlanIn": {
+      "ProcessingManualPlanIn": {
         "additionalProperties": false,
         "description": "An operator's hand-picked track choice for a held file (issue #501). At least one video and one\naudio track must be kept, every index must exist on a fresh probe of the source, and at most one\naudio track and one subtitle track may be marked default. order must list every kept index exactly once.",
         "properties": {
@@ -5525,7 +5525,7 @@
           },
           "keep": {
             "items": {
-              "$ref": "#/components/schemas/RefinerManualPlanKeepIn"
+              "$ref": "#/components/schemas/ProcessingManualPlanKeepIn"
             },
             "minItems": 1,
             "title": "Keep",
@@ -5545,10 +5545,10 @@
           "keep",
           "order"
         ],
-        "title": "RefinerManualPlanIn",
+        "title": "ProcessingManualPlanIn",
         "type": "object"
       },
-      "RefinerManualPlanKeepIn": {
+      "ProcessingManualPlanKeepIn": {
         "description": "One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.",
         "properties": {
           "default": {
@@ -5570,10 +5570,10 @@
         "required": [
           "index"
         ],
-        "title": "RefinerManualPlanKeepIn",
+        "title": "ProcessingManualPlanKeepIn",
         "type": "object"
       },
-      "RefinerManualPlanOut": {
+      "ProcessingManualPlanOut": {
         "properties": {
           "dedupe_key": {
             "title": "Dedupe Key",
@@ -5598,10 +5598,10 @@
           "dedupe_key",
           "job_kind"
         ],
-        "title": "RefinerManualPlanOut",
+        "title": "ProcessingManualPlanOut",
         "type": "object"
       },
-      "RefinerOperatorSettingsOut": {
+      "ProcessingOperatorSettingsOut": {
         "additionalProperties": false,
         "properties": {
           "failure_cleanup_enabled": {
@@ -5664,11 +5664,11 @@
             "title": "Movie Schedule Start",
             "type": "string"
           },
-          "refiner_min_input_file_size_mb": {
+          "min_input_file_size_mb": {
             "description": "Files smaller than this are skipped before Weir probes or writes them.",
             "maximum": 1048576.0,
             "minimum": 0.0,
-            "title": "Refiner Min Input File Size Mb",
+            "title": "Processing Min Input File Size Mb",
             "type": "integer"
           },
           "runner_capacity": {
@@ -5766,7 +5766,7 @@
           "verbose_detection_logging",
           "runner_cost_undetermined",
           "min_file_age_seconds",
-          "refiner_min_input_file_size_mb",
+          "min_input_file_size_mb",
           "minimum_free_disk_space_mb",
           "movie_schedule_enabled",
           "movie_schedule_hours_limited",
@@ -5781,10 +5781,10 @@
           "schedule_timezone",
           "updated_at"
         ],
-        "title": "RefinerOperatorSettingsOut",
+        "title": "ProcessingOperatorSettingsOut",
         "type": "object"
       },
-      "RefinerOperatorSettingsPutIn": {
+      "ProcessingOperatorSettingsPutIn": {
         "additionalProperties": false,
         "description": "PUT body supports partial updates: omit a group to leave it unchanged on the server.",
         "properties": {
@@ -5925,7 +5925,7 @@
             ],
             "title": "Movie Schedule Start"
           },
-          "refiner_min_input_file_size_mb": {
+          "min_input_file_size_mb": {
             "anyOf": [
               {
                 "maximum": 1048576.0,
@@ -5936,7 +5936,7 @@
                 "type": "null"
               }
             ],
-            "title": "Refiner Min Input File Size Mb"
+            "title": "Processing Min Input File Size Mb"
           },
           "runner_capacity": {
             "anyOf": [
@@ -6100,10 +6100,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerOperatorSettingsPutIn",
+        "title": "ProcessingOperatorSettingsPutIn",
         "type": "object"
       },
-      "RefinerOverviewStatsOut": {
+      "ProcessingOverviewStatsOut": {
         "properties": {
           "already_optimized_count": {
             "description": "No-change rows where Weir copied the unchanged file to output and that output exists.",
@@ -6112,7 +6112,7 @@
             "type": "integer"
           },
           "files_failed": {
-            "description": "Terminal-failure refiner.file.remux_pass.v1 jobs in the window (failed + finalize-failed).",
+            "description": "Terminal-failure processing.file.remux_pass.v1 jobs in the window (failed + finalize-failed).",
             "minimum": 0.0,
             "title": "Files Failed",
             "type": "integer"
@@ -6162,10 +6162,10 @@
           "net_space_saved_bytes",
           "net_space_saved_percent"
         ],
-        "title": "RefinerOverviewStatsOut",
+        "title": "ProcessingOverviewStatsOut",
         "type": "object"
       },
-      "RefinerRequeueOut": {
+      "ProcessingRequeueOut": {
         "properties": {
           "detail": {
             "title": "Detail",
@@ -6185,10 +6185,10 @@
           "skipped",
           "detail"
         ],
-        "title": "RefinerRequeueOut",
+        "title": "ProcessingRequeueOut",
         "type": "object"
       },
-      "RefinerRuleSetIn": {
+      "ProcessingRuleSetIn": {
         "additionalProperties": false,
         "properties": {
           "audio_keep_mode": {
@@ -6411,10 +6411,10 @@
           "csrf_token",
           "name"
         ],
-        "title": "RefinerRuleSetIn",
+        "title": "ProcessingRuleSetIn",
         "type": "object"
       },
-      "RefinerRuleSetOut": {
+      "ProcessingRuleSetOut": {
         "properties": {
           "audio_keep_mode": {
             "title": "Audio Keep Mode",
@@ -6601,10 +6601,10 @@
           "clear_video_track_names",
           "remove_chapters"
         ],
-        "title": "RefinerRuleSetOut",
+        "title": "ProcessingRuleSetOut",
         "type": "object"
       },
-      "RefinerRulesPreviewIn": {
+      "ProcessingRulesPreviewIn": {
         "additionalProperties": false,
         "description": "\"Try on a file\" (#502). Exactly one of relative_path/absolute_path is required; the API answers 400 (not a field error) when neither or both are given.",
         "properties": {
@@ -6642,22 +6642,22 @@
           "rules": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/RefinerRulesPreviewRulesIn"
+                "$ref": "#/components/schemas/ProcessingRulesPreviewRulesIn"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Unsaved rule-set edits to try, in the same shape PUT /refiner/rule-sets/{id} accepts (minus csrf_token). Omit to preview the library's saved rule set instead."
+            "description": "Unsaved rule-set edits to try, in the same shape PUT /processing/rule-sets/{id} accepts (minus csrf_token). Omit to preview the library's saved rule set instead."
           }
         },
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerRulesPreviewIn",
+        "title": "ProcessingRulesPreviewIn",
         "type": "object"
       },
-      "RefinerRulesPreviewOriginalLanguageOut": {
+      "ProcessingRulesPreviewOriginalLanguageOut": {
         "properties": {
           "lookup_detail": {
             "title": "Lookup Detail",
@@ -6695,10 +6695,10 @@
           "original_language",
           "note"
         ],
-        "title": "RefinerRulesPreviewOriginalLanguageOut",
+        "title": "ProcessingRulesPreviewOriginalLanguageOut",
         "type": "object"
       },
-      "RefinerRulesPreviewOut": {
+      "ProcessingRulesPreviewOut": {
         "properties": {
           "estimated_size_reduction_bytes": {
             "anyOf": [
@@ -6751,7 +6751,7 @@
           "original_language": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/RefinerRulesPreviewOriginalLanguageOut"
+                "$ref": "#/components/schemas/ProcessingRulesPreviewOriginalLanguageOut"
               },
               {
                 "type": "null"
@@ -6765,7 +6765,7 @@
           },
           "tracks": {
             "items": {
-              "$ref": "#/components/schemas/RefinerRulesPreviewTrackOut"
+              "$ref": "#/components/schemas/ProcessingRulesPreviewTrackOut"
             },
             "title": "Tracks",
             "type": "array"
@@ -6782,12 +6782,12 @@
           "estimated_size_reduction_bytes",
           "estimated_size_reduction_is_estimate"
         ],
-        "title": "RefinerRulesPreviewOut",
+        "title": "ProcessingRulesPreviewOut",
         "type": "object"
       },
-      "RefinerRulesPreviewRulesIn": {
+      "ProcessingRulesPreviewRulesIn": {
         "additionalProperties": false,
-        "description": "The same fields RefinerRuleSetIn accepts, minus csrf_token — validated exactly like a rule-set save, but never written to the database.",
+        "description": "The same fields ProcessingRuleSetIn accepts, minus csrf_token — validated exactly like a rule-set save, but never written to the database.",
         "properties": {
           "audio_keep_mode": {
             "default": "single",
@@ -6983,10 +6983,10 @@
         "required": [
           "name"
         ],
-        "title": "RefinerRulesPreviewRulesIn",
+        "title": "ProcessingRulesPreviewRulesIn",
         "type": "object"
       },
-      "RefinerRulesPreviewTrackOut": {
+      "ProcessingRulesPreviewTrackOut": {
         "properties": {
           "action": {
             "enum": [
@@ -7054,11 +7054,11 @@
           "forced",
           "reasons"
         ],
-        "title": "RefinerRulesPreviewTrackOut",
+        "title": "ProcessingRulesPreviewTrackOut",
         "type": "object"
       },
-      "RefinerRuntimeSettingsOut": {
-        "description": "What this API process was configured to run for ``refiner_jobs`` in-process workers only.",
+      "ProcessingRuntimeSettingsOut": {
+        "description": "What this API process was configured to run for ``jobs`` in-process workers only.",
         "properties": {
           "configuration_note": {
             "description": "How operators change the value (env + restart); not an in-app editor.",
@@ -7070,11 +7070,11 @@
             "title": "Failure Cleanup Configuration Note",
             "type": "string"
           },
-          "in_process_refiner_worker_count": {
-            "description": "Mirrors WEIR_REFINER_WORKER_COUNT after clamping — the processing lane only.",
+          "in_process_processing_worker_count": {
+            "description": "Mirrors WEIR_PROCESSING_WORKER_COUNT after clamping — the processing lane only.",
             "maximum": 8.0,
             "minimum": 0.0,
-            "title": "In Process Refiner Worker Count",
+            "title": "In Process Processing Worker Count",
             "type": "integer"
           },
           "in_process_workers_disabled": {
@@ -7092,113 +7092,113 @@
             "title": "Movie Output Cleanup Configuration Note",
             "type": "string"
           },
-          "refiner_analyze_duration_seconds": {
+          "processing_analyze_duration_seconds": {
             "description": "ffprobe analyze duration in seconds for preflight analysis.",
             "maximum": 300.0,
             "minimum": 1.0,
-            "title": "Refiner Analyze Duration Seconds",
+            "title": "Processing Analyze Duration Seconds",
             "type": "integer"
           },
-          "refiner_media_extensions": {
+          "processing_media_extensions": {
             "description": "File types Weir will pick up in a watched folder. Anything else is ignored and counted.",
             "items": {
               "type": "string"
             },
-            "title": "Refiner Media Extensions",
+            "title": "Processing Media Extensions",
             "type": "array"
           },
-          "refiner_movie_failure_cleanup_grace_period_seconds": {
-            "description": "Failed remux age gate for Movies failure cleanup (uses refiner_jobs.updated_at).",
+          "processing_movie_failure_cleanup_grace_period_seconds": {
+            "description": "Failed remux age gate for Movies failure cleanup (uses jobs.updated_at).",
             "maximum": 604800.0,
             "minimum": 300.0,
-            "title": "Refiner Movie Failure Cleanup Grace Period Seconds",
+            "title": "Processing Movie Failure Cleanup Grace Period Seconds",
             "type": "integer"
           },
-          "refiner_movie_failure_cleanup_schedule_enabled": {
-            "description": "``WEIR_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.",
-            "title": "Refiner Movie Failure Cleanup Schedule Enabled",
+          "processing_movie_failure_cleanup_schedule_enabled": {
+            "description": "``WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.",
+            "title": "Processing Movie Failure Cleanup Schedule Enabled",
             "type": "boolean"
           },
-          "refiner_movie_failure_cleanup_schedule_interval_seconds": {
+          "processing_movie_failure_cleanup_schedule_interval_seconds": {
             "description": "Seconds between Movies-only periodic failed-remux cleanup enqueue ticks.",
             "minimum": 60.0,
-            "title": "Refiner Movie Failure Cleanup Schedule Interval Seconds",
+            "title": "Processing Movie Failure Cleanup Schedule Interval Seconds",
             "type": "integer"
           },
-          "refiner_movie_output_cleanup_min_age_seconds": {
+          "processing_movie_output_cleanup_min_age_seconds": {
             "description": "Minimum age (newest file mtime under the folder) before Pass 3a may delete a Movies output folder (1h..30d; default 48h).",
             "minimum": 3600.0,
-            "title": "Refiner Movie Output Cleanup Min Age Seconds",
+            "title": "Processing Movie Output Cleanup Min Age Seconds",
             "type": "integer"
           },
-          "refiner_probe_size_mb": {
+          "processing_probe_size_mb": {
             "description": "ffprobe probe size in MB for preflight analysis.",
             "maximum": 1024.0,
             "minimum": 1.0,
-            "title": "Refiner Probe Size Mb",
+            "title": "Processing Probe Size Mb",
             "type": "integer"
           },
-          "refiner_tv_failure_cleanup_grace_period_seconds": {
-            "description": "Failed remux age gate for TV failure cleanup (uses refiner_jobs.updated_at).",
+          "processing_tv_failure_cleanup_grace_period_seconds": {
+            "description": "Failed remux age gate for TV failure cleanup (uses jobs.updated_at).",
             "maximum": 604800.0,
             "minimum": 300.0,
-            "title": "Refiner Tv Failure Cleanup Grace Period Seconds",
+            "title": "Processing Tv Failure Cleanup Grace Period Seconds",
             "type": "integer"
           },
-          "refiner_tv_failure_cleanup_schedule_enabled": {
-            "description": "``WEIR_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.",
-            "title": "Refiner Tv Failure Cleanup Schedule Enabled",
+          "processing_tv_failure_cleanup_schedule_enabled": {
+            "description": "``WEIR_PROCESSING_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.",
+            "title": "Processing Tv Failure Cleanup Schedule Enabled",
             "type": "boolean"
           },
-          "refiner_tv_failure_cleanup_schedule_interval_seconds": {
+          "processing_tv_failure_cleanup_schedule_interval_seconds": {
             "description": "Seconds between TV-only periodic failed-remux cleanup enqueue ticks.",
             "minimum": 60.0,
-            "title": "Refiner Tv Failure Cleanup Schedule Interval Seconds",
+            "title": "Processing Tv Failure Cleanup Schedule Interval Seconds",
             "type": "integer"
           },
-          "refiner_tv_output_cleanup_min_age_seconds": {
+          "processing_tv_output_cleanup_min_age_seconds": {
             "description": "Minimum age (direct-child episode media newest mtime) before Pass 3b may delete a TV season output folder (1h..30d; default 48h).",
             "minimum": 3600.0,
-            "title": "Refiner Tv Output Cleanup Min Age Seconds",
+            "title": "Processing Tv Output Cleanup Min Age Seconds",
             "type": "integer"
           },
-          "refiner_watched_folder_min_file_age_seconds": {
+          "processing_watched_folder_min_file_age_seconds": {
             "description": "Minimum file age before watched-folder scan or one-file pass touches media.",
             "minimum": 0.0,
-            "title": "Refiner Watched Folder Min File Age Seconds",
+            "title": "Processing Watched Folder Min File Age Seconds",
             "type": "integer"
           },
-          "refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs": {
-            "description": "When true, periodic scans may enqueue ``refiner.file.remux_pass.v1``.",
-            "title": "Refiner Watched Folder Remux Scan Dispatch Periodic Enqueue Remux Jobs",
+          "processing_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs": {
+            "description": "When true, periodic scans may enqueue ``processing.file.remux_pass.v1``.",
+            "title": "Processing Watched Folder Remux Scan Dispatch Periodic Enqueue Remux Jobs",
             "type": "boolean"
           },
-          "refiner_work_temp_stale_sweep_min_stale_age_seconds": {
+          "processing_work_temp_stale_sweep_min_stale_age_seconds": {
             "description": "Minimum file age before Weir removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).",
             "minimum": 60.0,
-            "title": "Refiner Work Temp Stale Sweep Min Stale Age Seconds",
+            "title": "Processing Work Temp Stale Sweep Min Stale Age Seconds",
             "type": "integer"
           },
-          "refiner_work_temp_stale_sweep_movie_schedule_enabled": {
-            "description": "``WEIR_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.",
-            "title": "Refiner Work Temp Stale Sweep Movie Schedule Enabled",
+          "processing_work_temp_stale_sweep_movie_schedule_enabled": {
+            "description": "``WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.",
+            "title": "Processing Work Temp Stale Sweep Movie Schedule Enabled",
             "type": "boolean"
           },
-          "refiner_work_temp_stale_sweep_movie_schedule_interval_seconds": {
+          "processing_work_temp_stale_sweep_movie_schedule_interval_seconds": {
             "description": "Seconds between Movies-only periodic stale temp sweep enqueue ticks (clamped 60..7d).",
             "minimum": 60.0,
-            "title": "Refiner Work Temp Stale Sweep Movie Schedule Interval Seconds",
+            "title": "Processing Work Temp Stale Sweep Movie Schedule Interval Seconds",
             "type": "integer"
           },
-          "refiner_work_temp_stale_sweep_tv_schedule_enabled": {
-            "description": "``WEIR_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.",
-            "title": "Refiner Work Temp Stale Sweep Tv Schedule Enabled",
+          "processing_work_temp_stale_sweep_tv_schedule_enabled": {
+            "description": "``WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.",
+            "title": "Processing Work Temp Stale Sweep Tv Schedule Enabled",
             "type": "boolean"
           },
-          "refiner_work_temp_stale_sweep_tv_schedule_interval_seconds": {
+          "processing_work_temp_stale_sweep_tv_schedule_interval_seconds": {
             "description": "Seconds between TV-only periodic stale temp sweep enqueue ticks (clamped 60..7d).",
             "minimum": 60.0,
-            "title": "Refiner Work Temp Stale Sweep Tv Schedule Interval Seconds",
+            "title": "Processing Work Temp Stale Sweep Tv Schedule Interval Seconds",
             "type": "integer"
           },
           "sqlite_throughput_note": {
@@ -7233,41 +7233,41 @@
           }
         },
         "required": [
-          "in_process_refiner_worker_count",
+          "in_process_processing_worker_count",
           "in_process_workers_disabled",
           "in_process_workers_enabled",
           "worker_mode_summary",
           "sqlite_throughput_note",
           "configuration_note",
           "visibility_note",
-          "refiner_media_extensions",
-          "refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs",
-          "refiner_probe_size_mb",
-          "refiner_analyze_duration_seconds",
-          "refiner_watched_folder_min_file_age_seconds",
-          "refiner_movie_output_cleanup_min_age_seconds",
+          "processing_media_extensions",
+          "processing_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs",
+          "processing_probe_size_mb",
+          "processing_analyze_duration_seconds",
+          "processing_watched_folder_min_file_age_seconds",
+          "processing_movie_output_cleanup_min_age_seconds",
           "movie_output_cleanup_configuration_note",
-          "refiner_tv_output_cleanup_min_age_seconds",
+          "processing_tv_output_cleanup_min_age_seconds",
           "tv_output_cleanup_configuration_note",
           "watched_folder_scan_periodic_configuration_note",
-          "refiner_work_temp_stale_sweep_movie_schedule_enabled",
-          "refiner_work_temp_stale_sweep_movie_schedule_interval_seconds",
-          "refiner_work_temp_stale_sweep_tv_schedule_enabled",
-          "refiner_work_temp_stale_sweep_tv_schedule_interval_seconds",
-          "refiner_work_temp_stale_sweep_min_stale_age_seconds",
-          "refiner_movie_failure_cleanup_schedule_enabled",
-          "refiner_movie_failure_cleanup_schedule_interval_seconds",
-          "refiner_tv_failure_cleanup_schedule_enabled",
-          "refiner_tv_failure_cleanup_schedule_interval_seconds",
-          "refiner_movie_failure_cleanup_grace_period_seconds",
-          "refiner_tv_failure_cleanup_grace_period_seconds",
+          "processing_work_temp_stale_sweep_movie_schedule_enabled",
+          "processing_work_temp_stale_sweep_movie_schedule_interval_seconds",
+          "processing_work_temp_stale_sweep_tv_schedule_enabled",
+          "processing_work_temp_stale_sweep_tv_schedule_interval_seconds",
+          "processing_work_temp_stale_sweep_min_stale_age_seconds",
+          "processing_movie_failure_cleanup_schedule_enabled",
+          "processing_movie_failure_cleanup_schedule_interval_seconds",
+          "processing_tv_failure_cleanup_schedule_enabled",
+          "processing_tv_failure_cleanup_schedule_interval_seconds",
+          "processing_movie_failure_cleanup_grace_period_seconds",
+          "processing_tv_failure_cleanup_grace_period_seconds",
           "failure_cleanup_configuration_note",
           "work_temp_stale_sweep_periodic_configuration_note"
         ],
-        "title": "RefinerRuntimeSettingsOut",
+        "title": "ProcessingRuntimeSettingsOut",
         "type": "object"
       },
-      "RefinerSourceFingerprintOut": {
+      "ProcessingSourceFingerprintOut": {
         "description": "The source's identity and content state at the moment it was probed (issue #501): device, inode, size and modified time. Compared again when the pass runs, to detect a file that changed since the operator chose its tracks.",
         "properties": {
           "device": {
@@ -7293,10 +7293,10 @@
           "size_bytes",
           "modified_time_ns"
         ],
-        "title": "RefinerSourceFingerprintOut",
+        "title": "ProcessingSourceFingerprintOut",
         "type": "object"
       },
-      "RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn": {
+      "ProcessingWatchedFolderRemuxScanDispatchManualEnqueueIn": {
         "additionalProperties": false,
         "description": "Queue one watched-folder scan.",
         "properties": {
@@ -7338,10 +7338,10 @@
         "required": [
           "csrf_token"
         ],
-        "title": "RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn",
+        "title": "ProcessingWatchedFolderRemuxScanDispatchManualEnqueueIn",
         "type": "object"
       },
-      "RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut": {
+      "ProcessingWatchedFolderRemuxScanDispatchManualEnqueueOut": {
         "additionalProperties": false,
         "properties": {
           "dedupe_key": {
@@ -7367,10 +7367,10 @@
           "dedupe_key",
           "job_kind"
         ],
-        "title": "RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut",
+        "title": "ProcessingWatchedFolderRemuxScanDispatchManualEnqueueOut",
         "type": "object"
       },
-      "RefinerWhyHeldOut": {
+      "ProcessingWhyHeldOut": {
         "description": "A live answer, alongside the recorded one, so a stale record is visible as stale.",
         "properties": {
           "blocked_by_connection": {
@@ -7468,7 +7468,7 @@
           "managers_consulted",
           "managers_reporting"
         ],
-        "title": "RefinerWhyHeldOut",
+        "title": "ProcessingWhyHeldOut",
         "type": "object"
       },
       "RejectSupportOut": {
@@ -7924,9 +7924,9 @@
             "title": "Activity Events Deleted",
             "type": "integer"
           },
-          "refiner_jobs_deleted": {
+          "jobs_deleted": {
             "minimum": 0.0,
-            "title": "Refiner Jobs Deleted",
+            "title": "Processing Jobs Deleted",
             "type": "integer"
           },
           "status": {
@@ -7943,7 +7943,7 @@
         "required": [
           "status",
           "activity_events_deleted",
-          "refiner_jobs_deleted",
+          "jobs_deleted",
           "total_deleted"
         ],
         "title": "SuiteOperationalHistoryResetOut",
@@ -10337,10 +10337,10 @@
         ]
       }
     },
-    "/api/v1/refiner/direct-play/devices": {
+    "/api/v1/processing/direct-play/devices": {
       "get": {
         "description": "The devices the badge can answer for, each with its source, and which ones you own.",
-        "operationId": "get_direct_play_devices_api_v1_refiner_direct_play_devices_get",
+        "operationId": "get_direct_play_devices_api_v1_processing_direct_play_devices_get",
         "responses": {
           "200": {
             "content": {
@@ -10355,13 +10355,13 @@
         },
         "summary": "Get Direct Play Devices",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "put": {
         "description": "Save which devices you own. Changes only the badge, never how a file is processed.",
-        "operationId": "put_direct_play_devices_api_v1_refiner_direct_play_devices_put",
+        "operationId": "put_direct_play_devices_api_v1_processing_direct_play_devices_put",
         "requestBody": {
           "content": {
             "application/json": {
@@ -10396,15 +10396,15 @@
         },
         "summary": "Put Direct Play Devices",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files": {
+    "/api/v1/processing/files": {
       "get": {
         "description": "Files Weir has seen, with the reason it is or is not working on each.",
-        "operationId": "get_refiner_files_api_v1_refiner_files_get",
+        "operationId": "get_files_api_v1_files_get",
         "parameters": [
           {
             "in": "query",
@@ -10503,7 +10503,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerFilesPageOut"
+                  "$ref": "#/components/schemas/ProcessingFilesPageOut"
                 }
               }
             },
@@ -10520,22 +10520,22 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner Files",
+        "summary": "Get Processing Files",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/requeue": {
+    "/api/v1/processing/files/requeue": {
       "post": {
         "description": "Try every file matching this filter again.\n\nThe filter is the same one the list uses, and ``limit`` is a ceiling rather than a\npage size: a mis-typed filter should not be able to queue a whole library.",
-        "operationId": "requeue_refiner_files_api_v1_refiner_files_requeue_post",
+        "operationId": "requeue_files_api_v1_files_requeue_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerFilesBulkRequeueIn"
+                "$ref": "#/components/schemas/ProcessingFilesBulkRequeueIn"
               }
             }
           },
@@ -10546,7 +10546,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerRequeueOut"
+                  "$ref": "#/components/schemas/ProcessingRequeueOut"
                 }
               }
             },
@@ -10563,17 +10563,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Requeue Refiner Files",
+        "summary": "Requeue Processing Files",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}": {
+    "/api/v1/processing/files/{file_id}": {
       "delete": {
         "description": "Forget a file. Removes Weir's record of it, never the file on disk.",
-        "operationId": "delete_refiner_file_api_v1_refiner_files__file_id__delete",
+        "operationId": "delete_processing_file_api_v1_files__file_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -10590,7 +10590,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerFileForgetIn"
+                "$ref": "#/components/schemas/ProcessingFileForgetIn"
               }
             }
           },
@@ -10611,17 +10611,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Delete Refiner File",
+        "summary": "Delete Processing File",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}/log": {
+    "/api/v1/processing/files/{file_id}/log": {
       "get": {
         "description": "Everything Weir retained about what it did to this file, newest first.",
-        "operationId": "get_refiner_file_log_api_v1_refiner_files__file_id__log_get",
+        "operationId": "get_processing_file_log_api_v1_files__file_id__log_get",
         "parameters": [
           {
             "in": "path",
@@ -10651,7 +10651,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerFileLogOut"
+                  "$ref": "#/components/schemas/ProcessingFileLogOut"
                 }
               }
             },
@@ -10668,17 +10668,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner File Log",
+        "summary": "Get Processing File Log",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}/log/download": {
+    "/api/v1/processing/files/{file_id}/log/download": {
       "get": {
         "description": "The same record as plain text, for attaching to a bug report.\n\nText rather than raw JSON: the reason anyone downloads this is to send it to somebody\nelse, and minified JSON is not something a person reads in a forum post.",
-        "operationId": "download_refiner_file_log_api_v1_refiner_files__file_id__log_download_get",
+        "operationId": "download_processing_file_log_api_v1_files__file_id__log_download_get",
         "parameters": [
           {
             "in": "path",
@@ -10711,17 +10711,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Download Refiner File Log",
+        "summary": "Download Processing File Log",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}/manual-plan": {
+    "/api/v1/processing/files/{file_id}/manual-plan": {
       "post": {
         "description": "Queue a remux pass built from an operator's hand-picked track choice (issue #501).\n\nValidates at least one video and one audio track kept, every index against a fresh probe\nof the held source, and at most one default per audio and subtitle. The pass re-probes\nbefore running: if the source changed, or a chosen track is missing or changed type, it\nfails asking the operator to choose again rather than guessing.",
-        "operationId": "post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post",
+        "operationId": "post_processing_file_manual_plan_api_v1_files__file_id__manual_plan_post",
         "parameters": [
           {
             "in": "path",
@@ -10738,7 +10738,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerManualPlanIn"
+                "$ref": "#/components/schemas/ProcessingManualPlanIn"
               }
             }
           },
@@ -10749,7 +10749,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerManualPlanOut"
+                  "$ref": "#/components/schemas/ProcessingManualPlanOut"
                 }
               }
             },
@@ -10766,17 +10766,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner File Manual Plan",
+        "summary": "Post Processing File Manual Plan",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}/move-to-top": {
+    "/api/v1/processing/files/{file_id}/move-to-top": {
       "post": {
         "description": "Put this file's queued work ahead of everything else waiting.\n\nOnly affects work that has not started. A file already being processed cannot be\nstarted earlier, and saying so is more use than a button that appears to work.",
-        "operationId": "move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post",
+        "operationId": "move_processing_file_to_top_api_v1_files__file_id__move_to_top_post",
         "parameters": [
           {
             "in": "path",
@@ -10793,7 +10793,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerFileMoveToTopIn"
+                "$ref": "#/components/schemas/ProcessingFileMoveToTopIn"
               }
             }
           },
@@ -10804,7 +10804,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerFileMoveToTopOut"
+                  "$ref": "#/components/schemas/ProcessingFileMoveToTopOut"
                 }
               }
             },
@@ -10821,17 +10821,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Move Refiner File To Top",
+        "summary": "Move Processing File To Top",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}/requeue": {
+    "/api/v1/processing/files/{file_id}/requeue": {
       "post": {
         "description": "Try this file again now.\n\nA manual requeue resets the attempt count and ignores the backoff: whoever asked has\nusually just fixed the thing that broke, so making them wait it out — or refusing\nbecause the automatic attempts are spent — would answer a question they did not ask.",
-        "operationId": "requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post",
+        "operationId": "requeue_processing_file_api_v1_files__file_id__requeue_post",
         "parameters": [
           {
             "in": "path",
@@ -10848,7 +10848,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerFileRequeueIn"
+                "$ref": "#/components/schemas/ProcessingFileRequeueIn"
               }
             }
           },
@@ -10859,7 +10859,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerRequeueOut"
+                  "$ref": "#/components/schemas/ProcessingRequeueOut"
                 }
               }
             },
@@ -10876,17 +10876,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Requeue Refiner File",
+        "summary": "Requeue Processing File",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}/tracks": {
+    "/api/v1/processing/files/{file_id}/tracks": {
       "get": {
         "description": "A fresh ffprobe of a held file's source: every stream with its index, type, codec, language,\ntitle, channels and disposition, and what the saved rules would do with it and why (issue #501).",
-        "operationId": "get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get",
+        "operationId": "get_processing_file_tracks_api_v1_files__file_id__tracks_get",
         "parameters": [
           {
             "in": "path",
@@ -10904,7 +10904,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerFileTracksOut"
+                  "$ref": "#/components/schemas/ProcessingFileTracksOut"
                 }
               }
             },
@@ -10921,17 +10921,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner File Tracks",
+        "summary": "Get Processing File Tracks",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/files/{file_id}/why-held": {
+    "/api/v1/processing/files/{file_id}/why-held": {
       "get": {
         "description": "Ask every manager covering this file's library what it is doing with it, right now.\n\nDeliberately live rather than cached: the question is only ever asked because the\nrecorded state looks wrong or stale, and answering it from the same record would be\nno answer at all.",
-        "operationId": "get_refiner_file_why_held_api_v1_refiner_files__file_id__why_held_get",
+        "operationId": "get_processing_file_why_held_api_v1_files__file_id__why_held_get",
         "parameters": [
           {
             "in": "path",
@@ -10949,7 +10949,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerWhyHeldOut"
+                  "$ref": "#/components/schemas/ProcessingWhyHeldOut"
                 }
               }
             },
@@ -10966,45 +10966,45 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner File Why Held",
+        "summary": "Get Processing File Why Held",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/hardware": {
+    "/api/v1/processing/hardware": {
       "get": {
         "description": "What ffmpeg on this machine reports it can do.",
-        "operationId": "get_refiner_hardware_api_v1_refiner_hardware_get",
+        "operationId": "get_processing_hardware_api_v1_processing_hardware_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerHardwareOut"
+                  "$ref": "#/components/schemas/ProcessingHardwareOut"
                 }
               }
             },
             "description": "Successful Response"
           }
         },
-        "summary": "Get Refiner Hardware",
+        "summary": "Get Processing Hardware",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/jobs/file-remux-pass/enqueue": {
+    "/api/v1/processing/jobs/file-remux-pass/enqueue": {
       "post": {
         "description": "Enqueue one live ffprobe + remux-plan + optional ffmpeg pass.",
-        "operationId": "post_refiner_file_remux_pass_enqueue_api_v1_refiner_jobs_file_remux_pass_enqueue_post",
+        "operationId": "post_processing_file_remux_pass_enqueue_api_v1_jobs_file_remux_pass_enqueue_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerFileRemuxPassManualEnqueueIn"
+                "$ref": "#/components/schemas/ProcessingFileRemuxPassManualEnqueueIn"
               }
             }
           },
@@ -11015,7 +11015,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerFileRemuxPassManualEnqueueOut"
+                  "$ref": "#/components/schemas/ProcessingFileRemuxPassManualEnqueueOut"
                 }
               }
             },
@@ -11032,17 +11032,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner File Remux Pass Enqueue",
+        "summary": "Post Processing File Remux Pass Enqueue",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/jobs/inspection": {
+    "/api/v1/processing/jobs/inspection": {
       "get": {
-        "description": "Read-only persisted ``refiner_jobs`` rows (all ``job_kind`` values on this lane).",
-        "operationId": "get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get",
+        "description": "Read-only persisted ``jobs`` rows (all ``job_kind`` values on this lane).",
+        "operationId": "get_jobs_inspection_api_v1_jobs_inspection_get",
         "parameters": [
           {
             "description": "Max rows to return.",
@@ -11085,7 +11085,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerJobsInspectionOut"
+                  "$ref": "#/components/schemas/ProcessingJobsInspectionOut"
                 }
               }
             },
@@ -11102,22 +11102,22 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner Jobs Inspection",
+        "summary": "Get Processing Jobs Inspection",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue": {
+    "/api/v1/processing/jobs/watched-folder-remux-scan-dispatch/enqueue": {
       "post": {
         "description": "Enqueue one scan of the saved watched folder (manual trigger).",
-        "operationId": "post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post",
+        "operationId": "post_processing_watched_folder_remux_scan_dispatch_enqueue_api_v1_jobs_watched_folder_remux_scan_dispatch_enqueue_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn"
+                "$ref": "#/components/schemas/ProcessingWatchedFolderRemuxScanDispatchManualEnqueueIn"
               }
             }
           },
@@ -11128,7 +11128,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut"
+                  "$ref": "#/components/schemas/ProcessingWatchedFolderRemuxScanDispatchManualEnqueueOut"
                 }
               }
             },
@@ -11145,17 +11145,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Watched Folder Remux Scan Dispatch Enqueue",
+        "summary": "Post Processing Watched Folder Remux Scan Dispatch Enqueue",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/jobs/{job_id}/cancel-pending": {
+    "/api/v1/processing/jobs/{job_id}/cancel-pending": {
       "post": {
         "description": "Abandon a **pending** row only — refuses leased, completed, failed, or cancelled jobs.",
-        "operationId": "post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post",
+        "operationId": "post_processing_job_cancel_pending_api_v1_jobs__job_id__cancel_pending_post",
         "parameters": [
           {
             "in": "path",
@@ -11171,7 +11171,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerJobCancelPendingIn"
+                "$ref": "#/components/schemas/ProcessingJobCancelPendingIn"
               }
             }
           },
@@ -11182,7 +11182,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerJobCancelPendingOut"
+                  "$ref": "#/components/schemas/ProcessingJobCancelPendingOut"
                 }
               }
             },
@@ -11199,17 +11199,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Job Cancel Pending",
+        "summary": "Post Processing Job Cancel Pending",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/jobs/{job_id}/recover-finalize-failed": {
+    "/api/v1/processing/jobs/{job_id}/recover-finalize-failed": {
       "post": {
         "description": "Recover a completed media pass whose durable job finalization was interrupted.",
-        "operationId": "post_refiner_job_recover_finalize_failed_api_v1_refiner_jobs__job_id__recover_finalize_failed_post",
+        "operationId": "post_processing_job_recover_finalize_failed_api_v1_jobs__job_id__recover_finalize_failed_post",
         "parameters": [
           {
             "in": "path",
@@ -11225,7 +11225,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerJobRecoverFinalizeFailedIn"
+                "$ref": "#/components/schemas/ProcessingJobRecoverFinalizeFailedIn"
               }
             }
           },
@@ -11236,7 +11236,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerJobRecoverFinalizeFailedOut"
+                  "$ref": "#/components/schemas/ProcessingJobRecoverFinalizeFailedOut"
                 }
               }
             },
@@ -11253,26 +11253,26 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Job Recover Finalize Failed",
+        "summary": "Post Processing Job Recover Finalize Failed",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries": {
+    "/api/v1/processing/libraries": {
       "get": {
         "description": "Every configured library, in display order.",
-        "operationId": "get_refiner_libraries_api_v1_refiner_libraries_get",
+        "operationId": "get_libraries_api_v1_libraries_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RefinerLibraryOut"
+                    "$ref": "#/components/schemas/ProcessingLibraryOut"
                   },
-                  "title": "Response Get Refiner Libraries Api V1 Refiner Libraries Get",
+                  "title": "Response Get Processing Libraries Api V1 Processing Libraries Get",
                   "type": "array"
                 }
               }
@@ -11280,20 +11280,20 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Get Refiner Libraries",
+        "summary": "Get Processing Libraries",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "post": {
         "description": "Add a library.",
-        "operationId": "post_refiner_library_api_v1_refiner_libraries_post",
+        "operationId": "post_processing_library_api_v1_libraries_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerLibraryCreateIn"
+                "$ref": "#/components/schemas/ProcessingLibraryCreateIn"
               }
             }
           },
@@ -11304,7 +11304,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                  "$ref": "#/components/schemas/ProcessingLibraryOut"
                 }
               }
             },
@@ -11321,17 +11321,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Library",
+        "summary": "Post Processing Library",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries/discover/{connection_id}": {
+    "/api/v1/processing/libraries/discover/{connection_id}": {
       "get": {
         "description": "What this manager says it looks after, and whether Weir already has it.",
-        "operationId": "get_refiner_discoverable_libraries_api_v1_refiner_libraries_discover__connection_id__get",
+        "operationId": "get_processing_discoverable_libraries_api_v1_libraries_discover__connection_id__get",
         "parameters": [
           {
             "in": "path",
@@ -11352,7 +11352,7 @@
                   "items": {
                     "$ref": "#/components/schemas/DiscoverableLibraryOut"
                   },
-                  "title": "Response Get Refiner Discoverable Libraries Api V1 Refiner Libraries Discover  Connection Id  Get",
+                  "title": "Response Get Processing Discoverable Libraries Api V1 Processing Libraries Discover  Connection Id  Get",
                   "type": "array"
                 }
               }
@@ -11370,17 +11370,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner Discoverable Libraries",
+        "summary": "Get Processing Discoverable Libraries",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries/discover/{connection_id}/drift": {
+    "/api/v1/processing/libraries/discover/{connection_id}/drift": {
       "get": {
         "description": "Differences between the manager and Weir. Reported only — nothing is applied.",
-        "operationId": "get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get",
+        "operationId": "get_processing_library_drift_api_v1_libraries_discover__connection_id__drift_get",
         "parameters": [
           {
             "in": "path",
@@ -11401,7 +11401,7 @@
                   "items": {
                     "$ref": "#/components/schemas/LibraryDriftOut"
                   },
-                  "title": "Response Get Refiner Library Drift Api V1 Refiner Libraries Discover  Connection Id  Drift Get",
+                  "title": "Response Get Processing Library Drift Api V1 Processing Libraries Discover  Connection Id  Drift Get",
                   "type": "array"
                 }
               }
@@ -11419,17 +11419,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner Library Drift",
+        "summary": "Get Processing Library Drift",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries/discover/{connection_id}/import": {
+    "/api/v1/processing/libraries/discover/{connection_id}/import": {
       "post": {
         "description": "Create a library per selected manager library.",
-        "operationId": "post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post",
+        "operationId": "post_processing_import_libraries_api_v1_libraries_discover__connection_id__import_post",
         "parameters": [
           {
             "in": "path",
@@ -11446,7 +11446,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerLibraryImportIn"
+                "$ref": "#/components/schemas/ProcessingLibraryImportIn"
               }
             }
           },
@@ -11458,9 +11458,9 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RefinerLibraryOut"
+                    "$ref": "#/components/schemas/ProcessingLibraryOut"
                   },
-                  "title": "Response Post Refiner Import Libraries Api V1 Refiner Libraries Discover  Connection Id  Import Post",
+                  "title": "Response Post Processing Import Libraries Api V1 Processing Libraries Discover  Connection Id  Import Post",
                   "type": "array"
                 }
               }
@@ -11478,22 +11478,22 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Import Libraries",
+        "summary": "Post Processing Import Libraries",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries/reorder": {
+    "/api/v1/processing/libraries/reorder": {
       "post": {
         "description": "Set display order. Order decides which library a scope-only payload resolves to.",
-        "operationId": "post_refiner_libraries_reorder_api_v1_refiner_libraries_reorder_post",
+        "operationId": "post_libraries_reorder_api_v1_libraries_reorder_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerLibraryReorderIn"
+                "$ref": "#/components/schemas/ProcessingLibraryReorderIn"
               }
             }
           },
@@ -11505,9 +11505,9 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RefinerLibraryOut"
+                    "$ref": "#/components/schemas/ProcessingLibraryOut"
                   },
-                  "title": "Response Post Refiner Libraries Reorder Api V1 Refiner Libraries Reorder Post",
+                  "title": "Response Post Processing Libraries Reorder Api V1 Processing Libraries Reorder Post",
                   "type": "array"
                 }
               }
@@ -11525,17 +11525,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Libraries Reorder",
+        "summary": "Post Processing Libraries Reorder",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}": {
+    "/api/v1/processing/libraries/{library_id}": {
       "delete": {
         "description": "Remove a library. Refused while it still has queued or running work.",
-        "operationId": "delete_refiner_library_api_v1_refiner_libraries__library_id__delete",
+        "operationId": "delete_processing_library_api_v1_libraries__library_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -11552,7 +11552,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerLibraryDeleteIn"
+                "$ref": "#/components/schemas/ProcessingLibraryDeleteIn"
               }
             }
           },
@@ -11573,14 +11573,14 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Delete Refiner Library",
+        "summary": "Delete Processing Library",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "get": {
-        "operationId": "get_refiner_library_api_v1_refiner_libraries__library_id__get",
+        "operationId": "get_processing_library_api_v1_libraries__library_id__get",
         "parameters": [
           {
             "in": "path",
@@ -11598,7 +11598,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                  "$ref": "#/components/schemas/ProcessingLibraryOut"
                 }
               }
             },
@@ -11615,15 +11615,15 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner Library",
+        "summary": "Get Processing Library",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "put": {
         "description": "Save a library. Edited whole, so a partial save cannot half-apply.",
-        "operationId": "put_refiner_library_api_v1_refiner_libraries__library_id__put",
+        "operationId": "put_processing_library_api_v1_libraries__library_id__put",
         "parameters": [
           {
             "in": "path",
@@ -11640,7 +11640,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerLibraryUpdateIn"
+                "$ref": "#/components/schemas/ProcessingLibraryUpdateIn"
               }
             }
           },
@@ -11651,7 +11651,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                  "$ref": "#/components/schemas/ProcessingLibraryOut"
                 }
               }
             },
@@ -11668,14 +11668,14 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Put Refiner Library",
+        "summary": "Put Processing Library",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-files": {
+    "/api/v1/processing/libraries/{library_id}/library-files": {
       "get": {
         "description": "Library view (#568). One page of the library's files, sorted by any listed column and narrowed by classification, matched manager kind, a path/title search, any breakdown facet, or a Problems group. Carries the whole library's totals as well as the filtered subset's, plus the removal/size summary the Clean confirmation dialog uses.",
         "operationId": "get_library_files",
@@ -11868,7 +11868,7 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-files/clean": {
+    "/api/v1/processing/libraries/{library_id}/library-files/clean": {
       "post": {
         "description": "Library mode (#505 point 5). Cleans the selected files in place. Refused with 400 (LibraryConfirmationRequired) when any selected file would have tracks removed and confirm_final_removal is not true.",
         "operationId": "post_library_files_clean",
@@ -11932,7 +11932,7 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-overview": {
+    "/api/v1/processing/libraries/{library_id}/library-overview": {
       "get": {
         "description": "Library view (#568). What the library holds and its state: totals, how many files match the rules, would change or cannot be processed, and the breakdowns by video codec, resolution class, audio codec/channels and audio/subtitle language. Every number is a SQL aggregate over the scan index.",
         "operationId": "get_library_overview",
@@ -11976,7 +11976,7 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-problems": {
+    "/api/v1/processing/libraries/{library_id}/library-problems": {
       "get": {
         "description": "Library view (#568). Files Weir will not clean, grouped by reason (still shared with a download, unreadable, no permission, no video track, no audio would remain, the manager would download it again), each with what to do about it.",
         "operationId": "get_library_problems",
@@ -12020,7 +12020,7 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-redownloads": {
+    "/api/v1/processing/libraries/{library_id}/library-redownloads": {
       "get": {
         "description": "Library mode (#505) / issue #509 step 2. Titles whose current rules would now keep a track a past clean removed for good, scoped to this library.",
         "operationId": "get_library_redownloads",
@@ -12126,7 +12126,7 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-scan": {
+    "/api/v1/processing/libraries/{library_id}/library-scan": {
       "post": {
         "description": "Library mode (#505 point 2). Queues a read-only scan of this library's folders: cached ffprobe by path/size/mtime, classified against the library's current rules. Never writes to a file. Returns the already-running scan instead of queuing a duplicate.",
         "operationId": "post_library_scan",
@@ -12183,7 +12183,7 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-schedule": {
+    "/api/v1/processing/libraries/{library_id}/library-schedule": {
       "post": {
         "description": "Library mode (#505 point 7). Turns the off-by-default scheduled scan-and-clean on or off, reusing the library's existing schedule window. Turning it on for the first time is refused with 400 (LibraryConfirmationRequired) unless confirm_final_removal is true, when the latest scan found tracks that would be removed.",
         "operationId": "post_library_schedule",
@@ -12247,7 +12247,7 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/library-settings": {
+    "/api/v1/processing/libraries/{library_id}/library-settings": {
       "get": {
         "description": "Library mode (#505). Weir server (.NET) only; there is no Python backend route to match, since library mode has no Python implementation.",
         "operationId": "get_library_settings",
@@ -12346,10 +12346,10 @@
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/preview": {
+    "/api/v1/processing/libraries/{library_id}/preview": {
       "post": {
         "description": "\"Try on a file\" (#502): probe a real file and run the rules engine against it — the library's saved rule set, or an unsaved one sent in ``rules`` — without queueing, processing or writing anything. ``relative_path`` must resolve under the library's watched or output folder; ``absolute_path`` goes through the same allow-list the local file picker uses. Refused with 409 while another preview is already running.",
-        "operationId": "post_refiner_library_preview_api_v1_refiner_libraries__library_id__preview_post",
+        "operationId": "post_processing_library_preview_api_v1_libraries__library_id__preview_post",
         "parameters": [
           {
             "in": "path",
@@ -12366,7 +12366,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerRulesPreviewIn"
+                "$ref": "#/components/schemas/ProcessingRulesPreviewIn"
               }
             }
           },
@@ -12377,7 +12377,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerRulesPreviewOut"
+                  "$ref": "#/components/schemas/ProcessingRulesPreviewOut"
                 }
               }
             },
@@ -12394,17 +12394,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Library Preview",
+        "summary": "Post Processing Library Preview",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/libraries/{library_id}/unlink": {
+    "/api/v1/processing/libraries/{library_id}/unlink": {
       "post": {
         "description": "Forget where a library came from. The library itself is untouched.",
-        "operationId": "post_refiner_library_unlink_api_v1_refiner_libraries__library_id__unlink_post",
+        "operationId": "post_processing_library_unlink_api_v1_libraries__library_id__unlink_post",
         "parameters": [
           {
             "in": "path",
@@ -12421,7 +12421,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerLibraryDeleteIn"
+                "$ref": "#/components/schemas/ProcessingLibraryDeleteIn"
               }
             }
           },
@@ -12432,7 +12432,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                  "$ref": "#/components/schemas/ProcessingLibraryOut"
                 }
               }
             },
@@ -12449,17 +12449,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Library Unlink",
+        "summary": "Post Processing Library Unlink",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/maintenance": {
+    "/api/v1/processing/maintenance": {
       "get": {
         "description": "What each maintenance family is doing, and whether its schedule is on.",
-        "operationId": "get_refiner_maintenance_api_v1_refiner_maintenance_get",
+        "operationId": "get_processing_maintenance_api_v1_processing_maintenance_get",
         "responses": {
           "200": {
             "content": {
@@ -12472,17 +12472,17 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Get Refiner Maintenance",
+        "summary": "Get Processing Maintenance",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/maintenance/run": {
+    "/api/v1/processing/maintenance/run": {
       "post": {
         "description": "Run one maintenance family now.\n\nIgnores the schedule toggle on purpose: the toggle decides whether Weir runs this\non its own, and somebody asking for it now has already decided.",
-        "operationId": "post_refiner_maintenance_run_api_v1_refiner_maintenance_run_post",
+        "operationId": "post_processing_maintenance_run_api_v1_processing_maintenance_run_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -12515,16 +12515,16 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Maintenance Run",
+        "summary": "Post Processing Maintenance Run",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/metadata-provider": {
+    "/api/v1/processing/metadata-provider": {
       "get": {
-        "operationId": "get_metadata_provider_api_v1_refiner_metadata_provider_get",
+        "operationId": "get_metadata_provider_api_v1_processing_metadata_provider_get",
         "responses": {
           "200": {
             "content": {
@@ -12539,12 +12539,12 @@
         },
         "summary": "Get Metadata Provider",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "put": {
-        "operationId": "put_metadata_provider_api_v1_refiner_metadata_provider_put",
+        "operationId": "put_metadata_provider_api_v1_processing_metadata_provider_put",
         "requestBody": {
           "content": {
             "application/json": {
@@ -12579,15 +12579,15 @@
         },
         "summary": "Put Metadata Provider",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/metadata-provider/test": {
+    "/api/v1/processing/metadata-provider/test": {
       "post": {
         "description": "Ask the provider a real question, so a saved connection is proven rather than assumed.",
-        "operationId": "post_metadata_provider_test_api_v1_refiner_metadata_provider_test_post",
+        "operationId": "post_metadata_provider_test_api_v1_processing_metadata_provider_test_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -12622,39 +12622,39 @@
         },
         "summary": "Post Metadata Provider Test",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/operator-settings": {
+    "/api/v1/processing/operator-settings": {
       "get": {
-        "operationId": "get_refiner_operator_settings_api_v1_refiner_operator_settings_get",
+        "operationId": "get_operator_settings_api_v1_operator_settings_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerOperatorSettingsOut"
+                  "$ref": "#/components/schemas/ProcessingOperatorSettingsOut"
                 }
               }
             },
             "description": "Successful Response"
           }
         },
-        "summary": "Get Refiner Operator Settings",
+        "summary": "Get Processing Operator Settings",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "put": {
-        "operationId": "put_refiner_operator_settings_api_v1_refiner_operator_settings_put",
+        "operationId": "put_operator_settings_api_v1_operator_settings_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerOperatorSettingsPutIn"
+                "$ref": "#/components/schemas/ProcessingOperatorSettingsPutIn"
               }
             }
           },
@@ -12665,7 +12665,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerOperatorSettingsOut"
+                  "$ref": "#/components/schemas/ProcessingOperatorSettingsOut"
                 }
               }
             },
@@ -12682,16 +12682,16 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Put Refiner Operator Settings",
+        "summary": "Put Processing Operator Settings",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/overview-stats": {
+    "/api/v1/processing/overview-stats": {
       "get": {
-        "operationId": "get_refiner_overview_stats_api_v1_refiner_overview_stats_get",
+        "operationId": "get_processing_overview_stats_api_v1_processing_overview_stats_get",
         "parameters": [
           {
             "description": "How far back to count. Pass 1 for 'today' on the custody screen.",
@@ -12713,7 +12713,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerOverviewStatsOut"
+                  "$ref": "#/components/schemas/ProcessingOverviewStatsOut"
                 }
               }
             },
@@ -12730,17 +12730,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner Overview Stats",
+        "summary": "Get Processing Overview Stats",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/reject-support": {
+    "/api/v1/processing/reject-support": {
       "get": {
         "description": "Whether the Reject failure policy can be chosen for a library linked to these managers.\n\nAsks Deluno or a native manager for its manifest, so it is called when the option is shown,\nnot on every list.",
-        "operationId": "get_refiner_reject_support_api_v1_refiner_reject_support_get",
+        "operationId": "get_processing_reject_support_api_v1_processing_reject_support_get",
         "parameters": [
           {
             "in": "query",
@@ -12777,25 +12777,25 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Refiner Reject Support",
+        "summary": "Get Processing Reject Support",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/rule-sets": {
+    "/api/v1/processing/rule-sets": {
       "get": {
-        "operationId": "get_refiner_rule_sets_api_v1_refiner_rule_sets_get",
+        "operationId": "get_rule_sets_api_v1_rule_sets_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RefinerRuleSetOut"
+                    "$ref": "#/components/schemas/ProcessingRuleSetOut"
                   },
-                  "title": "Response Get Refiner Rule Sets Api V1 Refiner Rule Sets Get",
+                  "title": "Response Get Processing Rule Sets Api V1 Processing Rule Sets Get",
                   "type": "array"
                 }
               }
@@ -12803,19 +12803,19 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Get Refiner Rule Sets",
+        "summary": "Get Processing Rule Sets",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "post": {
-        "operationId": "post_refiner_rule_set_api_v1_refiner_rule_sets_post",
+        "operationId": "post_processing_rule_set_api_v1_rule_sets_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerRuleSetIn"
+                "$ref": "#/components/schemas/ProcessingRuleSetIn"
               }
             }
           },
@@ -12826,7 +12826,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerRuleSetOut"
+                  "$ref": "#/components/schemas/ProcessingRuleSetOut"
                 }
               }
             },
@@ -12843,17 +12843,17 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Rule Set",
+        "summary": "Post Processing Rule Set",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/rule-sets/{rule_set_id}": {
+    "/api/v1/processing/rule-sets/{rule_set_id}": {
       "delete": {
         "description": "Remove a rule set. Refused while a library still points at it.",
-        "operationId": "delete_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__delete",
+        "operationId": "delete_processing_rule_set_api_v1_rule_sets__rule_set_id__delete",
         "parameters": [
           {
             "in": "path",
@@ -12870,7 +12870,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerLibraryDeleteIn"
+                "$ref": "#/components/schemas/ProcessingLibraryDeleteIn"
               }
             }
           },
@@ -12891,14 +12891,14 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Delete Refiner Rule Set",
+        "summary": "Delete Processing Rule Set",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       },
       "put": {
-        "operationId": "put_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__put",
+        "operationId": "put_processing_rule_set_api_v1_rule_sets__rule_set_id__put",
         "parameters": [
           {
             "in": "path",
@@ -12915,7 +12915,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerRuleSetIn"
+                "$ref": "#/components/schemas/ProcessingRuleSetIn"
               }
             }
           },
@@ -12926,7 +12926,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerRuleSetOut"
+                  "$ref": "#/components/schemas/ProcessingRuleSetOut"
                 }
               }
             },
@@ -12943,33 +12943,33 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Put Refiner Rule Set",
+        "summary": "Put Processing Rule Set",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },
-    "/api/v1/refiner/runtime-settings": {
+    "/api/v1/processing/runtime-settings": {
       "get": {
         "description": "Snapshot of configured in-process worker concurrency (env at process start).",
-        "operationId": "get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get",
+        "operationId": "get_processing_runtime_settings_api_v1_processing_runtime_settings_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerRuntimeSettingsOut"
+                  "$ref": "#/components/schemas/ProcessingRuntimeSettingsOut"
                 }
               }
             },
             "description": "Successful Response"
           }
         },
-        "summary": "Get Refiner Runtime Settings",
+        "summary": "Get Processing Runtime Settings",
         "tags": [
-          "refiner",
-          "refiner"
+          "processing",
+          "processing"
         ]
       }
     },

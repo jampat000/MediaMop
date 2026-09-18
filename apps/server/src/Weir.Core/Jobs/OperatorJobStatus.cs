@@ -11,12 +11,12 @@ public static class OperatorJobStatus
 {
     /// <summary>
     /// Display names for module keys whose plain capitalization would not read as a person expects.
-    /// The "refiner" module key is unchanged (it is the stored identifier the caller passes), but the
+    /// The "processing" module key is unchanged (it is the stored identifier the caller passes), but the
     /// app that runs it is just called Weir now.
     /// </summary>
     private static readonly Dictionary<string, string> ModuleDisplayNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["refiner"] = "Weir",
+        ["processing"] = "Weir",
     };
 
     private static string Clean(string? raw, int limit = 1200)
@@ -67,14 +67,14 @@ public static class OperatorJobStatus
 
         if (lower.Contains("database is locked", StringComparison.Ordinal) || lower.Contains("database table is locked", StringComparison.Ordinal))
         {
-            return string.Equals(module, "refiner", StringComparison.OrdinalIgnoreCase)
+            return string.Equals(module, "processing", StringComparison.OrdinalIgnoreCase)
                 ? ($"Weir could not save the result while another local operation was using the database{subject}.",
                    "Try the file again. If it repeats, set ‘Files at once’ to 1, let the current work finish, and retry.", technical)
                 : ($"Weir could not save the {label} result because another local operation was using the database.",
                    "Try the job again after the current local work finishes.", technical);
         }
 
-        if (lower.Contains("not a supported refiner media", StringComparison.Ordinal) || lower.Contains("unsupported refiner", StringComparison.Ordinal) || lower.Contains("refiner does not process", StringComparison.Ordinal) || lower.Contains("weir does not process", StringComparison.Ordinal))
+        if (lower.Contains("not a supported processing media", StringComparison.Ordinal) || lower.Contains("unsupported processing", StringComparison.Ordinal) || lower.Contains("processing does not process", StringComparison.Ordinal) || lower.Contains("weir does not process", StringComparison.Ordinal))
         {
             return ($"This file is not a supported media file for this pass{subject}.", "Choose a supported video file or update the library’s media types, then start it again.", technical);
         }
@@ -89,7 +89,7 @@ public static class OperatorJobStatus
             return ($"Weir could not read this media file{subject}.", "Check that the file is complete and playable, then use Try again.", technical);
         }
 
-        if (lower.Contains("legacy refiner dry_run", StringComparison.Ordinal) || lower.Contains("legacy weir dry_run", StringComparison.Ordinal))
+        if (lower.Contains("legacy processing dry_run", StringComparison.Ordinal) || lower.Contains("legacy weir dry_run", StringComparison.Ordinal))
         {
             return ($"This job was created with an older processing mode{subject}.", "Remove the old entry from the Files list, then let the next scan create a current job.", technical);
         }

@@ -98,7 +98,7 @@
       "input": {
         "ffmpeg_bin": "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": [],
         "plan": {
           "video_indices": [
@@ -157,7 +157,7 @@
           "copy",
           "-disposition:a:0",
           "0",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
@@ -182,7 +182,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -191,7 +191,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg-x",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": [
           "-hwaccel",
           "cuda"
@@ -251,7 +251,7 @@
           "copy",
           "-disposition:a:0",
           "default",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "ffmpeg-x",
@@ -276,7 +276,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -559,7 +559,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg-x",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": null,
         "plan": {
           "video_indices": [
@@ -636,7 +636,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "ffmpeg-x",
@@ -665,7 +665,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -674,7 +674,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": [],
         "plan": {
           "video_indices": [
@@ -768,7 +768,7 @@
           "forced",
           "-disposition:s:1",
           "0",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "ffmpeg",
@@ -801,7 +801,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -1516,7 +1516,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": [
           "-hwaccel",
           "qsv",
@@ -1586,7 +1586,7 @@
           "title=",
           "-disposition:a:0",
           "default",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "ffmpeg",
@@ -1617,7 +1617,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -1626,7 +1626,7 @@
       "input": {
         "ffmpeg_bin": "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": null,
         "plan": {
           "video_indices": [
@@ -1687,7 +1687,7 @@
           "-1",
           "-disposition:a:0",
           "default",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
@@ -1714,7 +1714,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -1928,7 +1928,7 @@
       "input": {
         "ffmpeg_bin": "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": [
           "-strict",
           "experimental"
@@ -2016,7 +2016,7 @@
           "default",
           "-disposition:s:0",
           "forced",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
@@ -2053,7 +2053,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -2062,7 +2062,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg-x",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": [
           "-hwaccel",
           "qsv",
@@ -2152,7 +2152,7 @@
           "0",
           "-disposition:s:0",
           "0",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "ffmpeg-x",
@@ -2189,7 +2189,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -2521,7 +2521,7 @@
       "input": {
         "ffmpeg_bin": "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": null,
         "plan": {
           "video_indices": [
@@ -2598,7 +2598,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
@@ -2627,7 +2627,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -2636,7 +2636,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg-x",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": null,
         "plan": {
           "video_indices": [
@@ -2713,7 +2713,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "ffmpeg-x",
@@ -2742,7 +2742,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -2981,7 +2981,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg-x",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": [],
         "plan": {
           "video_indices": [
@@ -3058,7 +3058,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "ffmpeg-x",
@@ -3087,7 +3087,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -3096,7 +3096,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": [],
         "plan": {
           "video_indices": [
@@ -3173,7 +3173,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "ffmpeg",
@@ -3202,7 +3202,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -3448,7 +3448,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": [
           "-hwaccel",
           "cuda"
@@ -3530,7 +3530,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "ffmpeg",
@@ -3561,7 +3561,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -3570,7 +3570,7 @@
       "input": {
         "ffmpeg_bin": "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": [
           "-hwaccel",
           "cuda"
@@ -3652,7 +3652,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
@@ -3683,7 +3683,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -3936,7 +3936,7 @@
       "input": {
         "ffmpeg_bin": "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": [
           "-strict",
           "experimental"
@@ -4018,7 +4018,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "C:\\Program Files\\Weir\\bin\\ffmpeg\\ffmpeg.exe",
@@ -4049,7 +4049,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -4058,7 +4058,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg-x",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": [
           "-strict",
           "experimental"
@@ -4140,7 +4140,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "ffmpeg-x",
@@ -4171,7 +4171,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -4430,7 +4430,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg-x",
         "src": "C:\\Media\\Film (2019)\\Film (2019).mkv",
-        "dst": "C:\\Work\\Film (2019).refiner.abc123de.mkv",
+        "dst": "C:\\Work\\Film (2019).processing.abc123de.mkv",
         "input_flags": [
           "-hwaccel",
           "qsv",
@@ -4516,7 +4516,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ],
         "progress_argv": [
           "ffmpeg-x",
@@ -4549,7 +4549,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "C:\\Work\\Film (2019).refiner.abc123de.mkv"
+          "C:\\Work\\Film (2019).processing.abc123de.mkv"
         ]
       }
     },
@@ -4558,7 +4558,7 @@
       "input": {
         "ffmpeg_bin": "ffmpeg",
         "src": "Amélie (2001) [1080p].mp4",
-        "dst": "Amélie (2001) [1080p].refiner.x.mp4",
+        "dst": "Amélie (2001) [1080p].processing.x.mp4",
         "input_flags": [
           "-hwaccel",
           "qsv",
@@ -4644,7 +4644,7 @@
           "default",
           "-disposition:s:0",
           "default+forced",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ],
         "progress_argv": [
           "ffmpeg",
@@ -4677,7 +4677,7 @@
           "-progress",
           "pipe:1",
           "-nostats",
-          "Amélie (2001) [1080p].refiner.x.mp4"
+          "Amélie (2001) [1080p].processing.x.mp4"
         ]
       }
     },
@@ -15654,11 +15654,11 @@
     }
   ],
   "constants": {
-    "REFINER_FFMPEG_TIMEOUT_S": 3600,
-    "REFINER_FFMPEG_SLOW_GRACE_S": 60,
-    "REFINER_FFMPEG_MAX_PROJECTED_REMAINING_S": 43200,
-    "_REFINER_FFPROBE_LOG_MAX_CHARS": 2000,
-    "_REFINER_FFMPEG_STDERR_TAIL_BYTES": 32768,
+    "PROCESSING_FFMPEG_TIMEOUT_S": 3600,
+    "PROCESSING_FFMPEG_SLOW_GRACE_S": 60,
+    "PROCESSING_FFMPEG_MAX_PROJECTED_REMAINING_S": 43200,
+    "_PROCESSING_FFPROBE_LOG_MAX_CHARS": 2000,
+    "_PROCESSING_FFMPEG_STDERR_TAIL_BYTES": 32768,
     "_UNREADABLE_MEDIA_MARKERS": [
       "invalid data found when processing input",
       "ebml header parsing failed",

@@ -4,8 +4,8 @@ using Weir.Core.Rules;
 namespace Weir.Core.Tests.Rules;
 
 /// <summary>
-/// Ported from <c>apps/backend/tests/test_refiner_metadata_rules.py</c> and
-/// <c>test_refiner_remux_rules_split_streams.py</c>, including the two that build the ffmpeg argv
+/// Ported from <c>apps/backend/tests/test_processing_metadata_rules.py</c> and
+/// <c>test_processing_remux_rules_split_streams.py</c>, including the two that build the ffmpeg argv
 /// (<c>build_ffmpeg_argv</c>, ported as <see cref="Weir.Core.Media.FfmpegCommands.BuildRemuxArgv"/>).
 /// </summary>
 public sealed class MetadataRulesTests
@@ -37,10 +37,10 @@ public sealed class MetadataRulesTests
 
     private static ProbeStreamInfo Stream(string json) => ProbeStreamInfo.Parse(json);
 
-    private static RefinerRulesConfig Config(MetadataRules? metadata = null) =>
+    private static ProcessingRulesConfig Config(MetadataRules? metadata = null) =>
         metadata is null ? RemuxRules.DefaultConfig() : RemuxRules.DefaultConfig() with { Metadata = metadata };
 
-    private static (RemuxPlan Plan, SplitProbeStreams Split) Plan(ProbeResult probe, RefinerRulesConfig config, bool withAttachments = false)
+    private static (RemuxPlan Plan, SplitProbeStreams Split) Plan(ProbeResult probe, ProcessingRulesConfig config, bool withAttachments = false)
     {
         var split = RemuxRules.SplitStreams(probe);
         var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config, withAttachments ? RemuxRules.AttachmentStreams(probe) : null);

@@ -41,15 +41,15 @@ public interface ISwapJournal
 
 /// <summary>
 /// Records each swap in the <c>library_swaps</c> table, one row per job (upserted by <c>job_id</c>): #557's
-/// migration (0040_library_swaps) moved this off <c>refiner_jobs.payload_json</c>'s <c>library_swap</c>
-/// object and <c>swap_committed</c> flag, which <c>RefinerJobSwapJournal</c> used to pack in there while
+/// migration (0040_library_swaps) moved this off <c>jobs.payload_json</c>'s <c>library_swap</c>
+/// object and <c>swap_committed</c> flag, which <c>ProcessingJobSwapJournal</c> used to pack in there while
 /// ADR-0017 froze the schema and both backends needed to open the same database.
 /// </summary>
-public sealed class RefinerJobSwapJournal : ISwapJournal
+public sealed class ProcessingJobSwapJournal : ISwapJournal
 {
     private readonly SqliteDatabase _database;
 
-    public RefinerJobSwapJournal(SqliteDatabase database)
+    public ProcessingJobSwapJournal(SqliteDatabase database)
     {
         _database = database;
     }
@@ -62,7 +62,7 @@ public sealed class RefinerJobSwapJournal : ISwapJournal
         using (var exists = connection.CreateCommand())
         {
             exists.Transaction = transaction;
-            exists.CommandText = "SELECT COUNT(*) FROM refiner_jobs WHERE id = $id";
+            exists.CommandText = "SELECT COUNT(*) FROM jobs WHERE id = $id";
             exists.Parameters.AddWithValue("$id", entry.JobId);
             var count = Convert.ToInt64(await exists.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), System.Globalization.CultureInfo.InvariantCulture);
             if (count == 0)
