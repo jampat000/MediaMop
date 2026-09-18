@@ -186,7 +186,7 @@ A folder layout that works well:
 | I want to… | Do this |
 | --- | --- |
 | Use a different port | Change the left number: `"8080:9347"` puts Weir at `http://your-server-ip:8080` |
-| Pin a version instead of `latest` | `image: ghcr.io/jampat000/weir:3.0.1` |
+| Pin a version instead of `latest` | `image: ghcr.io/jampat000/weir:3.0.2` |
 | Use HTTPS through a reverse proxy | Set `WEIR_SESSION_COOKIE_SECURE=true` and `WEIR_TRUSTED_PROXY_IPS=<your proxy's IP>`. See [the reverse proxy guide](docs-site/docs/deployment/reverse-proxy.md) |
 | Protect saved API keys with their own secret | Set `WEIR_CREDENTIALS_SECRET` to a long random value (`openssl rand -hex 32`) **before** you add Sonarr or Radarr |
 | Use a GPU | See [hardware acceleration](docker/README.md#hardware-acceleration-and-device-passthrough). It's optional; Weir doesn't re-encode, so you usually don't need it |
