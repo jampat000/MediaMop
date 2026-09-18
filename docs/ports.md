@@ -8,9 +8,17 @@ Vite reads it from [`apps/web/vite.config.ts`](../apps/web/vite.config.ts). Powe
 | Role | Host | Port | URL example |
 |------|------|------|-------------|
 | Web shell (Vite **dev** and **preview**) | all interfaces (`host: true` in `vite.config.ts`) | **8782** | `http://127.0.0.1:8782` or `http://localhost:8782` |
-| API (the .NET server, `dotnet watch run` per `scripts/dev-backend.ps1`) | `127.0.0.1` (from `dev-ports.json`) | **9347** | `http://127.0.0.1:9347` |
+| API (the .NET server, `dotnet watch run` per `scripts/dev-backend.ps1`) | `127.0.0.1` (from `dev-ports.json`) | **18788** | `http://127.0.0.1:18788` |
 
 The browser should use the **web** URL. `/api` is proxied to the API origin above (same-origin cookies).
+
+**The dev API port is deliberately not the installed/production default** (see below). A
+machine that also has Weir installed — every real dev machine, eventually — must never have
+`npm run dev`'s port collide with it: `npm run dev:stop-api` stops the dev API by the PID it
+recorded when it started that process (`.dev-api.pid` at the repo root, read by
+`scripts/stop-dev-api-port.mjs`), never by scanning the port for whatever is listening, so a
+same-numbered installed instance is never at risk either way — but a *different* number is the
+first line of defense and avoids the ambiguity entirely.
 
 **Windows / `ERR_CONNECTION_REFUSED`:** Vite listens on **all interfaces** so both **`127.0.0.1`** and **`localhost`** work. If `localhost` resolved to IPv6 (`::1`) while Vite listened only on IPv4, the browser showed connection refused; that mismatch is what the `host: true` dev bind fixes.
 
@@ -36,4 +44,4 @@ The Weir server (**`apps/server`**) uses **file-backed SQLite** under **`WEIR_HO
 
 ## CI / E2E
 
-Automated tests pick **ephemeral loopback ports** (see `tests/e2e/weir/conftest.py`) so they do not depend on 8782/9347 being free.
+Automated tests pick **ephemeral loopback ports** (see `tests/e2e/weir/conftest.py`) so they do not depend on 8782/18788 being free.

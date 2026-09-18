@@ -1,162 +1,111 @@
 #!/usr/bin/env node
 /**
- * Stops processes **listening** on the dev API port from ``scripts/dev-ports.json``
- * (override with ``WEIR_DEV_API_PORT``).
+ * Stops **this worktree's** dev API process — the one `apps/web/scripts/run-api-dev.mjs`
+ * spawned and recorded in `.dev-api.pid` at the repo root — and nothing else.
  *
- * Use when an old Weir API process is still bound (a current route returns 404) or the
- * port is stuck. Then run ``npm run dev`` from ``apps/web`` again.
+ * This used to stop whatever process was *listening on the dev API port*, full stop. That is
+ * unsafe: the dev API port and an installed Weir's port can be the same number (they both
+ * default to the same value — see `scripts/dev-ports.json` and `docs/ports.md`), so on any
+ * machine that also has Weir installed, this command would silently kill the installed
+ * instance instead of (or as well as) the dev one. The installer had the equivalent bug —
+ * killing every process merely *named* Weir — and was fixed by matching on the install's own
+ * folder (`apps/tray/Weir.Tray/InstallProcesses.cs`, `InstallProcesses.IsInside`). This script
+ * applies the same principle: identify the exact process before touching it, never infer it
+ * from what happens to hold a port.
+ *
+ * Use when an old dev API process from *this* worktree is still bound (a current route
+ * returns 404) or the port is stuck. Then run `npm run dev` from `apps/web` again.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { platform } from "node:os";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, "..");
-const devPortsPath = path.join(repoRoot, "scripts", "dev-ports.json");
+const pidFilePath = path.join(repoRoot, ".dev-api.pid");
 
-function readApiPort() {
-  const forced = (process.env.WEIR_DEV_API_PORT || "").trim();
-  if (forced) {
-    return Number(forced);
+function removePidFile() {
+  try {
+    rmSync(pidFilePath, { force: true });
+  } catch {
+    /* ignore — best-effort cleanup */
   }
-  const raw = JSON.parse(readFileSync(devPortsPath, "utf8"));
-  return Number(raw.development.apiPort);
+}
+
+function readRecordedProcess() {
+  if (!existsSync(pidFilePath)) {
+    return null;
+  }
+  try {
+    const raw = JSON.parse(readFileSync(pidFilePath, "utf8"));
+    const pid = Number(raw?.pid);
+    const serverProject = String(raw?.serverProject || "");
+    if (!Number.isInteger(pid) || pid <= 0 || !serverProject) {
+      return null;
+    }
+    return { pid, serverProject };
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Prefer ``Get-NetTCPConnection`` — on Windows 10+ it matches the real listener PID; ``netstat``
- * can list stale rows that no longer map to a process.
- * @returns {Set<string>}
+ * Windows: `Get-CimInstance Win32_Process` exposes the exact command line, which is what lets
+ * us tell "this PID is dotnet running *our* Weir.Host project" apart from "this PID happens to
+ * exist and answers to the same number" (PIDs are recycled by the OS soon after a process
+ * exits, so the bare fact that *some* process has this PID proves nothing on its own).
+ * @returns {{ ok: boolean, commandLine: string } | null} null when the PID is not running.
  */
-function listeningPidsWindowsNetTcp(port) {
-  const p = Number(port);
-  if (!Number.isFinite(p) || p < 1 || p > 65535) {
-    return new Set();
-  }
+function describeWindowsProcess(pid) {
   const ps = [
-    "Get-NetTCPConnection",
-    "-LocalPort",
-    String(p),
-    "-State",
-    "Listen",
-    "-ErrorAction",
-    "SilentlyContinue",
-    "|",
-    "Select-Object",
-    "-ExpandProperty",
-    "OwningProcess",
-    "-Unique",
+    "$p = Get-CimInstance Win32_Process -Filter \"ProcessId=${pid}\" -ErrorAction SilentlyContinue;",
+    "if ($p) { Write-Output $p.CommandLine } else { Write-Output '' }",
   ].join(" ");
   try {
-    const out = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {
-      encoding: "utf8",
-      windowsHide: true,
-    });
-    return new Set(
-      out
-        .split(/\r?\n/)
-        .map((s) => s.trim())
-        .filter((s) => /^\d+$/.test(s)),
+    const out = execFileSync(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-Command", ps.replace("${pid}", String(pid))],
+      { encoding: "utf8", windowsHide: true },
     );
+    const commandLine = out.trim();
+    return commandLine ? { commandLine } : null;
   } catch {
-    return new Set();
+    return null;
   }
 }
 
-/** @returns {Set<string>} */
-function listeningPidsWindowsNetstat(port) {
-  const out = execFileSync("netstat", ["-ano"], { encoding: "utf8" });
-  const pids = new Set();
-  const suffix = `:${port}`;
-  for (const line of out.split("\n")) {
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 5 || parts[0] !== "TCP") {
-      continue;
-    }
-    const local = parts[1];
-    if (!local.endsWith(suffix) && !local.endsWith(`]:${port}`)) {
-      continue;
-    }
-    const stateIdx = parts.indexOf("LISTENING");
-    if (stateIdx === -1) {
-      continue;
-    }
-    const pid = parts[stateIdx + 1];
-    if (pid && /^\d+$/.test(pid)) {
-      pids.add(pid);
-    }
-  }
-  return pids;
-}
-
-/** @returns {Set<string>} */
-function listeningPidsUnix(port) {
+/** @returns {{ commandLine: string } | null} null when the PID is not running. */
+function describeUnixProcess(pid) {
   try {
-    const out = execFileSync("lsof", ["-i", `TCP:${port}`, "-sTCP:LISTEN", "-t"], {
+    const out = execFileSync("ps", ["-p", String(pid), "-o", "command="], {
       encoding: "utf8",
     });
-    return new Set(
-      out
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    );
+    const commandLine = out.trim();
+    return commandLine ? { commandLine } : null;
   } catch {
-    return new Set();
+    return null;
   }
 }
 
-/**
- * Discover listener PIDs and stop them in one PowerShell run (avoids ``tasklist`` false
- * negatives vs ``Get-NetTCPConnection``).
- * @returns {number} number of processes stopped
- */
-function stopListenersWindowsPowerShell(port) {
-  const p = Number(port);
-  const script = `
-$ErrorActionPreference = 'SilentlyContinue'
-$pids = @(Get-NetTCPConnection -LocalPort ${p} -State Listen | Select-Object -ExpandProperty OwningProcess -Unique)
-$n = 0
-foreach ($id in $pids) {
-  if (-not $id) { continue }
+function stopProcessTreeWindows(pid) {
   try {
-    Stop-Process -Id $id -Force -ErrorAction Stop
-    $n = $n + 1
-  } catch { }
-}
-Write-Output $n
-exit 0
-`.trim();
-  try {
-    const out = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
-      encoding: "utf8",
-      windowsHide: true,
-    });
-    const n = Number.parseInt(String(out).trim(), 10);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function killPidWindows(pid) {
-  try {
-    execFileSync("taskkill", ["/F", "/PID", pid], { stdio: "inherit" });
+    execFileSync("taskkill", ["/T", "/F", "/PID", String(pid)], { stdio: "inherit" });
     return true;
   } catch {
     return false;
   }
 }
 
-function killPidUnix(pid) {
+/** Kills the recorded PID's whole process group (it was spawned detached; see run-api-dev.mjs). */
+function stopProcessTreeUnix(pid) {
   try {
-    process.kill(Number(pid), "SIGTERM");
+    process.kill(-pid, "SIGTERM");
     return true;
   } catch {
     try {
-      execFileSync("kill", ["-9", pid], { stdio: "inherit" });
+      process.kill(pid, "SIGTERM");
       return true;
     } catch {
       return false;
@@ -164,56 +113,58 @@ function killPidUnix(pid) {
   }
 }
 
-const port = readApiPort();
+const recorded = readRecordedProcess();
 
-if (platform() === "win32") {
-  const netTcp = listeningPidsWindowsNetTcp(port);
-  if (netTcp.size > 0) {
-    console.error(
-      `[stop-dev-api-port] Stopping listener(s) on port ${port} via PowerShell (PIDs: ${[...netTcp].join(", ")}).`,
-    );
-    let stopped = stopListenersWindowsPowerShell(port);
-    if (stopped === 0) {
-      console.error("[stop-dev-api-port] PowerShell Stop-Process had no effect — trying taskkill…");
-      for (const pid of netTcp) {
-        if (killPidWindows(pid)) {
-          stopped += 1;
-        }
-      }
-    }
-    if (stopped > 0) {
-      console.error(`[stop-dev-api-port] Stopped ${stopped} process(es).`);
-    } else {
-      console.error(
-        "[stop-dev-api-port] Could not stop listener(s) — close the terminal running the API, or run this from an elevated PowerShell.",
-      );
-    }
-    process.exit(0);
-  }
-}
-
-const pids = platform() === "win32" ? listeningPidsWindowsNetstat(port) : listeningPidsUnix(port);
-
-if (pids.size === 0) {
-  console.error(`[stop-dev-api-port] No LISTENING process on TCP port ${port}.`);
+if (!recorded) {
+  console.error(
+    "[stop-dev-api-port] No recorded dev API process for this worktree (.dev-api.pid missing " +
+      "or unreadable) — nothing to stop. This only stops a process `npm run dev` itself started; " +
+      "it never scans the port for arbitrary listeners (that could be an installed Weir).",
+  );
   process.exit(0);
 }
 
-console.error(`[stop-dev-api-port] Stopping ${pids.size} process(es) on port ${port}: ${[...pids].join(", ")}`);
+const isWindows = platform() === "win32";
+const description = isWindows
+  ? describeWindowsProcess(recorded.pid)
+  : describeUnixProcess(recorded.pid);
 
-let ok = 0;
-for (const pid of pids) {
-  const killed = platform() === "win32" ? killPidWindows(pid) : killPidUnix(pid);
-  if (killed) {
-    ok += 1;
-  }
-}
-
-if (ok === 0 && pids.size > 0) {
+if (!description) {
   console.error(
-    "[stop-dev-api-port] No processes were stopped (PIDs from netstat were already gone or taskkill failed).",
+    `[stop-dev-api-port] Recorded PID ${recorded.pid} is not running (already stopped, or the ` +
+      "machine restarted) — clearing the stale record.",
   );
-} else {
-  console.error(`[stop-dev-api-port] Done (${ok}/${pids.size}).`);
+  removePidFile();
+  process.exit(0);
 }
+
+const identifies = description.commandLine.includes(recorded.serverProject);
+
+if (!identifies) {
+  console.error(
+    `[stop-dev-api-port] PID ${recorded.pid} is running but is not this worktree's dev API — ` +
+      `its command line does not reference ${recorded.serverProject}. The OS likely reused the ` +
+      "PID for an unrelated process after the dev API exited. Leaving it alone: not knowing is " +
+      "not permission. Clearing the stale record.",
+  );
+  removePidFile();
+  process.exit(0);
+}
+
+console.error(
+  `[stop-dev-api-port] Stopping this worktree's dev API (PID ${recorded.pid}, ${recorded.serverProject}).`,
+);
+const stopped = isWindows
+  ? stopProcessTreeWindows(recorded.pid)
+  : stopProcessTreeUnix(recorded.pid);
+
+if (stopped) {
+  console.error("[stop-dev-api-port] Stopped.");
+} else {
+  console.error(
+    `[stop-dev-api-port] Could not stop PID ${recorded.pid} — close the terminal running the ` +
+      "API, or run this from an elevated shell.",
+  );
+}
+removePidFile();
 process.exit(0);

@@ -66,3 +66,7 @@ docs-site/.docusaurus/
 
 # Contract-suite leftover-server ledgers (WEIR_CONTRACT_LEDGER), per worktree.
 .ledger*.json
+
+# PID of the dev API process this worktree's `npm run dev` spawned (scripts/stop-dev-api-port.mjs
+# reads it to stop only that process, never "whatever holds the port" — see run-api-dev.mjs).
+.dev-api.pid
