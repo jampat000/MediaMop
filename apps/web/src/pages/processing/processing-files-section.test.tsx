@@ -169,9 +169,12 @@ it("shows a bucket for every state, including empty ones", async () => {
 
   render(<ProcessingFilesSection />, { wrapper });
 
-  expect(
-    await screen.findByTestId("processing-files-bucket-on_hold"),
-  ).toHaveTextContent("On hold (0)");
+  // The lead band draws one segment per state, an empty one included: it carries the
+  // state's name and its count, and it is a real button that filters the list.
+  const onHold = await screen.findByTestId("processing-files-bucket-on_hold");
+  expect(onHold).toHaveTextContent("On hold");
+  expect(onHold).toHaveTextContent("0");
+  expect(onHold.tagName).toBe("BUTTON");
   expect(
     screen.getByTestId("processing-files-bucket-out_of_schedule"),
   ).toBeInTheDocument();
@@ -204,7 +207,9 @@ it("labels paused work as paused instead of claiming its schedule is closed", as
 
   render(<ProcessingFilesSection />, { wrapper });
 
-  expect(await screen.findByText("Paused")).toBeInTheDocument();
+  // Both the row's status pill and the band segment for that state read "Paused" — the
+  // point of the guard is that neither of them claims the schedule is closed.
+  expect(await screen.findAllByText("Paused")).toHaveLength(2);
   expect(screen.getByText("Processing is paused.")).toBeInTheDocument();
   expect(screen.getByText(/Use Resume at the top/)).toBeInTheDocument();
   expect(
@@ -233,7 +238,11 @@ it("asks for a re-check when a saved pause reason is stale", async () => {
   expect(screen.getByText("Refresh this file's status.")).toBeInTheDocument();
   expect(screen.getByText(/Use Check again/)).toBeInTheDocument();
   expect(screen.queryByText("Processing is paused.")).not.toBeInTheDocument();
-  expect(screen.getByText("Needs action").parentElement).toHaveTextContent("1");
+  // A file whose pause reason has gone stale still counts as needing action. That total
+  // used to sit in a tile above the bucket row; it now reads out in the band's caption.
+  expect(screen.getByTestId("processing-files-flow-caption")).toHaveTextContent(
+    "1 file needs action.",
+  );
 });
 
 it("filters by bucket", async () => {

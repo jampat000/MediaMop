@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { ChooseTracksPanel } from "../../components/processing/choose-tracks-panel";
 import { DirectPlayLine } from "../../components/processing/direct-play-line";
@@ -39,8 +39,22 @@ function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
+/** The nine states the band draws and the list can filter to. `passed_through` and
+ *  `rejected` are real statuses but not filters, so they are counted in the caption
+ *  instead — see `elsewhere` below. */
+type BucketStatus =
+  | "processing"
+  | "unprocessed"
+  | "on_hold"
+  | "out_of_schedule"
+  | "blocked_upstream"
+  | "skipped"
+  | "disabled"
+  | "processed"
+  | "processing_failed";
+
 /** Buckets in the order an operator reads them: working, waiting, withheld, finished. */
-const BUCKETS: ProcessingFileStatus[] = [
+const BUCKETS: BucketStatus[] = [
   "processing",
   "unprocessed",
   "on_hold",
@@ -60,10 +74,70 @@ const ACTIONABLE_STATUSES = new Set<ProcessingFileStatus>([
   "blocked_upstream",
 ]);
 
+/** One line each, saying what the state means. Shown under the count in the lead band. */
+const BUCKET_HINTS: Record<BucketStatus, string> = {
+  processing: "Being rewritten now",
+  unprocessed: "Ready for the next slot",
+  on_hold: "Held until it can run",
+  out_of_schedule: "Outside its schedule window",
+  blocked_upstream: "Waiting on a media manager",
+  skipped: "Nothing to change",
+  disabled: "Its library is switched off",
+  processed: "Handed back clean",
+  processing_failed: "Waiting for review",
+};
+
+/**
+ * How each state's pill reads. Three states (`skipped`, `passed_through`, `rejected`)
+ * used to have no rule at all and fell through to a bare outlined pill, visibly unlike
+ * their eight siblings. This map is exhaustive over `ProcessingFileStatus`, so the
+ * compiler makes the next state a decision rather than another accidental gap.
+ */
+type ProcessingStatusTone = "healthy" | "info" | "warning" | "neutral";
+
+const PROCESSING_STATUS_TONES: Record<
+  ProcessingFileStatus,
+  ProcessingStatusTone
+> = {
+  unprocessed: "healthy",
+  processed: "healthy",
+  // A validated, unchanged hand-back is a finished good outcome, the same as `processed`.
+  passed_through: "healthy",
+  processing: "info",
+  // Everything an operator may need to act on shares one tone. `rejected` (dropped in
+  // favour of a replacement) belongs here rather than reading as benign, and no state is
+  // painted louder than a real failure.
+  processing_failed: "warning",
+  on_hold: "warning",
+  out_of_schedule: "warning",
+  blocked_upstream: "warning",
+  rejected: "warning",
+  // Deliberately colourless: "Weir looked and there was nothing to do" is not an outcome
+  // worth a colour, and neither is a library the operator switched off themselves.
+  skipped: "neutral",
+  disabled: "neutral",
+};
+
+const STATUS_TONE_CLASS: Record<ProcessingStatusTone, string> = {
+  healthy:
+    "text-[var(--mm-status-healthy-text)] bg-[var(--mm-status-healthy-bg)]",
+  info: "text-[var(--mm-status-info-text)] bg-[var(--mm-status-info-bg)]",
+  warning:
+    "text-[var(--mm-status-warning-text)] bg-[var(--mm-status-warning-bg)]",
+  neutral: "text-[var(--mm-text3)] bg-[var(--mm-well-bg)]",
+};
+
+const STATUS_PILL_BASE =
+  "inline-flex items-center whitespace-nowrap rounded-full border border-current px-[0.55rem] py-[0.2rem] text-[0.66rem] font-bold leading-[1.2] tracking-[0.04em]";
+
+function statusPillClass(status: ProcessingFileStatus): string {
+  return `${STATUS_PILL_BASE} ${STATUS_TONE_CLASS[PROCESSING_STATUS_TONES[status]]}`;
+}
+
 function fileStatusFromUrl(): ProcessingFileStatus | undefined {
   if (typeof window === "undefined") return undefined;
   const value = new URLSearchParams(window.location.search).get("status");
-  return BUCKETS.includes(value as ProcessingFileStatus)
+  return BUCKETS.includes(value as BucketStatus)
     ? (value as ProcessingFileStatus)
     : undefined;
 }
@@ -321,12 +395,136 @@ function timestampLabel(
   return `${formatDate(value)} · ${relative}`;
 }
 
+function QuietSection({
+  headingId,
+  heading,
+  aside,
+  children,
+  "data-testid": dataTestId,
+}: {
+  headingId: string;
+  heading: string;
+  aside?: ReactNode;
+  children: ReactNode;
+  "data-testid"?: string;
+}) {
+  return (
+    <section
+      className="mm-quiet-section"
+      aria-labelledby={headingId}
+      data-testid={dataTestId}
+    >
+      <div className="mm-quiet-section__head">
+        <h2 id={headingId} className="mm-quiet-section__title">
+          {heading}
+        </h2>
+        {aside ? <div className="mm-quiet-section__aside">{aside}</div> : null}
+      </div>
+      <div className="mm-quiet-section__body">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * The lead: every state Weir files work into, each segment as wide as the number of files
+ * in it, each one a filter into the list below.
+ *
+ * The counts come from `status_counts`, which the server computes with
+ * `SELECT status, COUNT(*) FROM files [WHERE library_id = ?] GROUP BY status` — so it
+ * ignores the status, path and limit filters entirely and only narrows to a chosen
+ * library. That is what makes a band honest here: paginating with "Show at most" cannot
+ * move these numbers. The one thing it does not know about is the path filter, and the
+ * caption says so rather than letting the band quietly disagree with the list.
+ *
+ * Nine segments is the full filter set, so turning the old pill row into the band lost no
+ * filter. The band wraps to a second line on a narrow panel, by itself.
+ */
+function FileFlowBand({
+  counts,
+  active,
+  outOfScheduleLabel,
+  onSelect,
+}: {
+  counts: Record<string, number>;
+  active: ProcessingFileStatus | undefined;
+  outOfScheduleLabel: string;
+  onSelect: (status: ProcessingFileStatus | undefined) => void;
+}) {
+  const stages = BUCKETS.map((status) => ({
+    status,
+    label:
+      status === "out_of_schedule"
+        ? outOfScheduleLabel
+        : PROCESSING_FILE_STATUS_LABELS[status],
+    count: counts[status] ?? 0,
+  }));
+  const total = stages.reduce((sum, stage) => sum + stage.count, 0);
+  return (
+    <div className="mm-lead-band" data-testid="processing-files-buckets">
+      {stages.map((stage) => {
+        const live = stage.status === "processing" && stage.count > 0;
+        const modifier =
+          stage.count === 0
+            ? " mm-lead-band__segment--empty"
+            : live
+              ? " mm-lead-band__segment--live"
+              : "";
+        // The same weighting Overview uses: the raw count, floored at 6% of the total so
+        // an empty state still reads as a state.
+        const share = total === 0 ? 1 : Math.max(stage.count, total * 0.06);
+        const selected = active === stage.status;
+        return (
+          <button
+            key={stage.status}
+            type="button"
+            className={`mm-lead-band__segment${modifier}`}
+            // Nine segments rather than Overview's six, so the floor has to come down from
+            // the primitive's 9rem: measured at 1440 the band is 1098px, and nine segments
+            // only share one line below about 121px each. That matters because a flex line
+            // justifies itself — a wrapped band compares widths only within a row, so a
+            // small count stranded on row two draws wider than a large one on row one.
+            // Inline because index.css imports Tailwind before weir-content.css, so a
+            // `min-w-*` utility loses the cascade to `.mm-lead-band__segment` at equal
+            // specificity. Below 1280 it still wraps, as the primitive is meant to.
+            style={
+              { "--mm-flow-share": share, minWidth: "6.75rem" } as CSSProperties
+            }
+            aria-pressed={selected}
+            onClick={() => onSelect(selected ? undefined : stage.status)}
+            data-testid={`processing-files-bucket-${stage.status}`}
+          >
+            <span className="mm-lead-band__label">
+              {stage.label}
+              {live ? (
+                <i className="mm-lead-band__pulse" aria-hidden="true" />
+              ) : null}
+            </span>
+            <span className="mm-lead-band__value">
+              {stage.count.toLocaleString()}
+            </span>
+            <span className="mm-lead-band__hint">
+              {BUCKET_HINTS[stage.status]}
+            </span>
+            <span className="mm-lead-band__go" aria-hidden="true">
+              {selected ? "Clear →" : "Filter →"}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * The Processing Files screen.
  *
  * This is the screen that answers "why isn't this file processing?". Processing used to
  * decide and move on — the reason existed only inside the scan — so a file that was
  * held, out of schedule, or waiting on an import simply never appeared anywhere (#334).
+ *
+ * Laid out in the Weir content language (docs/design/content-language.md): the state band
+ * leads, then the worklist, quietly. There is no figure row — a worklist has no single
+ * number that carries it, and an invented hero is worse than no hero.
  */
 export function ProcessingFilesSection() {
   const formatDate = useAppDateFormatter();
@@ -398,6 +596,23 @@ export function ProcessingFilesSection() {
   const selectedActionableRows = selectedRows.filter((file) =>
     ACTIONABLE_STATUSES.has(file.status),
   );
+
+  // Every file Weir holds, and the part of it the band draws. `status_counts` covers all
+  // eleven statuses; BUCKETS draws nine, so `passed_through` and `rejected` are counted
+  // and said out loud in the caption rather than quietly dropped.
+  const inHand = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  const shownInBand = BUCKETS.reduce(
+    (sum, status) => sum + (counts[status] ?? 0),
+    0,
+  );
+  const elsewhere = inHand - shownInBand;
+  // The same arithmetic the old "Needs action" tile did. It moves into the band's caption
+  // rather than being a fourth number in a box above the band.
+  const needsAction =
+    (counts.processing_failed ?? 0) +
+    (counts.on_hold ?? 0) +
+    (counts.blocked_upstream ?? 0) +
+    stalePausedRows;
 
   const selectFileStatus = (next: ProcessingFileStatus | undefined) => {
     setFileStatus(next);
@@ -657,527 +872,561 @@ export function ProcessingFilesSection() {
 
   return (
     <div
-      className="mm-processing-files space-y-5"
+      className="mm-processing-files mm-quiet-stack"
       data-testid="processing-files-section"
     >
-      <div className="mm-processing-workbench-intro">
-        <div>
-          <p className="mm-page__eyebrow">Files</p>
-          <h2 className="text-xl font-semibold tracking-tight text-[var(--mm-text1)]">
-            Give every file a useful next step.
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--mm-text2)]">
-            Every file Weir has seen. Select rows to start, retry, or re-check
-            them together. Pass through unchanged is the explicit exception: it
-            validates an unchanged output first, then performs the
-            library&apos;s normal successful source cleanup.
+      <div className="mm-lead">
+        {inHand === 0 ? (
+          <p
+            className="mm-quiet-note"
+            data-testid="processing-files-flow-empty"
+          >
+            No files match. Weir records a file the first time a scan looks at
+            it.
           </p>
-        </div>
-        <div
-          className="mm-processing-workbench-stats"
-          aria-label="File work summary"
-        >
-          <div>
-            <span>Needs action</span>
-            <strong>
-              {(counts.processing_failed ?? 0) +
-                (counts.on_hold ?? 0) +
-                (counts.blocked_upstream ?? 0) +
-                stalePausedRows}
-            </strong>
-          </div>
-          <div>
-            <span>Ready</span>
-            <strong>{counts.unprocessed ?? 0}</strong>
-          </div>
-          <div>
-            <span>In progress</span>
-            <strong>{counts.processing ?? 0}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div
-        className="flex flex-wrap gap-2"
-        data-testid="processing-files-buckets"
-      >
-        <button
-          type="button"
-          className={mmActionButtonClass({
-            variant: fileStatus === undefined ? "primary" : "tertiary",
-          })}
-          onClick={() => selectFileStatus(undefined)}
-        >
-          All (
-          {rows.length === 0 && !page
-            ? 0
-            : Object.values(counts).reduce((a, b) => a + b, 0)}
-          )
-        </button>
-        {BUCKETS.map((status) => (
-          <button
-            key={status}
-            type="button"
-            className={mmActionButtonClass({
-              variant: fileStatus === status ? "primary" : "tertiary",
-            })}
-            onClick={() => selectFileStatus(status)}
-            data-testid={`processing-files-bucket-${status}`}
-          >
-            {status === "out_of_schedule"
-              ? outOfScheduleLabel
-              : PROCESSING_FILE_STATUS_LABELS[status]}{" "}
-            ({counts[status] ?? 0})
-          </button>
-        ))}
-      </div>
-
-      {editable && rows.length > 0 ? (
-        <div
-          className="mm-processing-selection-bar"
-          data-testid="processing-files-selection-bar"
-        >
-          <label className="inline-flex items-center gap-2 text-sm text-[var(--mm-text2)]">
-            <input
-              type="checkbox"
-              checked={
-                rows.length > 0 &&
-                rows.every((file) => selectedIds.has(file.id))
-              }
-              onChange={selectAllVisible}
-              data-testid="processing-files-select-all"
-            />
-            Select all visible
-          </label>
-          <span className="text-xs text-[var(--mm-text3)]">
-            {selectedIds.size} selected · choose rows to run the right action
-            for each state.
-          </span>
-          <button
-            type="button"
-            className={mmActionButtonClass({
-              variant: "secondary",
-              disabled: bulkWorking || selectedActionableRows.length === 0,
-            })}
-            onClick={() => void runSelectedActions()}
-            disabled={bulkWorking || selectedActionableRows.length === 0}
-            data-testid="processing-files-run-selected"
-          >
-            {bulkWorking ? "Working…" : "Run selected actions"}
-          </button>
-          {selectedRows.some(
-            (file) => !ACTIONABLE_STATUSES.has(file.status),
-          ) ? (
-            <span className="text-xs text-[var(--mm-text3)]">
-              Done, skipped, processing, and library-off rows are informational
-              only.
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block text-sm">
-          <span className="text-[var(--mm-text2)]">Library</span>
-          <select
-            className={mmSelectFieldClass}
-            value={libraryId ?? ""}
-            onChange={(e) =>
-              setLibraryId(e.target.value ? Number(e.target.value) : undefined)
-            }
-          >
-            <option value="">All libraries</option>
-            {(libraries.data ?? []).map((library) => (
-              <option key={library.id} value={library.id}>
-                {library.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--mm-text2)]">Path contains</span>
-          <input
-            className={mmEditableTextFieldClass}
-            value={pathContains}
-            placeholder="part of a file or folder name"
-            onChange={(e) => setPathContains(e.target.value)}
+        ) : (
+          <FileFlowBand
+            counts={counts}
+            active={fileStatus}
+            outOfScheduleLabel={outOfScheduleLabel}
+            onSelect={selectFileStatus}
           />
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--mm-text2)]">Show at most</span>
-          <select
-            className={mmSelectFieldClass}
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
+        )}
+
+        {/* The caption explains the band. With no band drawn there is nothing for it to
+            explain, and the empty sentence above has already said the whole story. */}
+        {inHand === 0 ? null : (
+          <p
+            className="mm-lead-caption"
+            data-testid="processing-files-flow-caption"
           >
-            {[50, 200, 500, 1000].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </label>
+            <span>
+              Each state is as wide as the number of files in it; click one to
+              filter the list, or click it again to clear.
+              {libraryId === undefined
+                ? ""
+                : " These counts are for the selected library."}
+              {pathContains.trim()
+                ? " The path filter narrows the list below, not these counts."
+                : ""}
+            </span>
+            <span>
+              {needsAction > 0
+                ? `${needsAction.toLocaleString()} ${needsAction === 1 ? "file needs" : "files need"} action.`
+                : "Nothing needs action."}
+              {elsewhere > 0
+                ? ` ${elsewhere.toLocaleString()} more in states this band does not show.`
+                : ""}
+            </span>
+          </p>
+        )}
       </div>
 
-      {/* Bulk requeue acts on the filter currently on screen, so what gets queued is
-          what is being looked at. Only offered when the filter is narrow enough to mean
-          something — "requeue everything" is not a button anyone should have. */}
-      {editable && fileStatus === "processing_failed" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary" })}
-            onClick={() => void requeueFiltered()}
-            data-testid="processing-files-requeue-filtered"
-            disabled={requeueMany.isPending || rows.length === 0}
-          >
-            {requeueMany.isPending
-              ? "Queueing…"
-              : `Try all ${rows.length} again`}
-          </button>
-          <span className="text-xs text-[var(--mm-text3)]">
-            Queues everything matching the filters above, up to {limit} files.
-          </span>
-        </div>
-      ) : null}
+      <QuietSection
+        headingId="processing-files-worklist-heading"
+        heading="Give every file a useful next step."
+        aside={
+          fileStatus ? (
+            <button
+              type="button"
+              className="mm-quiet-link"
+              onClick={() => selectFileStatus(undefined)}
+            >
+              Show all {inHand.toLocaleString()} files →
+            </button>
+          ) : (
+            <span className="text-xs text-[var(--mm-text3)]">
+              {inHand.toLocaleString()} files
+            </span>
+          )
+        }
+      >
+        <p className="mm-quiet-note">
+          Every file Weir has seen. Select rows to start, retry, or re-check
+          them together. Pass through unchanged is the explicit exception: it
+          validates an unchanged output first, then performs the library&apos;s
+          normal successful source cleanup.
+        </p>
 
-      {openLog ? (
-        <div
-          className="rounded border border-[var(--mm-border)] p-3"
-          data-testid="processing-file-log-panel"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate font-medium text-[var(--mm-text1)]">
-                {openLog.relative_path}
-              </p>
-              <p className="text-xs text-[var(--mm-text3)]">
-                {openLog.entries.length} record(s) ·{" "}
-                {openLog.retention_days === 0
-                  ? "kept forever"
-                  : `kept for ${openLog.retention_days} days`}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {/* A real link, not a scripted save: the browser handles the download and
-                  the filename comes from the server. */}
-              <a
-                className={mmActionButtonClass({ variant: "tertiary" })}
-                href={processingFileLogDownloadPath(openLog.file_id)}
-                data-testid="processing-file-log-download"
-              >
-                Download
-              </a>
-              <button
-                type="button"
-                className={mmActionButtonClass({ variant: "tertiary" })}
-                onClick={() => setOpenLog(null)}
-                data-testid="processing-file-log-close"
-              >
-                Close
-              </button>
-            </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <label className="block text-sm">
+            <span className="text-[var(--mm-text2)]">Library</span>
+            <select
+              className={mmSelectFieldClass}
+              value={libraryId ?? ""}
+              onChange={(e) =>
+                setLibraryId(
+                  e.target.value ? Number(e.target.value) : undefined,
+                )
+              }
+            >
+              <option value="">All libraries</option>
+              {(libraries.data ?? []).map((library) => (
+                <option key={library.id} value={library.id}>
+                  {library.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-[var(--mm-text2)]">Path contains</span>
+            <input
+              className={mmEditableTextFieldClass}
+              value={pathContains}
+              placeholder="part of a file or folder name"
+              onChange={(e) => setPathContains(e.target.value)}
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-[var(--mm-text2)]">Show at most</span>
+            <select
+              className={mmSelectFieldClass}
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value))}
+            >
+              {[50, 200, 500, 1000].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {editable && rows.length > 0 ? (
+          <div
+            className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--mm-border)] pb-4"
+            data-testid="processing-files-selection-bar"
+          >
+            <label className="inline-flex items-center gap-2 text-sm text-[var(--mm-text2)]">
+              <input
+                type="checkbox"
+                className="[accent-color:var(--mm-accent)]"
+                checked={
+                  rows.length > 0 &&
+                  rows.every((file) => selectedIds.has(file.id))
+                }
+                onChange={selectAllVisible}
+                data-testid="processing-files-select-all"
+              />
+              Select all visible
+            </label>
+            <span className="text-xs text-[var(--mm-text3)]">
+              {selectedIds.size} selected · choose rows to run the right action
+              for each state.
+            </span>
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "secondary",
+                disabled: bulkWorking || selectedActionableRows.length === 0,
+              })}
+              onClick={() => void runSelectedActions()}
+              disabled={bulkWorking || selectedActionableRows.length === 0}
+              data-testid="processing-files-run-selected"
+            >
+              {bulkWorking ? "Working…" : "Run selected actions"}
+            </button>
+            {selectedRows.some(
+              (file) => !ACTIONABLE_STATUSES.has(file.status),
+            ) ? (
+              <span className="text-xs text-[var(--mm-text3)]">
+                Done, skipped, processing, and library-off rows are
+                informational only.
+              </span>
+            ) : null}
           </div>
-          <ul className="mt-3 space-y-3">
-            {openLog.entries.map((entry) => {
-              const facts = processingFacts(entry.detail);
-              return (
-                <li
-                  key={entry.id}
-                  className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3"
+        ) : null}
+
+        {/* Bulk requeue acts on the filter currently on screen, so what gets queued is
+            what is being looked at. Only offered when the filter is narrow enough to mean
+            something — "requeue everything" is not a button anyone should have. */}
+        {editable && fileStatus === "processing_failed" ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary" })}
+              onClick={() => void requeueFiltered()}
+              data-testid="processing-files-requeue-filtered"
+              disabled={requeueMany.isPending || rows.length === 0}
+            >
+              {requeueMany.isPending
+                ? "Queueing…"
+                : `Try all ${rows.length} again`}
+            </button>
+            <span className="text-xs text-[var(--mm-text3)]">
+              Queues everything matching the filters above, up to {limit} files.
+            </span>
+          </div>
+        ) : null}
+
+        {notice ? (
+          <p
+            className="mt-4 text-sm font-medium text-[var(--mm-text1)]"
+            role="status"
+            data-testid="processing-files-notice"
+          >
+            {notice}
+          </p>
+        ) : null}
+
+        {openLog ? (
+          <div className="mt-5" data-testid="processing-file-log-panel">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-[var(--mm-text1)]">
+                  {openLog.relative_path}
+                </p>
+                <p className="text-xs text-[var(--mm-text3)]">
+                  {openLog.entries.length} record(s) ·{" "}
+                  {openLog.retention_days === 0
+                    ? "kept forever"
+                    : `kept for ${openLog.retention_days} days`}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {/* A real link, not a scripted save: the browser handles the download and
+                  the filename comes from the server. */}
+                <a
+                  className={mmActionButtonClass({ variant: "tertiary" })}
+                  href={processingFileLogDownloadPath(openLog.file_id)}
+                  data-testid="processing-file-log-download"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--mm-text1)]">
-                        {entry.title || "Processing record"}
-                      </p>
-                      <p className="mt-0.5 text-xs text-[var(--mm-text3)]">
-                        {formatDate(entry.recorded_at)}
-                      </p>
+                  Download
+                </a>
+                <button
+                  type="button"
+                  className={mmActionButtonClass({ variant: "tertiary" })}
+                  onClick={() => setOpenLog(null)}
+                  data-testid="processing-file-log-close"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <ul className="mt-3">
+              {openLog.entries.map((entry) => {
+                const facts = processingFacts(entry.detail);
+                return (
+                  <li
+                    key={entry.id}
+                    className="border-b border-[var(--mm-border)] py-4 last:border-b-0"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--mm-text1)]">
+                          {entry.title || "Processing record"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--mm-text3)]">
+                          {formatDate(entry.recorded_at)}
+                        </p>
+                      </div>
+                      {/* The outcome word itself says what happened; the chip is a shape,
+                        not a verdict, so it stays tone-neutral rather than painting every
+                        record — including a failed one — healthy green as it used to. */}
+                      <span
+                        className={`${STATUS_PILL_BASE} ${STATUS_TONE_CLASS.neutral}`}
+                      >
+                        {(entry.outcome || "recorded").replaceAll("_", " ")}
+                      </span>
                     </div>
-                    <span className="mm-processing-status mm-processing-status--processed">
-                      {(entry.outcome || "recorded").replaceAll("_", " ")}
-                    </span>
-                  </div>
-                  {facts.length > 0 ? (
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {facts.map((fact, index) => (
-                        <div
-                          key={`${fact.label}-${index}`}
-                          className="rounded border border-[var(--mm-border)] px-3 py-2"
-                        >
-                          <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
-                            {fact.label}
-                          </dt>
-                          <dd className="mt-1 break-words text-sm text-[var(--mm-text2)] [overflow-wrap:anywhere]">
-                            {fact.value}
-                          </dd>
+                    {facts.length > 0 ? (
+                      <dl className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                        {facts.map((fact, index) => (
+                          <div key={`${fact.label}-${index}`}>
+                            <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+                              {fact.label}
+                            </dt>
+                            <dd className="mt-1 break-words text-sm text-[var(--mm-text2)] [overflow-wrap:anywhere]">
+                              {fact.value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <p className="mt-3 text-sm text-[var(--mm-text2)]">
+                        No additional human-readable detail was recorded for
+                        this pass.
+                      </p>
+                    )}
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-xs font-medium text-[var(--mm-text3)]">
+                        Technical record
+                      </summary>
+                      <pre className="mt-2 max-h-64 overflow-auto rounded border border-[var(--mm-border)] p-2 text-xs text-[var(--mm-text3)]">
+                        {JSON.stringify(entry.detail, null, 2)}
+                      </pre>
+                    </details>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
+
+        {rows.length === 0 ? (
+          // When Weir holds nothing at all the lead already said so, and the strongest
+          // empty wins outright rather than saying it twice. This line is for the other
+          // empty: files exist, but the filters on this screen hide all of them.
+          inHand === 0 ? null : (
+            <p className="mt-5 text-sm text-[var(--mm-text3)]">
+              No files match. Weir records a file the first time a scan looks at
+              it.
+            </p>
+          )
+        ) : (
+          <ul className="mt-2">
+            {rows.map((file) => {
+              const guidance = guidanceForFile(file, processingPaused);
+              return (
+                // The box goes, but a hairline stays: this is the densest row anywhere in
+                // Processing — seven facts and up to seven buttons — and without a
+                // separator one file's actions run straight into the next file's path.
+                // The intrinsic size is re-stated here because the shared rule in
+                // weir-shell.css is sized against the old bordered card.
+                <li
+                  key={file.id}
+                  className="border-b border-[var(--mm-border)] py-4 last:border-b-0 [contain-intrinsic-size:auto_15rem]"
+                  data-testid={`processing-file-${file.id}`}
+                >
+                  <div className="mm-processing-file-card">
+                    {editable ? (
+                      <label
+                        className="mm-processing-file-select"
+                        title="Select this file for a bulk action"
+                      >
+                        <input
+                          type="checkbox"
+                          className="[accent-color:var(--mm-accent)]"
+                          checked={selectedIds.has(file.id)}
+                          onChange={() => toggleSelected(file.id)}
+                          aria-label={`Select ${file.relative_path}`}
+                          data-testid={`processing-file-select-${file.id}`}
+                        />
+                      </label>
+                    ) : null}
+                    <div className="mm-processing-file-content min-w-0 flex-1">
+                      <div className="mm-processing-file-main min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="break-words font-medium text-[var(--mm-text1)] [overflow-wrap:anywhere]">
+                            {file.relative_path}
+                          </p>
+                          <span className={statusPillClass(file.status)}>
+                            {displayStatusForFile(file, processingPaused)}
+                          </span>
                         </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="mt-3 text-sm text-[var(--mm-text2)]">
-                      No additional human-readable detail was recorded for this
-                      pass.
-                    </p>
-                  )}
-                  <details className="mt-3">
-                    <summary className="cursor-pointer text-xs font-medium text-[var(--mm-text3)]">
-                      Technical record
-                    </summary>
-                    <pre className="mt-2 max-h-64 overflow-auto rounded border border-[var(--mm-border)] p-2 text-xs text-[var(--mm-text3)]">
-                      {JSON.stringify(entry.detail, null, 2)}
-                    </pre>
-                  </details>
+                        <p className="mt-1 text-xs text-[var(--mm-text3)]">
+                          {file.library_name} · {humanSize(file.size_bytes)} ·{" "}
+                          {file.failure_attempts} failure
+                          {file.failure_attempts === 1 ? "" : "s"}
+                        </p>
+                        {/* Three labelled facts, not a table and no longer three little
+                          boxes: whitespace and the eyebrow type carry them. */}
+                        <dl
+                          className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-3"
+                          data-testid={`processing-file-timestamps-${file.id}`}
+                        >
+                          {[
+                            {
+                              label: "First seen",
+                              value: timestampLabel(
+                                file.created_at,
+                                formatDate,
+                              ),
+                            },
+                            {
+                              label: "Last checked",
+                              value: timestampLabel(
+                                file.last_seen_at,
+                                formatDate,
+                              ),
+                            },
+                            {
+                              label: "Last processing attempt",
+                              value: timestampLabel(
+                                file.last_attempt_at,
+                                formatDate,
+                              ),
+                            },
+                          ].map((fact) => (
+                            <div key={fact.label} className="min-w-0">
+                              <dt className="text-[0.62rem] font-bold uppercase tracking-[0.08em] text-[var(--mm-text3)]">
+                                {fact.label}
+                              </dt>
+                              <dd className="mt-0.5 text-[0.73rem] leading-[1.4] text-[var(--mm-text2)] tabular-nums">
+                                {fact.value}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                        {/* The reason is the whole point of this screen, so it is not hidden
+                      behind a detail view. */}
+                        <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                          {displayReasonForFile(file, processingPaused)}
+                        </p>
+                        {/* A hold with no release time reads as held forever. When Weir
+                      knows when the wait ends, it says so; when the wait is on a writer
+                      rather than the clock, hold_until is null and nothing is invented. */}
+                        {file.status === "on_hold" && file.hold_until ? (
+                          <p
+                            className="mt-1 text-xs text-[var(--mm-text3)]"
+                            data-testid={`processing-file-hold-until-${file.id}`}
+                          >
+                            {holdReleaseLabel(file.hold_until, formatDate)}
+                          </p>
+                        ) : null}
+                        <DirectPlayLine
+                          directPlay={file.direct_play}
+                          testId={`processing-file-direct-play-${file.id}`}
+                        />
+                        {/* The guidance keeps its accent eyebrow but loses its tinted well:
+                          below the lead, hierarchy is type and whitespace. */}
+                        <div className="mt-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mm-accent-bright)]">
+                            Next step
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-[var(--mm-text1)]">
+                            {guidance.title}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-[var(--mm-text2)]">
+                            {guidance.next}
+                          </p>
+                        </div>
+                      </div>
+                      {editable ? (
+                        <div className="mm-processing-file-actions flex flex-wrap gap-2">
+                          {/* Only offered where it can do something: a file that is running
+                      cannot be started earlier, and a button that looked like it worked
+                      would be worse than no button. */}
+                          {file.status === "unprocessed" ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "tertiary",
+                              })}
+                              onClick={() => void moveToTop(file)}
+                              data-testid={`processing-file-move-to-top-${file.id}`}
+                              title="Puts this file's queued work ahead of everything else waiting."
+                            >
+                              Move to top
+                            </button>
+                          ) : null}
+                          {file.status === "processing_failed" ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "secondary",
+                              })}
+                              onClick={() => void requeue(file)}
+                              data-testid={`processing-file-requeue-${file.id}`}
+                              title="Tries this file again now, ignoring the automatic backoff and attempt limit."
+                            >
+                              Try again
+                            </button>
+                          ) : null}
+                          {file.status === "blocked_upstream" ||
+                          file.status === "on_hold" ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "tertiary",
+                              })}
+                              onClick={() => void askWhyHeld(file)}
+                              data-testid={`processing-file-why-held-${file.id}`}
+                              title="Asks every media manager covering this library what it is doing with this file, right now."
+                            >
+                              Why is this held?
+                            </button>
+                          ) : null}
+                          {file.status === "on_hold" ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "secondary",
+                              })}
+                              onClick={() => void openChooseTracks(file)}
+                              data-testid={`processing-file-choose-tracks-${file.id}`}
+                              title="Re-reads this file's tracks and lets you pick which ones to keep by hand, instead of the saved rules."
+                            >
+                              Choose tracks
+                            </button>
+                          ) : null}
+                          {file.status === "on_hold" ||
+                          file.status === "blocked_upstream" ||
+                          file.status === "skipped" ||
+                          file.status === "out_of_schedule" ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "secondary",
+                              })}
+                              onClick={() => void checkFileAgain(file)}
+                              data-testid={`processing-file-check-again-${file.id}`}
+                              title="Re-checks this library now and queues files that are ready."
+                            >
+                              Check again
+                            </button>
+                          ) : null}
+                          {file.status === "unprocessed" ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "tertiary",
+                              })}
+                              onClick={() => void processFileNow(file)}
+                              data-testid={`processing-file-process-now-${file.id}`}
+                              title="Queues a remux pass for this file straight away."
+                            >
+                              Process now
+                            </button>
+                          ) : null}
+                          {file.status !== "processing" &&
+                          file.status !== "processed" &&
+                          file.status !== "disabled" ? (
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "secondary",
+                              })}
+                              onClick={() => void passThroughFile(file)}
+                              data-testid={`processing-file-pass-through-${file.id}`}
+                              title="Skips your track and metadata rules, safely places an unchanged validated copy in the output folder, then performs normal successful source cleanup."
+                            >
+                              Pass through unchanged
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "tertiary",
+                            })}
+                            onClick={() => void showLog(file)}
+                            data-testid={`processing-file-log-${file.id}`}
+                            title="What Weir did to this file, and why. Kept beyond the activity feed."
+                          >
+                            Processing record
+                          </button>
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "tertiary",
+                            })}
+                            onClick={() => void removeFile(file)}
+                            data-testid={`processing-file-forget-${file.id}`}
+                            title="Removes Weir's record of this file. The file on disk is untouched."
+                          >
+                            Remove from list
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </li>
               );
             })}
           </ul>
-        </div>
-      ) : null}
-
-      {notice ? (
-        <p
-          className="rounded border border-[var(--mm-border)] px-3 py-2 text-sm"
-          role="status"
-          data-testid="processing-files-notice"
-        >
-          {notice}
-        </p>
-      ) : null}
-
-      {rows.length === 0 ? (
-        <p className="text-sm text-[var(--mm-text3)]">
-          No files match. Weir records a file the first time a scan looks at it.
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {rows.map((file) => {
-            const guidance = guidanceForFile(file, processingPaused);
-            return (
-              <li
-                key={file.id}
-                className="rounded border border-[var(--mm-border)] p-3"
-                data-testid={`processing-file-${file.id}`}
-              >
-                <div className="mm-processing-file-card">
-                  {editable ? (
-                    <label
-                      className="mm-processing-file-select"
-                      title="Select this file for a bulk action"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(file.id)}
-                        onChange={() => toggleSelected(file.id)}
-                        aria-label={`Select ${file.relative_path}`}
-                        data-testid={`processing-file-select-${file.id}`}
-                      />
-                    </label>
-                  ) : null}
-                  <div className="mm-processing-file-content min-w-0 flex-1">
-                    <div className="mm-processing-file-main min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="break-words font-medium text-[var(--mm-text1)] [overflow-wrap:anywhere]">
-                          {file.relative_path}
-                        </p>
-                        <span
-                          className={`mm-processing-status mm-processing-status--${file.status}`}
-                        >
-                          {displayStatusForFile(file, processingPaused)}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-[var(--mm-text3)]">
-                        {file.library_name} · {humanSize(file.size_bytes)} ·{" "}
-                        {file.failure_attempts} failure
-                        {file.failure_attempts === 1 ? "" : "s"}
-                      </p>
-                      <dl
-                        className="mm-processing-file-timeline"
-                        data-testid={`processing-file-timestamps-${file.id}`}
-                      >
-                        <div>
-                          <dt>First seen</dt>
-                          <dd>{timestampLabel(file.created_at, formatDate)}</dd>
-                        </div>
-                        <div>
-                          <dt>Last checked</dt>
-                          <dd>
-                            {timestampLabel(file.last_seen_at, formatDate)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Last processing attempt</dt>
-                          <dd>
-                            {timestampLabel(file.last_attempt_at, formatDate)}
-                          </dd>
-                        </div>
-                      </dl>
-                      {/* The reason is the whole point of this screen, so it is not hidden
-                      behind a detail view. */}
-                      <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                        {displayReasonForFile(file, processingPaused)}
-                      </p>
-                      {/* A hold with no release time reads as held forever. When Weir
-                      knows when the wait ends, it says so; when the wait is on a writer
-                      rather than the clock, hold_until is null and nothing is invented. */}
-                      {file.status === "on_hold" && file.hold_until ? (
-                        <p
-                          className="mt-1 text-xs text-[var(--mm-text3)]"
-                          data-testid={`processing-file-hold-until-${file.id}`}
-                        >
-                          {holdReleaseLabel(file.hold_until, formatDate)}
-                        </p>
-                      ) : null}
-                      <DirectPlayLine
-                        directPlay={file.direct_play}
-                        testId={`processing-file-direct-play-${file.id}`}
-                      />
-                      <div className="mm-processing-next-step mt-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mm-accent-bright)]">
-                          Next step
-                        </p>
-                        <p className="mt-1 text-sm font-medium text-[var(--mm-text1)]">
-                          {guidance.title}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-[var(--mm-text2)]">
-                          {guidance.next}
-                        </p>
-                      </div>
-                    </div>
-                    {editable ? (
-                      <div className="mm-processing-file-actions flex flex-wrap gap-2">
-                        {/* Only offered where it can do something: a file that is running
-                      cannot be started earlier, and a button that looked like it worked
-                      would be worse than no button. */}
-                        {file.status === "unprocessed" ? (
-                          <button
-                            type="button"
-                            className={mmActionButtonClass({
-                              variant: "tertiary",
-                            })}
-                            onClick={() => void moveToTop(file)}
-                            data-testid={`processing-file-move-to-top-${file.id}`}
-                            title="Puts this file's queued work ahead of everything else waiting."
-                          >
-                            Move to top
-                          </button>
-                        ) : null}
-                        {file.status === "processing_failed" ? (
-                          <button
-                            type="button"
-                            className={mmActionButtonClass({
-                              variant: "secondary",
-                            })}
-                            onClick={() => void requeue(file)}
-                            data-testid={`processing-file-requeue-${file.id}`}
-                            title="Tries this file again now, ignoring the automatic backoff and attempt limit."
-                          >
-                            Try again
-                          </button>
-                        ) : null}
-                        {file.status === "blocked_upstream" ||
-                        file.status === "on_hold" ? (
-                          <button
-                            type="button"
-                            className={mmActionButtonClass({
-                              variant: "tertiary",
-                            })}
-                            onClick={() => void askWhyHeld(file)}
-                            data-testid={`processing-file-why-held-${file.id}`}
-                            title="Asks every media manager covering this library what it is doing with this file, right now."
-                          >
-                            Why is this held?
-                          </button>
-                        ) : null}
-                        {file.status === "on_hold" ? (
-                          <button
-                            type="button"
-                            className={mmActionButtonClass({
-                              variant: "secondary",
-                            })}
-                            onClick={() => void openChooseTracks(file)}
-                            data-testid={`processing-file-choose-tracks-${file.id}`}
-                            title="Re-reads this file's tracks and lets you pick which ones to keep by hand, instead of the saved rules."
-                          >
-                            Choose tracks
-                          </button>
-                        ) : null}
-                        {file.status === "on_hold" ||
-                        file.status === "blocked_upstream" ||
-                        file.status === "skipped" ||
-                        file.status === "out_of_schedule" ? (
-                          <button
-                            type="button"
-                            className={mmActionButtonClass({
-                              variant: "secondary",
-                            })}
-                            onClick={() => void checkFileAgain(file)}
-                            data-testid={`processing-file-check-again-${file.id}`}
-                            title="Re-checks this library now and queues files that are ready."
-                          >
-                            Check again
-                          </button>
-                        ) : null}
-                        {file.status === "unprocessed" ? (
-                          <button
-                            type="button"
-                            className={mmActionButtonClass({
-                              variant: "tertiary",
-                            })}
-                            onClick={() => void processFileNow(file)}
-                            data-testid={`processing-file-process-now-${file.id}`}
-                            title="Queues a remux pass for this file straight away."
-                          >
-                            Process now
-                          </button>
-                        ) : null}
-                        {file.status !== "processing" &&
-                        file.status !== "processed" &&
-                        file.status !== "disabled" ? (
-                          <button
-                            type="button"
-                            className={mmActionButtonClass({
-                              variant: "secondary",
-                            })}
-                            onClick={() => void passThroughFile(file)}
-                            data-testid={`processing-file-pass-through-${file.id}`}
-                            title="Skips your track and metadata rules, safely places an unchanged validated copy in the output folder, then performs normal successful source cleanup."
-                          >
-                            Pass through unchanged
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className={mmActionButtonClass({
-                            variant: "tertiary",
-                          })}
-                          onClick={() => void showLog(file)}
-                          data-testid={`processing-file-log-${file.id}`}
-                          title="What Weir did to this file, and why. Kept beyond the activity feed."
-                        >
-                          Processing record
-                        </button>
-                        <button
-                          type="button"
-                          className={mmActionButtonClass({
-                            variant: "tertiary",
-                          })}
-                          onClick={() => void removeFile(file)}
-                          data-testid={`processing-file-forget-${file.id}`}
-                          title="Removes Weir's record of this file. The file on disk is untouched."
-                        >
-                          Remove from list
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+        )}
+      </QuietSection>
 
       <ChooseTracksPanel
         open={tracksFile !== null}

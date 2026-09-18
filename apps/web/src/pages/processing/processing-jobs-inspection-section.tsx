@@ -135,24 +135,30 @@ export function ProcessingJobsInspectionSection() {
 
   return (
     <section
-      className="mm-card mm-dash-card mm-module-surface overflow-hidden p-0"
+      className="mm-quiet-stack"
       aria-labelledby="processing-jobs-inspection-heading"
       data-testid="processing-jobs-inspection-section"
     >
-      <header className="border-b border-[var(--mm-border)] bg-black/10 px-4 py-3.5 sm:px-5 sm:py-4">
-        <h2
-          id="processing-jobs-inspection-heading"
-          className="text-lg font-semibold tracking-tight text-[var(--mm-text)]"
-        >
-          Jobs
-        </h2>
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">
-          Current and recent work, with a clear next step when you need to act.
-        </p>
-      </header>
-      <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
-        <div className="flex flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3.5 py-3.5 sm:flex-row sm:items-end sm:justify-between sm:px-5 sm:py-4">
-          <label className="block min-w-0 flex-1">
+      <div className="mm-quiet-section">
+        <div className="mm-quiet-section__head">
+          <h2
+            id="processing-jobs-inspection-heading"
+            className="mm-quiet-section__title"
+          >
+            Jobs
+          </h2>
+        </div>
+        <div className="mm-quiet-section__body space-y-4">
+          <p className="mm-quiet-note">
+            Current and recent work, with a clear next step when you need to
+            act.
+          </p>
+          {/* No lead band here, deliberately: GET /api/v1/processing/jobs/inspection
+              answers for one filter at a time and returns no counts for the others, so
+              a proportional band would have nothing honest to size itself from. Per
+              docs/design/content-language.md rule 1, a page with no real "now" starts
+              at rule 3 rather than inventing one. */}
+          <label className="block min-w-0 max-w-xl">
             <span
               id={filterLabelId}
               className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]"
@@ -160,7 +166,7 @@ export function ProcessingJobsInspectionSection() {
               Show jobs
             </span>
             <MmListboxPicker
-              className="mt-2 max-w-xl"
+              className="mt-2"
               data-testid="processing-jobs-inspection-filter"
               ariaLabelledBy={filterLabelId}
               placeholder="Select filter"
@@ -169,119 +175,148 @@ export function ProcessingJobsInspectionSection() {
               onChange={(v) => setFilter(v as ProcessingJobsInspectionFilter)}
             />
           </label>
-        </div>
-        {q.isPending || me.isPending ? (
-          <p className="text-sm text-[var(--mm-text2)]">Loading jobs…</p>
-        ) : null}
-        {q.isError ? (
-          <p
-            className="text-sm text-red-600"
-            role="alert"
-            data-testid="processing-jobs-inspection-error"
-          >
-            {isLikelyNetworkFailure(q.error)
-              ? "Could not reach the Weir API. Check that the backend is running."
-              : isHttpErrorFromApi(q.error)
-                ? "The server refused this request. Sign in again, then try this page."
-                : q.error instanceof Error
-                  ? q.error.message
-                  : "Could not load jobs."}
-          </p>
-        ) : null}
-
-        {cancel.isError ? (
-          <p
-            className="text-sm text-red-300"
-            role="alert"
-            data-testid="processing-jobs-inspection-cancel-error"
-          >
-            {cancel.error instanceof Error
-              ? cancel.error.message
-              : "Cancel failed."}
-          </p>
-        ) : null}
-        {recover.isError ? (
-          <p
-            className="text-sm text-red-300"
-            role="alert"
-            data-testid="processing-jobs-inspection-recover-error"
-          >
-            {recover.error instanceof Error
-              ? recover.error.message
-              : "Recovery failed."}
-          </p>
-        ) : null}
-
-        {!q.isPending && !q.isError && jobs.length === 0 ? (
-          <div
-            className="space-y-1 rounded border border-[var(--mm-border)] bg-black/10 px-5 py-10 text-center"
-            data-testid="processing-jobs-inspection-empty"
-          >
-            <p className="text-sm font-medium text-[var(--mm-text)]">
-              No jobs match this view
+          {q.isPending || me.isPending ? (
+            <p className="text-sm text-[var(--mm-text2)]">Loading jobs…</p>
+          ) : null}
+          {q.isError ? (
+            <p
+              className="text-sm text-[var(--mm-status-failed-text)]"
+              role="alert"
+              data-testid="processing-jobs-inspection-error"
+            >
+              {isLikelyNetworkFailure(q.error)
+                ? "Could not reach the Weir API. Check that the backend is running."
+                : isHttpErrorFromApi(q.error)
+                  ? "The server refused this request. Sign in again, then try this page."
+                  : q.error instanceof Error
+                    ? q.error.message
+                    : "Could not load jobs."}
             </p>
-            <p className="text-xs text-[var(--mm-text2)]">
-              Nothing matches this filter yet. Try{" "}
-              <strong className="text-[var(--mm-text2)]">Recent work</strong>{" "}
-              for the latest rows.
-            </p>
-          </div>
-        ) : null}
+          ) : null}
 
-        {!q.isPending && !q.isError && jobs.length > 0 ? (
-          <>
-            <div className="w-full min-w-0 overflow-x-auto rounded border border-[var(--mm-border)]">
-              <table className="w-full min-w-[46rem] text-left text-sm">
-                <thead className="bg-black/20 text-[var(--mm-text2)]">
-                  <tr>
-                    <th className="sticky left-0 top-0 z-30 bg-black/20 px-3 py-2 font-medium">
-                      Job
-                    </th>
-                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
-                      Status
-                    </th>
-                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
-                      Updated
-                    </th>
-                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
-                      What happened and what to do
-                    </th>
-                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedRows.map((j) => (
-                    <ProcessingJobRow
-                      key={j.id}
-                      job={j}
-                      canCancel={canCancel}
-                      cancelMutation={cancel}
-                      recoverMutation={recover}
-                      formatDate={formatDate}
-                      processingPaused={pause.data?.paused === true}
-                    />
-                  ))}
-                </tbody>
-              </table>
+          {cancel.isError ? (
+            <p
+              className="text-sm text-[var(--mm-status-failed-text)]"
+              role="alert"
+              data-testid="processing-jobs-inspection-cancel-error"
+            >
+              {cancel.error instanceof Error
+                ? cancel.error.message
+                : "Cancel failed."}
+            </p>
+          ) : null}
+          {recover.isError ? (
+            <p
+              className="text-sm text-[var(--mm-status-failed-text)]"
+              role="alert"
+              data-testid="processing-jobs-inspection-recover-error"
+            >
+              {recover.error instanceof Error
+                ? recover.error.message
+                : "Recovery failed."}
+            </p>
+          ) : null}
+
+          {!q.isPending && !q.isError && jobs.length === 0 ? (
+            <div
+              className="py-6"
+              data-testid="processing-jobs-inspection-empty"
+            >
+              <p className="text-sm font-medium text-[var(--mm-text1)]">
+                No jobs match this view
+              </p>
+              <p className="mt-1 text-xs text-[var(--mm-text2)]">
+                Nothing matches this filter yet. Try{" "}
+                <strong className="text-[var(--mm-text2)]">Recent work</strong>{" "}
+                for the latest rows.
+              </p>
             </div>
-            <MmJobsPagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              pageSize={pageSize}
-              onPageSizeChange={setPageSize}
-              pageSizeOptions={[...PAGE_SIZE_OPTIONS]}
-            />
-          </>
-        ) : null}
+          ) : null}
 
-        <p className="text-xs text-[var(--mm-text2)]">
-          Full detail on each outcome is in the{" "}
-          <Link to="/activity" className="text-[var(--mm-accent)] underline">
-            Activity log
-          </Link>
-          .
-        </p>
+          {!q.isPending && !q.isError && jobs.length > 0 ? (
+            <>
+              {/* The horizontal scroll container is load-bearing twice over: it is what
+                  lets a 46rem table live in a narrow panel, and it is the scrollport the
+                  sticky "Job" column pins itself to. Rule 3 takes this wrapper's border
+                  away, not the wrapper. The sticky cells need an opaque backdrop or rows
+                  scroll through them, and --mm-bg-main is the surface the de-carded tab
+                  now sits on — opaque in both themes, unlike the bg-black/NN wells this
+                  used to use (those remap to a 4.5%-alpha well on the light theme).
+
+                  Both the min-width and the sticky stop at 761px, because at 760px and
+                  below .mm-quiet-table stops being a table and becomes stacked rows. Left
+                  on, the min-width kept forcing a 736px scroll box around content that was
+                  already one column wide, and pushed every row off the side of a phone. */}
+              <div className="mm-quiet-table-wrap w-full min-w-0">
+                <table className="mm-quiet-table min-[761px]:min-w-[46rem]">
+                  <thead>
+                    <tr>
+                      <th
+                        scope="col"
+                        className="min-[761px]:sticky left-0 top-0 z-30 bg-[var(--mm-bg-main)] pr-4"
+                      >
+                        Job
+                      </th>
+                      <th
+                        scope="col"
+                        className="min-[761px]:sticky top-0 z-20 bg-[var(--mm-bg-main)]"
+                      >
+                        Status
+                      </th>
+                      <th
+                        scope="col"
+                        className="min-[761px]:sticky top-0 z-20 bg-[var(--mm-bg-main)]"
+                      >
+                        Updated
+                      </th>
+                      <th
+                        scope="col"
+                        className="min-[761px]:sticky top-0 z-20 bg-[var(--mm-bg-main)]"
+                      >
+                        What happened and what to do
+                      </th>
+                      <th
+                        scope="col"
+                        className="min-[761px]:sticky top-0 z-20 bg-[var(--mm-bg-main)]"
+                      >
+                        <span className="sr-only">Action</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedRows.map((j) => (
+                      <ProcessingJobRow
+                        key={j.id}
+                        job={j}
+                        canCancel={canCancel}
+                        cancelMutation={cancel}
+                        recoverMutation={recover}
+                        formatDate={formatDate}
+                        processingPaused={pause.data?.paused === true}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <MmJobsPagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                pageSize={pageSize}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[...PAGE_SIZE_OPTIONS]}
+              />
+            </>
+          ) : null}
+
+          <p className="text-xs text-[var(--mm-text2)]">
+            Full detail on each outcome is in the{" "}
+            <Link to="/activity" className="text-[var(--mm-accent)] underline">
+              Activity log
+            </Link>
+            .
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -308,21 +343,29 @@ function ProcessingJobRow({
   const showRecover = canCancel && job.status === "handler_ok_finalize_failed";
   const pausedPending = processingPaused && job.status === "pending";
   return (
-    <tr
-      className="border-t border-[var(--mm-border)] align-top text-[var(--mm-text)]"
-      data-testid="processing-jobs-row"
-    >
-      <td className="sticky left-0 z-[1] max-w-[16rem] bg-[var(--mm-card-bg)] px-3 py-2 text-[var(--mm-text1)]">
-        <p className="font-medium">{jobKindLabel(job.job_kind)}</p>
-        <p className="mt-1 font-mono text-[0.72rem] text-[var(--mm-text3)]">
-          Job #{job.id}
-        </p>
+    <tr data-testid="processing-jobs-row">
+      {/* Sticky to the wrapper's scrollport, same as the header cell above it, and on the
+          same opaque token so the two read as one pinned column while rows slide under. */}
+      <th
+        scope="row"
+        className="mm-quiet-table__name min-[761px]:sticky left-0 z-[1] max-w-[16rem] bg-[var(--mm-bg-main)] pr-4"
+      >
+        <span className="block">{jobKindLabel(job.job_kind)}</span>
+        <span className="mm-quiet-table__sub font-mono">Job #{job.id}</span>
+      </th>
+      <td data-label="Status" className="whitespace-nowrap">
+        {statusLabel(job.status)}
       </td>
-      <td className="whitespace-nowrap px-3 py-2">{statusLabel(job.status)}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--mm-text2)]">
+      <td
+        data-label="Updated"
+        className="whitespace-nowrap text-xs text-[var(--mm-text2)]"
+      >
         {formatDate(job.updated_at)}
       </td>
-      <td className="min-w-[19rem] max-w-[28rem] break-words px-3 py-2 text-[var(--mm-text2)]">
+      <td
+        data-label="What happened"
+        className="min-w-[19rem] max-w-[28rem] break-words"
+      >
         <p className="text-sm text-[var(--mm-text1)]">
           {pausedPending
             ? "This job is safely waiting because Weir is paused."
@@ -340,7 +383,10 @@ function ProcessingJobRow({
           <summary className="cursor-pointer select-none">
             Technical details
           </summary>
-          <pre className="mt-1 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--mm-border)] bg-black/10 p-2">
+          {/* Verbatim diagnostic text, not a content card: the box is what marks it as
+              raw output, so rule 3 leaves it alone. Its well is a token rather than a
+              bg-black/NN utility so it is deliberate in both themes. */}
+          <pre className="mt-1 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--mm-border)] bg-[var(--mm-well-bg)] p-2">
             {technicalJobSummary(job)}
             {job.technical_detail || job.last_error
               ? `\n\n${job.technical_detail || job.last_error}`
@@ -348,7 +394,7 @@ function ProcessingJobRow({
           </pre>
         </details>
       </td>
-      <td className="px-3 py-2 text-right">
+      <td data-label="Action" className="text-right">
         {showCancel ? (
           <button
             type="button"
