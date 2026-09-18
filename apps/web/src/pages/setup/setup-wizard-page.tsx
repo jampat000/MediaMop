@@ -515,9 +515,13 @@ export function SetupWizardPage() {
           </div>
 
           {statusMessage ? (
-            <p className="mm-auth-banner mt-4" role="alert">
-              {statusMessage}
-            </p>
+            // The gap goes on a wrapper: `.mm-auth-banner` sets its own margin, which
+            // silently beat an `mt-4` on the banner itself and left it flush.
+            <div className="mt-4">
+              <p className="mm-auth-banner" role="alert">
+                {statusMessage}
+              </p>
+            </div>
           ) : null}
 
           <div className="mt-4 flex flex-wrap gap-3">

@@ -159,10 +159,7 @@ export function ProcessingJobsInspectionSection() {
               docs/design/content-language.md rule 1, a page with no real "now" starts
               at rule 3 rather than inventing one. */}
           <label className="block min-w-0 max-w-xl">
-            <span
-              id={filterLabelId}
-              className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]"
-            >
+            <span id={filterLabelId} className="text-sm text-[var(--mm-text2)]">
               Show jobs
             </span>
             <MmListboxPicker

@@ -112,7 +112,7 @@ export function SettingsBackupTab({
                     <span>Run scheduled configuration backups</span>
                   </label>
                   <label className="block text-sm text-[var(--mm-text2)]">
-                    <span className="mb-1.5 block text-[length:var(--mm-type-eyebrow)] font-semibold tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)] uppercase">
+                    <span className="mb-1.5 block text-sm text-[var(--mm-text2)]">
                       Minimum time between runs
                     </span>
                     <select
@@ -135,7 +135,7 @@ export function SettingsBackupTab({
                     </select>
                   </label>
                   <label className="block text-sm text-[var(--mm-text2)]">
-                    <span className="mb-1.5 block text-[length:var(--mm-type-eyebrow)] font-semibold tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)] uppercase">
+                    <span className="mb-1.5 block text-sm text-[var(--mm-text2)]">
                       Preferred backup time
                     </span>
                     <input

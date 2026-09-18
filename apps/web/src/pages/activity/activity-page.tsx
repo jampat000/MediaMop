@@ -669,7 +669,7 @@ function ActivityEventRow({
 }
 
 const FIELD_LABEL_CLASS =
-  "flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]";
+  "flex min-w-0 flex-col gap-1 text-sm text-[var(--mm-text2)]";
 
 type ExportFormat = "csv" | "json";
 

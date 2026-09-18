@@ -75,9 +75,7 @@ function ChannelForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
-          Label
-        </span>
+        <span className="mb-1 block text-sm text-[var(--mm-text2)]">Label</span>
         <input
           type="text"
           className={mmEditableTextFieldClass}
@@ -91,7 +89,7 @@ function ChannelForm({
       </label>
 
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
+        <span className="mb-1 block text-sm text-[var(--mm-text2)]">
           Provider
         </span>
         <select
@@ -106,7 +104,7 @@ function ChannelForm({
       </label>
 
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
+        <span className="mb-1 block text-sm text-[var(--mm-text2)]">
           Webhook URL
         </span>
         <input
@@ -121,7 +119,7 @@ function ChannelForm({
       </label>
 
       <fieldset>
-        <legend className="mb-2 text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
+        <legend className="mb-2 text-sm text-[var(--mm-text2)]">
           Trigger events
         </legend>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">

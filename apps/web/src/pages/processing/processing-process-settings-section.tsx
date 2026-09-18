@@ -176,9 +176,7 @@ export function ProcessingProcessSettingsSection() {
     options: { min?: number; max?: number; step?: number; hint?: string } = {},
   ) => (
     <label className="block min-w-0">
-      <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
-        {label}
-      </span>
+      <span className="text-sm text-[var(--mm-text2)]">{label}</span>
       <input
         type="number"
         min={options.min ?? 0}
@@ -261,7 +259,7 @@ export function ProcessingProcessSettingsSection() {
               <div className="block min-w-0">
                 <span
                   id={filesAtOnceLabelId}
-                  className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]"
+                  className="text-sm text-[var(--mm-text2)]"
                 >
                   Absolute file limit
                 </span>

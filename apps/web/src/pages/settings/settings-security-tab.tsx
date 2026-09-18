@@ -370,9 +370,7 @@ export function SettingsSecurityTab() {
         </p>
         <div className="mt-4 max-w-xl space-y-3">
           <label className="block">
-            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
-              New username
-            </span>
+            <span className="text-sm text-[var(--mm-text2)]">New username</span>
             <div className="mt-1 flex flex-wrap gap-2">
               <input
                 type="text"
@@ -386,7 +384,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           <label className="block">
-            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
+            <span className="text-sm text-[var(--mm-text2)]">
               Current password
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -456,7 +454,7 @@ export function SettingsSecurityTab() {
         </p>
         <div className="mt-4 max-w-xl space-y-3">
           <label className="block">
-            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
+            <span className="text-sm text-[var(--mm-text2)]">
               Current password
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -489,7 +487,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           <label className="block">
-            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
+            <span className="text-sm text-[var(--mm-text2)]">
               New password (min. 8 characters)
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -522,7 +520,7 @@ export function SettingsSecurityTab() {
             </div>
           </label>
           <label className="block">
-            <span className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
+            <span className="text-sm text-[var(--mm-text2)]">
               Confirm new password
             </span>
             <div className="mt-1 flex flex-wrap gap-2">

@@ -13,11 +13,17 @@ import {
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
 import { quietActionRowClass } from "../../components/shared/quiet-section";
+import { mmStatusPillClass } from "../../lib/ui/mm-status-tone";
 import {
   SettingsFactTable,
   SettingsQuietSection,
   type SettingsFact,
 } from "./settings-shared";
+
+/** "up to date" -> "Up to date": status pills across Weir are sentence case. */
+function sentenceCase(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 type SettingsUpgradeTabProps = {
   updateStatusQ: ReturnType<typeof useSuiteUpdateStatusQuery>;
@@ -146,10 +152,10 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
             {/* The one thing on this tab that wants attention. It stays a filled,
                 colour-coded strip: the colour is functional, not decoration. */}
             <div
-              className={`rounded-xl border p-4 ${
+              className={`rounded-xl border border-[var(--mm-border)] p-4 ${
                 updateStatusQ.data.status === "update_available"
-                  ? "border-amber-400/25 bg-amber-400/[0.06]"
-                  : "border-emerald-500/20 bg-emerald-500/[0.05]"
+                  ? "bg-[var(--mm-status-warning-bg)]"
+                  : "bg-[var(--mm-status-healthy-bg)]"
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -161,14 +167,20 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     {updateStatusQ.data.summary}
                   </h4>
                 </div>
-                <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs font-medium text-[var(--mm-text2)] capitalize">
-                  {updateStatusQ.data.status.replaceAll("_", " ")}
+                <span
+                  className={mmStatusPillClass(
+                    updateStatusQ.data.status === "update_available"
+                      ? "warning"
+                      : "healthy",
+                  )}
+                >
+                  {sentenceCase(updateStatusQ.data.status.replaceAll("_", " "))}
                 </span>
               </div>
             </div>
 
             {isWindows && updateStateQ.data?.downloaded && (
-              <div className="flex items-start justify-between gap-4 rounded-xl border border-emerald-500/40 bg-emerald-500/[0.08] px-4 py-3">
+              <div className="flex items-start justify-between gap-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-status-healthy-bg)] px-4 py-3">
                 <div className="min-w-0">
                   <p className="mm-status-text--healthy text-sm font-semibold">
                     Update ready to install
@@ -331,7 +343,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                       </label>
 
                       <label className="block text-sm text-[var(--mm-text2)]">
-                        <span className="mb-1.5 block text-[length:var(--mm-type-eyebrow)] font-semibold tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)] uppercase">
+                        <span className="mb-1.5 block text-sm text-[var(--mm-text2)]">
                           Check interval
                         </span>
                         <select

@@ -173,7 +173,9 @@ export function LoginPage() {
           ) : null}
 
           {boot.data?.bootstrap_allowed ? (
-            <p className="mm-auth-lead mt-2">
+            // No `mt-2`: `.mm-auth-lead` sets its own margin, so the utility never applied.
+            // The gap above comes from the banner or lead paragraph before it, as it always did.
+            <p className="mm-auth-lead">
               First-time setup?{" "}
               <Link
                 to="/setup"
