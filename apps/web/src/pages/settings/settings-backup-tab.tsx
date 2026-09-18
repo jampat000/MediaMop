@@ -13,6 +13,7 @@ import {
 } from "../../lib/ui/mm-module-tab-blurb";
 import {
   CONFIGURATION_BACKUP_INTERVAL_HOURS,
+  SettingsQuietSection,
   SUITE_SETTINGS_DASH_CARD_CLASS,
   formatBackupBytes,
 } from "./settings-shared";
@@ -64,7 +65,7 @@ export function SettingsBackupTab({
   const formatDate = useAppDateFormatter();
 
   return (
-    <div data-testid="suite-settings-backup-tab" className="mm-bubble-stack">
+    <div data-testid="suite-settings-backup-tab" className="mm-quiet-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
           Export, restore, and automatically snapshot Weir configuration.
@@ -72,29 +73,30 @@ export function SettingsBackupTab({
       </div>
 
       {editable ? (
-        <section
-          className="grid grid-cols-1 gap-5 xl:grid-cols-3"
+        <div
+          className="mm-quiet-stack"
           data-testid="suite-settings-backup-restore"
-          aria-labelledby="suite-settings-backup-heading"
         >
-          <div className="xl:col-span-3">
+          <div>
             <h3
               id="suite-settings-backup-heading"
-              className="text-base font-semibold text-[var(--mm-text1)]"
+              className="mm-quiet-section__title"
             >
               Backup and restore
             </h3>
-            <p className="mt-1 text-sm text-[var(--mm-text2)]">
+            <p className="mm-quiet-note mt-1">
               Keep a clean copy of Weir settings and restore them if something
               goes wrong.
             </p>
           </div>
 
-          <div className="contents">
+          {/* Two distinct actions, each with its own scope and its own button.
+              The boundary is what says which button belongs to which. */}
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
             <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
               <div className="mm-card-action-body">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-[var(--mm-gold)] uppercase">
                     Automatic protection
                   </p>
                   <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
@@ -118,7 +120,7 @@ export function SettingsBackupTab({
                   <span>Run scheduled configuration backups</span>
                 </label>
                 <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+                  <span className="mb-1.5 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
                     Minimum time between runs
                   </span>
                   <select
@@ -141,7 +143,7 @@ export function SettingsBackupTab({
                   </select>
                 </label>
                 <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+                  <span className="mb-1.5 block text-xs font-medium tracking-wide text-[var(--mm-text3)] uppercase">
                     Preferred backup time
                   </span>
                   <input
@@ -199,7 +201,7 @@ export function SettingsBackupTab({
             <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
               <div className="mm-card-action-body">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                  <p className="text-[11px] font-semibold tracking-[0.14em] text-[var(--mm-gold)] uppercase">
                     Manual control
                   </p>
                   <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
@@ -246,95 +248,88 @@ export function SettingsBackupTab({
             </section>
           </div>
 
-          <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
-            <div className="mm-card-action-body">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                    Snapshot history
-                  </p>
-                  <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
-                    Recent automatic snapshots
-                  </h4>
-                </div>
-                <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                  Keeps latest 5
-                </span>
-              </div>
-              {backupsQ.data ? (
+          {/* A list of what is on disk: display content, so it loses its box. */}
+          <SettingsQuietSection
+            headingId="suite-settings-backup-snapshots-heading"
+            heading="Recent automatic snapshots"
+            aside={<span className="mm-quiet-badge">Keeps latest 5</span>}
+          >
+            {backupsQ.data ? (
+              <p
+                className="mm-quiet-table__sub font-mono break-all"
+                data-testid="suite-configuration-backup-directory"
+              >
+                {backupsQ.data.directory}
+              </p>
+            ) : null}
+            <div className="mt-3">
+              {backupsQ.isLoading ? (
+                <p className="mm-quiet-note">Loading snapshot list...</p>
+              ) : backupsQ.isError ? (
                 <p
-                  className="mt-1.5 break-all font-mono text-xs leading-snug text-[var(--mm-text2)]"
-                  data-testid="suite-configuration-backup-directory"
+                  className="text-sm text-[var(--mm-status-failed-text)]"
+                  role="alert"
                 >
-                  {backupsQ.data.directory}
+                  {(backupsQ.error as Error).message}
                 </p>
-              ) : null}
-              <div className="mt-3">
-                {backupsQ.isLoading ? (
-                  <p className="text-sm text-[var(--mm-text3)]">
-                    Loading snapshot list...
-                  </p>
-                ) : backupsQ.isError ? (
-                  <p
-                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                    role="alert"
-                  >
-                    {(backupsQ.error as Error).message}
-                  </p>
-                ) : (backupsQ.data?.items.length ?? 0) === 0 ? (
-                  <p className="text-sm text-[var(--mm-text3)]">
-                    No automatic snapshots yet.
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-[var(--mm-border)] overflow-hidden rounded-md border border-[var(--mm-border)] text-sm">
-                    {backupsQ.data!.items.map((row) => (
-                      <li
-                        key={row.id}
-                        className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-                      >
-                        <div className="min-w-0 text-[var(--mm-text2)]">
-                          <div className="font-medium text-[var(--mm-text)]">
+              ) : (backupsQ.data?.items.length ?? 0) === 0 ? (
+                <p className="mm-quiet-note">No automatic snapshots yet.</p>
+              ) : (
+                <div className="mm-quiet-table-wrap">
+                  <table className="mm-quiet-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Taken</th>
+                        <th scope="col">Size</th>
+                        <th scope="col">
+                          <span className="sr-only">Download</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {backupsQ.data!.items.map((row) => (
+                        <tr key={row.id}>
+                          <th scope="row" className="mm-quiet-table__name">
                             {formatDate(row.created_at)}
-                          </div>
-                          <div className="text-xs text-[var(--mm-text3)]">
+                          </th>
+                          <td data-label="Size">
                             {formatBackupBytes(row.size_bytes)}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className={mmActionButtonClass({
-                            variant: "tertiary",
-                            disabled: backupBusy || save.isPending,
-                          })}
-                          disabled={backupBusy || save.isPending}
-                          onClick={() =>
-                            onDownloadStoredBackup(row.id, row.file_name)
-                          }
-                        >
-                          Download snapshot
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                          </td>
+                          <td data-label="">
+                            <button
+                              type="button"
+                              className="mm-quiet-link"
+                              disabled={backupBusy || save.isPending}
+                              onClick={() =>
+                                onDownloadStoredBackup(row.id, row.file_name)
+                              }
+                            >
+                              Download snapshot →
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          </section>
+          </SettingsQuietSection>
 
           {backupMsg ? (
-            <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200 xl:col-span-3">
+            <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
               {backupMsg}
             </p>
           ) : null}
           {backupErr ? (
             <p
-              className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200 xl:col-span-3"
+              className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
               role="alert"
             >
               {backupErr}
             </p>
           ) : null}
-        </section>
+        </div>
       ) : null}
     </div>
   );

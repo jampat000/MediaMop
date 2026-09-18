@@ -729,7 +729,7 @@ class LiveAudit:
             "Settings upgrade panel",
         )
         self.click(
-            self.page.get_by_role("button", name="Check again", exact=True),
+            self.page.get_by_role("button", name="Check again →", exact=True),
             "refresh upgrade status",
         )
 

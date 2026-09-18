@@ -3,18 +3,17 @@ import {
   SHOW_SUPPORT_URL_PLACEHOLDER,
   SUPPORT_URL,
 } from "../../lib/support";
-import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
-import { SUITE_SETTINGS_DASH_CARD_CLASS } from "./settings-shared";
+import { SettingsQuietSection } from "./settings-shared";
 
 export { SHOW_SUPPORT_CARD };
 
 export function SettingsSupportTab() {
   return (
-    <div data-testid="suite-settings-support-tab" className="mm-bubble-stack">
+    <div data-testid="suite-settings-support-tab" className="mm-quiet-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
           Optional support details for Weir. Core app features remain fully
@@ -22,51 +21,38 @@ export function SettingsSupportTab() {
         </p>
       </div>
 
-      <section
-        className={SUITE_SETTINGS_DASH_CARD_CLASS}
+      <SettingsQuietSection
+        headingId="suite-settings-support-heading"
+        heading="Support Weir"
         data-testid="suite-settings-support"
-        aria-labelledby="suite-settings-support-heading"
       >
-        <div className="mm-card-action-body">
-          <div className="space-y-3">
-            <h3
-              id="suite-settings-support-heading"
-              className="text-base font-semibold text-[var(--mm-text1)]"
-            >
-              Support Weir
-            </h3>
-            <div className="space-y-2 text-sm text-[var(--mm-text2)]">
-              <p>Weir is free to use. Support is optional.</p>
-              <p>
-                If Weir saves you time or keeps your downloads clean, you can
-                support ongoing development.
-              </p>
-            </div>
-          </div>
-          {SHOW_SUPPORT_URL_PLACEHOLDER ? (
-            <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
-              Development note: set <code>VITE_SUPPORT_URL</code> to show the
-              support button.
-            </p>
-          ) : null}
-        </div>
+        <p className="mm-quiet-note">
+          Weir is free to use. Support is optional.
+        </p>
+        <p className="mm-quiet-note mt-2">
+          If Weir saves you time or keeps your downloads clean, you can support
+          ongoing development.
+        </p>
         {SUPPORT_URL ? (
-          <div className="mm-card-action-footer">
+          <p className="mt-4">
             <a
               href={SUPPORT_URL}
               target="_blank"
               rel="noreferrer"
-              className={mmActionButtonClass({
-                variant: "secondary",
-                disabled: false,
-              })}
+              className="mm-quiet-link"
               data-testid="suite-settings-support-button"
             >
-              Support Weir
+              Support Weir →
             </a>
-          </div>
+          </p>
         ) : null}
-      </section>
+        {SHOW_SUPPORT_URL_PLACEHOLDER ? (
+          <p className="mm-quiet-table__sub mt-3">
+            Development note: set <code>VITE_SUPPORT_URL</code> to show the
+            support button.
+          </p>
+        ) : null}
+      </SettingsQuietSection>
     </div>
   );
 }

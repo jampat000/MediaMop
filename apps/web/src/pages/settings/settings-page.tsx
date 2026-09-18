@@ -506,94 +506,86 @@ export function SettingsPage() {
         </>
       }
     >
-      <div className="mm-page__body max-w-none">
-        <WorkspaceTabList
-          tabs={settingsTabs(showSupportTab)}
-          activeId={tab}
-          onSelect={setSettingsTab}
-          ariaLabel="Settings sections"
-          idPrefix="settings-tab"
-          panelId="settings-panel"
-          dataTestId="settings-section-tabs"
-        />
-        <WorkspacePanel id="settings-panel" labelledBy={`settings-tab-${tab}`}>
-          {tab === "general" ? (
-            <SettingsGeneralTab
-              editable={editable}
-              settingsData={settingsQ.data}
-              save={save}
-              appTimezone={appTimezone}
-              setAppTimezone={setAppTimezone}
-              timezoneDirty={timezoneDirty}
-              setLogRetentionDaysDraft={setLogRetentionDaysDraft}
-              normalizedLogRetentionDraft={normalizedLogRetentionDraft}
-              finalizeLogRetentionDays={finalizeLogRetentionDays}
-              logsDirty={logsDirty || activityRetentionDirty}
-              normalizedActivityRetentionDraft={
-                normalizedActivityRetentionDraft
-              }
-              setActivityRetentionDaysDraft={setActivityRetentionDaysDraft}
-              finalizeActivityRetentionDays={finalizeActivityRetentionDays}
-              lastSuiteSaveTarget={lastSuiteSaveTarget}
-              displayDensity={displayDensity}
-              setDisplayDensity={setDisplayDensity}
-              resetHistoryConfirm={resetHistoryConfirm}
-              setResetHistoryConfirm={setResetHistoryConfirm}
-              resetHistory={resetHistory}
-              resetHistoryMsg={resetHistoryMsg}
-              onSaveTimezone={() => void handleSaveTimezone()}
-              onSaveLogs={() => void handleSaveLogs()}
-              onResetOperationalHistory={() =>
-                void handleResetOperationalHistory()
-              }
-            />
-          ) : tab === "backup" ? (
-            <SettingsBackupTab
-              editable={editable}
-              settingsData={settingsQ.data}
-              save={save}
-              backupScheduleDirty={backupScheduleDirty}
-              lastSuiteSaveTarget={lastSuiteSaveTarget}
-              configurationBackupEnabled={configurationBackupEnabled}
-              setConfigurationBackupEnabled={setConfigurationBackupEnabled}
-              configurationBackupIntervalHours={
-                configurationBackupIntervalHours
-              }
-              setConfigurationBackupIntervalHours={
-                setConfigurationBackupIntervalHours
-              }
-              configurationBackupPreferredTime={
-                configurationBackupPreferredTime
-              }
-              setConfigurationBackupPreferredTime={
-                setConfigurationBackupPreferredTime
-              }
-              backupsQ={backupsQ}
-              backupBusy={backupBusy}
-              backupMsg={backupMsg}
-              backupErr={backupErr}
-              onSaveBackupSchedule={() => void handleSaveBackupSchedule()}
-              onDownloadConfiguration={() => void handleDownloadConfiguration()}
-              onRestoreFileChange={(e) => void handleRestoreFileChange(e)}
-              onDownloadStoredBackup={(id, fileLabel) =>
-                void handleDownloadStoredBackup(id, fileLabel)
-              }
-            />
-          ) : tab === "upgrade" ? (
-            <SettingsUpgradeTab updateStatusQ={updateStatusQ} />
-          ) : tab === "security" ? (
-            <SettingsSecurityTab />
-          ) : tab === "media-managers" ? (
-            <SettingsMediaManagersTab />
-          ) : tab === "notifications" ? (
-            <SettingsNotificationsTab />
-          ) : tab === "support" ? (
-            <SettingsSupportTab />
-          ) : (
-            <SettingsLogsTab />
-          )}
-        </WorkspacePanel>
-      </div>
+      <WorkspaceTabList
+        tabs={settingsTabs(showSupportTab)}
+        activeId={tab}
+        onSelect={setSettingsTab}
+        ariaLabel="Settings sections"
+        idPrefix="settings-tab"
+        panelId="settings-panel"
+        dataTestId="settings-section-tabs"
+      />
+      <WorkspacePanel id="settings-panel" labelledBy={`settings-tab-${tab}`}>
+        {tab === "general" ? (
+          <SettingsGeneralTab
+            editable={editable}
+            settingsData={settingsQ.data}
+            save={save}
+            appTimezone={appTimezone}
+            setAppTimezone={setAppTimezone}
+            timezoneDirty={timezoneDirty}
+            setLogRetentionDaysDraft={setLogRetentionDaysDraft}
+            normalizedLogRetentionDraft={normalizedLogRetentionDraft}
+            finalizeLogRetentionDays={finalizeLogRetentionDays}
+            logsDirty={logsDirty || activityRetentionDirty}
+            normalizedActivityRetentionDraft={normalizedActivityRetentionDraft}
+            setActivityRetentionDaysDraft={setActivityRetentionDaysDraft}
+            finalizeActivityRetentionDays={finalizeActivityRetentionDays}
+            lastSuiteSaveTarget={lastSuiteSaveTarget}
+            displayDensity={displayDensity}
+            setDisplayDensity={setDisplayDensity}
+            resetHistoryConfirm={resetHistoryConfirm}
+            setResetHistoryConfirm={setResetHistoryConfirm}
+            resetHistory={resetHistory}
+            resetHistoryMsg={resetHistoryMsg}
+            onSaveTimezone={() => void handleSaveTimezone()}
+            onSaveLogs={() => void handleSaveLogs()}
+            onResetOperationalHistory={() =>
+              void handleResetOperationalHistory()
+            }
+          />
+        ) : tab === "backup" ? (
+          <SettingsBackupTab
+            editable={editable}
+            settingsData={settingsQ.data}
+            save={save}
+            backupScheduleDirty={backupScheduleDirty}
+            lastSuiteSaveTarget={lastSuiteSaveTarget}
+            configurationBackupEnabled={configurationBackupEnabled}
+            setConfigurationBackupEnabled={setConfigurationBackupEnabled}
+            configurationBackupIntervalHours={configurationBackupIntervalHours}
+            setConfigurationBackupIntervalHours={
+              setConfigurationBackupIntervalHours
+            }
+            configurationBackupPreferredTime={configurationBackupPreferredTime}
+            setConfigurationBackupPreferredTime={
+              setConfigurationBackupPreferredTime
+            }
+            backupsQ={backupsQ}
+            backupBusy={backupBusy}
+            backupMsg={backupMsg}
+            backupErr={backupErr}
+            onSaveBackupSchedule={() => void handleSaveBackupSchedule()}
+            onDownloadConfiguration={() => void handleDownloadConfiguration()}
+            onRestoreFileChange={(e) => void handleRestoreFileChange(e)}
+            onDownloadStoredBackup={(id, fileLabel) =>
+              void handleDownloadStoredBackup(id, fileLabel)
+            }
+          />
+        ) : tab === "upgrade" ? (
+          <SettingsUpgradeTab updateStatusQ={updateStatusQ} />
+        ) : tab === "security" ? (
+          <SettingsSecurityTab />
+        ) : tab === "media-managers" ? (
+          <SettingsMediaManagersTab />
+        ) : tab === "notifications" ? (
+          <SettingsNotificationsTab />
+        ) : tab === "support" ? (
+          <SettingsSupportTab />
+        ) : (
+          <SettingsLogsTab />
+        )}
+      </WorkspacePanel>
     </WorkspacePage>
   );
 }

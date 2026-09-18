@@ -13,12 +13,13 @@ import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import {
   formatAverageMs,
   formatRuntimeUptime,
-  logCardTone,
-  logLevelBadgeTone,
+  logLevelToneClass,
   renderLogTechnicalDetails,
   requestIssueSummary,
-  SettingsSummaryCard,
+  SettingsFactTable,
+  SettingsQuietSection,
   type LogLevelFilter,
+  type SettingsFact,
 } from "./settings-shared";
 
 export function SettingsLogsTab() {
@@ -40,8 +41,69 @@ export function SettingsLogsTab() {
     runtimeMetrics?.status_counts,
   );
 
+  // Five coequal counters, not one magnitude that carries the tab: on a healthy
+  // install the number worth reading is the one that is usually zero, so none of
+  // these earns a hero tile. See docs/design/content-language.md, rule 2.
+  const logCounts: SettingsFact[] = [
+    {
+      label: "Showing now",
+      value: `${logsQ.data?.items.length ?? 0} events`,
+    },
+    {
+      label: "Matching events",
+      value: `${logsQ.data?.total ?? 0} events`,
+    },
+    {
+      label: "Errors",
+      value: String(logsQ.data?.counts.error ?? 0),
+      toneClass:
+        (logsQ.data?.counts.error ?? 0) > 0 ? "mm-status-text--failed" : "",
+    },
+    {
+      label: "Warnings",
+      value: String(logsQ.data?.counts.warning ?? 0),
+      toneClass:
+        (logsQ.data?.counts.warning ?? 0) > 0 ? "mm-status-text--warning" : "",
+    },
+    {
+      label: "Information",
+      value: String(logsQ.data?.counts.information ?? 0),
+    },
+  ];
+
+  const diagnosticFacts: SettingsFact[] = [
+    {
+      label: "Running for",
+      value: runtimeMetrics
+        ? formatRuntimeUptime(runtimeMetrics.uptime_seconds)
+        : "Loading...",
+    },
+    {
+      label: "Requests handled",
+      value: runtimeMetrics
+        ? String(runtimeMetrics.total_requests)
+        : "Loading...",
+    },
+    {
+      label: "Average response",
+      value: runtimeMetrics
+        ? formatAverageMs(runtimeMetrics.average_response_ms)
+        : "Loading...",
+    },
+    {
+      label: "Logged failures",
+      value: runtimeMetrics
+        ? String(runtimeMetrics.error_log_count)
+        : "Loading...",
+    },
+    {
+      label: "Request issues",
+      value: runtimeMetrics ? runtimeRequestIssues.value : "Loading...",
+    },
+  ];
+
   return (
-    <div data-testid="suite-settings-logs" className="mm-bubble-stack w-full">
+    <div data-testid="suite-settings-logs" className="mm-quiet-stack w-full">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
           System event logs from the Weir runtime. Use filters to narrow down
@@ -50,304 +112,236 @@ export function SettingsLogsTab() {
         </p>
       </div>
 
-      <section
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
-        aria-label="Log summary"
-      >
-        <SettingsSummaryCard
-          label="Showing now"
-          value={`${logsQ.data?.items.length ?? 0} events`}
-        />
-        <SettingsSummaryCard
-          label="Matching events"
-          value={`${logsQ.data?.total ?? 0} events`}
-        />
-        <SettingsSummaryCard
-          label="Errors"
-          value={String(logsQ.data?.counts.error ?? 0)}
-        />
-        <SettingsSummaryCard
-          label="Warnings"
-          value={String(logsQ.data?.counts.warning ?? 0)}
-        />
-        <SettingsSummaryCard
-          label="Information"
-          value={String(logsQ.data?.counts.information ?? 0)}
-        />
-      </section>
+      <SettingsFactTable
+        caption="Log summary"
+        facts={logCounts}
+        data-testid="suite-settings-log-summary"
+      />
 
-      <section
-        className="mm-card mm-dash-card w-full"
-        aria-labelledby="suite-settings-diagnostics-heading"
-      >
-        <details>
-          <summary
-            id="suite-settings-diagnostics-heading"
-            className="cursor-pointer text-base font-semibold text-[var(--mm-text1)]"
-          >
-            Server diagnostics
-          </summary>
-          <p className="mt-2 text-sm text-[var(--mm-text2)]">
-            Advanced counters for troubleshooting. Request issues usually mean a
-            browser or API request was rejected or asked for something that was
-            not found; they are not the same as application failures.
-          </p>
-          {metricsQ.isError ? (
-            <p
-              className="mt-4 rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-              role="alert"
+      <section className="mm-quiet-section">
+        <details className="group">
+          <summary className="mm-quiet-section__head cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <span
+              id="suite-settings-diagnostics-heading"
+              className="mm-quiet-section__title"
             >
-              {metricsQ.error instanceof Error
-                ? metricsQ.error.message
-                : "Could not load server diagnostics."}
+              Server diagnostics
+            </span>
+            <span className="mm-quiet-section__aside">
+              <span className="mm-quiet-link group-open:hidden">Show →</span>
+              <span className="mm-quiet-link hidden group-open:inline">
+                Hide →
+              </span>
+            </span>
+          </summary>
+          <div className="mm-quiet-section__body">
+            <p className="mm-quiet-note">
+              Advanced counters for troubleshooting. Request issues usually mean
+              a browser or API request was rejected or asked for something that
+              was not found; they are not the same as application failures.
             </p>
-          ) : (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <SettingsSummaryCard
-                label="Running for"
-                value={
-                  runtimeMetrics
-                    ? formatRuntimeUptime(runtimeMetrics.uptime_seconds)
-                    : "Loading..."
-                }
-              />
-              <SettingsSummaryCard
-                label="Requests handled"
-                value={
-                  runtimeMetrics
-                    ? String(runtimeMetrics.total_requests)
-                    : "Loading..."
-                }
-              />
-              <SettingsSummaryCard
-                label="Average response"
-                value={
-                  runtimeMetrics
-                    ? formatAverageMs(runtimeMetrics.average_response_ms)
-                    : "Loading..."
-                }
-              />
-              <SettingsSummaryCard
-                label="Logged failures"
-                value={
-                  runtimeMetrics
-                    ? String(runtimeMetrics.error_log_count)
-                    : "Loading..."
-                }
-              />
-              <SettingsSummaryCard
-                label="Request issues"
-                value={
-                  runtimeMetrics ? runtimeRequestIssues.value : "Loading..."
-                }
-              />
-            </div>
-          )}
-          {runtimeMetrics ? (
-            <p className="mt-3 text-xs text-[var(--mm-text3)]">
-              {runtimeRequestIssues.detail}
-            </p>
-          ) : null}
+            {metricsQ.isError ? (
+              <p
+                className="mt-4 text-sm text-[var(--mm-status-failed-text)]"
+                role="alert"
+              >
+                {metricsQ.error instanceof Error
+                  ? metricsQ.error.message
+                  : "Could not load server diagnostics."}
+              </p>
+            ) : (
+              <div className="mt-4">
+                <SettingsFactTable
+                  caption="Server runtime counters"
+                  facts={diagnosticFacts}
+                />
+              </div>
+            )}
+            {runtimeMetrics ? (
+              <p className="mt-3 text-xs text-[var(--mm-text3)]">
+                {runtimeRequestIssues.detail}
+              </p>
+            ) : null}
+          </div>
         </details>
       </section>
 
-      <section
-        className="mm-card mm-dash-card w-full"
-        aria-labelledby="suite-settings-logs-filters-heading"
-      >
-        <div className="mm-card__body space-y-4">
-          <div>
-            <h3
-              id="suite-settings-logs-filters-heading"
-              className="text-base font-semibold text-[var(--mm-text1)]"
-            >
-              Search logs
-            </h3>
-            <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Search message text, component names, tracebacks, request IDs, and
-              job IDs. This view refreshes while it is open.
-            </p>
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_220px_auto_auto]">
-            <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-              Search
-              <input
-                type="text"
-                className={mmEditableTextFieldClass}
-                placeholder="Search message, detail, traceback, logger, or source"
-                value={logSearch}
-                onChange={(e) => setLogSearch(e.target.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-              Level
-              <select
-                className={mmEditableTextFieldClass}
-                value={logLevel}
-                onChange={(e) => setLogLevel(e.target.value as LogLevelFilter)}
-              >
-                <option value="">All levels</option>
-                <option value="INFO">Information</option>
-                <option value="WARNING">Warnings</option>
-                <option value="ERROR">Errors</option>
-              </select>
-            </label>
-            <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-              <span>Tracebacks only</span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className={mmActionButtonClass({
-                    variant: tracebacksOnly ? "primary" : "tertiary",
-                  })}
-                  onClick={() => setTracebacksOnly(true)}
-                >
-                  On
-                </button>
-                <button
-                  type="button"
-                  className={mmActionButtonClass({
-                    variant: !tracebacksOnly ? "primary" : "tertiary",
-                  })}
-                  onClick={() => setTracebacksOnly(false)}
-                >
-                  Off
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-end gap-2">
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "secondary",
-                  disabled: logsQ.isFetching,
-                })}
-                disabled={logsQ.isFetching}
-                onClick={() => void logsQ.refetch()}
-              >
-                {logsQ.isFetching ? "Refreshing..." : "Refresh"}
-              </button>
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "tertiary",
-                  disabled: !logSearch.trim() && !logLevel && !tracebacksOnly,
-                })}
-                disabled={!logSearch.trim() && !logLevel && !tracebacksOnly}
-                onClick={() => {
-                  setLogSearch("");
-                  setLogLevel("");
-                  setTracebacksOnly(false);
-                }}
-              >
-                Clear filters
-              </button>
-            </div>
-          </div>
-
-          {logSearch.trim() || logLevel || tracebacksOnly ? (
-            <div className="flex flex-wrap gap-2">
-              {logSearch.trim() ? (
-                <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                  Search: {logSearch.trim()}
-                </span>
-              ) : null}
-              {logLevel ? (
-                <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                  Level: {logLevel === "INFO" ? "Information" : logLevel}
-                </span>
-              ) : null}
-              {tracebacksOnly ? (
-                <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                  Tracebacks only
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section
-        className="mm-card mm-dash-card w-full"
-        aria-labelledby="suite-settings-logs-list-heading"
-      >
-        <div className="mm-card__body space-y-4">
-          <div>
-            <h3
-              id="suite-settings-logs-list-heading"
-              className="text-base font-semibold text-[var(--mm-text1)]"
-            >
-              System events
-            </h3>
-            <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Recent runtime events, warnings, and failures captured by Weir.
-            </p>
-          </div>
-
-          {logsQ.isPending ? (
-            <div className="rounded-lg border border-[var(--mm-border)] bg-black/10 px-4 py-4 text-sm text-[var(--mm-text3)]">
-              Loading logs...
-            </div>
-          ) : logsQ.isError ? (
-            <div
-              className="rounded-lg border border-red-500/40 bg-red-950/25 px-4 py-4 text-sm text-red-200"
-              role="alert"
-            >
-              {logsQ.error instanceof Error
-                ? logsQ.error.message
-                : "Could not load logs."}
-            </div>
-          ) : (logsQ.data?.items.length ?? 0) === 0 ? (
-            <div className="rounded-lg border border-[var(--mm-border)] bg-black/10 px-4 py-4 text-sm text-[var(--mm-text2)]">
-              No system events matched the current filters.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {logsQ.data?.items.map((entry) => {
-                const technicalDetails = renderLogTechnicalDetails(entry);
-                return (
-                  <article
-                    key={`${entry.timestamp}-${entry.level}-${entry.message}`}
-                    className={`rounded-lg border px-4 py-4 ${logCardTone(entry.level)}`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
-                            {entry.component}
-                          </span>
-                          <span
-                            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${logLevelBadgeTone(entry.level)}`}
-                          >
-                            {entry.level === "INFO"
-                              ? "Information"
-                              : entry.level}
-                          </span>
-                        </div>
-                        <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
-                          {entry.message}
-                        </h4>
-                        {entry.detail ? (
-                          <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                            {entry.detail}
-                          </p>
-                        ) : null}
-                      </div>
-                      <time className="text-sm text-[var(--mm-text3)]">
-                        {formatDateTime(entry.timestamp)}
-                      </time>
-                    </div>
-                    {technicalDetails ? (
-                      <div className="mt-3">{technicalDetails}</div>
-                    ) : null}
-                  </article>
-                );
+      <SettingsQuietSection
+        headingId="suite-settings-logs-filters-heading"
+        heading="Search logs"
+        aside={
+          <>
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "secondary",
+                disabled: logsQ.isFetching,
               })}
+              disabled={logsQ.isFetching}
+              onClick={() => void logsQ.refetch()}
+            >
+              {logsQ.isFetching ? "Refreshing..." : "Refresh"}
+            </button>
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "tertiary",
+                disabled: !logSearch.trim() && !logLevel && !tracebacksOnly,
+              })}
+              disabled={!logSearch.trim() && !logLevel && !tracebacksOnly}
+              onClick={() => {
+                setLogSearch("");
+                setLogLevel("");
+                setTracebacksOnly(false);
+              }}
+            >
+              Clear filters
+            </button>
+          </>
+        }
+      >
+        <p className="mm-quiet-note">
+          Search message text, component names, tracebacks, request IDs, and job
+          IDs. This view refreshes while it is open.
+        </p>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,2fr)_220px_auto]">
+          <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+            Search
+            <input
+              type="text"
+              className={mmEditableTextFieldClass}
+              placeholder="Search message, detail, traceback, logger, or source"
+              value={logSearch}
+              onChange={(e) => setLogSearch(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+            Level
+            <select
+              className={mmEditableTextFieldClass}
+              value={logLevel}
+              onChange={(e) => setLogLevel(e.target.value as LogLevelFilter)}
+            >
+              <option value="">All levels</option>
+              <option value="INFO">Information</option>
+              <option value="WARNING">Warnings</option>
+              <option value="ERROR">Errors</option>
+            </select>
+          </label>
+          <div className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-[var(--mm-text3)] uppercase">
+            <span>Tracebacks only</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={mmActionButtonClass({
+                  variant: tracebacksOnly ? "primary" : "tertiary",
+                })}
+                onClick={() => setTracebacksOnly(true)}
+              >
+                On
+              </button>
+              <button
+                type="button"
+                className={mmActionButtonClass({
+                  variant: !tracebacksOnly ? "primary" : "tertiary",
+                })}
+                onClick={() => setTracebacksOnly(false)}
+              >
+                Off
+              </button>
             </div>
-          )}
+          </div>
         </div>
-      </section>
+
+        {logSearch.trim() || logLevel || tracebacksOnly ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {logSearch.trim() ? (
+              <span className="mm-quiet-badge">Search: {logSearch.trim()}</span>
+            ) : null}
+            {logLevel ? (
+              <span className="mm-quiet-badge">
+                Level: {logLevel === "INFO" ? "Information" : logLevel}
+              </span>
+            ) : null}
+            {tracebacksOnly ? (
+              <span className="mm-quiet-badge">Tracebacks only</span>
+            ) : null}
+          </div>
+        ) : null}
+      </SettingsQuietSection>
+
+      <SettingsQuietSection
+        headingId="suite-settings-logs-list-heading"
+        heading="System events"
+      >
+        <p className="mm-quiet-note">
+          Recent runtime events, warnings, and failures captured by Weir.
+        </p>
+
+        {logsQ.isPending ? (
+          <p className="mm-quiet-note mt-4">Loading logs...</p>
+        ) : logsQ.isError ? (
+          <p
+            className="mt-4 text-sm text-[var(--mm-status-failed-text)]"
+            role="alert"
+          >
+            {logsQ.error instanceof Error
+              ? logsQ.error.message
+              : "Could not load logs."}
+          </p>
+        ) : (logsQ.data?.items.length ?? 0) === 0 ? (
+          <p className="mm-quiet-note mt-4">
+            No system events matched the current filters.
+          </p>
+        ) : (
+          <div className="mm-quiet-table-wrap mt-4">
+            <table className="mm-quiet-table">
+              <thead>
+                <tr>
+                  <th scope="col">Event</th>
+                  <th scope="col">Level</th>
+                  <th scope="col">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logsQ.data?.items.map((entry) => {
+                  const technicalDetails = renderLogTechnicalDetails(entry);
+                  return (
+                    <tr
+                      key={`${entry.timestamp}-${entry.level}-${entry.message}`}
+                    >
+                      <th scope="row" className="mm-quiet-table__name">
+                        <span>{entry.message}</span>
+                        <span className="mm-quiet-badge">
+                          {entry.component}
+                        </span>
+                        {entry.detail ? (
+                          <span className="mm-quiet-table__sub">
+                            {entry.detail}
+                          </span>
+                        ) : null}
+                        {technicalDetails}
+                      </th>
+                      <td
+                        data-label="Level"
+                        className={logLevelToneClass(entry.level)}
+                      >
+                        {entry.level === "INFO" ? "Information" : entry.level}
+                      </td>
+                      <td data-label="When" className="whitespace-nowrap">
+                        <time dateTime={entry.timestamp}>
+                          {formatDateTime(entry.timestamp)}
+                        </time>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SettingsQuietSection>
     </div>
   );
 }
