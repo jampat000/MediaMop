@@ -41,9 +41,9 @@ library can be set to use ffmpeg for everything instead.
 | --- | --- |
 | ![Home](screenshots/home.png) | ![Activity](screenshots/activity.png) |
 
-| Processing | Existing library |
+| Processing | Library |
 | --- | --- |
-| ![Processing](screenshots/processing.png) | ![Existing library](screenshots/existing-library.png) |
+| ![Processing](screenshots/processing.png) | ![Library](screenshots/library.png) |
 
 | Settings |
 | --- |
