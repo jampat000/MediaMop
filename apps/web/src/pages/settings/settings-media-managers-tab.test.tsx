@@ -242,4 +242,165 @@ describe("SettingsMediaManagersTab", () => {
 
     expect(screen.getByTestId("media-manager-save")).toBeDisabled();
   });
+
+  // #599 follow-up: Remove used to delete on the first click. What matters is not that a
+  // dialog appears — it is that nothing is deleted until the dialog is confirmed.
+  describe("removing a connection", () => {
+    function threeConnections() {
+      return [
+        connection({ id: 1, name: "Deluno" }),
+        connection({ id: 2, kind: "radarr", name: "Radarr" }),
+        connection({ id: 3, kind: "sonarr", name: "Sonarr" }),
+      ];
+    }
+
+    it("does not delete anything on the first click", async () => {
+      vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue(
+        threeConnections(),
+      );
+      const del = vi
+        .spyOn(api, "deleteMediaManagerConnection")
+        .mockResolvedValue(undefined);
+
+      render(<SettingsMediaManagersTab />, { wrapper });
+      fireEvent.click(
+        (await screen.findAllByTestId("media-manager-remove"))[1],
+      );
+
+      expect(
+        await screen.findByTestId("media-manager-remove-confirm"),
+      ).toBeInTheDocument();
+      expect(del).not.toHaveBeenCalled();
+      // And the connection is still on screen behind the dialog.
+      expect(screen.getByText("Radarr")).toBeInTheDocument();
+    });
+
+    it("names the connection it is about to remove, not just 'this one'", async () => {
+      vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue(
+        threeConnections(),
+      );
+      render(<SettingsMediaManagersTab />, { wrapper });
+
+      // Second of three: the case where an unnamed prompt would be useless.
+      fireEvent.click(
+        (await screen.findAllByTestId("media-manager-remove"))[1],
+      );
+
+      const dialog = screen.getByTestId("media-manager-remove-confirm");
+      expect(dialog).toHaveTextContent("Remove Radarr?");
+      expect(dialog).not.toHaveTextContent("Remove Deluno?");
+      expect(dialog).not.toHaveTextContent("Remove Sonarr?");
+    });
+
+    it("leaves the connection alone when the dialog is cancelled", async () => {
+      vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue(
+        threeConnections(),
+      );
+      const del = vi
+        .spyOn(api, "deleteMediaManagerConnection")
+        .mockResolvedValue(undefined);
+
+      render(<SettingsMediaManagersTab />, { wrapper });
+      fireEvent.click(
+        (await screen.findAllByTestId("media-manager-remove"))[1],
+      );
+      fireEvent.click(
+        screen.getByTestId("media-manager-remove-confirm-cancel"),
+      );
+
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("media-manager-remove-confirm"),
+        ).not.toBeInTheDocument(),
+      );
+      expect(del).not.toHaveBeenCalled();
+      expect(screen.getByText("Radarr")).toBeInTheDocument();
+      expect(screen.getAllByTestId("media-manager-card")).toHaveLength(3);
+    });
+
+    it("leaves the connection alone when Escape closes the dialog", async () => {
+      vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue(
+        threeConnections(),
+      );
+      const del = vi
+        .spyOn(api, "deleteMediaManagerConnection")
+        .mockResolvedValue(undefined);
+
+      render(<SettingsMediaManagersTab />, { wrapper });
+      fireEvent.click(
+        (await screen.findAllByTestId("media-manager-remove"))[1],
+      );
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("media-manager-remove-confirm"),
+        ).not.toBeInTheDocument(),
+      );
+      expect(del).not.toHaveBeenCalled();
+      expect(screen.getAllByTestId("media-manager-card")).toHaveLength(3);
+    });
+
+    it("opens with focus on the safe choice, so Enter keeps the connection", async () => {
+      vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue(
+        threeConnections(),
+      );
+      render(<SettingsMediaManagersTab />, { wrapper });
+      fireEvent.click(
+        (await screen.findAllByTestId("media-manager-remove"))[1],
+      );
+
+      expect(
+        screen.getByTestId("media-manager-remove-confirm-cancel"),
+      ).toHaveFocus();
+      expect(
+        screen.getByTestId("media-manager-remove-confirm-confirm"),
+      ).not.toHaveFocus();
+    });
+
+    it("deletes only the confirmed connection, once confirmed", async () => {
+      vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue(
+        threeConnections(),
+      );
+      const del = vi
+        .spyOn(api, "deleteMediaManagerConnection")
+        .mockResolvedValue(undefined);
+
+      render(<SettingsMediaManagersTab />, { wrapper });
+      fireEvent.click(
+        (await screen.findAllByTestId("media-manager-remove"))[1],
+      );
+      fireEvent.click(
+        screen.getByTestId("media-manager-remove-confirm-confirm"),
+      );
+
+      await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
+      expect(del).toHaveBeenCalledWith(2);
+    });
+
+    it("keeps the dialog open and says why when the removal fails", async () => {
+      vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue(
+        threeConnections(),
+      );
+      vi.spyOn(api, "deleteMediaManagerConnection").mockRejectedValue(
+        new Error("Could not reach the server."),
+      );
+
+      render(<SettingsMediaManagersTab />, { wrapper });
+      fireEvent.click(
+        (await screen.findAllByTestId("media-manager-remove"))[1],
+      );
+      fireEvent.click(
+        screen.getByTestId("media-manager-remove-confirm-confirm"),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Could not reach the server.",
+      );
+      expect(
+        screen.getByTestId("media-manager-remove-confirm"),
+      ).toBeInTheDocument();
+      expect(screen.getAllByTestId("media-manager-card")).toHaveLength(3);
+    });
+  });
 });
