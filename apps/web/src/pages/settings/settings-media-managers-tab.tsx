@@ -347,6 +347,18 @@ function ConnectionCard({
           </summary>
 
           <div className="mt-3">
+            {connection.kind === "sonarr" || connection.kind === "radarr" ? (
+              <p
+                className="mb-3 text-[var(--mm-text2)]"
+                data-testid="media-manager-mapping-pointer"
+              >
+                {connection.name} picks up what Weir cleans through a remote
+                path mapping from a library&apos;s watched folder to its output
+                folder. Open that library under Processing → Libraries: its
+                editor shows the exact values to enter and checks that{" "}
+                {connection.name} has them.
+              </p>
+            ) : null}
             <p className="text-[var(--mm-text2)]">
               In {connection.name}, send files to this address:
             </p>

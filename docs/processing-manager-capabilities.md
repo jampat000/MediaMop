@@ -23,3 +23,20 @@ The library screen uses three coverage states:
 Connect or repair a manager from Settings → Media managers. A manually created
 library remains valid and is never deleted or disabled merely because it has no
 manager link.
+
+## How each manager picks up Weir's output
+
+- **Deluno** hands each finished download to Weir over its API and imports the
+  cleaned file itself. A library only needs Deluno's folders: the one its
+  downloads arrive in as the watched folder (a hand-off must sit inside it), and
+  its processed-output folder as the output folder. The library editor reads
+  both from Deluno's manifest and offers to fill them in.
+- **Sonarr and Radarr** are set up by hand, the way FileFlows documents it: the
+  download client finishes into Weir's watched folder, and a remote path mapping
+  in Sonarr/Radarr (Settings → Download Clients → Remote Path Mappings) maps that
+  folder to Weir's output folder, so Completed Download Handling only ever looks
+  at cleaned files. Weir writes each output under the same relative path, name
+  and extension as the download, and publishes it in one step. The library editor
+  shows the exact Host, Remote Path and Local Path, and checks them against the
+  saved connection with `GET` requests only; Weir never changes a manager's
+  settings.

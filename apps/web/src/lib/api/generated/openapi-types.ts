@@ -1286,6 +1286,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/processing/manager-setup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Processing Manager Setup
+     * @description What each enabled Sonarr, Radarr or Deluno connection covering a media type needs for a library with these folders, and whether it already has it.
+     *
+     *     Sonarr and Radarr import Weir's output through a remote path mapping from the watched folder to the output folder; Deluno hands files over and reports its own folders. Read only: Weir only ever sends GET requests to the managers and never changes their settings.
+     */
+    get: operations["get_processing_manager_setup_api_v1_processing_manager_setup_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/processing/metadata-provider": {
     parameters: {
       query?: never;
@@ -6106,6 +6128,93 @@ export interface components {
       /** Error Type */
       type: string;
     };
+    /**
+     * ManagerSetupLineOut
+     * @description One line of a setup check.
+     */
+    ManagerSetupLineOut: {
+      /**
+       * State
+       * @description ``ok``, ``problem`` (with its fix in the sentence) or ``note``.
+       * @enum {string}
+       */
+      state: "ok" | "problem" | "note";
+      /**
+       * Text
+       * @description One plain sentence.
+       */
+      text: string;
+    };
+    /**
+     * ManagerSetupMappingOut
+     * @description The remote path mapping Sonarr or Radarr needs under Settings > Download Clients > Remote Path Mappings.
+     */
+    ManagerSetupMappingOut: {
+      /**
+       * Hosts
+       * @description The Host of each enabled download client, exactly as the manager has it: one mapping per host.
+       */
+      hosts: string[];
+      /**
+       * Remote Path
+       * @description The library's watched folder, as Weir sees it.
+       */
+      remote_path: string;
+      /**
+       * Local Path
+       * @description The library's output folder, as Weir sees it.
+       */
+      local_path: string;
+    };
+    /**
+     * ManagerSetupItemOut
+     * @description One connection's setup: what it needs and whether it has it.
+     */
+    ManagerSetupItemOut: {
+      /** Connection Id */
+      connection_id: number;
+      /** Kind */
+      kind: string;
+      /** Name */
+      name: string;
+      /** Label */
+      label: string;
+      /**
+       * Flow
+       * @description ``remote_path_mapping`` (Sonarr, Radarr) or ``handoff`` (Deluno).
+       * @enum {string}
+       */
+      flow: "remote_path_mapping" | "handoff";
+      /**
+       * Ready
+       * @description True when no line is a problem.
+       */
+      ready: boolean;
+      /** Lines */
+      lines: components["schemas"]["ManagerSetupLineOut"][];
+      /** @description Sonarr and Radarr only. */
+      mapping?: components["schemas"]["ManagerSetupMappingOut"] | null;
+      /**
+       * Suggested Watched Folder
+       * @description Deluno only: where this media type's downloads arrive, as Deluno reports it.
+       */
+      suggested_watched_folder?: string | null;
+      /**
+       * Suggested Output Folder
+       * @description Deluno only: where Deluno picks up cleaned files, as it reports it.
+       */
+      suggested_output_folder?: string | null;
+    };
+    /** ManagerSetupOut */
+    ManagerSetupOut: {
+      /**
+       * Media Type
+       * @enum {string}
+       */
+      media_type: "movie" | "tv";
+      /** Managers */
+      managers: components["schemas"]["ManagerSetupItemOut"][];
+    };
   };
   responses: never;
   parameters: never;
@@ -8468,6 +8577,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["MaintenanceTriggerOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_processing_manager_setup_api_v1_processing_manager_setup_get: {
+    parameters: {
+      query: {
+        media_type: "movie" | "tv";
+        watched_folder?: string;
+        output_folder?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ManagerSetupOut"];
         };
       };
       /** @description Validation Error */

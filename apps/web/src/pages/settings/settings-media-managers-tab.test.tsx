@@ -219,6 +219,22 @@ describe("SettingsMediaManagersTab", () => {
     expect(summary).toHaveTextContent("Show →");
   });
 
+  it("points Sonarr and Radarr at the library editor's mapping, not at Deluno's hand-off", async () => {
+    vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
+      connection({ id: 2, kind: "sonarr", name: "Sonarr" }),
+      connection(),
+    ]);
+    render(<SettingsMediaManagersTab />, { wrapper });
+
+    const pointer = await screen.findByTestId("media-manager-mapping-pointer");
+    expect(pointer).toHaveTextContent(
+      "Sonarr picks up what Weir cleans through a remote path mapping",
+    );
+    expect(screen.getAllByTestId("media-manager-mapping-pointer")).toHaveLength(
+      1,
+    );
+  });
+
   it("does not name internal modules in the intro", async () => {
     vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([]);
     const { container } = render(<SettingsMediaManagersTab />, { wrapper });

@@ -99,14 +99,19 @@ public enum ManagerNotifyOutcome
 /// <summary>What a kind of manager can be asked, before anyone talks to it.</summary>
 public sealed record ManagerCapabilities(IReadOnlySet<string> Scopes, bool ReportsQueue, bool ReportsLibraryTruth, string Summary, bool RemovesQueueItems = false);
 
-/// <summary>One library a manager says it looks after. <see cref="RootPath"/> is a path on the manager's host.</summary>
+/// <summary>
+/// One library a manager says it looks after. <see cref="RootPath"/> is a path on the manager's host.
+/// <see cref="DownloadsPath"/> is where the manager says this library's downloads arrive (Deluno's manifest
+/// <c>downloadsPath</c>), which is where its hand-offs come from; null when the manager does not say.
+/// </summary>
 public sealed record ManagerLibraryDescriptor(
     string Key,
     string Name,
     string? MediaScope,
     string? RootPath = null,
     string? OutputPath = null,
-    bool ProcessesBeforeImport = false);
+    bool ProcessesBeforeImport = false,
+    string? DownloadsPath = null);
 
 /// <summary>A live answer to "what do you manage", degrading to the static capabilities.</summary>
 public sealed record ManagerDescription(

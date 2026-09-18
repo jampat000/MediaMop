@@ -24,6 +24,7 @@ public static class MediaManagerServices
         services.TryAddSingleton<IMediaManagerPorts, HttpMediaManagerPorts>();
         services.TryAddSingleton<MediaManagerConnectionService>();
         services.TryAddSingleton<LibraryDiscoveryService>();
+        services.TryAddSingleton<ManagerSetupCheck>();
         services.TryAddSingleton<HandoffLedgerStore>();
         services.TryAddSingleton(sp => new ProcessingJobStore(
             sp.GetRequiredService<SqliteDatabase>(), sp.GetRequiredService<TimeProvider>(), sp.GetService<IJobQueueMetrics>()));

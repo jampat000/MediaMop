@@ -269,7 +269,11 @@ public static class ManagerDialectRules
         var workflow = PyStrings.Strip(PyValues.Text(library.Get("importWorkflow")) ?? string.Empty).ToLowerInvariant();
         var processesBeforeImport = workflow == "refine-before-import";
         var output = processesBeforeImport ? PyValues.FirstText(library, "processorOutputPath") : null;
-        return new ManagerLibraryDescriptor(key, name, scope, root, output, processesBeforeImport);
+        // Deluno's ExternalLibraryManifest carries DownloadsPath beside RootPath (Deluno
+        // src/Deluno.Platform/ExternalIntegrationEndpointRouteBuilderExtensions.cs, ExternalLibraryManifest): the folder
+        // the library's downloads arrive in, which is where a hand-off's sourcePath comes from.
+        var downloads = PyValues.FirstText(library, "downloadsPath");
+        return new ManagerLibraryDescriptor(key, name, scope, root, output, processesBeforeImport, downloads);
     }
 
     /// <summary>The external-integration <c>describe</c> answer from a manifest payload.</summary>

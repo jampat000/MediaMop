@@ -361,3 +361,51 @@ it("lets an operator choose Reject when a linked manager supports it", async () 
     ),
   );
 });
+
+it("fills a library's folders from what Deluno reports, then saves them", async () => {
+  asOperator();
+  const existing = library({
+    media_type: "tv",
+    name: "TV",
+    watched_folder: "/media/tv",
+    output_folder: "",
+  });
+  vi.spyOn(api, "fetchProcessingLibraries").mockResolvedValue([existing]);
+  vi.spyOn(api, "fetchProcessingManagerSetup").mockResolvedValue({
+    media_type: "tv",
+    managers: [
+      {
+        connection_id: 5,
+        kind: "deluno",
+        name: "Deluno",
+        label: "Deluno",
+        flow: "handoff",
+        ready: false,
+        mapping: null,
+        suggested_watched_folder: "/media/downloads/complete/tv",
+        suggested_output_folder: "/media/downloads/weir/tv",
+        lines: [],
+      },
+    ],
+  });
+  const update = vi
+    .spyOn(api, "updateProcessingLibrary")
+    .mockResolvedValue(existing);
+
+  render(<ProcessingLibrariesSection />, { wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Use Deluno's folders" }),
+  );
+  fireEvent.click(screen.getByTestId("processing-library-save"));
+
+  await waitFor(() => {
+    expect(update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        watched_folder: "/media/downloads/complete/tv",
+        output_folder: "/media/downloads/weir/tv",
+      }),
+    );
+  });
+});

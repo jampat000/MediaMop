@@ -1,5 +1,6 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
+import type { components } from "../api/generated/openapi-types";
 
 export type ProcessingMediaType = "movie" | "tv";
 
@@ -460,6 +461,30 @@ export async function fetchProcessingRejectSupport(
     "Could not check whether Reject is available",
   );
   return readJson<ProcessingRejectSupport>(response);
+}
+
+/**
+ * What each connected Sonarr, Radarr or Deluno needs for a library with these folders, and whether it
+ * already has it. Read only on the manager's side: Weir only ever sends it GET requests.
+ */
+export type ProcessingManagerSetup = components["schemas"]["ManagerSetupOut"];
+export type ProcessingManagerSetupItem =
+  components["schemas"]["ManagerSetupItemOut"];
+
+export async function fetchProcessingManagerSetup(
+  mediaType: ProcessingMediaType,
+  watchedFolder: string,
+  outputFolder: string,
+): Promise<ProcessingManagerSetup> {
+  const query = new URLSearchParams({
+    media_type: mediaType,
+    watched_folder: watchedFolder,
+    output_folder: outputFolder,
+  });
+  const path = `/api/v1/processing/manager-setup?${query.toString()}`;
+  const response = await apiFetch(path);
+  await requireOk(path, response, "Could not check your media managers");
+  return readJson<ProcessingManagerSetup>(response);
 }
 
 const processingRuleSetsPath = () => "/api/v1/processing/rule-sets";

@@ -8597,6 +8597,175 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "ManagerSetupLineOut": {
+        "description": "One line of a setup check.",
+        "properties": {
+          "state": {
+            "description": "``ok``, ``problem`` (with its fix in the sentence) or ``note``.",
+            "enum": [
+              "ok",
+              "problem",
+              "note"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "text": {
+            "description": "One plain sentence.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "text"
+        ],
+        "title": "ManagerSetupLineOut",
+        "type": "object"
+      },
+      "ManagerSetupMappingOut": {
+        "description": "The remote path mapping Sonarr or Radarr needs under Settings > Download Clients > Remote Path Mappings.",
+        "properties": {
+          "hosts": {
+            "description": "The Host of each enabled download client, exactly as the manager has it: one mapping per host.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Hosts",
+            "type": "array"
+          },
+          "remote_path": {
+            "description": "The library's watched folder, as Weir sees it.",
+            "title": "Remote Path",
+            "type": "string"
+          },
+          "local_path": {
+            "description": "The library's output folder, as Weir sees it.",
+            "title": "Local Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hosts",
+          "remote_path",
+          "local_path"
+        ],
+        "title": "ManagerSetupMappingOut",
+        "type": "object"
+      },
+      "ManagerSetupItemOut": {
+        "description": "One connection's setup: what it needs and whether it has it.",
+        "properties": {
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "flow": {
+            "description": "``remote_path_mapping`` (Sonarr, Radarr) or ``handoff`` (Deluno).",
+            "enum": [
+              "remote_path_mapping",
+              "handoff"
+            ],
+            "title": "Flow",
+            "type": "string"
+          },
+          "ready": {
+            "description": "True when no line is a problem.",
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerSetupLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "mapping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManagerSetupMappingOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sonarr and Radarr only."
+          },
+          "suggested_watched_folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Deluno only: where this media type's downloads arrive, as Deluno reports it.",
+            "title": "Suggested Watched Folder"
+          },
+          "suggested_output_folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Deluno only: where Deluno picks up cleaned files, as it reports it.",
+            "title": "Suggested Output Folder"
+          }
+        },
+        "required": [
+          "connection_id",
+          "kind",
+          "name",
+          "label",
+          "flow",
+          "ready",
+          "lines"
+        ],
+        "title": "ManagerSetupItemOut",
+        "type": "object"
+      },
+      "ManagerSetupOut": {
+        "properties": {
+          "media_type": {
+            "enum": [
+              "movie",
+              "tv"
+            ],
+            "title": "Media Type",
+            "type": "string"
+          },
+          "managers": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerSetupItemOut"
+            },
+            "title": "Managers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "media_type",
+          "managers"
+        ],
+        "title": "ManagerSetupOut",
+        "type": "object"
       }
     }
   },
@@ -12504,6 +12673,76 @@
           }
         },
         "summary": "Post Processing Maintenance Run",
+        "tags": [
+          "processing",
+          "processing"
+        ]
+      }
+    },
+    "/api/v1/processing/manager-setup": {
+      "get": {
+        "description": "What each enabled Sonarr, Radarr or Deluno connection covering a media type needs for a library with these folders, and whether it already has it.\n\nSonarr and Radarr import Weir's output through a remote path mapping from the watched folder to the output folder; Deluno hands files over and reports its own folders. Read only: Weir only ever sends GET requests to the managers and never changes their settings.",
+        "operationId": "get_processing_manager_setup_api_v1_processing_manager_setup_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "media_type",
+            "required": true,
+            "schema": {
+              "enum": [
+                "movie",
+                "tv"
+              ],
+              "title": "Media Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "watched_folder",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 4000,
+              "title": "Watched Folder",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "output_folder",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 4000,
+              "title": "Output Folder",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerSetupOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Processing Manager Setup",
         "tags": [
           "processing",
           "processing"

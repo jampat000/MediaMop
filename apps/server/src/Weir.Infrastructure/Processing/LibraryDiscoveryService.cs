@@ -38,6 +38,21 @@ public sealed class LibraryDiscoveryService
     }
 
     /// <summary>
+    /// The folder a discovered library should watch. For a manager that hands files over before importing (Deluno's
+    /// Refine before import), that is where its downloads arrive (<see cref="ManagerLibraryDescriptor.DownloadsPath"/>),
+    /// because a hand-off's file must sit inside the watched folder (<see cref="Weir.Core.MediaManagers.HandoffPaths"/>);
+    /// the library root is where finished media ends up and never where a hand-off comes from. Otherwise, and for a
+    /// manager that does not report a downloads folder, the library root as before.
+    /// </summary>
+    public static string? WatchedSource(ManagerLibraryDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        return descriptor.ProcessesBeforeImport && !string.IsNullOrWhiteSpace(descriptor.DownloadsPath)
+            ? descriptor.DownloadsPath
+            : descriptor.RootPath;
+    }
+
+    /// <summary>
     /// <c>local_path_problem</c>: why a manager-reported root cannot be used locally, or <see langword="null"/>
     /// if it can. Deliberately not a filesystem check first: a share that is simply not mounted yet should
     /// read as "not visible here", not as a crash. The existence check comes last and only sharpens the message.
@@ -116,9 +131,9 @@ public sealed class LibraryDiscoveryService
                 Key: descriptor.Key,
                 Name: descriptor.Name,
                 MediaType: descriptor.MediaScope,
-                RootPath: descriptor.RootPath,
+                RootPath: WatchedSource(descriptor),
                 AlreadyImported: imported.Contains((connectionRow.Id, descriptor.Key)),
-                LocalPathProblem: LocalPathProblem(descriptor.RootPath),
+                LocalPathProblem: LocalPathProblem(WatchedSource(descriptor)),
                 OutputPath: descriptor.OutputPath,
                 ProcessesBeforeImport: descriptor.ProcessesBeforeImport,
                 OutputPathProblem: descriptor.ProcessesBeforeImport ? LocalPathProblem(descriptor.OutputPath) : null));
@@ -194,7 +209,7 @@ public sealed class LibraryDiscoveryService
             // An unusable root is imported as an empty watched folder rather than a path Weir cannot see: a
             // library pointed at a folder that is not there would fail every scan, and the operator is told
             // why on the way in.
-            var usableRoot = LocalPathProblem(descriptor.RootPath) is null ? descriptor.RootPath ?? string.Empty : string.Empty;
+            var usableRoot = LocalPathProblem(WatchedSource(descriptor)) is null ? WatchedSource(descriptor) ?? string.Empty : string.Empty;
 
             // A manager that processes before importing tells Weir where it expects the finished file.
             // Without this a discovered library arrived with no output folder and could not run a pass at
@@ -259,7 +274,7 @@ public sealed class LibraryDiscoveryService
                 continue;
             }
 
-            var managerRoot = PyStrings.Strip(descriptor.RootPath ?? string.Empty);
+            var managerRoot = PyStrings.Strip(WatchedSource(descriptor) ?? string.Empty);
             var saved = PyStrings.Strip(row.WatchedFolder ?? string.Empty);
             if (managerRoot.Length > 0 && saved.Length > 0 &&
                 LibraryDiscoveryRules.Comparable(managerRoot) != LibraryDiscoveryRules.Comparable(saved))
@@ -275,7 +290,7 @@ public sealed class LibraryDiscoveryService
                     "successful pass, so a watched folder only moves when you move it."));
             }
 
-            var problem = LocalPathProblem(descriptor.RootPath);
+            var problem = LocalPathProblem(WatchedSource(descriptor));
             if (problem is not null && saved.Length == 0)
             {
                 drift.Add(new LibraryDrift(
@@ -300,7 +315,7 @@ public sealed class LibraryDiscoveryService
                 LibraryDriftKinds.LibraryAdded,
                 null,
                 descriptor.Name,
-                descriptor.RootPath,
+                WatchedSource(descriptor),
                 null,
                 $"{connectionRow.Name} reports a library Weir has not imported. Import it if you want Weir to process it."));
         }

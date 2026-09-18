@@ -8,6 +8,7 @@ import {
   quietActionRowClass,
 } from "../../components/shared/quiet-section";
 import { ScheduleGridEditor } from "./schedule-grid-editor";
+import { LibraryManagerSetup } from "./library/library-manager-setup";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
   mmStatusPillClass,
@@ -940,6 +941,20 @@ export function ProcessingLibrariesSection() {
                 )}
               </div>
             </QuietFieldGroup>
+
+            <LibraryManagerSetup
+              mediaType={form.media_type}
+              watchedFolder={form.watched_folder}
+              outputFolder={form.output_folder}
+              editable={editable}
+              onUseFolders={(watched, output) =>
+                setForm((current) => ({
+                  ...current,
+                  watched_folder: watched ?? current.watched_folder,
+                  output_folder: output ?? current.output_folder,
+                }))
+              }
+            />
 
             <QuietFieldGroup
               title="Intake rules"

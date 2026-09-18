@@ -26,6 +26,7 @@ public static class ProcessingLibraryEndpoints
         endpoints.MapV1("GET", "/processing/libraries", GetLibrariesAsync);
         endpoints.MapV1("POST", "/processing/libraries", PostLibraryAsync);
         endpoints.MapV1("GET", "/processing/reject-support", GetRejectSupportAsync);
+        endpoints.MapV1("GET", "/processing/manager-setup", GetManagerSetupAsync);
         endpoints.MapV1("GET", "/processing/libraries/discover/{connection_id}", GetDiscoverableLibrariesAsync);
         endpoints.MapV1("POST", "/processing/libraries/discover/{connection_id}/import", PostImportLibrariesAsync);
         endpoints.MapV1("GET", "/processing/libraries/discover/{connection_id}/drift", GetLibraryDriftAsync);
@@ -249,6 +250,36 @@ public static class ProcessingLibraryEndpoints
         var connections = await request.Service<MediaManagerConnectionService>().ConnectionsByIdAsync(uow, connectionIds).ConfigureAwait(false);
         var support = await request.Service<RejectSupportEvaluator>().EvaluateAsync(connections).ConfigureAwait(false);
         return ApiRoutes.Ok(new PyDict().Set("available", support.Available).Set("reason", support.Reason));
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/processing/manager-setup</c>: for a library's media type and folders (saved or still being typed),
+    /// what each enabled Sonarr, Radarr or Deluno connection needs, and whether it already has it — the remote path
+    /// mapping Sonarr/Radarr must hold, or the folders Deluno reports. Read only: Weir never writes a manager's settings.
+    /// </summary>
+    private static async Task<ApiResult> GetManagerSetupAsync(ApiRequest request)
+    {
+        await request.RequireUserAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var mediaType = ProcessingMediaScopes.Movie;
+        if (request.Query("media_type") is not { } rawType)
+        {
+            issues.Add(new ValidationIssue("missing", ["query", "media_type"], "Field required", PyJson.Null));
+        }
+        else if (PydanticRules.TryLiteral(new PyStr(rawType), ["query", "media_type"], ProcessingMediaScopes.All, issues, out var parsedType))
+        {
+            mediaType = parsedType;
+        }
+
+        var watchedFolder = PyStrings.Slice(request.Query("watched_folder") ?? string.Empty, 4000);
+        var outputFolder = PyStrings.Slice(request.Query("output_folder") ?? string.Empty, 4000);
+        issues.ThrowIfAny();
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var managers = await request.Service<ManagerSetupCheck>()
+            .CheckAsync(uow, mediaType, watchedFolder, outputFolder, request.Context.RequestAborted)
+            .ConfigureAwait(false);
+        return ApiRoutes.Ok(new PyDict().Set("media_type", mediaType).Set("managers", new PyList(managers.Select(item => (PyJson)item))));
     }
 
     /// <summary>

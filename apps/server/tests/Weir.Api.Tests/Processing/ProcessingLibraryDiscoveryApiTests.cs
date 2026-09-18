@@ -31,7 +31,8 @@ public sealed class ProcessingLibraryDiscoveryApiTests
         string MediaType,
         string? RootPath = null,
         string ImportWorkflow = "standard",
-        string? ProcessorOutputPath = null);
+        string? ProcessorOutputPath = null,
+        string? DownloadsPath = null);
 
     /// <summary>The confirmed Deluno manifest shape (jampat000/Deluno#331), matching Python's fixture.</summary>
     private static string ManifestJson(params ManifestLibrary[] libraries)
@@ -46,6 +47,7 @@ public sealed class ProcessingLibraryDiscoveryApiTests
                 ["rootPath"] = library.RootPath,
                 ["importWorkflow"] = library.ImportWorkflow,
                 ["processorOutputPath"] = library.ProcessorOutputPath,
+                ["downloadsPath"] = library.DownloadsPath,
             }),
         };
         return JsonSerializer.Serialize(payload);
@@ -303,6 +305,42 @@ public sealed class ProcessingLibraryDiscoveryApiTests
         finally
         {
             Directory.Delete(watched, recursive: true);
+            Directory.Delete(output, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// A Refine before import library's hand-offs come from where its downloads arrive, and a hand-off must sit inside the
+    /// watched folder; the library root is where finished media ends up. So the downloads folder is what is watched, and
+    /// listed, whenever Deluno reports one — and drift is judged against it too.
+    /// </summary>
+    [Fact]
+    public async Task A_refine_before_import_library_watches_where_its_downloads_arrive_not_its_library_root()
+    {
+        var (server, client, manager) = await StartAsync();
+        await using var _server = server;
+        var connectionId = await CreateConnectionAsync(client);
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var downloads = Directory.CreateTempSubdirectory().FullName;
+        var output = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            SetManifest(manager, ManifestJson(new ManifestLibrary("7", "TV", "tv", root, "refine-before-import", output, downloads)));
+
+            using var listed = await client.GetAsync(DiscoverPath(connectionId));
+            var item = (await Json(listed))!.AsArray()[0]!;
+            var created = (await ImportAsync(client, connectionId, "7")).AsArray()[0]!;
+            using var drift = await client.GetAsync(DriftPath(connectionId));
+
+            Assert.Equal(downloads, item["root_path"]!.GetValue<string>());
+            Assert.Equal(downloads, created["watched_folder"]!.GetValue<string>());
+            Assert.Equal(output, created["output_folder"]!.GetValue<string>());
+            Assert.Empty((await Json(drift))!.AsArray());
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+            Directory.Delete(downloads, recursive: true);
             Directory.Delete(output, recursive: true);
         }
     }
