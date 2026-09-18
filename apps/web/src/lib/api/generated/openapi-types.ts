@@ -1690,50 +1690,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/suite/settings/configuration-bundle": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Configuration Bundle
-     * @description Export suite + module configuration as JSON (operators/admins only — contains secrets).
-     */
-    get: operations["get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get"];
-    /**
-     * Put Configuration Bundle
-     * @description Replace suite + module configuration from a prior export (operators/admins only).
-     */
-    put: operations["put_configuration_bundle_api_v1_suite_settings_configuration_bundle_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/settings/update-status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Update Status
-     * @description Read-only update check for the signed-in Settings page.
-     */
-    get: operations["get_suite_update_status_api_v1_suite_settings_update_status_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/suite/update-settings": {
     parameters: {
       query?: never;
@@ -1892,58 +1848,6 @@ export interface paths {
      * @description Apply one explicit safe repair action.
      */
     post: operations["post_reconciliation_repair_api_v1_system_reconciliation_repair_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/suite-configuration-backups": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Suite Configuration Backups */
-    get: operations["get_suite_configuration_backups_api_v1_system_suite_configuration_backups_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/suite-configuration-backups/{backup_id}/download": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Download Suite Configuration Backup */
-    get: operations["download_suite_configuration_backup_api_v1_system_suite_configuration_backups__backup_id__download_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/suite-configuration-bundle": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Suite Configuration Bundle */
-    get: operations["get_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_get"];
-    /** Put Suite Configuration Bundle */
-    put: operations["put_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_put"];
-    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -6024,19 +5928,13 @@ export interface components {
      * SuiteSettingsPutIn
      * @description Body for ``PUT /suite/settings``.
      *
-     *     ``extra="ignore"`` keeps older browser builds or tools from failing when they send removed keys.
-     *     ``application_logs_enabled`` is accepted for compatibility with pre-0047 APIs but is not persisted.
+     *     Unknown keys are ignored rather than rejected.
      */
     SuiteSettingsPutIn: {
       /** Activity Retention Days */
       activity_retention_days?: number | null;
       /** App Timezone */
       app_timezone: string;
-      /**
-       * Application Logs Enabled
-       * @description Deprecated; retained so older clients can POST without changes. Ignored when persisting.
-       */
-      application_logs_enabled?: boolean | null;
       /**
        * Configuration Backup Enabled
        * @description Enable or disable periodic automatic configuration snapshots.
@@ -9401,83 +9299,6 @@ export interface operations {
       };
     };
   };
-  get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-    };
-  };
-  put_configuration_bundle_api_v1_suite_settings_configuration_bundle_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ConfigurationBundleImportIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_update_status_api_v1_suite_settings_update_status_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteUpdateStatusOut"];
-        };
-      };
-    };
-  };
   get_suite_update_settings_api_v1_suite_update_settings_get: {
     parameters: {
       query?: never;
@@ -9682,114 +9503,6 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_configuration_backups_api_v1_system_suite_configuration_backups_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteConfigurationBackupListOut"];
-        };
-      };
-    };
-  };
-  download_suite_configuration_backup_api_v1_system_suite_configuration_backups__backup_id__download_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        backup_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-    };
-  };
-  put_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ConfigurationBundleImportIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
         };
       };
       /** @description Validation Error */

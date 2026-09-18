@@ -135,12 +135,14 @@ public sealed class WeirOptionsParsingTests
         Assert.Equal(expected, TestRuntime.Load(("WEIR_PROCESSING_PROBE_SIZE_MB", raw)).ProcessingProbeSizeMb);
 
     [Fact]
-    public void Webhook_secret_prefers_the_new_name_then_the_legacy_one()
+    public void Webhook_secret_is_trimmed_and_read_from_one_name_only()
     {
-        Assert.Equal("new", TestRuntime.Load(("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", " new "), ("WEIR_SUBBER_WEBHOOK_SECRET", "old")).MediaManagerWebhookSecret);
-        Assert.Equal("old", TestRuntime.Load(("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", ""), ("WEIR_SUBBER_WEBHOOK_SECRET", " old ")).MediaManagerWebhookSecret);
-        // Python's `a or b`: a whitespace-only new value is truthy, so the legacy one is never read.
-        Assert.Null(TestRuntime.Load(("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "  "), ("WEIR_SUBBER_WEBHOOK_SECRET", "old")).MediaManagerWebhookSecret);
+        Assert.Equal("new", TestRuntime.Load(("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", " new ")).MediaManagerWebhookSecret);
+        Assert.Null(TestRuntime.Load(("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "  ")).MediaManagerWebhookSecret);
+        // WEIR_SUBBER_WEBHOOK_SECRET was the pre-v2.4.3 name and was read as a fallback until 3.0.0
+        // dropped it. Asserted here so the fallback cannot creep back in unnoticed: an install still
+        // setting the old name is now unauthenticated rather than quietly authenticated.
+        Assert.Null(TestRuntime.Load(("WEIR_SUBBER_WEBHOOK_SECRET", "old")).MediaManagerWebhookSecret);
     }
 
     [Fact]
@@ -292,37 +294,28 @@ public sealed class WeirOptionsParsingTests
     }
 
     [Fact]
-    public void Temp_sweep_schedule_falls_back_to_the_legacy_shared_variables()
+    public void Temp_sweep_schedule_reads_only_the_per_scope_variables()
     {
-        var legacy = TestRuntime.Load(
+        // The shared WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_* pair was the fallback for
+        // installs configured before the sweep was split per media scope; 3.0.0 removed it. Setting
+        // only the shared pair now changes nothing, which is the assertion worth keeping.
+        var shared = TestRuntime.Load(
             ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED", "true"),
             ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS", "7200"));
-        Assert.True(legacy.ProcessingWorkTempStaleSweepMovieScheduleEnabled);
-        Assert.True(legacy.ProcessingWorkTempStaleSweepTvScheduleEnabled);
-        Assert.Equal(7200, legacy.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds);
-        Assert.Equal(7200, legacy.ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds);
+        Assert.False(shared.ProcessingWorkTempStaleSweepMovieScheduleEnabled);
+        Assert.False(shared.ProcessingWorkTempStaleSweepTvScheduleEnabled);
+        Assert.Equal(3600, shared.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds);
+        Assert.Equal(3600, shared.ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds);
 
         var specific = TestRuntime.Load(
-            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED", "true"),
-            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS", "7200"),
-            // Present but empty still wins over the legacy variable, as `key in os.environ` does.
+            // Present but empty is still "set", as `key in os.environ` is, and parses to false.
             ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED", ""),
+            ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED", "true"),
             ("WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_INTERVAL_SECONDS", "30"));
         Assert.False(specific.ProcessingWorkTempStaleSweepMovieScheduleEnabled);
         Assert.True(specific.ProcessingWorkTempStaleSweepTvScheduleEnabled);
-        Assert.Equal(7200, specific.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds);
+        Assert.Equal(3600, specific.ProcessingWorkTempStaleSweepMovieScheduleIntervalSeconds);
         Assert.Equal(60, specific.ProcessingWorkTempStaleSweepTvScheduleIntervalSeconds);
-    }
-
-    [Fact]
-    public void Remux_media_root_is_expanded_and_normalized_but_not_resolved()
-    {
-        var runtime = TestRuntime.With(("WEIR_PROCESSING_REMUX_MEDIA_ROOT", " ~/media//movies/ "));
-        var expected = PythonCompat.NormalizeLexically(Path.Join(runtime.UserHomeDirectory, "media//movies/"), runtime);
-        Assert.Equal(expected, WeirOptionsLoader.Load(runtime).ProcessingRemuxMediaRoot);
-        Assert.Equal(
-            PythonCompat.NormalizeLexically("relative/./media", runtime),
-            TestRuntime.Load(("WEIR_PROCESSING_REMUX_MEDIA_ROOT", "relative/./media")).ProcessingRemuxMediaRoot);
     }
 
     [Fact]

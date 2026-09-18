@@ -307,7 +307,7 @@ export function SetupWizardPage() {
         setup_wizard_state: nextState,
         app_timezone: appTimezone,
         log_retention_days: current.log_retention_days,
-        application_logs_enabled: true,
+
         configuration_backup_enabled: backupEnabled,
         configuration_backup_interval_hours: Number.parseInt(
           backupIntervalHours,

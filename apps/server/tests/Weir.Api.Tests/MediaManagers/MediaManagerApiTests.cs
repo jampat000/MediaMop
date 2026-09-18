@@ -332,14 +332,22 @@ public sealed class MediaManagerApiTests
     }
 
     [Fact]
-    public async Task A_configured_instance_secret_is_required_including_under_its_old_name()
+    public async Task A_configured_instance_secret_is_required_and_only_the_current_name_configures_it()
     {
-        foreach (var name in new[] { "WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "WEIR_SUBBER_WEBHOOK_SECRET" })
+        await using (var server = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), ("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET", "s3cret")]))
         {
-            await using var server = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), (name, "s3cret")]);
             var client = new ApiTestClient(server);
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/v1/intake/webhook/radarr", new { eventType = "Grab" })).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/intake/webhook/radarr", new { eventType = "Grab" }, new Dictionary<string, string> { ["X-Webhook-Secret"] = "s3cret" })).StatusCode);
+        }
+
+        // WEIR_SUBBER_WEBHOOK_SECRET, the pre-v2.4.3 name, was read as a fallback until 3.0.0. It no
+        // longer configures anything, so the webhook is simply unguarded here rather than demanding a
+        // secret the caller would have no way to know about.
+        await using (var server = await WeirTestServer.StartAsync([("WEIR_SESSION_SECRET", Secret), ("WEIR_PROCESSING_WORKER_COUNT", "0"), ("WEIR_SUBBER_WEBHOOK_SECRET", "s3cret")]))
+        {
+            var client = new ApiTestClient(server);
+            Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/intake/webhook/radarr", new { eventType = "Grab" })).StatusCode);
         }
     }
 

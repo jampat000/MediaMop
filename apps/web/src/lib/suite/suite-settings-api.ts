@@ -1,10 +1,5 @@
 import { fetchCsrfToken } from "../api/auth-api";
-import {
-  apiFetch,
-  readJson,
-  requireOk,
-  throwApiResponseError,
-} from "../api/client";
+import { apiFetch, readJson, requireOk } from "../api/client";
 
 import type {
   NotificationChannelIn,
@@ -27,11 +22,7 @@ import type {
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
 export const suiteSecurityOverviewPath = () =>
   "/api/v1/suite/security-overview";
-export const suiteUpdateStatusPaths = [
-  "/api/v1/suite/update-status",
-  "/api/v1/suite/settings/update-status",
-] as const;
-export const suiteUpdateStatusPath = () => suiteUpdateStatusPaths[0];
+export const suiteUpdateStatusPath = () => "/api/v1/suite/update-status";
 export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 export const suiteOperationalHistoryResetPath = () =>
@@ -41,17 +32,14 @@ export const suiteUpdateStatePath = () => "/api/v1/suite/update-state";
 export const suiteApplyUpdatePath = () => "/api/v1/suite/apply-update";
 
 /**
- * GET/PUT configuration bundle: same handler on the backend, several URL aliases for older builds
- * and reverse proxies that only forward a subset of `/api/v1/suite/*` or `/api/v1/system/*`.
+ * GET/PUT configuration bundle. This used to be a list of three addresses tried in turn — the
+ * `/suite/settings/...` and `/system/suite-configuration-bundle` spellings the Python suite also
+ * answered on — so an older web bundle or a proxy forwarding only part of the API would still find
+ * one. 3.0.0 serves the one address and the client asks for the one address; a 404 here now means
+ * the request is genuinely wrong, instead of being swallowed and retried against an alias.
  */
-export const configurationBundlePaths = [
-  "/api/v1/suite/configuration-bundle",
-  "/api/v1/suite/settings/configuration-bundle",
-  "/api/v1/system/suite-configuration-bundle",
-] as const;
-
-/** Preferred path (first entry in {@link configurationBundlePaths}). */
-export const suiteConfigurationBundlePath = () => configurationBundlePaths[0];
+export const suiteConfigurationBundlePath = () =>
+  "/api/v1/suite/configuration-bundle";
 export const suiteConfigurationBackupsPath = () =>
   "/api/v1/suite/configuration-backups";
 
@@ -88,23 +76,10 @@ export async function fetchSuiteSecurityOverview(): Promise<SuiteSecurityOvervie
 }
 
 export async function fetchSuiteUpdateStatus(): Promise<SuiteUpdateStatusOut> {
-  let last: Response | undefined;
-  for (const path of suiteUpdateStatusPaths) {
-    const r = await apiFetch(path);
-    last = r;
-    if (r.status === 404) {
-      continue;
-    }
-    if (!r.ok) {
-      await throwApiResponseError(path, r, "Could not check for updates");
-    }
-    return readJson<SuiteUpdateStatusOut>(r);
-  }
-  return throwApiResponseError(
-    suiteUpdateStatusPath(),
-    last!,
-    "Could not check for updates",
-  );
+  const path = suiteUpdateStatusPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not check for updates");
+  return readJson<SuiteUpdateStatusOut>(r);
 }
 
 export async function fetchSuiteLogs(filters?: {
@@ -203,50 +178,24 @@ export async function resetSuiteOperationalHistory(
 }
 
 export async function fetchConfigurationBundle(): Promise<ConfigurationBundle> {
-  let last: Response | undefined;
-  for (const path of configurationBundlePaths) {
-    const r = await apiFetch(path);
-    last = r;
-    if (r.status === 404) {
-      continue;
-    }
-    if (!r.ok) {
-      await throwApiResponseError(path, r, "Could not export configuration");
-    }
-    return readJson<ConfigurationBundle>(r);
-  }
-  return throwApiResponseError(
-    suiteConfigurationBundlePath(),
-    last!,
-    "Could not export configuration",
-  );
+  const path = suiteConfigurationBundlePath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not export configuration");
+  return readJson<ConfigurationBundle>(r);
 }
 
 export async function putConfigurationBundle(
   bundle: ConfigurationBundle,
 ): Promise<ConfigurationBundle> {
   const csrf_token = await fetchCsrfToken();
-  let last: Response | undefined;
-  for (const path of configurationBundlePaths) {
-    const r = await apiFetch(path, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csrf_token, bundle }),
-    });
-    last = r;
-    if (r.status === 404) {
-      continue;
-    }
-    if (!r.ok) {
-      await throwApiResponseError(path, r, "Could not restore configuration");
-    }
-    return readJson<ConfigurationBundle>(r);
-  }
-  return throwApiResponseError(
-    suiteConfigurationBundlePath(),
-    last!,
-    "Could not restore configuration",
-  );
+  const path = suiteConfigurationBundlePath();
+  const r = await apiFetch(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token, bundle }),
+  });
+  await requireOk(path, r, "Could not restore configuration");
+  return readJson<ConfigurationBundle>(r);
 }
 
 export async function fetchConfigurationBackupList(): Promise<SuiteConfigurationBackupListOut> {

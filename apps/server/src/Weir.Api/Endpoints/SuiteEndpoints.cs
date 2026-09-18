@@ -33,12 +33,6 @@ public static class SuiteEndpoints
 {
     public static IEndpointRouteBuilder MapSuiteEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        // weir.platform.system_configuration.router (registered before the suite router, as in Python).
-        endpoints.MapV1("GET", "/system/suite-configuration-bundle", GetBundleAsync);
-        endpoints.MapV1("PUT", "/system/suite-configuration-bundle", PutBundleAsync);
-        endpoints.MapV1("GET", "/system/suite-configuration-backups", GetBackupsAsync);
-        endpoints.MapV1("GET", "/system/suite-configuration-backups/{backup_id}/download", DownloadBackupAsync);
-
         // weir.platform.local_browse.router
         endpoints.MapV1("GET", "/system/directories", GetDirectoriesAsync);
 
@@ -46,17 +40,21 @@ public static class SuiteEndpoints
         endpoints.MapV1("GET", "/system/media-tools", GetMediaToolsAsync);
 
         // weir.platform.suite_settings.router
+        //
+        // One URL per handler. The Python suite had the configuration bundle, the snapshot list and
+        // the update check on two or three addresses each — the `/system/suite-configuration-*` pair
+        // from `system_configuration.router` plus a `/suite/settings/...` spelling — and the port kept
+        // all of them so older browser bundles and hand-tuned reverse proxies would still find one.
+        // 3.0.0 drops the aliases: there is one install, the shipped web app is built from this repo,
+        // and a second address for the same handler is a second thing to secure, document and test.
         endpoints.MapV1("GET", "/suite/settings", GetSettingsAsync);
         endpoints.MapV1("PUT", "/suite/settings", PutSettingsAsync);
-        endpoints.MapV1("GET", "/suite/settings/configuration-bundle", GetBundleAsync);
         endpoints.MapV1("GET", "/suite/configuration-bundle", GetBundleAsync);
-        endpoints.MapV1("PUT", "/suite/settings/configuration-bundle", PutBundleAsync);
         endpoints.MapV1("PUT", "/suite/configuration-bundle", PutBundleAsync);
         endpoints.MapV1("GET", "/suite/configuration-backups", GetBackupsAsync);
         endpoints.MapV1("GET", "/suite/configuration-backups/{backup_id}/download", DownloadBackupAsync);
         endpoints.MapV1("GET", "/suite/security-overview", GetSecurityOverviewAsync);
         endpoints.MapV1("GET", "/suite/update-status", GetUpdateStatusAsync);
-        endpoints.MapV1("GET", "/suite/settings/update-status", GetUpdateStatusAsync);
         endpoints.MapV1("GET", "/suite/update-settings", GetUpdateSettingsAsync);
         endpoints.MapV1("PUT", "/suite/update-settings", PutUpdateSettingsAsync);
         endpoints.MapV1("GET", "/suite/update-state", GetUpdateStateAsync);
@@ -92,7 +90,6 @@ public static class SuiteEndpoints
         var timezone = model.Str("app_timezone", minLength: 1, maxLength: 120);
         var logRetention = model.Number("log_retention_days", 0, required: true, ge: 1, le: 3650);
         var activityRetention = model.OptionalInt("activity_retention_days", ge: 0, le: 3650);
-        model.OptionalBool("application_logs_enabled");
         var backupEnabled = model.OptionalBool("configuration_backup_enabled");
         var backupHours = model.OptionalInt("configuration_backup_interval_hours", ge: 1, le: 720);
         var backupTime = model.OptionalStr("configuration_backup_preferred_time", minLength: 5, maxLength: 5);

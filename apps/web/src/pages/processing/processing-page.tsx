@@ -63,16 +63,11 @@ const PROCESSING_CAPABILITY_NOTE =
   "A library works on its own once its folders are set. Linking a media manager adds import protection, library discovery and safe cleanup; if the manager does not answer, Weir waits rather than assuming its queue is empty.";
 
 /**
- * Query values that used to name a tab and still turn up in a bookmark or a link someone shared. Issue #568
- * renamed "Existing library" to **Library**; the tab's own id was already `library`, but the label was the
- * visible name, so these spellings are redirected rather than silently dropping the reader on Overview.
+ * The tab named by `?tab=`, or Overview. Only the ids this page currently has are accepted: the
+ * `existing-library` spellings #568 left behind when it renamed that tab to **Library** were removed
+ * for 3.0.0, which is a breaking release with no installs to migrate, so there is no bookmark out
+ * there to keep working. An unknown value lands on Overview, as any typo always has.
  */
-const RETIRED_PROCESSING_TAB_VALUES: Record<string, ProcessingPageTabId> = {
-  "existing-library": "library",
-  existing_library: "library",
-  "existing library": "library",
-};
-
 function processingTabFromQuery(value: string | null): ProcessingPageTabId {
   const allowed: ProcessingPageTabId[] = [
     "overview",
@@ -84,12 +79,9 @@ function processingTabFromQuery(value: string | null): ProcessingPageTabId {
     "jobs",
     "maintenance",
   ];
-  if (allowed.includes(value as ProcessingPageTabId)) {
-    return value as ProcessingPageTabId;
-  }
-  return (
-    RETIRED_PROCESSING_TAB_VALUES[(value ?? "").toLowerCase()] ?? "overview"
-  );
+  return allowed.includes(value as ProcessingPageTabId)
+    ? (value as ProcessingPageTabId)
+    : "overview";
 }
 
 export function ProcessingPage() {
@@ -99,21 +91,8 @@ export function ProcessingPage() {
   );
 
   useEffect(() => {
-    const raw = searchParams.get("tab");
-    const resolved = processingTabFromQuery(raw);
-    setTab(resolved);
-    // An old anchor lands on the right tab and then gets the current spelling in the address bar, so the
-    // next copy of the link is the new one.
-    if (
-      raw !== null &&
-      raw !== resolved &&
-      raw.toLowerCase() in RETIRED_PROCESSING_TAB_VALUES
-    ) {
-      const params = new URLSearchParams(searchParams);
-      params.set("tab", resolved);
-      setSearchParams(params, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
+    setTab(processingTabFromQuery(searchParams.get("tab")));
+  }, [searchParams]);
 
   const selectTab = (next: ProcessingPageTabId) => {
     setTab(next);

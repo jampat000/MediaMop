@@ -314,14 +314,19 @@ def test_security_overview_shape(viewer) -> None:
 
 def test_update_status_requires_auth(client) -> None:
     assert client.get(UPDATE_STATUS).status_code == 401
-    assert client.get(f"{API}/suite/settings/update-status").status_code == 401
 
 
-@pytest.mark.parametrize("path", [UPDATE_STATUS, f"{API}/suite/settings/update-status"])
-def test_update_status_when_the_release_feed_is_unreachable(admin, path: str) -> None:
+def test_the_retired_update_status_alias_is_not_served(admin) -> None:
+    """``/suite/settings/update-status`` was a second address for this handler, kept so an older
+    web build would still find the update check. 3.0.0 serves ``/suite/update-status`` only."""
+
+    assert admin.get(f"{API}/suite/settings/update-status").status_code == 404
+
+
+def test_update_status_when_the_release_feed_is_unreachable(admin) -> None:
     """With no route to the release feed the check says so instead of failing or guessing."""
 
-    r = admin.get(path)
+    r = admin.get(UPDATE_STATUS)
     assert r.status_code == 200, r.text
     body = r.json()
     assert {"current_version", "install_type", "status", "summary", "in_app_upgrade_supported"}.issubset(body)

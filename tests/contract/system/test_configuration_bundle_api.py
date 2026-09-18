@@ -9,7 +9,7 @@ import pytest
 from tests.contract.support.client import API
 from tests.contract.system import _helpers as h
 
-BUNDLE = f"{API}/system/suite-configuration-bundle"
+BUNDLE = f"{API}/suite/configuration-bundle"
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -23,10 +23,20 @@ def test_configuration_bundle_get_requires_operator(server, client_factory) -> N
     assert r.status_code == 403
 
 
-def test_configuration_bundle_get_legacy_path_still_works(admin) -> None:
-    r = admin.get(f"{API}/suite/configuration-bundle")
-    assert r.status_code == 200, r.text
-    assert r.json()["format_version"] == 4
+def test_the_retired_bundle_url_aliases_are_not_served(admin) -> None:
+    """One address per handler since 3.0.0.
+
+    The bundle used to answer on three URLs — this one plus ``/suite/settings/configuration-bundle``
+    and ``/system/suite-configuration-bundle`` — so an older web build or a proxy forwarding only
+    part of the API would still find it. The aliases are gone; this proves they stay gone.
+    """
+
+    for path in (
+        f"{API}/suite/settings/configuration-bundle",
+        f"{API}/system/suite-configuration-bundle",
+        f"{API}/system/suite-configuration-backups",
+    ):
+        assert admin.get(path).status_code == 404, path
 
 
 def test_configuration_bundle_round_trip_suite_name(admin) -> None:
@@ -84,7 +94,7 @@ def test_configuration_bundle_put_rejects_bad_version(admin) -> None:
 
 
 def test_configuration_backup_list_shape(admin) -> None:
-    r = admin.get(f"{API}/system/suite-configuration-backups")
+    r = admin.get(f"{API}/suite/configuration-backups")
     assert r.status_code == 200, r.text
     body = r.json()
     assert "directory" in body

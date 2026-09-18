@@ -274,16 +274,15 @@ def test_configured_secret_is_required(server_factory, client_factory) -> None:
     assert ok.status_code == 200
 
 
-def test_the_old_subber_env_name_still_configures_the_secret(server_factory, client_factory) -> None:
-    """The setting was named for Subber; the endpoint it guards outlived the name.
+def test_the_old_subber_env_name_no_longer_configures_the_secret(server_factory, client_factory) -> None:
+    """WEIR_SUBBER_WEBHOOK_SECRET was the pre-v2.4.3 name and was read as a fallback until 3.0.0.
 
-    An install that set WEIR_SUBBER_WEBHOOK_SECRET and never renamed it must keep
-    authenticating, because the alternative is a webhook that quietly stops checking.
+    Reading two spellings of a shared secret meant a 401 could come from either one being wrong, so
+    3.0.0 reads WEIR_MEDIA_MANAGER_WEBHOOK_SECRET and nothing else. Setting only the old name now
+    leaves the webhook with no instance-wide secret at all, which is what this asserts: not a
+    stricter check, just no secret configured.
     """
 
     sut = server_factory({**NO_WEBHOOK_SECRET, "WEIR_SUBBER_WEBHOOK_SECRET": "s3cret"})
     c = client_factory(sut)
-    body = {"eventType": "Grab"}
-    assert c.post(f"{API}/intake/webhook/radarr", json=body).status_code == 401
-    ok = c.post(f"{API}/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": "s3cret"})
-    assert ok.status_code == 200
+    assert c.post(f"{API}/intake/webhook/radarr", json={"eventType": "Grab"}).status_code == 200

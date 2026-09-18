@@ -71,9 +71,11 @@ public static class WeirOptionsLoader
         var bootstrapWindow = Math.Max(1, EnvInt(runtime, "WEIR_BOOTSTRAP_RATE_WINDOW_SECONDS", 3600));
         var enableHsts = EnvBool(runtime, "WEIR_SECURITY_ENABLE_HSTS", false);
         var metricsBearerToken = NullIfEmpty(runtime.Get("WEIR_METRICS_BEARER_TOKEN")?.Trim());
-        // The legacy name is read second so an install that never renamed it keeps authenticating.
-        var webhookSecret = NullIfEmpty(
-            Or(OrNullable(runtime.Get("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET"), runtime.Get("WEIR_SUBBER_WEBHOOK_SECRET")), string.Empty).Trim());
+        // v2.4.3 renamed this from WEIR_SUBBER_WEBHOOK_SECRET and kept reading the old name so an
+        // install that never renamed it would keep authenticating. 3.0.0 reads the current name only:
+        // the release notes gave the rename, and a second accepted spelling for a shared secret is a
+        // second place to look when the webhook starts returning 401.
+        var webhookSecret = NullIfEmpty((runtime.Get("WEIR_MEDIA_MANAGER_WEBHOOK_SECRET") ?? string.Empty).Trim());
 
         var paths = RuntimePaths.Resolve(runtime);
 
@@ -82,19 +84,16 @@ public static class WeirOptionsLoader
         var watcherEnabled = EnvBool(runtime, "WEIR_PROCESSING_WATCHER_ENABLED", true);
         var watcherDebounce = Math.Max(0.25, Math.Min(300.0, EnvInt(runtime, "WEIR_PROCESSING_WATCHER_DEBOUNCE_SECONDS", 3)));
 
-        const string legacySweepEnabled = "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED";
-        const string legacySweepInterval = "WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS";
-
-        bool SweepEnabled(string key) =>
-            runtime.IsSet(key) ? EnvBool(runtime, key, false)
-            : runtime.IsSet(legacySweepEnabled) && EnvBool(runtime, legacySweepEnabled, false);
+        // Per-scope only. The temp sweep used to be one shared schedule
+        // (WEIR_PROCESSING_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED / _INTERVAL_SECONDS); when it was
+        // split per media scope the shared pair stayed readable as a fallback for installs that had
+        // set it. 3.0.0 drops it, so what is set is what runs and the movie and TV schedules cannot
+        // silently inherit a value from a variable that no longer appears anywhere else.
+        bool SweepEnabled(string key) => runtime.IsSet(key) && EnvBool(runtime, key, false);
 
         int SweepInterval(string key) =>
-            runtime.IsSet(key) ? ClampProcessingScheduleIntervalSeconds(EnvInt(runtime, key, 3600))
-            : runtime.IsSet(legacySweepInterval) ? ClampProcessingScheduleIntervalSeconds(EnvInt(runtime, legacySweepInterval, 3600))
-            : ClampProcessingScheduleIntervalSeconds(3600);
+            ClampProcessingScheduleIntervalSeconds(runtime.IsSet(key) ? EnvInt(runtime, key, 3600) : 3600);
 
-        var remuxRoot = (runtime.Get("WEIR_PROCESSING_REMUX_MEDIA_ROOT") ?? string.Empty).Trim();
         var webDist = (runtime.Get("WEIR_WEB_DIST") ?? string.Empty).Trim();
 
         var outputOwnershipChown = EnvBool(runtime, "WEIR_CHOWN_OUTPUT", false);
@@ -164,9 +163,6 @@ public static class WeirOptionsLoader
                 EnvInt(runtime, "WEIR_PROCESSING_MOVIE_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", 1800), 300, 604800),
             ProcessingTvFailureCleanupGracePeriodSeconds = Clamp(
                 EnvInt(runtime, "WEIR_PROCESSING_TV_FAILURE_CLEANUP_GRACE_PERIOD_SECONDS", 1800), 300, 604800),
-            ProcessingRemuxMediaRoot = remuxRoot.Length == 0
-                ? null
-                : PythonCompat.NormalizeLexically(PythonCompat.ExpandUser(remuxRoot, runtime), runtime),
             JobRowsRetentionDays = Clamp(EnvInt(runtime, "WEIR_JOB_ROWS_RETENTION_DAYS", 90), 1, 365),
             JobRowsRetentionScheduleIntervalSeconds = Clamp(
                 EnvInt(runtime, "WEIR_JOB_ROWS_RETENTION_SCHEDULE_INTERVAL_SECONDS", 3600), 60, 86400),
@@ -324,8 +320,6 @@ public static class WeirOptionsLoader
 
     /// <summary>Python's <c>a or b</c> for strings: only an unset or empty value falls through.</summary>
     private static string Or(string? value, string fallback) => string.IsNullOrEmpty(value) ? fallback : value;
-
-    private static string? OrNullable(string? value, string? fallback) => string.IsNullOrEmpty(value) ? fallback : value;
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 }
