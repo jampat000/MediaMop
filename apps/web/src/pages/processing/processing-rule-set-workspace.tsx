@@ -1,6 +1,10 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 
 import { PageLoading } from "../../components/shared/page-loading";
+import {
+  QuietFieldGroup,
+  QuietSection,
+} from "../../components/shared/quiet-section";
 import { ProcessingRulesPreviewPanel } from "./processing-rules-preview-panel";
 import { MmMultiListboxPicker } from "../../components/ui/mm-multi-listbox-picker";
 import { useMeQuery } from "../../lib/auth/queries";
@@ -344,20 +348,9 @@ function ProfileSettingsSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-4 sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--mm-gold)] bg-[var(--mm-accent-soft)] text-xs font-bold text-[var(--mm-text1)]">
-          {step}
-        </span>
-        <div className="min-w-0">
-          <h3 className="font-semibold text-[var(--mm-text1)]">{title}</h3>
-          <p className="mt-1 text-xs leading-5 text-[var(--mm-text3)]">
-            {detail}
-          </p>
-        </div>
-      </div>
-      <div className="mt-4 space-y-3">{children}</div>
-    </section>
+    <QuietFieldGroup step={step} title={title} detail={detail}>
+      <div className="space-y-3">{children}</div>
+    </QuietFieldGroup>
   );
 }
 
@@ -385,18 +378,12 @@ function SorterEditor({
   };
 
   return (
-    <section className="space-y-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-4">
-      <div>
-        <h4 className="font-medium text-[var(--mm-text1)]">{title}</h4>
-        <p className="mt-1 text-xs leading-5 text-[var(--mm-text3)]">
-          {detail}
-        </p>
-      </div>
-      <ol className="space-y-2">
+    <QuietFieldGroup title={title} detail={detail}>
+      <ol>
         {rows.map((row, index) => (
           <li
             key={`${row.field}-${index}`}
-            className="grid gap-2 rounded-lg border border-[var(--mm-border)] p-3 md:grid-cols-[2rem_1fr_1.4fr_auto]"
+            className="grid gap-2 border-b border-[var(--mm-border)] py-3 last:border-b-0 md:grid-cols-[2rem_1fr_1.4fr_auto]"
           >
             <span className="pt-2 text-center text-xs font-semibold text-[var(--mm-text3)]">
               {index + 1}
@@ -484,17 +471,22 @@ function SorterEditor({
           </li>
         ))}
       </ol>
-      <button
-        type="button"
-        className={mmActionButtonClass({ variant: "secondary", disabled })}
-        disabled={disabled}
-        onClick={() =>
-          onChange([...rows, { field: "language", value: "", reversed: false }])
-        }
-      >
-        Add criterion
-      </button>
-    </section>
+      <div className="mt-4">
+        <button
+          type="button"
+          className={mmActionButtonClass({ variant: "secondary", disabled })}
+          disabled={disabled}
+          onClick={() =>
+            onChange([
+              ...rows,
+              { field: "language", value: "", reversed: false },
+            ])
+          }
+        >
+          Add criterion
+        </button>
+      </div>
+    </QuietFieldGroup>
   );
 }
 
@@ -667,7 +659,7 @@ export function ProcessingRuleSetWorkspace() {
     detail: string,
     key: keyof ProcessingRuleSetWrite,
   ) => (
-    <label className="flex items-start gap-3 rounded-lg border border-[var(--mm-border)] px-3 py-2 text-sm">
+    <label className="flex items-start gap-3 border-b border-[var(--mm-border)] py-2.5 text-sm last:border-b-0">
       <input
         type="checkbox"
         className={mmCheckboxControlClass}
@@ -687,19 +679,12 @@ export function ProcessingRuleSetWorkspace() {
   );
 
   return (
-    <div className="space-y-5" data-testid="processing-rule-set-workspace">
-      <section className="mm-module-surface rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="mm-page__eyebrow">Processing profiles</p>
-            <h2 className="mt-1 text-xl font-semibold text-[var(--mm-text1)]">
-              Audio &amp; subtitle profiles
-            </h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--mm-text2)]">
-              Save a profile once, then assign it to one or more libraries.
-            </p>
-          </div>
-          {!creating ? (
+    <div className="mm-quiet-stack" data-testid="processing-rule-set-workspace">
+      <QuietSection
+        headingId="processing-rule-set-profiles-heading"
+        heading="Audio & subtitle profiles"
+        aside={
+          !creating ? (
             <button
               type="button"
               className={mmActionButtonClass({
@@ -717,8 +702,12 @@ export function ProcessingRuleSetWorkspace() {
             >
               New profile
             </button>
-          ) : null}
-        </div>
+          ) : null
+        }
+      >
+        <p className="mm-quiet-note">
+          Save a profile once, then assign it to one or more libraries.
+        </p>
 
         {(ruleSets.data?.length ?? 0) > 0 && !creating ? (
           <label className="mt-5 block max-w-2xl text-sm">
@@ -760,7 +749,7 @@ export function ProcessingRuleSetWorkspace() {
               {textField("Profile name", "name", "English feature films")}
             </div>
 
-            <div className="grid items-start gap-4 xl:grid-cols-2">
+            <div className="grid items-start gap-10 xl:grid-cols-2 xl:gap-x-14">
               <ProfileSettingsSection
                 step={1}
                 title="Audio"
@@ -1143,10 +1132,10 @@ export function ProcessingRuleSetWorkspace() {
               </ProfileSettingsSection>
             </div>
 
-            <section className="rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)]">
+            <section>
               <button
                 type="button"
-                className="flex w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
+                className="flex w-full items-center justify-between gap-4 border-b border-[var(--mm-border)] py-3 text-left"
                 aria-expanded={advancedOrderingOpen}
                 onClick={() => setAdvancedOrderingOpen((open) => !open)}
               >
@@ -1164,7 +1153,7 @@ export function ProcessingRuleSetWorkspace() {
                 </span>
               </button>
               {advancedOrderingOpen ? (
-                <div className="space-y-4 border-t border-[var(--mm-border)] p-4 sm:p-5">
+                <div className="mt-8 space-y-10">
                   <SorterEditor
                     title="Audio order"
                     detail="The first matching criterion wins. Only add a match value when a criterion needs one."
@@ -1192,7 +1181,7 @@ export function ProcessingRuleSetWorkspace() {
             {notice ? (
               <p
                 role="status"
-                className="rounded border border-[var(--mm-border)] px-3 py-2 text-sm"
+                className="text-sm font-medium text-[var(--mm-text1)]"
               >
                 {notice}
               </p>
@@ -1242,22 +1231,14 @@ export function ProcessingRuleSetWorkspace() {
             </div>
           </div>
         )}
-      </section>
+      </QuietSection>
 
-      <section className="mm-module-surface rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="mm-page__eyebrow">Optional connection</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
-              Metadata provider
-            </h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--mm-text2)]">
-              Only needed by profiles that keep a title&apos;s original
-              language. Weir falls back safely when metadata is unavailable.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-full border border-[var(--mm-border)] px-2.5 py-1 text-xs font-semibold text-[var(--mm-text2)]">
+      <QuietSection
+        headingId="processing-rule-set-provider-heading"
+        heading="Metadata provider"
+        aside={
+          <>
+            <span className="mm-quiet-badge">
               {providerName
                 ? `${providerName.toUpperCase()} configured`
                 : "Not configured"}
@@ -1270,8 +1251,13 @@ export function ProcessingRuleSetWorkspace() {
             >
               {providerEditorOpen ? "Close" : "Configure"}
             </button>
-          </div>
-        </div>
+          </>
+        }
+      >
+        <p className="mm-quiet-note">
+          Only needed by profiles that keep a title&apos;s original language.
+          Weir falls back safely when metadata is unavailable.
+        </p>
 
         {providerEditorOpen ? (
           <div className="mt-5 border-t border-[var(--mm-border)] pt-5">
@@ -1318,7 +1304,7 @@ export function ProcessingRuleSetWorkspace() {
                   onChange={(event) => setProviderKey(event.target.value)}
                 />
               </label>
-              <label className="flex items-center gap-2 rounded-lg border border-[var(--mm-border)] px-3 py-2 text-sm text-[var(--mm-text2)]">
+              <label className="flex items-center gap-2 self-end py-2 text-sm text-[var(--mm-text2)]">
                 <input
                   type="checkbox"
                   className={mmCheckboxControlClass}
@@ -1334,7 +1320,7 @@ export function ProcessingRuleSetWorkspace() {
             {providerNotice ? (
               <p
                 role="status"
-                className="mt-3 rounded border border-[var(--mm-border)] px-3 py-2 text-sm"
+                className="mt-3 text-sm font-medium text-[var(--mm-text1)]"
               >
                 {providerNotice}
               </p>
@@ -1368,7 +1354,7 @@ export function ProcessingRuleSetWorkspace() {
             </div>
           </div>
         ) : null}
-      </section>
+      </QuietSection>
     </div>
   );
 }

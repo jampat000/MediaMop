@@ -510,3 +510,21 @@ export async function deleteProcessingRuleSet(id: number): Promise<void> {
   });
   await requireOk(path, response, "Could not remove that rule set");
 }
+
+/**
+ * The type badge beside a library's name, or null when the name already says it
+ * ("Movies · Movies"). Shared by every page that lists libraries so they agree on
+ * when the badge is worth the room.
+ */
+export function processingMediaTypeBadge(
+  library: Pick<ProcessingLibrary, "name" | "media_type">,
+): string | null {
+  const label = PROCESSING_MEDIA_TYPE_LABELS[library.media_type];
+  const name = library.name.trim().toLowerCase();
+  const lower = label.toLowerCase();
+  if (!name || lower.includes(name) || name.includes(lower)) return null;
+  if (library.media_type === "tv" && /\b(tv|shows?|series)\b/.test(name)) {
+    return null;
+  }
+  return label;
+}

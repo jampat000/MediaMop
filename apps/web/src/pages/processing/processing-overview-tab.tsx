@@ -1,6 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { MmOverviewSection } from "../../components/overview/mm-overview-cards";
 import { PageLoading } from "../../components/shared/page-loading";
+import { QuietSection } from "../../components/shared/quiet-section";
 import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
@@ -13,6 +14,7 @@ import { useProcessingFilesQuery } from "../../lib/processing/files-queries";
 import { useProcessingJobsInspectionQuery } from "../../lib/processing/jobs-inspection/queries";
 import {
   PROCESSING_MEDIA_TYPE_LABELS,
+  processingMediaTypeBadge,
   type ProcessingLibrary,
   type ProcessingRuleSet,
 } from "../../lib/processing/libraries-api";
@@ -92,18 +94,6 @@ function scanIntervalLabel(seconds: number): string {
     return minutes === 1 ? "Every minute" : `Every ${minutes} minutes`;
   }
   return `Every ${seconds} seconds`;
-}
-
-/** The type badge only appears when the name does not already say it ("Movies · Movies"). */
-function mediaTypeBadge(library: ProcessingLibrary): string | null {
-  const label = PROCESSING_MEDIA_TYPE_LABELS[library.media_type];
-  const name = library.name.trim().toLowerCase();
-  const lower = label.toLowerCase();
-  if (!name || lower.includes(name) || name.includes(lower)) return null;
-  if (library.media_type === "tv" && /\b(tv|shows?|series)\b/.test(name)) {
-    return null;
-  }
-  return label;
 }
 
 function buildAttention(args: {
@@ -327,36 +317,6 @@ function FlowBand({
         );
       })}
     </div>
-  );
-}
-
-function QuietSection({
-  headingId,
-  heading,
-  aside,
-  children,
-  "data-testid": dataTestId,
-}: {
-  headingId: string;
-  heading: string;
-  aside?: ReactNode;
-  children: ReactNode;
-  "data-testid"?: string;
-}) {
-  return (
-    <section
-      className="mm-quiet-section"
-      aria-labelledby={headingId}
-      data-testid={dataTestId}
-    >
-      <div className="mm-quiet-section__head">
-        <h2 id={headingId} className="mm-quiet-section__title">
-          {heading}
-        </h2>
-        {aside ? <div className="mm-quiet-section__aside">{aside}</div> : null}
-      </div>
-      <div className="mm-quiet-section__body">{children}</div>
-    </section>
   );
 }
 
@@ -635,7 +595,7 @@ export function ProcessingOverviewTab({
               </thead>
               <tbody>
                 {libraries.map((library) => {
-                  const badge = mediaTypeBadge(library);
+                  const badge = processingMediaTypeBadge(library);
                   const ruleSet =
                     library.rule_set_id === null
                       ? undefined

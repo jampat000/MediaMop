@@ -58,7 +58,7 @@ const TRACK_TYPE_LABELS: Record<ProcessingRulesPreviewTrack["type"], string> = {
 function TrackRow({ track }: { track: ProcessingRulesPreviewTrack }) {
   const kept = track.action === "keep";
   return (
-    <tr className="border-t border-[var(--mm-border)] align-top">
+    <tr className="border-b border-[var(--mm-border)] align-top last:border-b-0">
       <td className="px-3 py-2 text-[var(--mm-text3)]">{track.index}</td>
       <td className="px-3 py-2">{TRACK_TYPE_LABELS[track.type]}</td>
       <td className="px-3 py-2">{track.codec || "—"}</td>
@@ -121,38 +121,65 @@ function PreviewResults({ result }: { result: ProcessingRulesPreviewResult }) {
         ) : null}
       </div>
 
-      <div className="w-full min-w-0 overflow-x-auto rounded border border-[var(--mm-border)]">
+      <div className="w-full min-w-0 overflow-x-auto">
         <table className="w-full min-w-[52rem] text-left text-sm">
           <caption className="sr-only">
             Per-track plan for the previewed file
           </caption>
-          <thead className="bg-black/20 text-[var(--mm-text2)]">
+          <thead className="text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]">
             <tr>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 #
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Type
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Codec
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Language
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Title
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Channels
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Action
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Flags
               </th>
-              <th scope="col" className="px-3 py-2 font-medium">
+              <th
+                scope="col"
+                className="border-b border-[var(--mm-line)] px-3 pb-[0.6rem] font-semibold"
+              >
                 Reasons
               </th>
             </tr>
@@ -269,8 +296,8 @@ export function ProcessingRulesPreviewPanel({
 
   if (!open) {
     return (
-      <section className="rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--mm-border)] pt-5">
           <div>
             <h3 className="font-semibold text-[var(--mm-text1)]">
               Try on a file
@@ -297,11 +324,8 @@ export function ProcessingRulesPreviewPanel({
   }
 
   return (
-    <section
-      className="space-y-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-4 sm:p-5"
-      aria-labelledby={headingId}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="space-y-4" aria-labelledby={headingId}>
+      <div className="flex flex-wrap items-start justify-between gap-3 border-t border-[var(--mm-border)] pt-5">
         <div>
           <h3 id={headingId} className="font-semibold text-[var(--mm-text1)]">
             Try on a file
@@ -426,7 +450,7 @@ export function ProcessingRulesPreviewPanel({
         {error ? (
           <p
             role="alert"
-            className="rounded border border-red-400/40 bg-red-400/10 px-3 py-2 text-sm text-red-200"
+            className="text-sm font-medium text-[var(--mm-status-failed-text)]"
           >
             {error}
           </p>

@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 
 import { PageLoading } from "../../components/shared/page-loading";
 import {
+  QuietSection,
+  quietActionRowClass,
+} from "../../components/shared/quiet-section";
+import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
 } from "../../lib/api/error-guards";
@@ -107,22 +111,19 @@ export function ProcessingDirectPlaySection() {
   };
 
   return (
-    <section
-      className="mm-module-surface flex w-full min-w-0 flex-col rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7"
+    <QuietSection
+      headingId="processing-direct-play-heading"
+      heading="Direct Play devices"
       data-testid="processing-direct-play-section"
     >
-      <p className="mm-page__eyebrow">Information only</p>
-      <h2 className="mt-1 text-lg font-semibold text-[var(--mm-text)]">
-        Direct Play devices
-      </h2>
-      <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
+      <p className="mm-quiet-note">
         Shows which of your devices can play each file without your media server
         converting it. Information only — Weir never changes a file because of
         this.
       </p>
       {q.data.customised ? (
         <p
-          className="mt-2 max-w-3xl text-[var(--mm-text3)]"
+          className="mm-quiet-note mt-2"
           data-testid="processing-direct-play-customised"
         >
           This list comes from your own direct-play-devices.json in the Weir
@@ -130,19 +131,19 @@ export function ProcessingDirectPlaySection() {
         </p>
       ) : null}
       {!editable ? (
-        <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
+        <p className="mm-quiet-note mt-2">
           Only an operator or admin can change which devices are chosen.
         </p>
       ) : null}
-      <div className="mm-card-action-body mt-6 flex-1 min-h-0">
+      <div className="mt-6 text-sm leading-relaxed text-[var(--mm-text2)]">
         {devices.length === 0 ? (
           <p className="text-[var(--mm-text3)]">No devices are listed.</p>
         ) : (
-          <ul className="grid gap-3 lg:grid-cols-2">
+          <ul className="grid gap-x-10 lg:grid-cols-2">
             {devices.map((device) => (
               <li
                 key={device.id}
-                className="flex items-start gap-3 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-3"
+                className="flex items-start gap-3 border-b border-[var(--mm-border)] py-3"
               >
                 <input
                   id={`direct-play-device-${device.id}`}
@@ -176,7 +177,7 @@ export function ProcessingDirectPlaySection() {
           </p>
         ) : null}
       </div>
-      <div className="mm-card-action-footer">
+      <div className={`${quietActionRowClass} mt-8`}>
         <button
           type="button"
           className={mmActionButtonClass({
@@ -193,6 +194,6 @@ export function ProcessingDirectPlaySection() {
           {save.isPending ? "Saving…" : "Save devices"}
         </button>
       </div>
-    </section>
+    </QuietSection>
   );
 }
