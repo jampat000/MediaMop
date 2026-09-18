@@ -83,14 +83,18 @@ public sealed class ProcessingWatchedFolderWatcherServiceTests
         var output = store.Home.Join("out");
         Directory.CreateDirectory(watched);
         Directory.CreateDirectory(output);
-        await CreateLibraryAsync(store, watched, output);
+        var libraryId = await CreateLibraryAsync(store, watched, output);
 
         var state = new WatcherStateStore();
         var service = Service(store, state);
         await service.StartAsync(CancellationToken.None);
         try
         {
-            await Task.Delay(1500); // let the first reconcile tick attach the watcher.
+            // Wait for the watcher itself to report Watching rather than guessing how long the first
+            // reconcile tick takes: on a loaded CI box that tick can take longer than any fixed sleep, and
+            // writing the file before FileSystemWatcher.EnableRaisingEvents is actually true means Windows
+            // never raises the event at all, so the test would wait out its full timeout for nothing.
+            await WaitUntilAsync(() => state.Reports().Any(r => r.LibraryId == libraryId && r.Status == WatcherStatus.Watching));
             await File.WriteAllBytesAsync(Path.Combine(watched, "Gate Test 2001.mkv"), new byte[2048]);
 
             await WaitUntilAsync(() => ScanJobPayloads(store).Count > 0);
@@ -120,13 +124,17 @@ public sealed class ProcessingWatchedFolderWatcherServiceTests
         Directory.CreateDirectory(staging);
         var staged = Path.Combine(staging, "Gate Test 2001.mkv");
         await File.WriteAllBytesAsync(staged, new byte[2048]);
-        await CreateLibraryAsync(store, watched, output);
+        var libraryId = await CreateLibraryAsync(store, watched, output);
 
-        var service = Service(store, new WatcherStateStore());
+        var state = new WatcherStateStore();
+        var service = Service(store, state);
         await service.StartAsync(CancellationToken.None);
         try
         {
-            await Task.Delay(1500);
+            // See the comment in A_file_appearing_becomes_a_candidate_without_waiting_for_the_scan_interval:
+            // wait for the watcher to actually be attached instead of guessing with a fixed sleep. The move
+            // is within store.Home, so it raises Renamed (not Created); the service subscribes to both.
+            await WaitUntilAsync(() => state.Reports().Any(r => r.LibraryId == libraryId && r.Status == WatcherStatus.Watching));
             File.Move(staged, Path.Combine(watched, "Gate Test 2001.mkv"));
 
             await WaitUntilAsync(() => ScanJobPayloads(store).Count > 0);
@@ -149,13 +157,15 @@ public sealed class ProcessingWatchedFolderWatcherServiceTests
         var output = store.Home.Join("out");
         Directory.CreateDirectory(watched);
         Directory.CreateDirectory(output);
-        await CreateLibraryAsync(store, watched, output);
+        var libraryId = await CreateLibraryAsync(store, watched, output);
 
-        var service = Service(store, new WatcherStateStore());
+        var state = new WatcherStateStore();
+        var service = Service(store, state);
         await service.StartAsync(CancellationToken.None);
         try
         {
-            await Task.Delay(1500);
+            // See the comment in A_file_appearing_becomes_a_candidate_without_waiting_for_the_scan_interval.
+            await WaitUntilAsync(() => state.Reports().Any(r => r.LibraryId == libraryId && r.Status == WatcherStatus.Watching));
             var target = Path.Combine(watched, "Recording.mkv");
             await using (var handle = File.Open(target, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
