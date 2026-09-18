@@ -116,6 +116,9 @@ anyone looking. **Low** needs a particular state, width or install type.
 - **"Try on a file" and "Advanced track ordering"** are disclosure rows inside the profile
   form, not section asides, so C1 does not apply. "Try on a file" is also asserted by five
   unit tests. Kept.
+- **Media managers' "Add an app"** stays a button under the list. C1 is about controls
+  beside a section heading, and this list has no heading to put one beside. Giving it
+  one ("Connected apps") is a copy decision. Left.
 - **The Metadata provider editor** (behind "Configure →") lays out its three fields as 1 + 2,
   then 2, which leaves one empty cell. It is only visible after a click. Minor. Left.
 

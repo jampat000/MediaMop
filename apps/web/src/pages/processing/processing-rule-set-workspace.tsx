@@ -748,7 +748,7 @@ export function ProcessingRuleSetWorkspace() {
               {textField("Profile name", "name", "English feature films")}
             </div>
 
-            <div className="grid max-w-3xl gap-10">
+            <div className="grid max-w-2xl gap-10">
               <ProfileSettingsSection
                 step={1}
                 title="Audio"
