@@ -1,16 +1,22 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { MmOverviewSection } from "../../components/overview/mm-overview-cards";
 import { PageLoading } from "../../components/shared/page-loading";
 import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
 } from "../../lib/api/error-guards";
+import {
+  PROCESSING_FILE_STATUS_LABELS,
+  type ProcessingFileStatus,
+} from "../../lib/processing/files-api";
+import { useProcessingFilesQuery } from "../../lib/processing/files-queries";
 import { useProcessingJobsInspectionQuery } from "../../lib/processing/jobs-inspection/queries";
 import {
   PROCESSING_MEDIA_TYPE_LABELS,
   type ProcessingLibrary,
   type ProcessingRuleSet,
 } from "../../lib/processing/libraries-api";
+import { formatBytes } from "../../lib/processing/library-api";
 import {
   useProcessingLibrariesQuery,
   useProcessingRuleSetsQuery,
@@ -23,9 +29,24 @@ import { processingStreamLanguageLabel } from "../../lib/processing/stream-langu
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
 export type ProcessingOverviewOpenTab =
-  "libraries" | "audio-subtitles" | "jobs" | "schedules";
+  "libraries" | "audio-subtitles" | "jobs" | "schedules" | "files";
 
 type AttentionItem = { text: string; target: ProcessingOverviewOpenTab };
+
+/** The pipeline, left to right, as the lead band draws it. Each stage is one real
+ *  file status, so clicking it can open Files filtered to exactly that status. */
+const FLOW_STAGES: {
+  status: ProcessingFileStatus;
+  hint: string;
+  live?: boolean;
+}[] = [
+  { status: "unprocessed", hint: "Found in a watched folder" },
+  { status: "on_hold", hint: "Held until it can run" },
+  { status: "processing", hint: "Being rewritten now", live: true },
+  { status: "processed", hint: "Handed back clean" },
+  { status: "skipped", hint: "Nothing to change" },
+  { status: "processing_failed", hint: "Waiting for review" },
+];
 
 function ruleSetSummary(rem: ProcessingRuleSet): string {
   const languages = [
@@ -142,6 +163,8 @@ function openLabel(target: ProcessingOverviewOpenTab): string {
       return "Open Jobs";
     case "schedules":
       return "Open Schedules";
+    case "files":
+      return "Open Files";
     default: {
       const unreachable: never = target;
       return unreachable;
@@ -220,7 +243,8 @@ function SetupChecklist({
   );
 }
 
-function AttentionPanel({
+/** Something blocking, above the lead band: sentences, not a card. */
+function AttentionList({
   items,
   onOpenTab,
 }: {
@@ -228,49 +252,111 @@ function AttentionPanel({
   onOpenTab?: (tab: ProcessingOverviewOpenTab) => void;
 }) {
   return (
-    <MmOverviewSection
-      headingId="processing-overview-needs-attention-heading"
-      heading="Needs attention"
+    <ul
+      className="mm-interrupt"
       data-testid="processing-overview-needs-attention"
     >
-      <ul className="mm-proc-attention">
-        {items.map((item) => (
-          <li key={item.text} className="mm-proc-attention__item">
-            <span className="mm-proc-attention__icon" aria-hidden="true">
-              !
-            </span>
-            <span className="mm-proc-attention__text">{item.text}</span>
-            {onOpenTab ? (
-              <button
-                type="button"
-                className={mmActionButtonClass({ variant: "secondary" })}
-                onClick={() => onOpenTab(item.target)}
-              >
-                {openLabel(item.target)}
-              </button>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </MmOverviewSection>
+      {items.map((item) => (
+        <li key={item.text} className="mm-interrupt__item">
+          <span className="mm-interrupt__text">{item.text}</span>
+          {onOpenTab ? (
+            <button
+              type="button"
+              className="mm-quiet-link"
+              onClick={() => onOpenTab(item.target)}
+            >
+              {openLabel(item.target)} →
+            </button>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function Stat({
-  label,
-  value,
-  hint,
+/** The lead: six pipeline stages, each as wide as the number of files in it. */
+function FlowBand({
+  counts,
+  onOpenFiles,
 }: {
-  label: string;
-  value: ReactNode;
-  hint?: string;
+  counts: Record<string, number>;
+  onOpenFiles?: (status: ProcessingFileStatus) => void;
+}) {
+  const stages = FLOW_STAGES.map((stage) => ({
+    ...stage,
+    label: PROCESSING_FILE_STATUS_LABELS[stage.status],
+    count: counts[stage.status] ?? 0,
+  }));
+  const total = stages.reduce((sum, stage) => sum + stage.count, 0);
+  return (
+    <div className="mm-lead-band" data-testid="processing-overview-flow">
+      {stages.map((stage) => {
+        const live = Boolean(stage.live) && stage.count > 0;
+        const modifier =
+          stage.count === 0
+            ? " mm-lead-band__segment--empty"
+            : live
+              ? " mm-lead-band__segment--live"
+              : "";
+        // Share of the band: the count itself, floored so an empty stage still
+        // reads as a stage. Weights are unitless, so the band never over-fits.
+        const share = total === 0 ? 1 : Math.max(stage.count, total * 0.06);
+        return (
+          <button
+            key={stage.status}
+            type="button"
+            className={`mm-lead-band__segment${modifier}`}
+            style={{ "--mm-flow-share": share } as CSSProperties}
+            onClick={() => onOpenFiles?.(stage.status)}
+            data-testid="processing-overview-flow-stage"
+          >
+            <span className="mm-lead-band__label">
+              {stage.label}
+              {live ? (
+                <i className="mm-lead-band__pulse" aria-hidden="true" />
+              ) : null}
+            </span>
+            <span className="mm-lead-band__value">
+              {stage.count.toLocaleString()}
+            </span>
+            <span className="mm-lead-band__hint">{stage.hint}</span>
+            <span className="mm-lead-band__go" aria-hidden="true">
+              Filter →
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuietSection({
+  headingId,
+  heading,
+  aside,
+  children,
+  "data-testid": dataTestId,
+}: {
+  headingId: string;
+  heading: string;
+  aside?: ReactNode;
+  children: ReactNode;
+  "data-testid"?: string;
 }) {
   return (
-    <div className="mm-proc-stat">
-      <dt className="mm-proc-stat__label">{label}</dt>
-      <dd className="mm-proc-stat__value">{value}</dd>
-      {hint ? <dd className="mm-proc-stat__hint">{hint}</dd> : null}
-    </div>
+    <section
+      className="mm-quiet-section"
+      aria-labelledby={headingId}
+      data-testid={dataTestId}
+    >
+      <div className="mm-quiet-section__head">
+        <h2 id={headingId} className="mm-quiet-section__title">
+          {heading}
+        </h2>
+        {aside ? <div className="mm-quiet-section__aside">{aside}</div> : null}
+      </div>
+      <div className="mm-quiet-section__body">{children}</div>
+    </section>
   );
 }
 
@@ -291,18 +377,21 @@ function ProcessingOverviewLoadError({ err }: { err: unknown }) {
   );
 }
 
-/** Processing Overview: one contextual panel, the numbers, and every library at a glance. */
+/** Processing Overview: the pipeline across the top, the month's one number, then
+ *  every library, quietly. See docs/design/content-language.md. */
 export function ProcessingOverviewTab({
   onOpenTab,
 }: {
-  onOpenTab?: (t: ProcessingOverviewOpenTab) => void;
+  onOpenTab?: (
+    t: ProcessingOverviewOpenTab,
+    status?: ProcessingFileStatus,
+  ) => void;
 } = {}) {
   const librariesQuery = useProcessingLibrariesQuery();
   const operatorSettings = useProcessingOperatorSettingsQuery();
   const ruleSets = useProcessingRuleSetsQuery();
   const overviewStats = useProcessingOverviewStatsQuery();
-  const pending = useProcessingJobsInspectionQuery("pending");
-  const leased = useProcessingJobsInspectionQuery("leased");
+  const files = useProcessingFilesQuery({ limit: 1 });
   const failed = useProcessingJobsInspectionQuery("failed");
 
   const blocking = librariesQuery.isError
@@ -335,84 +424,204 @@ export function ProcessingOverviewTab({
 
   const stats = overviewStats.data;
   const finished = stats ? stats.files_processed + stats.files_failed : 0;
-  const count = (value: number | undefined, ready: boolean) =>
-    ready && value !== undefined ? value.toLocaleString() : "…";
+  const counts = files.data?.status_counts ?? {};
+  const inHand = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  const shownInBand = FLOW_STAGES.reduce(
+    (sum, stage) => sum + (counts[stage.status] ?? 0),
+    0,
+  );
+  const elsewhere = inHand - shownInBand;
 
   const ruleSetById = new Map(
     (ruleSets.data ?? []).map((ruleSet) => [ruleSet.id, ruleSet]),
   );
 
+  const flowSummary = () => {
+    if ((counts.processing_failed ?? 0) > 0) {
+      return `${counts.processing_failed} ${counts.processing_failed === 1 ? "file needs" : "files need"} review.`;
+    }
+    if ((counts.processing ?? 0) > 0) {
+      return `${counts.processing} being rewritten right now.`;
+    }
+    if ((counts.unprocessed ?? 0) > 0) {
+      return `${counts.unprocessed} waiting for the next slot.`;
+    }
+    return "Nothing is stuck.";
+  };
+
   return (
     <div
       data-testid="processing-overview-panel"
-      className="mm-bubble-stack w-full min-w-0"
+      className="mm-quiet-stack min-w-0"
     >
       {!watchedSet ? (
         <SetupChecklist libraries={libraries} onOpenTab={onOpenTab} />
-      ) : attention.length > 0 ? (
-        <AttentionPanel items={attention} onOpenTab={onOpenTab} />
-      ) : null}
+      ) : (
+        <div className="mm-lead">
+          {attention.length > 0 ? (
+            <AttentionList items={attention} onOpenTab={onOpenTab} />
+          ) : null}
 
-      <MmOverviewSection
-        headingId="processing-overview-at-a-glance-heading"
-        heading="At a glance"
-        data-testid="processing-overview-at-a-glance"
-      >
-        <dl
-          className="mm-proc-stats"
-          data-testid="processing-overview-last-30-days"
-        >
-          <Stat
-            label="Processed"
-            value={count(stats?.files_processed, Boolean(stats))}
-            hint="Last 30 days"
-          />
-          <Stat
-            label="Failed"
-            value={count(stats?.files_failed, Boolean(stats))}
-            hint="Last 30 days"
-          />
-          <Stat
-            label="Success rate"
-            value={
-              !stats
-                ? "…"
-                : finished === 0
-                  ? "—"
-                  : `${stats.success_rate_percent}%`
-            }
-            hint={
-              finished === 0 && stats ? "No finished jobs yet" : "Last 30 days"
-            }
-          />
-          <Stat
-            label="Waiting"
-            value={count(pending.data?.jobs.length, Boolean(pending.data))}
-            hint="In the queue"
-          />
-          <Stat
-            label="Running"
-            value={count(leased.data?.jobs.length, Boolean(leased.data))}
-            hint={`Up to ${settings.max_concurrent_files} at once`}
-          />
-        </dl>
-        <p className="mm-proc-caption">
-          A file is picked up once it has not changed for{" "}
-          {settings.min_file_age_seconds} seconds.
-        </p>
-      </MmOverviewSection>
+          {files.isPending || files.isError || inHand === 0 ? (
+            <p
+              className="mm-quiet-note"
+              data-testid="processing-overview-flow-empty"
+            >
+              {files.isPending
+                ? "Counting the files Weir has in hand…"
+                : files.isError
+                  ? "Could not count the files Weir has in hand. The Files tab still works."
+                  : "Weir has no files in hand yet. Nothing has landed in a watched folder since the last scan."}
+            </p>
+          ) : (
+            <FlowBand
+              counts={counts}
+              onOpenFiles={
+                onOpenTab ? (status) => onOpenTab("files", status) : undefined
+              }
+            />
+          )}
 
-      <MmOverviewSection
+          <p
+            className="mm-lead-caption"
+            data-testid="processing-overview-flow-caption"
+          >
+            <span>
+              Each stage is as wide as the number of files in it; click one to
+              open Files filtered to it. A file is picked up once it has not
+              changed for {settings.min_file_age_seconds} seconds. Up to{" "}
+              {settings.max_concurrent_files} at once.
+            </span>
+            <span>
+              {flowSummary()}
+              {elsewhere > 0
+                ? ` ${elsewhere} more in states the band does not show.`
+                : ""}
+            </span>
+          </p>
+
+          <div
+            className="mm-figure-row"
+            data-testid="processing-overview-last-30-days"
+          >
+            <section className="mm-figure mm-figure--hero">
+              <div className="mm-figure__eyebrow">
+                <span>Processed</span>
+                <span>Last 30 days</span>
+              </div>
+              <div className="mm-figure__value">
+                {stats ? stats.files_processed.toLocaleString() : "…"}
+                <span className="mm-figure__unit">files handed back</span>
+              </div>
+              {stats ? (
+                <div className="mm-figure__foot">
+                  <div>
+                    <span className="mm-figure__foot-value">
+                      {stats.output_written_count.toLocaleString()}
+                    </span>
+                    <span className="mm-figure__foot-label">Rewritten</span>
+                  </div>
+                  <div>
+                    <span className="mm-figure__foot-value">
+                      {stats.already_optimized_count.toLocaleString()}
+                    </span>
+                    <span className="mm-figure__foot-label">Already right</span>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="mm-figure">
+              <div className="mm-figure__eyebrow">
+                <span>Success rate</span>
+              </div>
+              <div className="mm-figure__value">
+                {!stats
+                  ? "…"
+                  : finished === 0
+                    ? "—"
+                    : `${stats.success_rate_percent}%`}
+              </div>
+              {stats && finished > 0 ? (
+                <div
+                  className="mm-figure__meter"
+                  aria-hidden="true"
+                  style={
+                    {
+                      "--mm-meter-fill": `${stats.success_rate_percent}%`,
+                    } as CSSProperties
+                  }
+                />
+              ) : null}
+              <p className="mm-figure__note">
+                {!stats
+                  ? "Last 30 days"
+                  : finished === 0
+                    ? "No finished jobs yet"
+                    : `${finished.toLocaleString()} finished · ${stats.files_failed.toLocaleString()} failed`}
+              </p>
+            </section>
+
+            <section className="mm-figure">
+              <div className="mm-figure__eyebrow">
+                <span>Reclaimed</span>
+              </div>
+              <div className="mm-figure__value">
+                {stats ? formatBytes(stats.net_space_saved_bytes) : "…"}
+              </div>
+              <p className="mm-figure__note">
+                Net space saved by removed tracks, last 30 days
+              </p>
+            </section>
+          </div>
+        </div>
+      )}
+
+      <QuietSection
         headingId="processing-overview-libraries-heading"
         heading="Libraries"
         data-testid="processing-overview-audio-subtitles-glance"
+        aside={
+          onOpenTab ? (
+            <>
+              <button
+                type="button"
+                className="mm-quiet-link"
+                onClick={() => onOpenTab("libraries")}
+              >
+                Open Libraries →
+              </button>
+              <button
+                type="button"
+                className="mm-quiet-link"
+                onClick={() => onOpenTab("audio-subtitles")}
+              >
+                Open Audio &amp; subtitles →
+              </button>
+              <button
+                type="button"
+                className="mm-quiet-link"
+                onClick={() => onOpenTab("schedules")}
+              >
+                Schedules →
+              </button>
+              <button
+                type="button"
+                className="mm-quiet-link"
+                onClick={() => onOpenTab("jobs")}
+              >
+                Jobs →
+              </button>
+            </>
+          ) : null
+        }
       >
         {libraries.length === 0 ? (
-          <p className="mm-proc-panel__lead">No libraries yet.</p>
+          <p className="mm-quiet-note">No libraries yet.</p>
         ) : (
-          <div className="mm-proc-table-wrap">
+          <div className="mm-quiet-table-wrap">
             <table
-              className="mm-proc-table"
+              className="mm-quiet-table"
               data-testid="processing-overview-libraries"
             >
               <thead>
@@ -436,13 +645,13 @@ export function ProcessingOverviewTab({
                       key={library.id}
                       data-testid="processing-overview-library"
                     >
-                      <th scope="row" className="mm-proc-table__name">
+                      <th scope="row" className="mm-quiet-table__name">
                         <span>{library.name}</span>
                         {badge ? (
-                          <span className="mm-proc-badge">{badge}</span>
+                          <span className="mm-quiet-badge">{badge}</span>
                         ) : null}
                         {library.enabled ? null : (
-                          <span className="mm-proc-badge mm-proc-badge--off">
+                          <span className="mm-quiet-badge mm-quiet-badge--off">
                             Off
                           </span>
                         )}
@@ -461,15 +670,15 @@ export function ProcessingOverviewTab({
                           "…"
                         ) : ruleSet ? (
                           <span>
-                            <span className="mm-proc-table__strong">
+                            <span className="mm-quiet-table__strong">
                               {ruleSet.name}
                             </span>
-                            <span className="mm-proc-table__sub">
+                            <span className="mm-quiet-table__sub">
                               {ruleSetSummary(ruleSet)}
                             </span>
                           </span>
                         ) : (
-                          <span className="mm-proc-table__strong">
+                          <span className="mm-quiet-table__strong">
                             {PROCESSING_MEDIA_TYPE_LABELS[library.media_type]}{" "}
                             defaults
                           </span>
@@ -482,47 +691,15 @@ export function ProcessingOverviewTab({
             </table>
           </div>
         )}
-        {onOpenTab ? (
-          <div className="mm-proc-panel__actions">
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "secondary" })}
-              onClick={() => onOpenTab("libraries")}
-            >
-              Open Libraries
-            </button>
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "secondary" })}
-              onClick={() => onOpenTab("audio-subtitles")}
-            >
-              Open Audio &amp; subtitles
-            </button>
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "tertiary" })}
-              onClick={() => onOpenTab("schedules")}
-            >
-              Schedules
-            </button>
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "tertiary" })}
-              onClick={() => onOpenTab("jobs")}
-            >
-              Jobs
-            </button>
-          </div>
-        ) : null}
-      </MmOverviewSection>
+      </QuietSection>
     </div>
   );
 }
 
 function FolderState({ set }: { set: boolean }) {
   return set ? (
-    <span className="mm-proc-state mm-proc-state--ok">Set</span>
+    <span className="mm-quiet-state mm-quiet-state--ok">Set</span>
   ) : (
-    <span className="mm-proc-state mm-proc-state--missing">Not set</span>
+    <span className="mm-quiet-state mm-quiet-state--missing">Not set</span>
   );
 }

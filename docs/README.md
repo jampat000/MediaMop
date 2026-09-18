@@ -24,6 +24,7 @@ This directory is the repository-local system of record. Keep durable decisions 
 
 - [`visual-identity.md`](visual-identity.md) - brand and visual identity.
 - [`ux-polish.md`](ux-polish.md) - UI polish baseline.
+- [`design/content-language.md`](design/content-language.md) - how the content of every page is laid out: the lead band, the hero figure row, and the borderless body.
 - [`operator-messaging-standard.md`](operator-messaging-standard.md) - operator-facing wording.
 
 ## Reliability And Safety

@@ -75,6 +75,10 @@
   --mm-type-title: 1.5rem; /* 24px — page title */
   --mm-type-figure: 1.75rem; /* 28px — hero figures and stat values */
   --mm-tracking-eyebrow: 0.14em;
+  /* Content language (styles/weir-content.css, docs/design/content-language.md).
+     Layout-only, set per instance from React; no colour or font is introduced here. */
+  --mm-flow-share: 1; /* one lead-band segment's share of the band's width */
+  --mm-meter-fill: 0%; /* how full a figure tile's meter is */
   /* Control sizes (#464). The single 34px height was below a comfortable hit target for form
      fields; 40px is the field size, with smaller steps for secondary and quiet controls. */
   --mm-control-height-lg: calc(40px * var(--mm-density-ui-scale));
