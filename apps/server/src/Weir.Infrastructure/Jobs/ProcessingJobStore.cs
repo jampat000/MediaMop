@@ -629,6 +629,16 @@ public sealed class ProcessingJobStore
         return rows;
     }
 
+    /// <summary>Every pending or leased job of <paramref name="jobKind"/>, oldest first.</summary>
+    internal static List<ProcessingJob> ActiveOfKind(SqliteConnection connection, SqliteTransaction transaction, string jobKind) =>
+        Query(
+            connection,
+            transaction,
+            $"SELECT {SelectColumns} FROM jobs WHERE job_kind = @kind AND status IN (@pending, @leased) ORDER BY id",
+            ("@kind", jobKind),
+            ("@pending", ProcessingJobStatus.Pending),
+            ("@leased", ProcessingJobStatus.Leased));
+
     internal static int Execute(SqliteConnection connection, SqliteTransaction transaction, string sql, params (string Name, object? Value)[] parameters)
     {
         using var command = Command(connection, transaction, sql, parameters);
@@ -654,7 +664,7 @@ public sealed class ProcessingJobStore
         job.LeaseExpiresAt is { } expires &&
         expires >= when;
 
-    private static ProcessingJob? GetByDedupeKey(SqliteConnection connection, SqliteTransaction transaction, string dedupeKey) =>
+    internal static ProcessingJob? GetByDedupeKey(SqliteConnection connection, SqliteTransaction transaction, string dedupeKey) =>
         Query(connection, transaction, $"SELECT {SelectColumns} FROM jobs WHERE dedupe_key = @dedupe", ("@dedupe", dedupeKey)).FirstOrDefault();
 
     private static SqliteCommand Command(SqliteConnection connection, SqliteTransaction transaction, string sql, (string Name, object? Value)[] parameters)

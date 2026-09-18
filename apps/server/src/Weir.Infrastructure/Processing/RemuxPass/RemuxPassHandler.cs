@@ -147,6 +147,14 @@ public sealed class RemuxPassHandler : IJobHandler
                 ManualPlanFingerprint = manualPlanFingerprint,
             },
             cancellationToken).ConfigureAwait(false);
+        // A hand-off that arrived while this pass was running took the pass over (MediaManagerIntake.AdoptActivePass)
+        // and wrote its origin onto this job's row; pick it up now so the outcome is recorded and called back for it.
+        if (origin is null && await AdoptedOriginAsync(context.Id).ConfigureAwait(false) is { } adopted)
+        {
+            origin = adopted;
+            payloadJson = PyJsonWriter.Dumps(data.Copy().Set("origin", adopted), PyJsonFormat.Compact);
+        }
+
         result.Set("job_id", context.Id);
         result.Set("library_id", claim.Library?.Id ?? libraryId);
         if (result.Get("rejection_kind") is { IsTruthy: true } && claim.Library is { } library)
@@ -269,6 +277,25 @@ public sealed class RemuxPassHandler : IJobHandler
         catch (Exception exception) when (exception is SqliteException or InvalidOperationException)
         {
             _logger.LogWarning(exception, "Weir could not look up the hand-off this file came from.");
+            return null;
+        }
+    }
+
+    /// <summary>The origin written onto this job's own row after it started, or null.</summary>
+    private async Task<PyDict?> AdoptedOriginAsync(long jobId)
+    {
+        try
+        {
+            var uow = await UnitOfWork.OpenAsync(_database).ConfigureAwait(false);
+            await using (uow.ConfigureAwait(false))
+            {
+                var payload = await uow.ScalarAsync("SELECT payload_json FROM jobs WHERE id = @id", ("@id", jobId)).ConfigureAwait(false);
+                return payload is string text && PyJsonParser.Parse(text) is PyDict dict ? dict.Get("origin") as PyDict : null;
+            }
+        }
+        catch (Exception exception) when (exception is SqliteException or InvalidOperationException or PyJsonDecodeException)
+        {
+            _logger.LogWarning(exception, "Weir could not check whether a hand-off took over this pass.");
             return null;
         }
     }
