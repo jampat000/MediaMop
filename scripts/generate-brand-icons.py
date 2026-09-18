@@ -14,15 +14,15 @@ Outputs (all committed):
 ## Two optical sizes in one .ico (James's three-stream request, reopening #582)
 
 `weir-app-icon.svg` carries the three-stream primary mark and is the source for every frame
-48px and above, same as every other asset here. But a multi-resolution .ico is exactly the one
+24px and above, same as every other asset here. But a multi-resolution .ico is exactly the one
 place two different drawings of "the same icon" have to live side by side in a single file, and
-`design-options/logos-round4/build/mark.py`'s SHIPPED_STREAMS/SMALL_STREAMS note (plus the 32px
-check recorded in packaging/brand/README.md) found that three streams still don't earn their
-keep at 16 or 32px: the bands are sub-pixel at 16, and at 32 they are wide enough to count but
-the crest still softens under anti-aliasing, most visibly in the single-colour tray rendering
-that is exactly what the .ico's 32px frame is used for. So the 16 and 32px frames render from
-`weir-app-icon-small.svg` instead — the same tile with the two-stream fallback geometry — and
-only 48px and above use the three-stream `weir-app-icon.svg`. `favicon.svg` itself (the SVG
+at 16px three streams cannot survive: a 1.85-unit band on a 24-unit grid is 1.23 device pixels
+there, sub-pixel by construction, so the arcs fuse into a smear. The 16px frame therefore
+renders from `weir-app-icon-small.svg` — the same tile with the two-stream fallback geometry —
+and every larger frame uses the three-stream `weir-app-icon.svg`. An earlier revision put the
+cutoff at 32px as well, on the theory that the crest softened under anti-aliasing there; the
+real rasters in `design-options/logos-round4/gate-16px.png` do not bear that out at 24 or 32 in
+any of the three renderings, and it cost the mark two of the three sizes a person actually sees. `favicon.svg` itself (the SVG
 favicon, not the .ico) is unaffected: browsers scale one vector for it, at whatever size they
 show it, so it is always the three-stream primary mark like every other SVG in this repo.
 """

@@ -22,8 +22,8 @@ type Props = {
  * the bands are sub-pixel at that size and fuse into a smear (see mark.py's SHIPPED_STREAMS
  * comment and design-options/logos-round4/gate-16px.png). But the sidebar mark here is never
  * rendered anywhere near that small, so it carries no such penalty, and the extra stream is what
- * makes it read as three-dimensional water rather than a flat arch. The 16/32px .ico frames are
- * the only place that trade-off still applies — see scripts/generate-brand-icons.py and
+ * makes it read as three-dimensional water rather than a flat arch. The 16px .ico frame is the
+ * only place that trade-off still applies — see scripts/generate-brand-icons.py and
  * packaging/brand/README.md for the optical-size split.
  *
  * Three paths, all one colour. The mark used to be two tones — gold water over a stone wall —
@@ -48,7 +48,7 @@ function WeirMark({ className }: { className?: string }) {
       />
       {/* The middle stream: a repeat of the outer one on a smaller radius, carrying no
           structure of its own. This is the band #582 dropped for 16px legibility; it is back
-          here because the sidebar mark is never shown that small. */}
+          here, and everywhere above 16px, because nothing else is rendered that small. */}
       <path
         className="mm-logo-mark__stream"
         d="M7.05 16.55L7.05 13.7A6.25 6.25 0 0 1 17.739 9.3L13.3 9.3A4.4 4.4 0 0 0 8.9 13.7L8.9 16.55Z"
