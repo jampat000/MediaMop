@@ -5,7 +5,7 @@
 #   docker compose pull
 #   docker compose up -d
 #
-# Open http://localhost:8788/ after the container starts.
+# Open http://localhost:9347/ after the container starts.
 # Stable releases publish linux/amd64 and linux/arm64 images.
 # Override the image with WEIR_DOCKER_IMAGE if needed (for a local build: `docker build -t weir:local .`
 # then WEIR_DOCKER_IMAGE=weir:local docker compose up -d --pull never).
@@ -17,7 +17,7 @@ services:
     image: ${WEIR_DOCKER_IMAGE:-ghcr.io/jampat000/weir:latest}
     pull_policy: always
     ports:
-      - "8788:8788"
+      - "9347:9347"
     environment:
       WEIR_HOME: ${WEIR_HOME:-/data/weir}
       # Optional UID/GID remap for the runtime account inside the container.

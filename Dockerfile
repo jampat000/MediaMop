@@ -7,7 +7,7 @@
 # Build both published architectures (needs buildx; QEMU for the non-native final stage):
 #   docker buildx build --platform linux/amd64,linux/arm64 -t weir:local .
 # Run:
-#   docker run --rm -e WEIR_SESSION_SECRET=... -p 8788:8788 -v weir-data:/data/weir weir:local
+#   docker run --rm -e WEIR_SESSION_SECRET=... -p 9347:9347 -v weir-data:/data/weir weir:local
 
 FROM node:24-bookworm-slim AS web
 WORKDIR /src/apps/web
@@ -95,9 +95,9 @@ ENV WEIR_ENV=production
 # would discard the cookie on a plain-HTTP LAN install and lock the operator out for nothing,
 # so the default is left as `auto`. Set WEIR_SESSION_COOKIE_SECURE=true to force it.
 
-EXPOSE 8788
+EXPOSE 9347
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=50s --retries=3 \
-  CMD curl -fsS "http://127.0.0.1:${PORT:-8788}/health" >/dev/null || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT:-9347}/health" >/dev/null || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

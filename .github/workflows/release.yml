@@ -351,13 +351,13 @@ jobs:
           docker rm -f weir-release-candidate >/dev/null 2>&1 || true
           mkdir -p "$WEIR_LIVE_E2E_FIXTURE_HOST_ROOT"
           chmod 0777 "$WEIR_LIVE_E2E_FIXTURE_HOST_ROOT"
-          docker run -d --name weir-release-candidate -p 8788:8788 \
+          docker run -d --name weir-release-candidate -p 9347:9347 \
             -v "$WEIR_LIVE_E2E_FIXTURE_HOST_ROOT:$WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT" \
             -e WEIR_SESSION_SECRET="$WEIR_SESSION_SECRET" \
             -e WEIR_SESSION_COOKIE_SECURE=false \
             "weir-release-candidate:${{ steps.version.outputs.plain }}"
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8788/health >/tmp/weir-candidate-health.json; then
+            if curl -fsS http://127.0.0.1:9347/health >/tmp/weir-candidate-health.json; then
               cat /tmp/weir-candidate-health.json
               exit 0
             fi
@@ -368,7 +368,7 @@ jobs:
 
       - name: Full live E2E against unpushed Docker release candidate
         env:
-          WEIR_LIVE_BASE_URL: http://127.0.0.1:8788
+          WEIR_LIVE_BASE_URL: http://127.0.0.1:9347
           WEIR_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}
           WEIR_LIVE_E2E_ARTIFACTS: artifacts/docker-release-candidate-e2e
         run: python scripts/live-packaged-e2e.py
@@ -434,12 +434,12 @@ jobs:
       - name: Smoke test published Docker image
         run: |
           docker rm -f weir-release-smoke >/dev/null 2>&1 || true
-          docker run -d --name weir-release-smoke -p 8788:8788 \
+          docker run -d --name weir-release-smoke -p 9347:9347 \
             -e WEIR_SESSION_SECRET="$WEIR_SESSION_SECRET" \
             -e WEIR_SESSION_COOKIE_SECURE=false \
             "${{ steps.image.outputs.name }}:latest"
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8788/health >/tmp/weir-health.json; then
+            if curl -fsS http://127.0.0.1:9347/health >/tmp/weir-health.json; then
               cat /tmp/weir-health.json
               exit 0
             fi

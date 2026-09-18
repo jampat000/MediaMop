@@ -1,6 +1,9 @@
 param(
   [string]$PackageDir = "",
-  [int]$Port = 8799,
+  # Weir's own default (PortChoice.DefaultPort in the tray, ServerListenOptions.DefaultPort in the
+  # server), so the release gate runs the package on the port it ships with. Pass -Port if a Weir
+  # you have installed is already using it.
+  [int]$Port = 9347,
   [string]$ExpectedVersion = ""
 )
 
@@ -9,6 +12,8 @@ $ErrorActionPreference = "Stop"
 # Smoke test for the assembled Windows package (packaging/windows/build-velopack.ps1): the exact
 # server directory the tray app launches (dist\windows\pack\server), started the way the tray starts
 # it, then driven through sign-up, a library and a real pass-through job with the bundled ffmpeg.
+# Then the packaged tray itself (Weir.exe), started the way an unattended install starts it — with
+# --port and no one to answer a dialog — must come up on that port, save it, and show no window.
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if (-not $PackageDir) {
@@ -287,4 +292,75 @@ try {
   if ($null -ne $oldFfmpegDir) { $env:WEIR_FFMPEG_DIR = $oldFfmpegDir } else { Remove-Item Env:\WEIR_FFMPEG_DIR -ErrorAction SilentlyContinue }
   $env:PATH = $oldPath
   Remove-Item -LiteralPath $runtimeHome -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# The packaged tray, started the way a scripted or remote (WinRM) install starts it: the port is
+# supplied, so it must be used and saved with no dialog, and the server must come up on it. A tray
+# that showed its first-run window here would sit waiting for a click that never comes, so this
+# phase also fails if the tray has a window at all.
+$trayHome = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-package-tray-smoke-" + [System.Guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $trayHome | Out-Null
+$oldHome = $env:WEIR_HOME
+$oldWeirPort = $env:WEIR_PORT
+$trayProc = $null
+try {
+  $env:WEIR_HOME = $trayHome
+  Remove-Item Env:\WEIR_PORT -ErrorAction SilentlyContinue
+  $trayProc = Start-Process -FilePath $trayExe `
+    -ArgumentList @("--port", [string]$Port, "--no-browser") `
+    -WorkingDirectory (Split-Path -Parent $trayExe) `
+    -PassThru
+
+  $readyUrl = "http://127.0.0.1:$Port/ready"
+  $deadline = (Get-Date).AddSeconds(90)
+  $trayReady = $false
+  do {
+    if ($trayProc.HasExited) {
+      throw "Packaged tray exited with code $($trayProc.ExitCode) before Weir was ready (exit code 0 this early means another Weir tray is already running in this session)."
+    }
+    try {
+      $ready = Invoke-RestMethod -Uri $readyUrl -Method Get -TimeoutSec 2
+      if ($ready.ready -eq $true) { $trayReady = $true; break }
+    } catch {
+      Start-Sleep -Milliseconds 500
+    }
+  } while ((Get-Date) -lt $deadline)
+  if (-not $trayReady) {
+    throw "Packaged tray did not bring Weir up at $readyUrl."
+  }
+
+  $trayProc.Refresh()
+  if ($trayProc.MainWindowHandle -ne [IntPtr]::Zero) {
+    throw "Packaged tray opened a window ('$($trayProc.MainWindowTitle)') although --port was supplied; an unattended install would hang on it."
+  }
+  $savedPort = (Get-Content -LiteralPath (Join-Path $trayHome "port.txt") -Raw).Trim()
+  if ($savedPort -ne [string]$Port) {
+    throw "Packaged tray saved port '$savedPort' but was started with --port $Port."
+  }
+  $currentPort = (Get-Content -LiteralPath (Join-Path $trayHome "current-port.txt") -Raw).Trim()
+  if ($currentPort -ne [string]$Port) {
+    throw "Packaged tray wrote current-port.txt '$currentPort' but is running on $Port."
+  }
+  $trayLog = Get-Content -LiteralPath (Join-Path $trayHome "tray-host.log") -Raw
+  if ($trayLog -notmatch [regex]::Escape("Using port $Port from --port")) {
+    throw "Packaged tray did not log that it used the supplied port."
+  }
+  Write-Host "Packaged tray started unattended on port $Port with --port: no dialog, port saved, server ready."
+} catch {
+  Write-Host "Packaged tray smoke failed."
+  $trayLogPath = Join-Path $trayHome "tray-host.log"
+  if (Test-Path -LiteralPath $trayLogPath) {
+    Write-Host "--- tray-host.log ---"
+    Get-Content -LiteralPath $trayLogPath -Tail 100
+  }
+  throw
+} finally {
+  if ($trayProc -and -not $trayProc.HasExited) {
+    # The tray supervises WeirServer.exe as a child; take the whole tree down.
+    & taskkill.exe /PID $trayProc.Id /T /F | Out-Null
+  }
+  if ($null -ne $oldHome) { $env:WEIR_HOME = $oldHome } else { Remove-Item Env:\WEIR_HOME -ErrorAction SilentlyContinue }
+  if ($null -ne $oldWeirPort) { $env:WEIR_PORT = $oldWeirPort }
+  Start-Sleep -Milliseconds 500
+  Remove-Item -LiteralPath $trayHome -Recurse -Force -ErrorAction SilentlyContinue
 }

@@ -8,13 +8,13 @@ namespace Weir.Core.Configuration;
 /// <list type="bullet">
 /// <item>the Windows tray starts the server with <c>--port &lt;port&gt;</c>;</item>
 /// <item>the Docker entrypoint reads <c>PORT</c>;</item>
-/// <item>both bind every interface, on port 8788 by default.</item>
+/// <item>both bind every interface, on port 9347 by default.</item>
 /// </list>
 /// <c>--host</c> narrows the bind address (local development uses 127.0.0.1).
 /// </summary>
 public sealed record ServerListenOptions(string Host, int Port)
 {
-    public const int DefaultPort = 8788;
+    public const int DefaultPort = 9347;
     public const string DefaultHost = "0.0.0.0";
 
     public static ServerListenOptions Parse(IReadOnlyList<string> args, RuntimeEnvironment runtime)

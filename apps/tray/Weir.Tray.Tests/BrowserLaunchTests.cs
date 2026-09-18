@@ -28,7 +28,7 @@ public sealed class BrowserLaunchTests : IDisposable
     public void Browser_shell_failure_is_non_fatal_and_logged()
     {
         var result = Program.OpenBrowser(
-            8788,
+            9347,
             _ => throw new Win32Exception(unchecked((int)0x80004021), "Shell execution unavailable"));
 
         Assert.False(result);
@@ -42,11 +42,11 @@ public sealed class BrowserLaunchTests : IDisposable
     {
         ProcessStartInfo? observed = null;
 
-        var result = Program.OpenBrowser(8788, info => observed = info);
+        var result = Program.OpenBrowser(9347, info => observed = info);
 
         Assert.True(result);
         Assert.NotNull(observed);
-        Assert.Equal("http://127.0.0.1:8788/", observed.FileName);
+        Assert.Equal("http://127.0.0.1:9347/", observed.FileName);
         Assert.True(observed.UseShellExecute);
     }
 
@@ -56,13 +56,13 @@ public sealed class BrowserLaunchTests : IDisposable
         ProcessStartInfo? observed = null;
 
         var result = Program.OpenBrowser(
-            8788,
+            9347,
             info => observed = info,
             Program.UpgradeSettingsPath);
 
         Assert.True(result);
         Assert.NotNull(observed);
-        Assert.Equal("http://127.0.0.1:8788/settings?tab=upgrade", observed.FileName);
+        Assert.Equal("http://127.0.0.1:9347/settings?tab=upgrade", observed.FileName);
         Assert.True(observed.UseShellExecute);
     }
 

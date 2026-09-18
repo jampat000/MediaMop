@@ -5,13 +5,13 @@ title: Docker
 
 # Docker Deployment
 
-Weir ships as an all-in-one container: the .NET server, SQLite and the bundled web UI on port 8788.
+Weir ships as an all-in-one container: the .NET server, SQLite and the bundled web UI on port 9347.
 
 ## Quick start
 
 ```bash
 docker pull ghcr.io/jampat000/weir:latest
-docker run --rm -p 8788:8788 -v weir-data:/data/weir ghcr.io/jampat000/weir:latest
+docker run --rm -p 9347:9347 -v weir-data:/data/weir ghcr.io/jampat000/weir:latest
 ```
 
 Or with Docker Compose from a repo clone:
@@ -29,7 +29,7 @@ No `.env` file is required for the default path. The container generates its own
 - A self-contained .NET server at `/opt/weir/Weir`, with the web UI at `/opt/weir/web-dist`
 - ffmpeg, mkvmerge (MKVToolNix), curl and gosu on a slim Debian base (`mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim`)
 - Runs as the `weir` user (UID/GID 1000 by default)
-- Data volume `/data/weir`, port `8788`
+- Data volume `/data/weir`, port `9347`
 - A built-in health check on `/health`
 
 ## Architecture

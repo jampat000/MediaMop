@@ -117,7 +117,7 @@ warn_unported_processing_permissions() {
 
 run_app() {
   cd /opt/weir
-  exec ./Weir --port "${PORT:-8788}"
+  exec ./Weir --port "${PORT:-9347}"
 }
 
 validate_uint "$WEIR_PUID" "WEIR_PUID"
@@ -163,7 +163,7 @@ if [ "$(id -u)" -eq 0 ]; then
     chown weir:weir "$WEIR_HOME/session.secret"
   fi
   cd /opt/weir
-  exec gosu weir ./Weir --port "${PORT:-8788}"
+  exec gosu weir ./Weir --port "${PORT:-9347}"
 fi
 
 run_app
