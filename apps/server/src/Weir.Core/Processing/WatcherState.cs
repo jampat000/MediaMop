@@ -1,3 +1,5 @@
+using Weir.Core.Text;
+
 namespace Weir.Core.Processing;
 
 /// <summary>How a library's watched folder is being monitored (port of <c>processing_watcher_state.WatcherStatus</c>).</summary>
@@ -87,7 +89,7 @@ public sealed class WatcherStateStore
         var watching = reports.Count(r => r.Status is WatcherStatus.Watching);
         if (degraded.Count == 0)
         {
-            return (true, $"Watching {watching} folder(s) for changes; the periodic scan is the backstop.");
+            return (true, $"Watching {Plural.Of(watching, "folder")} for changes; the periodic scan is the backstop.");
         }
 
         var names = string.Join(", ", degraded.Select(r => r.LibraryName));

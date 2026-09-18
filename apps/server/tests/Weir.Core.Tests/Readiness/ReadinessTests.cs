@@ -15,7 +15,7 @@ public sealed class ReadinessTests
         Assert.Equal(
             new WorkerLaneHealth(
                 "processing", 8, 0, 8, 0, "degraded",
-                "Weir is not processing new work because 8 worker slot(s) stopped responding. Restart Weir; queued work remains safe."),
+                "Weir is not processing new work because 8 worker slots stopped responding. Restart Weir; queued work remains safe."),
             lane);
     }
 
@@ -49,7 +49,7 @@ public sealed class ReadinessTests
         heartbeats.Stopped("processing", 1);
         var stopped = Assert.Single(heartbeats.Snapshot([new("processing", 2)]));
         Assert.Equal((1, 0, 1, "degraded"), (stopped.ActiveWorkers, stopped.StaleWorkers, stopped.StoppedWorkers, stopped.Status));
-        Assert.Contains("1 worker slot(s)", stopped.Detail, StringComparison.Ordinal);
+        Assert.Contains("because 1 worker slot stopped responding.", stopped.Detail, StringComparison.Ordinal);
     }
 
     [Theory]

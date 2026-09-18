@@ -1,5 +1,6 @@
 using System.Globalization;
 using Weir.Core.MediaManagers;
+using Weir.Core.Text;
 
 namespace Weir.Core.Processing.RemuxPass;
 
@@ -97,7 +98,7 @@ public static class LibraryTruthGate
             return new LibraryTruthVerdict(
                 LibraryTruthVerdict.Failed,
                 $"{string.Join(", ", holders)} still keeps at least one library file inside this folder, so Weir " +
-                $"treats it as the kept library location and will not delete it. Example path(s): {Sample(hits)}",
+                $"treats it as the kept library location and will not delete it. {Plural.Noun(hits.Count, "Example path", "Example paths")}: {Sample(hits)}",
                 hits);
         }
 

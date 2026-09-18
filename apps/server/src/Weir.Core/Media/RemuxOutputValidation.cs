@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Weir.Core.Json;
 using Weir.Core.Rules;
+using Weir.Core.Text;
 
 namespace Weir.Core.Media;
 
@@ -396,14 +397,14 @@ public static partial class RemuxOutputValidation
             if (wantCount != gotCount)
             {
                 throw new MediaToolException(
-                    $"Planned {wantCount.ToString(CultureInfo.InvariantCulture)} {type} track(s), output has {gotCount.ToString(CultureInfo.InvariantCulture)}.");
+                    $"Planned {Plural.Of(wantCount, type + " track")}, output has {gotCount.ToString(CultureInfo.InvariantCulture)}.");
             }
         }
 
         if (actual.Count != expected.Count)
         {
             throw new MediaToolException(
-                $"Planned {expected.Count.ToString(CultureInfo.InvariantCulture)} track(s), output has {actual.Count.ToString(CultureInfo.InvariantCulture)}.");
+                $"Planned {Plural.Of(expected.Count, "track")}, output has {actual.Count.ToString(CultureInfo.InvariantCulture)}.");
         }
 
         // 3. Track type, disposition and language at every position.

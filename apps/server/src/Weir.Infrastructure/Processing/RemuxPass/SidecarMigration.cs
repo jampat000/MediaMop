@@ -1,4 +1,4 @@
-using System.Globalization;
+using Weir.Core.Text;
 using Weir.Infrastructure.MediaManagers;
 
 namespace Weir.Infrastructure.Processing.RemuxPass;
@@ -21,7 +21,7 @@ public sealed class SidecarMigrationResult
     public string BlockingReason => Failures.Count == 0
         ? string.Empty
         : "Weir did not remove the source folder because it could not copy " +
-          $"{Failures.Count.ToString(CultureInfo.InvariantCulture)} file(s) that were set to travel with the video: " +
+          $"{Plural.Of(Failures.Count, "file")} that {Plural.Noun(Failures.Count, "was", "were")} set to travel with the video: " +
           $"{string.Join("; ", Failures)}. The source is left in place so nothing is lost.";
 }
 

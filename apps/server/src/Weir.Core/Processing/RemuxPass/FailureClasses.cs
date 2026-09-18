@@ -1,5 +1,6 @@
 using System.Globalization;
 using Weir.Core.Json;
+using Weir.Core.Text;
 
 namespace Weir.Core.Processing.RemuxPass;
 
@@ -90,7 +91,7 @@ public static class RetryPolicy
         return new RetryDecision(
             true,
             now + TimeSpan.FromSeconds(delay),
-            $"This failed and Weir will try again in about {(minutes == 0 ? 1 : minutes).ToString(CultureInfo.InvariantCulture)} minute(s) " +
+            $"This failed and Weir will try again in about {Plural.Of(minutes == 0 ? 1 : minutes, "minute")} " +
             $"(attempt {(attemptsSoFar + 1).ToString(CultureInfo.InvariantCulture)} of {maxAttempts.ToString(CultureInfo.InvariantCulture)}).");
     }
 

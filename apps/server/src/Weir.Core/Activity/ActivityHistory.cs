@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Weir.Core.Json;
+using Weir.Core.Text;
 using Weir.Core.Time;
 
 namespace Weir.Core.Activity;
@@ -159,7 +160,7 @@ public static class ActivityHistory
                 "message",
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"This removes {counts.ActivityEvents} Activity event(s) and {counts.ProcessingRecords} processing record(s) about {counts.RelativePath}. ") +
+                    $"This removes {Plural.Of(counts.ActivityEvents, "Activity event")} and {Plural.Of(counts.ProcessingRecords, "processing record")} about {counts.RelativePath}. ") +
                 "It does not touch the file itself, its current status on the Files screen, or anything else's history.");
     }
 

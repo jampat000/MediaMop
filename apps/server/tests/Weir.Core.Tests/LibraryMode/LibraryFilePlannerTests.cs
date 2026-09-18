@@ -8,6 +8,9 @@ public sealed class LibraryFilePlannerTests
     private const string EnglishAndJapanese =
         """{"format":{"duration":"120.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"bit_rate":"128000"},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"},"bit_rate":"96000"}]}""";
 
+    private const string EnglishJapaneseAndFrench =
+        """{"format":{"duration":"120.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"bit_rate":"128000"},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"},"bit_rate":"96000"},{"index":3,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"fre"},"bit_rate":"96000"}]}""";
+
     private const string EnglishOnly =
         """{"format":{"duration":"120.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"bit_rate":"128000"}]}""";
 
@@ -43,9 +46,18 @@ public sealed class LibraryFilePlannerTests
         Assert.Equal(LibraryFileClassification.WouldChange, result.Classification);
         Assert.Equal(1, result.RemovedAudioCount);
         Assert.NotNull(result.Summary);
-        Assert.Contains("audio track", result.Summary, StringComparison.Ordinal);
+        Assert.StartsWith("Would remove 1 audio track (jpn ", result.Summary, StringComparison.Ordinal);
         // 96000 bits/s * 120s / 8 = 1,440,000 bytes for the removed Japanese track.
         Assert.Equal(1_440_000, result.EstimatedBytesSaved);
+    }
+
+    [Fact]
+    public void Two_removed_tracks_read_in_the_plural()
+    {
+        var result = LibraryFilePlanner.Classify(ProbeResult.Parse(EnglishJapaneseAndFrench), EnglishOnlyRules());
+        Assert.Equal(2, result.RemovedAudioCount);
+        Assert.NotNull(result.Summary);
+        Assert.StartsWith("Would remove 2 audio tracks (jpn ", result.Summary, StringComparison.Ordinal);
     }
 
     [Fact]

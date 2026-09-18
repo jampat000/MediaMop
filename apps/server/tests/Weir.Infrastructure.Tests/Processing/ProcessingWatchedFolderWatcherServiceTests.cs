@@ -272,7 +272,7 @@ public sealed class ProcessingWatchedFolderWatcherServiceTests
 
             var (ok, detail) = state.Summary();
             Assert.True(ok);
-            Assert.Contains("Watching 1 folder(s)", detail, StringComparison.Ordinal);
+            Assert.Contains("Watching 1 folder for changes", detail, StringComparison.Ordinal);
         }
         finally
         {

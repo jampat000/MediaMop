@@ -7,6 +7,7 @@ using Weir.Core.Media;
 using Weir.Core.MediaManagers;
 using Weir.Core.Processing;
 using Weir.Core.Rules;
+using Weir.Core.Text;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.MediaManagers;
@@ -133,7 +134,7 @@ public sealed class LibraryScanHandler : IJobHandler
                     new ActivityEventDraft(
                         LibraryActivityEventTypes.ScanCompleted,
                         "library",
-                        $"Scanned {library.Name}: {entries.Count} file(s), {wouldChange} would change, {cannotProcess} could not be processed",
+                        $"Scanned {library.Name}: {Plural.Of(entries.Count, "file")}, {wouldChange} would change, {cannotProcess} could not be processed",
                         PyJsonWriter.Dumps(
                             new PyDict().Set("trigger", trigger).Set("library_id", libraryId).Set("result", "success"),
                             PyJsonFormat.Compact)))

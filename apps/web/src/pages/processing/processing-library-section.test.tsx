@@ -129,7 +129,7 @@ function file(over: Partial<LibraryFile> = {}): LibraryFile {
     size_bytes: 5_000_000,
     modified_at: 1_700_000_000,
     classification: "would_change",
-    summary: "Would remove 1 audio track(s) (jpn).",
+    summary: "Would remove 1 audio track (jpn).",
     reason: null,
     removed_audio_tracks: 1,
     removed_subtitle_tracks: 0,

@@ -1,3 +1,5 @@
+using Weir.Core.Text;
+
 namespace Weir.Core.Workers;
 
 /// <summary>One lane's worker health as readiness reports it (<c>ReadinessWorkerOut</c>).</summary>
@@ -78,7 +80,7 @@ public sealed class WorkerHeartbeats
             lanes.Add(degraded > 0
                 ? new WorkerLaneHealth(
                     module, expected, active, stale + missing, stopped, "degraded",
-                    $"{title} is not processing new work because {degraded} worker slot(s) stopped responding. " +
+                    $"{title} is not processing new work because {Plural.Of(degraded, "worker slot")} stopped responding. " +
                     "Restart Weir; queued work remains safe.")
                 : new WorkerLaneHealth(
                     module, expected, active, stale + missing, stopped, "healthy",

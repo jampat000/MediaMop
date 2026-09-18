@@ -7,6 +7,7 @@ using Weir.Core.Activity;
 using Weir.Core.Auth;
 using Weir.Core.Json;
 using Weir.Core.Security;
+using Weir.Core.Text;
 using Weir.Core.Validation;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Auth;
@@ -337,7 +338,7 @@ public static class AuthEndpoints
             uow, ActivityEventTypes.AuthSessionsRevoked, "auth", "Other sessions signed out",
             count.ToString(System.Globalization.CultureInfo.InvariantCulture)).ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
-        return ApiRoutes.Ok(new PyDict().Set("message", $"Signed out {count} other session(s).").Set("revoked_count", count));
+        return ApiRoutes.Ok(new PyDict().Set("message", $"Signed out {Plural.Of(count, "other session")}.").Set("revoked_count", count));
     }
 
     private static async Task<ApiResult> PostRevokeSessionAsync(ApiRequest request)

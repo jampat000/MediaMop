@@ -191,7 +191,15 @@ public sealed class FailureClassesTests
 
         Assert.True(decision.WillRetry);
         Assert.Equal(Now.AddSeconds(300), decision.NextRetryAt);
-        Assert.Equal("This failed and Weir will try again in about 5 minute(s) (attempt 2 of 3).", decision.Reason);
+        Assert.Equal("This failed and Weir will try again in about 5 minutes (attempt 2 of 3).", decision.Reason);
+    }
+
+    [Fact]
+    public void A_one_minute_retry_reads_in_the_singular()
+    {
+        var decision = RetryPolicy.DecideForRecordedFailure(Library(backoff: 60), "execution", 0, null, Now);
+
+        Assert.Equal("This failed and Weir will try again in about 1 minute (attempt 2 of 3).", decision.Reason);
     }
 
     [Fact]
@@ -350,7 +358,22 @@ public sealed class LibraryTruthGateTests
 
         Assert.Equal("failed", verdict.Check);
         Assert.Contains("Radarr (4K) still keeps at least one library file", verdict.Note, StringComparison.Ordinal);
+        Assert.EndsWith($"will not delete it. Example path: {Path.GetFullPath(kept)}", verdict.Note, StringComparison.Ordinal);
         Assert.Equal([Path.GetFullPath(kept)], verdict.MatchedPaths);
+    }
+
+    [Fact]
+    public void Several_kept_files_are_named_as_example_paths()
+    {
+        var first = Path.Join(Folder, "a.mkv");
+        var second = Path.Join(Folder, "b.mkv");
+        var verdict = Evaluate([Reported([first, second], name: "4K")]);
+
+        Assert.Equal("failed", verdict.Check);
+        Assert.EndsWith(
+            $"will not delete it. Example paths: {Path.GetFullPath(first)}; {Path.GetFullPath(second)}",
+            verdict.Note,
+            StringComparison.Ordinal);
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using Weir.Core.LibraryMode;
 using Weir.Core.MediaManagers;
 using Weir.Infrastructure.LibraryMode;
 using Weir.Infrastructure.Media;
+using Weir.Infrastructure.Sqlite;
 using Weir.Infrastructure.Tests.Media;
 using Weir.Infrastructure.Tests.MediaManagers;
 using Weir.Infrastructure.Tests.Processing.RemuxPass;
@@ -55,6 +56,11 @@ public sealed class LibraryScanHandlerTests : IDisposable
         Assert.True(await _fixture.Jobs.CompleteClaimedAsync(claimed.Id, leaseOwner));
     }
 
+    private Task<List<string>> ScanActivityTitlesAsync() =>
+        _fixture.Db(uow => uow.QueryAsync(
+            "SELECT title FROM activity_events WHERE event_type = 'library.scan_completed' ORDER BY id",
+            reader => SqliteValues.GetString(reader, 0)), commit: false);
+
     [Fact]
     public async Task A_scan_classifies_files_and_writes_nothing_to_them()
     {
@@ -93,6 +99,8 @@ public sealed class LibraryScanHandlerTests : IDisposable
         // Unmatched (no manager linked to this library): still processable, not skipped.
         Assert.Null(changing.ManagerKind);
         Assert.Null(changing.ManagerTitle);
+
+        Assert.Equal(["Scanned Movies library: 2 files, 1 would change, 0 could not be processed"], await ScanActivityTitlesAsync());
     }
 
     [Fact]
@@ -114,6 +122,8 @@ public sealed class LibraryScanHandlerTests : IDisposable
 
         // The file's size and mtime have not changed, so the cached ffprobe answer is reused: no new probe call.
         Assert.Equal(probesAfterFirst, _media.Probed.Count());
+
+        Assert.Equal("Scanned Movies library: 1 file, 0 would change, 0 could not be processed", (await ScanActivityTitlesAsync())[^1]);
     }
 
     [Fact]

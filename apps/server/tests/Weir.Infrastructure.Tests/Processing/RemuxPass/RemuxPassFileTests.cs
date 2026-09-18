@@ -240,7 +240,21 @@ public sealed class SidecarMigrationTests : IDisposable
         Assert.Empty(result.Migrated);
         Assert.True(result.BlocksSourceDeletion);
         Assert.Contains("did not remove the source folder", result.BlockingReason, StringComparison.Ordinal);
+        Assert.Contains("could not copy 1 file that was set to travel with the video: ", result.BlockingReason, StringComparison.Ordinal);
         Assert.Contains("nothing is lost", result.BlockingReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Several_uncopied_sidecars_read_in_the_plural()
+    {
+        var result = new SidecarMigrationResult();
+        result.Failures.Add("a.srt: in use");
+        result.Failures.Add("b.srt: in use");
+
+        Assert.Equal(
+            "Weir did not remove the source folder because it could not copy 2 files that were set to travel with the video: "
+            + "a.srt: in use; b.srt: in use. The source is left in place so nothing is lost.",
+            result.BlockingReason);
     }
 
     [Fact]

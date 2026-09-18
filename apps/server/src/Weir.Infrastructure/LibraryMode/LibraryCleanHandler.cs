@@ -7,6 +7,7 @@ using Weir.Core.Media;
 using Weir.Core.MediaManagers;
 using Weir.Core.Processing;
 using Weir.Core.Rules;
+using Weir.Core.Text;
 using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Media;
@@ -232,7 +233,7 @@ public sealed class LibraryCleanHandler : IJobHandler
         // "cleaned" entry below never depends on how that call went.
         try
         {
-            var reason = $"removed {plan.RemovedAudioCount} audio and {plan.RemovedSubtitleCount} subtitle track(s)";
+            var reason = RemovedTracks(plan.RemovedAudioCount, plan.RemovedSubtitleCount);
             await _notifier.NotifyAsync(new LibraryFileChange(library.MediaType, path, Reason: reason), cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // The notify step is best-effort and must never fail a committed clean.
@@ -243,7 +244,7 @@ public sealed class LibraryCleanHandler : IJobHandler
         }
 
         var warnings = result.Warnings;
-        var detail = $"Cleaned {Path.GetFileName(path)}: removed {plan.RemovedAudioCount} audio and {plan.RemovedSubtitleCount} subtitle track(s)." +
+        var detail = $"Cleaned {Path.GetFileName(path)}: {RemovedTracks(plan.RemovedAudioCount, plan.RemovedSubtitleCount)}." +
                      (warnings.Count > 0 ? " " + string.Join(" ", warnings) : string.Empty);
         await RecordAsync(library.Id, path, null, LibraryActivityEventTypes.FileCleaned, detail, "success").ConfigureAwait(false);
     }
@@ -303,6 +304,23 @@ public sealed class LibraryCleanHandler : IJobHandler
         {
             _logger.LogWarning(exception, "Library mode could not record its activity entry; the outcome remains only in the job row.");
         }
+    }
+
+    /// <summary>"removed 1 audio track and 2 subtitle tracks", naming only the kinds that lost a track.</summary>
+    internal static string RemovedTracks(int audio, int subtitles)
+    {
+        var parts = new List<string>(2);
+        if (audio > 0)
+        {
+            parts.Add(Plural.Of(audio, "audio track"));
+        }
+
+        if (subtitles > 0)
+        {
+            parts.Add(Plural.Of(subtitles, "subtitle track"));
+        }
+
+        return parts.Count == 0 ? "removed no audio or subtitle tracks" : "removed " + string.Join(" and ", parts);
     }
 
     private static void TryDelete(string path)

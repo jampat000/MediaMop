@@ -201,5 +201,9 @@ public sealed class ProcessingManualTrackApiTests
         var activityCount = await TestDatabase.ScalarAsync(
             server, "SELECT COUNT(*) FROM activity_events WHERE event_type = 'processing.file_manual_plan_queued'");
         Assert.Equal(1, activityCount);
+        var countedInEnglish = await TestDatabase.ScalarAsync(
+            server,
+            "SELECT COUNT(*) FROM activity_events WHERE event_type = 'processing.file_manual_plan_queued' AND instr(detail, ' chose 2 tracks to keep for ') > 0");
+        Assert.Equal(1, countedInEnglish);
     }
 }

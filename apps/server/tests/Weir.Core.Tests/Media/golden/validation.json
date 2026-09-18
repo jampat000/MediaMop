@@ -191,7 +191,7 @@
       "expected": {
         "error": {
           "type": "RuntimeError",
-          "message": "validation failed: expected 2 audio stream(s), got 3"
+          "message": "validation failed: expected 2 audio streams, got 3"
         }
       }
     },

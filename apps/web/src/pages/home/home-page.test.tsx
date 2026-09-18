@@ -371,7 +371,7 @@ it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", 
     {
       failedJobs: 2,
       workerDetail:
-        "Weir is not processing new work because 1 worker slot(s) stopped responding.",
+        "Weir is not processing new work because 1 worker slot stopped responding.",
     },
   );
 
@@ -379,7 +379,7 @@ it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", 
     await screen.findByText(/Background work has stopped/),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/1 worker slot\(s\) stopped responding/),
+    screen.getByText(/1 worker slot stopped responding/),
   ).toBeInTheDocument();
   expect(await screen.findByText(/2 jobs failed/)).toBeInTheDocument();
   expect(

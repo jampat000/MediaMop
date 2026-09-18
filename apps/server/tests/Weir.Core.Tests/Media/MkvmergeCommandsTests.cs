@@ -132,7 +132,22 @@ public sealed class MkvmergeCommandsTests
         var error = Assert.Throws<MkvmergeTrackMappingException>(
             () => MkvmergeCommands.MapStreamIndicesToTrackIds(streams, identification));
 
-        Assert.Contains("cannot be addressed to mkvmerge safely", error.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            "mkvmerge reported 1 track but ffprobe reported 2 matching streams, so a plan built from ffprobe indices "
+            + "cannot be addressed to mkvmerge safely.",
+            error.Message);
+    }
+
+    [Fact]
+    public void A_count_mismatch_the_other_way_reads_in_english_too()
+    {
+        var streams = Streams("""[{"index":0,"codec_type":"video"}]""");
+        var identification = Identify("""{"tracks":[{"id":0,"type":"video"},{"id":1,"type":"audio"}]}""");
+
+        var error = Assert.Throws<MkvmergeTrackMappingException>(
+            () => MkvmergeCommands.MapStreamIndicesToTrackIds(streams, identification));
+
+        Assert.StartsWith("mkvmerge reported 2 tracks but ffprobe reported 1 matching stream, so", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

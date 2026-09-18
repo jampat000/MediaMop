@@ -1,5 +1,6 @@
 using Weir.Core.Json;
 using Weir.Core.Processing;
+using Weir.Core.Text;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Sqlite;
 
@@ -77,13 +78,15 @@ public sealed class RequeueStore(ProcessingJobStore jobStore)
             skipped += result.Skipped;
         }
 
-        string detail = (requeued, skipped) switch
-        {
-            (> 0, 0) => $"Queued {requeued} file(s) again. They start as capacity frees up.",
-            (> 0, _) => $"Queued {requeued} file(s) again. {skipped} could not be queued because their library is gone.",
-            (0, > 0) => $"Nothing was queued: {skipped} file(s) belong to a library that no longer exists.",
-            _ => "Nothing matched, so nothing was queued.",
-        };
-        return new RequeueResult(requeued, skipped, detail);
+        return new RequeueResult(requeued, skipped, BulkDetail(requeued, skipped));
     }
+
+    /// <summary>The sentence a bulk requeue reports, counted in English.</summary>
+    internal static string BulkDetail(int requeued, int skipped) => (requeued, skipped) switch
+    {
+        (> 0, 0) => $"Queued {Plural.Of(requeued, "file")} again. {(requeued == 1 ? "It starts" : "They start")} as capacity frees up.",
+        (> 0, _) => $"Queued {Plural.Of(requeued, "file")} again. {skipped} could not be queued because {(skipped == 1 ? "its" : "their")} library is gone.",
+        (0, > 0) => $"Nothing was queued: {Plural.Of(skipped, "file")} {Plural.Noun(skipped, "belongs", "belong")} to a library that no longer exists.",
+        _ => "Nothing matched, so nothing was queued.",
+    };
 }

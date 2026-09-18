@@ -85,7 +85,7 @@ public sealed class WatcherStateAndPendingChangesTests
         var (ok, detail) = store.Summary();
 
         Assert.True(ok);
-        Assert.Contains("Watching 2 folder(s)", detail, StringComparison.Ordinal);
+        Assert.Contains("Watching 2 folders for changes", detail, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class WatcherStateAndPendingChangesTests
         Assert.True(ok);
         // Nothing is watching and nothing is degraded, so this reads as the "watching 0" sentence, not an
         // alarm about the switched-off library.
-        Assert.Contains("Watching 0 folder(s)", detail, StringComparison.Ordinal);
+        Assert.Contains("Watching 0 folders for changes", detail, StringComparison.Ordinal);
     }
 
     [Fact]

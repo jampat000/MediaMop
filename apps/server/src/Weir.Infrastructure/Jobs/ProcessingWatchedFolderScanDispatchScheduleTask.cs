@@ -128,10 +128,16 @@ public sealed class ProcessingWatchedFolderScanDispatchScheduleTask : IPeriodicT
             }
 
             var missed = PeriodicSchedule.MissedDueRunCount(now.ToUnixTimeMilliseconds() / 1000.0, due.ToUnixTimeMilliseconds() / 1000.0, interval.TotalSeconds);
-            if (missed > 0)
+            if (missed == 1)
             {
                 _logger.LogWarning(
-                    "Watched-folder scheduler missed {Missed} run(s) for library {Library}; enqueueing one catch-up scan",
+                    "Watched-folder scheduler missed {Missed} run for library {Library}; enqueueing one catch-up scan",
+                    missed, library.Name);
+            }
+            else if (missed > 1)
+            {
+                _logger.LogWarning(
+                    "Watched-folder scheduler missed {Missed} runs for library {Library}; enqueueing one catch-up scan",
                     missed, library.Name);
             }
 

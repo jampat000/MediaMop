@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using Weir.Core.Json;
+using Weir.Core.Text;
 
 namespace Weir.Core.Validation;
 
@@ -100,7 +101,7 @@ public static class PydanticRules
         if (minLength is { } min && length < min)
         {
             issues.Add(new ValidationIssue(
-                "string_too_short", loc, $"String should have at least {min} {Plural(min, "character")}", input,
+                "string_too_short", loc, $"String should have at least {min} {Plural.Noun(min, "character")}", input,
                 new PyDict().Set("min_length", min)));
             return false;
         }
@@ -108,7 +109,7 @@ public static class PydanticRules
         if (maxLength is { } max && length > max)
         {
             issues.Add(new ValidationIssue(
-                "string_too_long", loc, $"String should have at most {max} {Plural(max, "character")}", input,
+                "string_too_long", loc, $"String should have at most {max} {Plural.Noun(max, "character")}", input,
                 new PyDict().Set("max_length", max)));
             return false;
         }
@@ -442,8 +443,6 @@ public static class PydanticRules
 
     private static ValidationIssue BoolParsing(IReadOnlyList<object> loc, PyJson input) =>
         new("bool_parsing", loc, "Input should be a valid boolean, unable to interpret input", input);
-
-    private static string Plural(int count, string noun) => count == 1 ? noun : noun + "s";
 
     private static int CodePointLength(string value)
     {

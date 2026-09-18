@@ -1,5 +1,6 @@
 using System.Globalization;
 using Weir.Core.Json;
+using Weir.Core.Text;
 
 namespace Weir.Core.Processing;
 
@@ -127,8 +128,6 @@ public static class FileStory
         return $"{hours.ToString("F1", CultureInfo.InvariantCulture)} hours";
     }
 
-    private static string Plural(long count, string word) => $"{count} {word}{(count == 1 ? string.Empty : "s")}";
-
     private static string? TrackLine(PyJson? value)
     {
         var line = Text(value);
@@ -174,7 +173,7 @@ public static class FileStory
         }
 
         var sentence = counts is not null
-            ? $"It found {Plural(video, "video track")}, {Plural(audio, "audio track")} and {Plural(subs, "subtitle track")}."
+            ? $"It found {Plural.Of(video, "video track")}, {Plural.Of(audio, "audio track")} and {Plural.Of(subs, "subtitle track")}."
             : "It looked inside the file.";
         if (audioLine is not null)
         {
@@ -214,22 +213,22 @@ public static class FileStory
         var changes = new List<string>();
         if (removedAudio.Count > 0)
         {
-            changes.Add($"remove {Plural(removedAudio.Count, "audio track")}");
+            changes.Add($"remove {Plural.Of(removedAudio.Count, "audio track")}");
         }
 
         if (removedSubs.Count > 0)
         {
-            changes.Add($"remove {Plural(removedSubs.Count, "subtitle track")}");
+            changes.Add($"remove {Plural.Of(removedSubs.Count, "subtitle track")}");
         }
 
         if (removedImages.Count > 0)
         {
-            changes.Add($"remove {Plural(removedImages.Count, "embedded image")}");
+            changes.Add($"remove {Plural.Of(removedImages.Count, "embedded image")}");
         }
 
         if (removedAttachments.Count > 0)
         {
-            changes.Add($"remove {Plural(removedAttachments.Count, "attachment")}");
+            changes.Add($"remove {Plural.Of(removedAttachments.Count, "attachment")}");
         }
 
         if (detail.TryGetValue("metadata_removed", out var metadataRemoved) && metadataRemoved.IsTruthy)

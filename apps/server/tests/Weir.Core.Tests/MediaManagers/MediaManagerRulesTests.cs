@@ -190,7 +190,7 @@ public sealed class MediaManagerRulesTests
     {
         var body = CompletionReports.BuildCompletionBody(Origin, Dict("""{"ok":true,"outcome":"live_output_written","output_file":"D:\\Refined\\Blade.Runner.2049\\film.mkv","removed_audio":["fre","deu"],"removed_subtitles":["spa"]}"""));
         Assert.Equal(
-            """{"handoffId":"handoff-1","status":"completed","processorName":"Weir","releaseName":"Blade.Runner.2049","outputPath":"D:\\Refined\\Blade.Runner.2049\\film.mkv","message":"Removed 2 audio track(s) and 1 subtitle track(s)."}""",
+            """{"handoffId":"handoff-1","status":"completed","processorName":"Weir","releaseName":"Blade.Runner.2049","outputPath":"D:\\Refined\\Blade.Runner.2049\\film.mkv","message":"Removed 2 audio tracks and 1 subtitle track."}""",
             PyJsonWriter.Dumps(body, PyJsonFormat.Compact));
     }
 

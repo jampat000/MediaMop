@@ -1,4 +1,5 @@
 using Weir.Core.Json;
+using Weir.Core.Text;
 
 namespace Weir.Core.MediaManagers;
 
@@ -145,12 +146,12 @@ public static class CompletionReports
         var parts = new List<string>();
         if (result.Get("removed_audio") is PyList { Items.Count: > 0 } audio)
         {
-            parts.Add($"{audio.Items.Count} audio track(s)");
+            parts.Add(Plural.Of(audio.Items.Count, "audio track"));
         }
 
         if (result.Get("removed_subtitles") is PyList { Items.Count: > 0 } subtitles)
         {
-            parts.Add($"{subtitles.Items.Count} subtitle track(s)");
+            parts.Add(Plural.Of(subtitles.Items.Count, "subtitle track"));
         }
 
         return parts.Count == 0 ? "Remux finished." : "Removed " + string.Join(" and ", parts) + ".";
