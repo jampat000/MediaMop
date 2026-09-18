@@ -42,9 +42,12 @@ APP_ICON_SMALL = BRAND / "weir-app-icon-small.svg"
 MARK_DARK = BRAND / "weir-mark.svg"
 MARK_LIGHT = BRAND / "weir-mark-light.svg"
 
-# Below this size, .ico frames render from the two-stream fallback tile; at and above it, from
-# the three-stream primary tile. See the module docstring and packaging/brand/README.md.
-SMALL_ICON_MAX = 32
+# At or below this size, .ico frames render from the two-stream fallback tile; above it, from
+# the three-stream primary tile. Only 16px falls back: design-options/logos-round4/gate-16px.png
+# shows three bands still separating cleanly at 24 and 32 in all three renderings, including the
+# single-colour tray case, and fusing into a grey smear only at 16, where a band is sub-pixel.
+# See the module docstring and packaging/brand/README.md.
+SMALL_ICON_MAX = 16
 
 
 def render_png(page, svg_path: Path, size: int) -> bytes:

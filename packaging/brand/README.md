@@ -20,9 +20,9 @@ There are **two drawings of this mark in the repo, and that is deliberate, not d
   survive being rasterised down to 16px: a 1.85-unit band on a 24-unit grid is 1.23 device pixels
   there, sub-pixel by construction, and the arcs fuse into a smear (see
   `design-options/logos-round4/gate-16px.png` and `mark.py`'s `SHIPPED_STREAMS` comment). This
-  drawing exists only to be the 16px (and, see below, 32px) frames inside the `.ico` files: the
-  favicon `.ico`, the docs `.ico`, and the Windows tray icon. It is not used anywhere a person
-  looks at an SVG or a large raster directly.
+  drawing exists only to be the 16px frame inside the `.ico` files: the favicon `.ico`, the docs
+  `.ico`, and the Windows tray icon. It is not used anywhere a person looks at an SVG or a large
+  raster directly.
 
 This is the standard type-design move of shipping separate "text" and "display" masters of one
 typeface: the identity is one mark, traced once, but which optical size represents it changes
@@ -31,21 +31,21 @@ the two — `mark.py`'s `paths(3)` is `paths(2)` plus one more band on the same 
 "fixing" the two to match by deleting one of them would be removing a deliberate accommodation,
 not tidying up an inconsistency.
 
-**The 32px call.** A `.ico`'s 32px frame is large enough that three streams are countable —
-unlike at 16 — but `design-options/logos-round4/gate-16px.png`'s real rasters show the crest
-(where the two outer arcs run closest together) still soften under anti-aliasing at that size,
-most visibly in the single-colour mono rendering that is exactly the tray icon's own case. Two
-streams stay crisp at 32px with a clear gap at the crest. So 32px keeps the two-stream fallback
-as well; only 48px and above switch to the three-stream primary. See
-`scripts/generate-brand-icons.py`'s `SMALL_ICON_MAX` for where that cutoff is enforced, and
+**Where the cutoff sits.** Only the 16px frame falls back. `design-options/logos-round4/gate-16px.png`
+renders both drawings at 16 and 32 in dark, light and single colour: at 32 a band is 1.33 device
+pixels, the three arcs separate cleanly and the crest holds in every rendering including the
+single-colour one the tray icon uses; at 16 a band is sub-pixel and they fuse. An earlier revision
+of this put the cutoff at 32 out of caution, which cost the real mark two of the three sizes a
+person actually sees in a tab strip or a system tray for no legibility gain. See
+`scripts/generate-brand-icons.py`'s `SMALL_ICON_MAX` for where the cutoff is enforced, and
 `design-options/logos-round4/wiring-comparison.png` for the actual rendered frames at each size.
 
 | File | Streams | Use |
 | --- | --- | --- |
 | `weir-mark.svg` | three (primary) | Mark for dark backgrounds: accent `#3ed7c8`. |
 | `weir-mark-light.svg` | three (primary) | Mark for light backgrounds: accent `#0d6f68`. |
-| `weir-app-icon.svg` | three (primary) | The mark on the `#0b1418` rounded tile. Source of every favicon/Windows icon frame **48px and above**. |
-| `weir-app-icon-small.svg` | two (fallback) | The same tile with the small-size fallback geometry. Source of the favicon/Windows icon frames at **16 and 32px only**. |
+| `weir-app-icon.svg` | three (primary) | The mark on the `#0b1418` rounded tile. Source of every favicon/Windows icon frame **24px and above**. |
+| `weir-app-icon-small.svg` | two (fallback) | The same tile with the small-size fallback geometry. Source of the favicon/Windows icon frame at **16px only**. |
 
 Those accents are the live Theme A "Tailrace" tokens from `apps/web/src/styles/weir-tokens.css`.
 The web app draws the same geometry inline (`apps/web/src/components/brand/weir-logo.tsx`) so it
