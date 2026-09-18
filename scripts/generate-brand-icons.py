@@ -10,6 +10,21 @@ Outputs (all committed):
   apps/web/public/favicon.svg, favicon.ico, apple-touch-icon.png
   packaging/windows/assets/weir-tray-icon.ico      (tray and installer icon)
   docs-site/static/img/favicon.ico, logo.svg, logo-dark.svg
+
+## Two optical sizes in one .ico (James's three-stream request, reopening #582)
+
+`weir-app-icon.svg` carries the three-stream primary mark and is the source for every frame
+48px and above, same as every other asset here. But a multi-resolution .ico is exactly the one
+place two different drawings of "the same icon" have to live side by side in a single file, and
+`design-options/logos-round4/build/mark.py`'s SHIPPED_STREAMS/SMALL_STREAMS note (plus the 32px
+check recorded in packaging/brand/README.md) found that three streams still don't earn their
+keep at 16 or 32px: the bands are sub-pixel at 16, and at 32 they are wide enough to count but
+the crest still softens under anti-aliasing, most visibly in the single-colour tray rendering
+that is exactly what the .ico's 32px frame is used for. So the 16 and 32px frames render from
+`weir-app-icon-small.svg` instead — the same tile with the two-stream fallback geometry — and
+only 48px and above use the three-stream `weir-app-icon.svg`. `favicon.svg` itself (the SVG
+favicon, not the .ico) is unaffected: browsers scale one vector for it, at whatever size they
+show it, so it is always the three-stream primary mark like every other SVG in this repo.
 """
 
 from __future__ import annotations
@@ -23,8 +38,13 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 BRAND = ROOT / "packaging" / "brand"
 APP_ICON = BRAND / "weir-app-icon.svg"
+APP_ICON_SMALL = BRAND / "weir-app-icon-small.svg"
 MARK_DARK = BRAND / "weir-mark.svg"
 MARK_LIGHT = BRAND / "weir-mark-light.svg"
+
+# Below this size, .ico frames render from the two-stream fallback tile; at and above it, from
+# the three-stream primary tile. See the module docstring and packaging/brand/README.md.
+SMALL_ICON_MAX = 32
 
 
 def render_png(page, svg_path: Path, size: int) -> bytes:
@@ -53,10 +73,16 @@ def main() -> None:
     docs_img = ROOT / "docs-site" / "static" / "img"
     tray_ico = ROOT / "packaging" / "windows" / "assets" / "weir-tray-icon.ico"
 
+    icon_sizes = (16, 24, 32, 48, 64, 128, 256)
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(device_scale_factor=1)
-        frames = {n: render_png(page, APP_ICON, n) for n in (16, 24, 32, 48, 64, 128, 256)}
+        frames = {
+            n: render_png(page, APP_ICON_SMALL if n <= SMALL_ICON_MAX else APP_ICON, n)
+            for n in icon_sizes
+        }
+        # The touch icon (180px, iOS home screen) and favicon.svg are both well above the small
+        # cutoff and always the three-stream primary mark, rendered from the full-size tile.
         touch = render_png(page, APP_ICON, 180)
         browser.close()
 

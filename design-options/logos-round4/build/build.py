@@ -143,8 +143,8 @@ TILE_RADIUS = 24 * 7 / 32
 
 
 def emit_brand() -> None:
-    def mark_paths(colour: str) -> str:
-        return "".join(f'\n  <path d="{d}" fill="{colour}"/>' for d in mark.paths())
+    def mark_paths(colour: str, streams: int = mark.SHIPPED_STREAMS) -> str:
+        return "".join(f'\n  <path d="{d}" fill="{colour}"/>' for d in mark.paths(streams))
 
     files = {
         "weir-mark.svg": (
@@ -160,10 +160,28 @@ def emit_brand() -> None:
         "weir-app-icon.svg": (
             _HEAD + _NOTE
             + "\n  <!-- App icon: the mark on the dark surface, so it reads on any tab bar,"
-            + "\n       taskbar or tray. Source of every favicon and Windows icon. -->"
+            + "\n       taskbar or tray. Source of every favicon and Windows icon 48px and"
+            + "\n       above (see weir-app-icon-small.svg for 16/32px). -->"
             + f'\n  <rect width="24" height="24" rx="{TILE_RADIUS:.2f}"'
             + f' fill="{mark.DARK["surface"]}"/>'
             + mark_paths(mark.DARK["accent"]) + "\n</svg>"
+        ),
+        # The optical-size fallback (#582, reopened): the .ico formats are the one place two
+        # optical sizes of the same mark have to live side by side in a single file, so the small
+        # size needs its own tile source for scripts/generate-brand-icons.py to render at 16 and
+        # 32px, the same way weir-app-icon.svg is the source for 48px and above. Not used anywhere
+        # else — every SVG a person actually looks at (favicon.svg, the in-app logo, the docs
+        # logo, packaging/brand/weir-mark*.svg) is the three-stream primary mark. See mark.py's
+        # SHIPPED_STREAMS / SMALL_STREAMS comment and packaging/brand/README.md for the reasoning
+        # and the 32px call.
+        "weir-app-icon-small.svg": (
+            _HEAD + _NOTE
+            + "\n  <!-- Small-size fallback tile: two streams, used only for the 16 and 32px"
+            + "\n       frames of the .ico files. Everywhere else uses weir-app-icon.svg's three"
+            + "\n       streams. See mark.py's SHIPPED_STREAMS/SMALL_STREAMS note. -->"
+            + f'\n  <rect width="24" height="24" rx="{TILE_RADIUS:.2f}"'
+            + f' fill="{mark.DARK["surface"]}"/>'
+            + mark_paths(mark.DARK["accent"], mark.SMALL_STREAMS) + "\n</svg>"
         ),
     }
     for name, text in files.items():
