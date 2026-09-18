@@ -239,7 +239,8 @@ export function LoginPage() {
                 {loginErrorMessage}
               </p>
             ) : null}
-            <label className="flex items-start gap-3 rounded-md border border-[var(--mm-line)] bg-[var(--mm-surface-2)] px-3 py-3 text-sm text-[var(--mm-text2)]">
+            {/* A checkbox row, not a filled box inside the sign-in card. */}
+            <label className="flex items-start gap-3 py-1 text-sm text-[var(--mm-text2)]">
               <input
                 type="checkbox"
                 className="mt-0.5 h-4 w-4"

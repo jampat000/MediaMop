@@ -301,7 +301,7 @@ export function SettingsBackupTab({
           </SettingsQuietSection>
 
           {backupMsg ? (
-            <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
+            <p className="mm-status-text--healthy text-sm" role="status">
               {backupMsg}
             </p>
           ) : null}

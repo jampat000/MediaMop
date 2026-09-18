@@ -170,7 +170,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
             {isWindows && updateStateQ.data?.downloaded && (
               <div className="flex items-start justify-between gap-4 rounded-xl border border-emerald-500/40 bg-emerald-500/[0.08] px-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-emerald-300">
+                  <p className="mm-status-text--healthy text-sm font-semibold">
                     Update ready to install
                     {updateStateQ.data.pending_version
                       ? ` — v${updateStateQ.data.pending_version}`
@@ -190,7 +190,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     </p>
                   )}
                   {applyUpdate.isSuccess && (
-                    <p className="mt-1 text-xs text-emerald-400">
+                    <p className="mm-status-text--healthy mt-1 text-xs">
                       Restart signal sent — the tray will apply the update
                       shortly.
                     </p>
