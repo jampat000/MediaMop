@@ -234,10 +234,39 @@ anything.
 Under **Settings → Media managers** you can connect:
 
 - **Deluno** hands each file to Weir, waits for it to be cleaned, then imports it. This is the fully automatic setup.
-- **Sonarr and Radarr** let Weir check what they're still importing before it touches a file. They
-  also power **Download again** for titles that lost tracks after you changed your rules, and they
-  let you set up libraries from their root folders.
+- **Sonarr and Radarr** import the cleaned files from Weir's output folder. Weir also checks their
+  queue before it touches a file, and they power **Download again** for titles that lost tracks after
+  you changed your rules. See [Sonarr and Radarr](#sonarr-and-radarr) below.
 - **Anything else** can hand files to Weir by posting to `/api/v1/intake/webhook/native`. The [API reference](docs-site/docs/api/index.md) links the full specification.
+
+### Sonarr and Radarr
+
+Your download client finishes into Weir's watched folder, Weir writes the cleaned copy to its output
+folder, and Sonarr or Radarr import from there. You connect them with a **remote path mapping**: it
+tells Sonarr "when the download client says a file is in the downloads folder, look in Weir's output
+folder instead." Sonarr then only ever sees cleaned files.
+
+1. **In Weir**, open **Processing → Libraries** and edit the library.
+   - **Watched folder**: where your download client finishes files, e.g. `/media/downloads/complete/tv`
+   - **Output folder**: where Weir puts cleaned files, e.g. `/media/weir/tv`
+   - Using torrents? Turn **After cleaning, remove the original download** off, so the torrent keeps
+     seeding. Your download client or Sonarr removes it later, as they normally would.
+2. **Connect Sonarr** under **Settings → Media managers**, with its address and API key
+   (Sonarr: **Settings → General → API Key**).
+3. Back in the library, the **Media manager** section shows the exact mapping to add, with copy buttons.
+4. **In Sonarr**, go to **Settings → Download Clients → Remote Path Mappings** and press **+**:
+   - **Host**: exactly what's in your download client's **Host** field on that same screen, e.g. `qbittorrent`
+   - **Remote Path**: Weir's watched folder, e.g. `/media/downloads/complete/tv/`
+   - **Local Path**: Weir's output folder, e.g. `/media/weir/tv/`
+
+   The output folder has to exist before Sonarr will save the mapping.
+5. Keep **Completed Download Handling** switched on in Sonarr. This setup relies on it.
+6. Back in Weir, press **Check again** in the library's **Media manager** section. It reads Sonarr's
+   settings (it never changes them) and shows ✓, or tells you exactly what to fix.
+
+Radarr works the same way, with its own movies folders. After a download finishes, Sonarr shows
+"No files found are eligible for import" until Weir is done with it. That's normal: it checks again
+every minute and imports the cleaned file as soon as it appears.
 
 ## Updating
 
