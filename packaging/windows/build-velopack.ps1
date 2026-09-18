@@ -8,7 +8,8 @@ $ErrorActionPreference = "Stop"
 
 # Builds the Weir Windows package (Velopack): the web app, the .NET server
 # (apps/server/src/Weir.Host, self-contained single-file win-x64), the tray app (apps/tray/Weir.Tray)
-# and a checksum-verified ffmpeg, packed as packId Weir with Weir.exe (the tray) as the main exe.
+# and a checksum-verified ffmpeg and mkvmerge, packed as packId Weir with Weir.exe (the tray) as the
+# main exe.
 # Output: dist\windows\releases\{Weir-win-Setup.exe, Weir-win-Portable.zip, *.nupkg, RELEASES, ...}.
 #
 # Layout of the pack directory (dist\windows\pack), which is what gets installed:
@@ -19,6 +20,9 @@ $ErrorActionPreference = "Stop"
 #   server\web-dist\                  the built web app (the tray sets WEIR_WEB_DIST to it)
 #   server\bin\ffmpeg\{ffmpeg,ffprobe}.exe
 #                                     found by the server's MediaToolResolver as <app>\bin\ffmpeg
+#   server\bin\mkvtoolnix\mkvmerge.exe
+#                                     found by MediaToolResolver.ResolveMkvmerge as
+#                                     <app>\bin\mkvtoolnix (#548)
 #
 # scripts/smoke-windows-package.ps1 then proves the assembled server works end to end.
 
@@ -76,6 +80,24 @@ $ffmpegVendorDir = Join-Path $PSScriptRoot "vendor\\ffmpeg"
 $ffmpegArchiveName = "ffmpeg-master-latest-win64-lgpl.zip"
 $ffmpegArchiveUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/$ffmpegArchiveName"
 $ffmpegChecksumsUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/checksums.sha256"
+# #548: MKVToolNix, for the mkvmerge writer (Weir.Infrastructure.Media.MkvmergeRemuxWriter). Vendored
+# and cached exactly like ffmpeg above, with one deliberate difference: the version is *pinned* here
+# rather than tracked from a "latest" tag. BtbN republishes its `latest` release continuously and
+# publishes a checksums.sha256 next to it, so ffmpeg can be verified against whatever upstream says
+# today; MKVToolNix publishes immutable per-version directories instead, and the tool that writes the
+# user's Matroska output is not something that should change underneath a Weir release without
+# somebody choosing it. Bumping means editing both lines below together — the checksum is the one
+# upstream publishes at
+# https://mkvtoolnix.download/windows/releases/<version>/mkvtoolnix-64-bit-<version>.zip.sha256
+# (also listed in that directory's sha256sums.txt). v102.0 is the current stable, released
+# 2026-09-14. Note the #503 trial (docs/trials/503-mkvmerge-vs-ffmpeg.md) measured v100.0; Weir uses
+# only mkvmerge's long-stable CLI surface (`-o`, `--identification-format json`, per-track
+# selection — see Weir.Core.Media.MkvmergeCommands), so the pin is not tied to the trial's build.
+$mkvtoolnixVersion = "102.0"
+$mkvtoolnixArchiveSha256 = "c02e918900f6d945d9307b426237e456378b79a200589ac6928de39064409a44"
+$mkvtoolnixVendorDir = Join-Path $PSScriptRoot "vendor\\mkvtoolnix"
+$mkvtoolnixArchiveName = "mkvtoolnix-64-bit-$mkvtoolnixVersion.zip"
+$mkvtoolnixArchiveUrl = "https://mkvtoolnix.download/windows/releases/$mkvtoolnixVersion/$mkvtoolnixArchiveName"
 
 function Invoke-Native {
   param(
@@ -170,6 +192,62 @@ function Ensure-WindowsFfmpegRuntime {
   }
 }
 
+function Ensure-WindowsMkvtoolnixRuntime {
+  # #548: the same download / verify / cache shape as Ensure-WindowsFfmpegRuntime, against a pinned
+  # version and checksum instead of an upstream checksums file. Only mkvmerge.exe is vendored: the
+  # portable archive is ~85 MB because it carries the Qt GUI, mkvinfo, mkvextract, mkvpropedit, the
+  # docs and 40-odd locales, none of which Weir ever runs. MKVToolNix's Windows CLI binaries are
+  # statically linked — no sibling DLLs, no data directory — verified by copying mkvmerge.exe alone
+  # out of an install and running `--version` and an `--identification-format json` identify from the
+  # copy, both of which succeeded. That keeps the package's growth to the ~23 MB of mkvmerge itself
+  # rather than the ~120 MB the whole archive would expand to.
+  $mkvmergeExe = Join-Path $mkvtoolnixVendorDir "mkvmerge.exe"
+  $stampPath = Join-Path $mkvtoolnixVendorDir ".mkvtoolnix-archive.sha256"
+
+  if ((Test-Path -LiteralPath $mkvmergeExe) -and (Test-Path -LiteralPath $stampPath)) {
+    $vendoredSha256 = (Get-Content -LiteralPath $stampPath -Raw).Trim().ToLowerInvariant()
+    if ($vendoredSha256 -eq $mkvtoolnixArchiveSha256) {
+      Write-Host "Vendored MKVToolNix already matches the pin ($mkvtoolnixVersion, $mkvtoolnixArchiveSha256); skipping download."
+      return
+    }
+    Write-Host "Vendored MKVToolNix is stale (have $vendoredSha256, want $mkvtoolnixArchiveSha256); refreshing."
+  }
+
+  $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("weir-mkvtoolnix-" + [System.Guid]::NewGuid().ToString("N"))
+  $archivePath = Join-Path $downloadRoot $mkvtoolnixArchiveName
+  $extractRoot = Join-Path $downloadRoot "extract"
+  try {
+    New-Item -ItemType Directory -Path $downloadRoot | Out-Null
+    New-Item -ItemType Directory -Path $extractRoot | Out-Null
+    Write-Host "Downloading MKVToolNix $mkvtoolnixVersion..."
+    Invoke-WebRequest -Uri $mkvtoolnixArchiveUrl -OutFile $archivePath -UseBasicParsing
+    $actualSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualSha256 -ne $mkvtoolnixArchiveSha256) {
+      throw "Downloaded MKVToolNix archive hash mismatch. Expected $mkvtoolnixArchiveSha256 but got $actualSha256."
+    }
+    Expand-Archive -LiteralPath $archivePath -DestinationPath $extractRoot -Force
+    # The archive nests everything under a "mkvtoolnix\" folder, but searching for the directory that
+    # actually holds mkvmerge.exe (rather than hard-coding that name) means a future layout change
+    # fails loudly on the throw below instead of silently shipping a package without the tool.
+    $binDir = Get-ChildItem -Path $extractRoot -Recurse -Directory |
+      Where-Object { Test-Path (Join-Path $_.FullName "mkvmerge.exe") } |
+      Select-Object -First 1
+    if (-not $binDir) {
+      throw "Downloaded MKVToolNix archive did not contain mkvmerge.exe."
+    }
+    if (Test-Path $mkvtoolnixVendorDir) {
+      Remove-Item -LiteralPath $mkvtoolnixVendorDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $mkvtoolnixVendorDir | Out-Null
+    Copy-Item -LiteralPath (Join-Path $binDir.FullName "mkvmerge.exe") -Destination $mkvmergeExe -Force
+    Set-Content -LiteralPath $stampPath -Value $mkvtoolnixArchiveSha256 -Encoding ascii
+  } finally {
+    if (Test-Path $downloadRoot) {
+      Remove-Item -LiteralPath $downloadRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
+
 # ── Resolve version from apps/server/Directory.Build.props (WeirVersion) ──
 # The one product version; the server's own assembly version is stamped from the same line.
 $propsPath = Join-Path $repoRoot "apps\\server\\Directory.Build.props"
@@ -257,6 +335,10 @@ New-Item -ItemType Directory -Path $distRoot -Force | Out-Null
 # ── FFmpeg ──
 Start-BuildPhase "FFmpeg download + vendor"
 Ensure-WindowsFfmpegRuntime
+
+# ── MKVToolNix (#548) ──
+Start-BuildPhase "MKVToolNix download + vendor"
+Ensure-WindowsMkvtoolnixRuntime
 
 # ── .NET server publish (self-contained single-file, via the checked-in win-x64 publish
 #    profile — apps/server/src/Weir.Host/Properties/PublishProfiles/win-x64.pubxml — the same
@@ -397,6 +479,15 @@ $serverFfmpegDir = Join-Path $serverDestDir "bin\\ffmpeg"
 New-Item -ItemType Directory -Path $serverFfmpegDir -Force | Out-Null
 Copy-Item -Path (Join-Path $ffmpegVendorDir "ffmpeg.exe") -Destination $serverFfmpegDir -Force
 Copy-Item -Path (Join-Path $ffmpegVendorDir "ffprobe.exe") -Destination $serverFfmpegDir -Force
+
+# #548: matches the <packaged-app-dir>\bin\mkvtoolnix candidate in
+# MediaToolLocations.MkvtoolnixCandidateDirectories (MkvtoolnixBundleDirectory). Until this landed,
+# MediaToolResolver.ResolveMkvmerge always returned null in a packaged install, so the per-library
+# writer setting's "best" default (RemuxWriterChoice) silently fell through to ffmpeg for every
+# write and the mkvmerge writer shipped inert.
+$serverMkvtoolnixDir = Join-Path $serverDestDir "bin\\mkvtoolnix"
+New-Item -ItemType Directory -Path $serverMkvtoolnixDir -Force | Out-Null
+Copy-Item -Path (Join-Path $mkvtoolnixVendorDir "mkvmerge.exe") -Destination $serverMkvtoolnixDir -Force
 
 # ── vpk pack (packId Weir, mainExe Weir.exe: the install identity every release keeps) ──
 Start-BuildPhase "vpk pack"

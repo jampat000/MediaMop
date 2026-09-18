@@ -1818,6 +1818,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/system/media-tools": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get System Media Tools
+     * @description Which external media tools this install has, and what they report as their version.
+     */
+    get: operations["get_system_media_tools_api_v1_system_media_tools_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/system/readiness": {
     parameters: {
       query?: never;
@@ -3145,6 +3165,22 @@ export interface components {
       webhook_secret: string;
       /** Webhook Url Path */
       webhook_url_path: string;
+    };
+    /**
+     * MediaToolsOut
+     * @description What each external media tool on this machine reports, or 'not installed' when it is absent.
+     */
+    MediaToolsOut: {
+      /**
+       * Ffmpeg
+       * @description ffmpeg's version banner line. 'not installed' means Weir could not find ffmpeg at all, which is why nothing can be processed; 'unknown' means it is on disk but would not say what it is.
+       */
+      ffmpeg: string;
+      /**
+       * Mkvmerge
+       * @description mkvmerge's version banner line. mkvmerge is optional, so 'not installed' is a normal answer: a library's writer setting falls back to ffmpeg wherever it is absent.
+       */
+      mkvmerge: string;
     };
     /** MetadataProviderIn */
     MetadataProviderIn: {
@@ -9561,6 +9597,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_system_media_tools_api_v1_system_media_tools_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaToolsOut"];
         };
       };
     };

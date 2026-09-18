@@ -183,6 +183,18 @@ try {
   }
   Write-Host "Packaged server found its bundled ffmpeg."
 
+  # #548: and the mkvmerge bundled next to it (<app>\bin\mkvtoolnix). This is the assertion that keeps
+  # the mkvmerge writer from silently shipping inert again: the writer setting's default is "best",
+  # and "best" degrades to ffmpeg without complaint wherever mkvmerge cannot be found, so nothing else
+  # in the smoke test would notice a package that stopped carrying it. MKVToolNix is not installed on
+  # the CI runner and PATH was stripped above, so the only way this can answer with a version is the
+  # copy the package itself shipped.
+  $mediaTools = Invoke-RestMethod -Uri "$baseUrl/api/v1/system/media-tools" -WebSession $webSession -Headers $readHeaders -TimeoutSec 60
+  if ([string]$mediaTools.mkvmerge -notmatch "^mkvmerge ") {
+    throw "The packaged server did not find its bundled mkvmerge: $($mediaTools.mkvmerge)"
+  }
+  Write-Host "Packaged server found its bundled mkvmerge: $($mediaTools.mkvmerge)"
+
   # Configure the seeded Movies library directly (the path-settings route was retired in #460).
   $libraries = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/libraries" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
   $moviesLibrary = $libraries | Where-Object { $_.media_type -eq "movie" } | Select-Object -First 1

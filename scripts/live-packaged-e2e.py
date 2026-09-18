@@ -409,6 +409,7 @@ class LiveAudit:
             "/api/v1/suite/update-state",
             "/api/v1/suite/update-status",
             "/api/v1/system/directories",
+            "/api/v1/system/media-tools",
             "/api/v1/system/readiness",
             "/api/v1/system/reconciliation",
             "/api/v1/system/suite-configuration-backups",

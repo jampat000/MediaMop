@@ -364,6 +364,31 @@ public sealed class SuiteApiTests
         Assert.Equal(HttpStatusCode.NotFound, (await client.SendAsync(HttpMethod.Head, "/api/v1/nothing-here")).StatusCode);
     }
 
+    /// <summary>
+    /// #548. The versions themselves depend on what is installed on the machine running the tests (CI runners
+    /// have ffmpeg; mkvmerge is only there on the packaging job), so this asserts the contract the web app and
+    /// an operator rely on rather than any particular string: operator-only, always 200, and both tools always
+    /// present as a non-empty string — "not installed" for an absent tool, never a missing key and never a 500.
+    /// <c>Weir.Infrastructure.Tests.Media.MediaToolVersionReportTests</c> pins the actual wording against a
+    /// scripted runner, where it can be deterministic.
+    /// </summary>
+    [Fact]
+    public async Task Media_tools_are_operator_only_and_always_report_both_tools()
+    {
+        var (server, client) = await SignedInAdminAsync();
+        await using var _ = server;
+        await TestDatabase.SeedViewerAsync(server);
+        var viewer = new ApiTestClient(server);
+        await viewer.SignInAsync("bob", ViewerPassword);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync("/api/v1/system/media-tools")).StatusCode);
+
+        using var response = await client.GetAsync("/api/v1/system/media-tools");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = (await Json(response)).AsObject();
+        Assert.False(string.IsNullOrWhiteSpace(body["ffmpeg"]!.GetValue<string>()));
+        Assert.False(string.IsNullOrWhiteSpace(body["mkvmerge"]!.GetValue<string>()));
+    }
+
     private sealed class FakeReleaseCatalog : IReleaseCatalogClient
     {
         public bool NotFound { get; set; }

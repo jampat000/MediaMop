@@ -2698,6 +2698,27 @@
         "title": "MediaManagerWebhookSecretOut",
         "type": "object"
       },
+      "MediaToolsOut": {
+        "description": "What each external media tool on this machine reports, or 'not installed' when it is absent.",
+        "properties": {
+          "ffmpeg": {
+            "description": "ffmpeg's version banner line. 'not installed' means Weir could not find ffmpeg at all, which is why nothing can be processed; 'unknown' means it is on disk but would not say what it is.",
+            "title": "Ffmpeg",
+            "type": "string"
+          },
+          "mkvmerge": {
+            "description": "mkvmerge's version banner line. mkvmerge is optional, so 'not installed' is a normal answer: a library's writer setting falls back to ffmpeg wherever it is absent.",
+            "title": "Mkvmerge",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ffmpeg",
+          "mkvmerge"
+        ],
+        "title": "MediaToolsOut",
+        "type": "object"
+      },
       "MetadataProviderIn": {
         "additionalProperties": false,
         "properties": {
@@ -13833,6 +13854,28 @@
           }
         },
         "summary": "Get System Directories",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/v1/system/media-tools": {
+      "get": {
+        "description": "Which external media tools this install has, and what they report as their version.",
+        "operationId": "get_system_media_tools_api_v1_system_media_tools_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaToolsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get System Media Tools",
         "tags": [
           "system"
         ]

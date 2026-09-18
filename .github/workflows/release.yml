@@ -93,7 +93,20 @@ jobs:
           restore-keys: |
             ffmpeg-vendor-${{ runner.os }}-
 
-      # Builds the web app, publishes the .NET server (win-x64 single file) and the tray, vendors FFmpeg and packs.
+      # #548: same reasoning as FFmpeg above — an ~85 MB download the gitignored vendor folder would
+      # otherwise repeat every run. The key carries the pinned version, so bumping
+      # $mkvtoolnixVersion in build-velopack.ps1 misses the cache and downloads the new archive
+      # rather than restoring the old one; the build script re-checks the vendored copy against the
+      # pinned checksum either way.
+      - name: Cache vendored MKVToolNix
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: packaging/windows/vendor/mkvtoolnix
+          key: mkvtoolnix-vendor-${{ runner.os }}-${{ hashFiles('packaging/windows/build-velopack.ps1') }}
+          restore-keys: |
+            mkvtoolnix-vendor-${{ runner.os }}-
+
+      # Builds the web app, publishes the .NET server (win-x64 single file) and the tray, vendors FFmpeg and MKVToolNix and packs.
       - name: Build Weir Windows package (Velopack)
         env:
           WEIR_BUILD_VERSION: ${{ steps.version.outputs.plain }}

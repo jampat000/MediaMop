@@ -27,7 +27,7 @@ No `.env` file is required for the default path. The container generates its own
 
 - Images are published for **linux/amd64** and **linux/arm64** (`ghcr.io/jampat000/weir:latest` and `:X.Y.Z`)
 - A self-contained .NET server at `/opt/weir/Weir`, with the web UI at `/opt/weir/web-dist`
-- ffmpeg, curl and gosu on a slim Debian base (`mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim`)
+- ffmpeg, mkvmerge (MKVToolNix), curl and gosu on a slim Debian base (`mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim`)
 - Runs as the `weir` user (UID/GID 1000 by default)
 - Data volume `/data/weir`, port `8788`
 - A built-in health check on `/health`

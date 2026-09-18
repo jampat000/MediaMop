@@ -12,6 +12,17 @@ FFmpeg is a third-party project and is not owned by Weir. FFmpeg licensing depen
 - Windows build source: https://github.com/BtbN/FFmpeg-Builds
 - License information: https://ffmpeg.org/legal.html
 
+## MKVToolNix (mkvmerge)
+
+Windows builds bundle `mkvmerge.exe` from the official MKVToolNix portable Windows archive. Docker builds install MKVToolNix from the Debian/Ubuntu `mkvtoolnix` package. Weir uses mkvmerge to write Matroska output; it is optional, and Weir falls back to FFmpeg wherever it is absent.
+
+MKVToolNix is a third-party project and is not owned by Weir. It is distributed under the GNU General Public License, version 2.
+
+- Project: https://mkvtoolnix.download/
+- Windows build source: https://mkvtoolnix.download/windows/releases/
+- Source code: https://gitlab.com/mbunkus/mkvtoolnix
+- License: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+
 ## Outfit font
 
 The web app bundles the Outfit typeface locally via the `@fontsource/outfit` package. Outfit is distributed under the SIL Open Font License 1.1.

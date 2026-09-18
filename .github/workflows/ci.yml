@@ -320,6 +320,19 @@ jobs:
           docker logs weir-ci-smoke
           exit 1
 
+      # #548: the writer setting's "best" default degrades to ffmpeg without complaint when mkvmerge is
+      # missing, so an image that quietly stopped installing it would pass every other step here. This
+      # asserts the binary is in the image and runs at all; the live E2E below reads
+      # /api/v1/system/media-tools, which proves the endpoint answers in a real deployment.
+      - name: Docker candidate carries mkvmerge
+        if: env.RUN_PACKAGING == 'true'
+        run: |
+          version="$(docker exec weir-ci-smoke mkvmerge --version | head -n 1)"
+          case "$version" in
+            mkvmerge\ *) echo "Docker image carries $version" ;;
+            *) echo "The Docker image did not report a usable mkvmerge: $version" >&2; exit 1 ;;
+          esac
+
       - name: Full live E2E against Docker candidate
         if: env.RUN_PACKAGING == 'true'
         env:
@@ -404,7 +417,21 @@ jobs:
           restore-keys: |
             ffmpeg-vendor-${{ runner.os }}-
 
-      # Builds the web app, publishes the .NET server and the tray, vendors FFmpeg and packs.
+      # #548: same reasoning as FFmpeg above — an ~85 MB download the gitignored vendor folder would
+      # otherwise repeat every run. The key carries the pinned version, so bumping
+      # $mkvtoolnixVersion in build-velopack.ps1 misses the cache and downloads the new archive
+      # rather than restoring the old one; the build script re-checks the vendored copy against the
+      # pinned checksum either way.
+      - name: Cache vendored MKVToolNix
+        if: env.RUN_PACKAGING == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: packaging/windows/vendor/mkvtoolnix
+          key: mkvtoolnix-vendor-${{ runner.os }}-${{ hashFiles('packaging/windows/build-velopack.ps1') }}
+          restore-keys: |
+            mkvtoolnix-vendor-${{ runner.os }}-
+
+      # Builds the web app, publishes the .NET server and the tray, vendors FFmpeg and MKVToolNix and packs.
       - name: Build Weir Windows package (Velopack)
         if: env.RUN_PACKAGING == 'true'
         run: powershell -ExecutionPolicy Bypass -File packaging/windows/build-velopack.ps1

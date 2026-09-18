@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-# All-in-one Weir image: the .NET server (apps/server), SQLite, ffmpeg and the production web UI
-# (same origin /api/v1).
+# All-in-one Weir image: the .NET server (apps/server), SQLite, ffmpeg, mkvmerge and the production
+# web UI (same origin /api/v1).
 #
 # Build (your host's architecture):
 #   docker build -t weir:local .
@@ -53,12 +53,26 @@ RUN case "$TARGETARCH" in \
 # runtime-deps ships. No second copy of the managed runtime.
 # .NET 10 images are Ubuntu 24.04 (noble); there is no Debian bookworm runtime-deps tag.
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble
+# #548: mkvtoolnix is the CLI-only package (mkvmerge, mkvinfo, mkvextract, mkvpropedit); the Qt GUI
+# lives in the separate mkvtoolnix-gui package, which --no-install-recommends already keeps out. It
+# lands mkvmerge on PATH at /usr/bin/mkvmerge, which is the last candidate MediaToolResolver.
+# ResolveMkvmerge tries — the same way ffmpeg is found here, so the image needs no bundle directory.
+# Without it the writer setting's "best" default fell back to ffmpeg for every write and the
+# mkvmerge writer shipped inert.
+#
+# The distribution's version (noble universe ships 82.0) trails the version the Windows package pins,
+# and that is accepted rather than worked around: every flag Weir.Core.Media.MkvmergeCommands builds
+# — --track-order, --default-track-flag, --forced-display-flag, --no-global-tags, --no-track-tags,
+# -J — has existed since v68, so both images run the same command line, and taking the tool from apt
+# is what keeps it patched with the rest of the base image. GET /api/v1/system/media-tools reports
+# whichever version an install actually has.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     ffmpeg \
     gosu \
+    mkvtoolnix \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/weir

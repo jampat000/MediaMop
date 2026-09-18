@@ -18,6 +18,7 @@ using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.Browse;
 using Weir.Infrastructure.Http;
 using Weir.Infrastructure.Logging;
+using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Settings;
 
@@ -40,6 +41,9 @@ public static class SuiteEndpoints
 
         // weir.platform.local_browse.router
         endpoints.MapV1("GET", "/system/directories", GetDirectoriesAsync);
+
+        // #548: the external media tools this install actually has. No Python counterpart.
+        endpoints.MapV1("GET", "/system/media-tools", GetMediaToolsAsync);
 
         // weir.platform.suite_settings.router
         endpoints.MapV1("GET", "/suite/settings", GetSettingsAsync);
@@ -230,6 +234,33 @@ public static class SuiteEndpoints
         context.Response.Headers.ETag = $"\"{etag}\"";
         context.Response.Headers.AcceptRanges = "bytes";
         await context.Response.Body.WriteAsync(bytes, context.RequestAborted).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// #548: which external media tools this install has, and what they say they are. Weir bundles both in the
+    /// Windows package (<c>server\bin\ffmpeg</c>, <c>server\bin\mkvtoolnix</c>) and the Docker image, but a
+    /// source install provides its own, and until this endpoint existed there was no way for an operator to see
+    /// whether the one that matters most for a library's writer setting — mkvmerge — had actually been found.
+    /// That mattered: the writer setting defaults to "best", and "best" silently means ffmpeg wherever mkvmerge
+    /// is missing, so an install with no mkvmerge looked identical to one that was using it.
+    ///
+    /// <para>
+    /// Always 200. <c>mkvmerge: "not installed"</c> is the correct answer for an install without it, not a
+    /// failure — the writer falls back to ffmpeg and everything still works, which is the whole reason
+    /// <see cref="IMediaToolResolver.ResolveMkvmerge"/> returns null instead of throwing. A missing ffmpeg
+    /// reports the same way rather than erroring, because an operator diagnosing exactly that needs the answer,
+    /// not a 500.
+    /// </para>
+    /// </summary>
+    private static async Task<ApiResult> GetMediaToolsAsync(ApiRequest request)
+    {
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+        var report = await request.Service<MediaTools>()
+            .DescribeVersionsAsync(request.Context.RequestAborted)
+            .ConfigureAwait(false);
+        return ApiRoutes.Ok(new PyDict()
+            .Set("ffmpeg", report.Ffmpeg)
+            .Set("mkvmerge", report.Mkvmerge));
     }
 
     private static async Task<ApiResult> GetDirectoriesAsync(ApiRequest request)

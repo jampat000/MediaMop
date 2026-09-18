@@ -22,6 +22,7 @@ Weir ships a Velopack-based Windows package. It installs as a desktop app with a
 | Weir server | `server\WeirServer.exe` |
 | Web UI | `server\web-dist` |
 | Bundled ffmpeg | `server\bin\ffmpeg` |
+| Bundled mkvmerge (MKVToolNix) | `server\bin\mkvtoolnix` |
 | Runtime data (SQLite, logs, backups) | `C:\ProgramData\Weir` |
 
 ## How it runs
