@@ -39,6 +39,12 @@ public sealed class RequeueStore(ProcessingJobStore jobStore)
             payload.Set("origin", origin);
         }
 
+        // The commit at the end of this method releases uow's write lock for every later file in a bulk
+        // requeue, but not for the first one: an API request arrives with the lock already taken whenever
+        // RequireUserAsync refreshed user_sessions.last_seen_at on its way in, and EnqueueOrGetAsync below
+        // opens its own connection and BEGIN IMMEDIATEs on it. Committing here makes the first call behave
+        // exactly like the second and every one after it, rather than introducing a new ordering.
+        await uow.CommitAsync().ConfigureAwait(false);
         await jobStore.EnqueueOrGetAsync(
             $"{RemuxPassJobKind}:requeue:{Guid.NewGuid():N}",
             RemuxPassJobKind,

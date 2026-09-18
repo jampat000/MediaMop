@@ -195,8 +195,12 @@ public static class ProcessingFilesEndpoints
         }
 
         var jobStore = request.Service<ProcessingJobStore>();
-        var outcome = await jobStore.MoveToTopAsync(job.Value.Id).ConfigureAwait(false);
+        // This commit used to sit after MoveToTopAsync, which deadlocked the request against the store's own
+        // connection: RequireUserAsync may have refreshed user_sessions.last_seen_at, and that write holds
+        // SQLite's single write lock until this commit runs, while the store's BEGIN IMMEDIATE waits for it.
+        // Everything above is a read apart from that session touch, so committing here changes nothing else.
         await request.CommitAsync().ConfigureAwait(false);
+        var outcome = await jobStore.MoveToTopAsync(job.Value.Id).ConfigureAwait(false);
         if (outcome != Weir.Core.Jobs.JobActionOutcome.Ok)
         {
             return ApiRoutes.Ok(new PyDict().Set("moved", false).Set("detail", "This file's work has already started, so it cannot be moved ahead of anything."));

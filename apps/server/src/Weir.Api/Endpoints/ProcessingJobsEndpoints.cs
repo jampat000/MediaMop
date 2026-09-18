@@ -87,6 +87,15 @@ public static class ProcessingJobsEndpoints
         await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
         request.RequireConfirmationToken(csrfToken);
         var jobStore = request.Service<ProcessingJobStore>();
+        // Release this request's write lock before ProcessingJobStore opens its own connection, the same
+        // hazard RequeueStore and ProcessingWatchedFolderScanDispatchJobHandler already document. Here the
+        // writer is RequireUserAsync: every SessionRules.LastSeenTouchGap it refreshes user_sessions.last_seen_at,
+        // and that single UPDATE holds the lock until ApiRoutes commits after this handler returns — so the
+        // store's BEGIN IMMEDIATE waits out the full busy timeout on a lock only this handler can release.
+        // That touch is the only write in this transaction (the handler itself writes nothing through uow),
+        // and AuthService.RevokeExpiredAsync already commits session bookkeeping independently of the
+        // request's outcome, so committing it early gives up no atomicity this endpoint relied on.
+        await request.CommitAsync().ConfigureAwait(false);
         var outcome = await jobStore.CancelPendingAsync(id).ConfigureAwait(false);
         if (outcome == JobActionOutcome.NotFound)
         {
@@ -114,6 +123,9 @@ public static class ProcessingJobsEndpoints
         var user = await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
         request.RequireConfirmationToken(csrfToken);
         var jobStore = request.Service<ProcessingJobStore>();
+        // Same reason as the cancel-pending handler above: the session touch is the only write in this
+        // request's transaction, and it must be committed before the store's own connection asks for the lock.
+        await request.CommitAsync().ConfigureAwait(false);
         var outcome = await jobStore.RecoverHandlerOkFinalizeFailedToCompletedAsync(id, user.User.Username).ConfigureAwait(false);
         if (outcome == JobActionOutcome.NotFound)
         {
