@@ -59,7 +59,9 @@ def test_a_filtered_range_exports_as_csv_and_json(seeded: WeirClient) -> None:
     assert sorted(r["title"] for r in rows) == ["Heat failed", "Heat was handed back"]
     assert {r["trigger"] for r in rows} == {"scheduled", "retry"}
 
-    as_json = client.get(f"{API}/activity/export", params={"format": "json", "trigger": "manual", "module": "processing"})
+    as_json = client.get(
+        f"{API}/activity/export", params={"format": "json", "trigger": "manual", "module": "processing"}
+    )
     assert as_json.status_code == 200
     assert [r["title"] for r in as_json.json()] == ["Alien processed"]
 

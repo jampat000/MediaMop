@@ -64,7 +64,9 @@ def test_disabling_the_periodic_scan_switch_stops_the_scan_timer(
     watched.mkdir()
     output = tmp_path / "output"
     output.mkdir()
-    sut: ServerUnderTest = server_factory(env={"WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED": "0"})
+    sut: ServerUnderTest = server_factory(
+        env={"WEIR_PROCESSING_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED": "0"}
+    )
     admin = client_factory(sut)
     admin.ensure_admin()
     movie = library_for_scope(admin, "movie")

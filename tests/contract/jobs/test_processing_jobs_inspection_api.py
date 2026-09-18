@@ -221,7 +221,9 @@ def test_processing_job_cancel_pending_ok(reseed) -> None:
     assert ":cancelled:" in row["dedupe_key"]
 
 
-def test_processing_job_cancel_pending_refuses_leased(server_factory, client_factory, fake_ffmpeg, tmp_path: Path) -> None:
+def test_processing_job_cancel_pending_refuses_leased(
+    server_factory, client_factory, fake_ffmpeg, tmp_path: Path
+) -> None:
     with _leased_job(server_factory, client_factory, fake_ffmpeg, tmp_path) as (client, job_id):
         r = client.post_csrf(f"{API}/processing/jobs/{job_id}/cancel-pending")
         assert r.status_code == 409
