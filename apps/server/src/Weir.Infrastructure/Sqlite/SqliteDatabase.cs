@@ -13,6 +13,14 @@ public sealed class SqliteDatabase
     /// Processing writes progress in short transactions; a transient writer collision should wait for
     /// that transaction rather than fail a completed media mutation.
     /// </summary>
+    /// <remarks>
+    /// The contract suite's HTTP client timeout (<c>REQUEST_TIMEOUT_S</c>, tests/contract/support/client.py)
+    /// is deliberately held above this value — 45s against this 30s — and the two must not be made equal
+    /// again. When they match, a request blocked on the write lock has the client give up at the same
+    /// instant this ceiling expires, so the failure shows up as a bare <c>httpx.ReadTimeout</c> with no
+    /// server-side error to go with it. That ambiguity is what made #586 take two investigations to pin
+    /// down. If this value changes, move that one too, and keep it the larger of the pair.
+    /// </remarks>
     public const int BusyTimeoutMilliseconds = 30_000;
 
     /// <param name="databasePath">The SQLite file.</param>

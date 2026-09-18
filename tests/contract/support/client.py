@@ -15,11 +15,23 @@ ADMIN_USERNAME = "alice"
 ADMIN_PASSWORD = "test-password-strong"
 API = "/api/v1"
 
+# Deliberately NOT 30s: the server's SQLite busy timeout is 30_000 ms
+# (`SqliteDatabase.BusyTimeoutMilliseconds`, and the ADO.NET command timeout derived from it). When
+# the two are the same number, a request blocked on the write lock makes the client give up at the
+# very instant the server would have raised its own error, so the suite only ever sees an opaque
+# `httpx.ReadTimeout` with nothing at all in the server log. Staying above the server's ceiling means
+# a lock problem surfaces as the server's own 500 ("SQLite Error 5: 'database is locked'"), which is
+# diagnosable, and a `ReadTimeout` here now means something genuinely hung instead. #586.
+# Keep this strictly greater than SqliteDatabase.BusyTimeoutMilliseconds; do not re-align them.
+REQUEST_TIMEOUT_S = 45.0
+
 
 class WeirClient:
     """One browser-like session against one server: its own cookie jar."""
 
-    def __init__(self, base_url: str, *, timeout_s: float = 30.0, headers: Mapping[str, str] | None = None) -> None:
+    def __init__(
+        self, base_url: str, *, timeout_s: float = REQUEST_TIMEOUT_S, headers: Mapping[str, str] | None = None
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.http = httpx.Client(
             base_url=self.base_url,
