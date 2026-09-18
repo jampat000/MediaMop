@@ -62,8 +62,6 @@
   );
   --mm-bubble-stack-gap-mobile: calc(1.25rem * var(--mm-density-ui-scale));
   --mm-bubble-stack-gap-desktop: calc(1.75rem * var(--mm-density-ui-scale));
-  --mm-bubble-grid-gap-mobile: calc(1.25rem * var(--mm-density-ui-scale));
-  --mm-bubble-grid-gap-desktop: calc(1.75rem * var(--mm-density-ui-scale));
   --mm-main-pad-y: calc(clamp(32px, 2.2vw, 40px) * var(--mm-density-ui-scale));
   --mm-main-pad-x: calc(clamp(16px, 3vw, 40px) * var(--mm-density-ui-scale));
   /* Type ramp (#464). Before this, almost everything sat at 13-14px, so no screen had a lead

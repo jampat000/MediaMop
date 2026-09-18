@@ -2972,67 +2972,10 @@ html[data-mm-theme="light"] .bg-black\/20 {
   background-color: var(--mm-well-bg);
 }
 
-/* Settings > General: cards sized to their content, no stretched empty space. */
-.mm-settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  align-items: start;
-  gap: var(--mm-bubble-grid-gap-mobile);
-}
-
-@media (min-width: 768px) {
-  .mm-settings-grid {
-    gap: var(--mm-bubble-grid-gap-desktop);
-  }
-}
-
-.mm-settings-card {
-  gap: 0.9rem;
-  min-height: 0;
-}
-
-.mm-settings-card__title {
-  margin: 0;
-  padding: 0;
-  color: var(--mm-text1);
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.mm-settings-card__lead {
-  margin: 0.25rem 0 0;
-  color: var(--mm-text2);
-  font-size: var(--mm-type-body);
-  line-height: 1.5;
-}
-
-.mm-settings-card__hint {
-  margin: 0;
-  color: var(--mm-text3);
-  font-size: var(--mm-type-caption);
-  line-height: 1.45;
-}
-
-.mm-settings-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--mm-border);
-}
-
-.mm-settings-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-  gap: 0.9rem 1rem;
-}
-
-.mm-settings-field-label {
-  color: var(--mm-text2);
-  font-size: var(--mm-type-caption);
-  font-weight: 600;
-}
-
+/* Display density tiles. Shared by Settings > General and the setup wizard: the tile's
+   border is the radio's hit target and its selected state, not a panel around content.
+   The Settings > General cards that used to box them in went with that tab's conversion
+   to the content language (docs/design/content-language.md, rule 3). */
 .mm-density-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
