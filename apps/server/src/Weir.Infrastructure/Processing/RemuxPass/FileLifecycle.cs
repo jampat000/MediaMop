@@ -191,13 +191,30 @@ public static partial class FileLifecycle
     }
 
     /// <summary>
-    /// <c>safe_finalize_file</c>: a rename when it can be one; across volumes, a copy into a hidden partial beside the
-    /// destination, an atomic replace, then removal of the staged file.
+    /// <c>safe_finalize_file</c>: the staged file is moved to a hidden <c>.{name}.XXXXXXXX.partial</c> beside the destination,
+    /// then renamed onto the destination, so the destination only ever appears complete.
     /// </summary>
-    public static void SafeFinalizeFile(string staged, string final, IOutputOwnership? ownership = null)
+    /// <remarks>
+    /// Python's <c>os.replace</c> refuses to cross volumes, which is what made "rename, else copy to a partial" safe there.
+    /// .NET's <see cref="File.Move(string, string, bool)"/> does not refuse: across volumes it copies straight to the name it
+    /// is given and then deletes the source (dotnet/runtime@release/10.0 <c>System/IO/FileSystem.Unix.cs</c> L190-202, the
+    /// <c>EXDEV</c> branch; on Windows every move passes <c>MOVEFILE_COPY_ALLOWED</c>, <c>Interop.MoveFileEx.cs</c> L35). The
+    /// default work folder lives under Weir's home, which in Docker is usually another volume from the output folder, so a
+    /// direct move exposed a half-written file at its final name — exactly what Sonarr or Radarr importing from the output
+    /// folder through a remote path mapping must never see. Moving to the partial first keeps any such copy under a hidden,
+    /// non-video name; the last step is a rename within one directory, which is atomic on every filesystem. Same-volume
+    /// finalisation is still two renames and no copy.
+    /// </remarks>
+    public static void SafeFinalizeFile(string staged, string final, IOutputOwnership? ownership = null) =>
+        SafeFinalizeFile(staged, final, ownership, File.Move);
+
+    /// <summary><see cref="SafeFinalizeFile(string, string, IOutputOwnership?)"/> with the move made swappable for tests.</summary>
+    internal static void SafeFinalizeFile(string staged, string final, IOutputOwnership? ownership, Action<string, string, bool> move)
     {
+        ArgumentNullException.ThrowIfNull(move);
         var src = Path.GetFullPath(staged);
-        var directory = Path.GetDirectoryName(Path.GetFullPath(final))!;
+        var destination = Path.GetFullPath(final);
+        var directory = Path.GetDirectoryName(destination)!;
         var directoryExisted = Directory.Exists(directory);
         Directory.CreateDirectory(directory);
         if (!directoryExisted)
@@ -205,31 +222,29 @@ public static partial class FileLifecycle
             ownership?.ApplyToDirectory(directory);
         }
 
+        var tmp = CreateTempFile(directory, "." + Path.GetFileName(destination) + ".", ".partial");
         try
         {
-            File.Move(src, final, overwrite: true);
-            ownership?.ApplyToFile(Path.GetFullPath(final));
-            return;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            // Fall through to the copy.
-        }
+            try
+            {
+                move(src, tmp, true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // The staged file could not be moved (held open, say): copy it instead, and remove it once published.
+                File.Copy(src, tmp, overwrite: true);
+            }
 
-        var tmp = CreateTempFile(directory, "." + Path.GetFileName(final) + ".", ".partial");
-        try
-        {
-            File.Copy(src, tmp, overwrite: true);
-            File.Move(tmp, final, overwrite: true);
+            move(tmp, destination, true);
             BestEffortDelete(src);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             BestEffortDelete(tmp);
-            throw new FileLifecycleException($"Could not safely finalize {src} to {final}: {exception.Message}", exception);
+            throw new FileLifecycleException($"Could not safely finalize {src} to {destination}: {exception.Message}", exception);
         }
 
-        ownership?.ApplyToFile(Path.GetFullPath(final));
+        ownership?.ApplyToFile(destination);
     }
 
     /// <summary><c>tempfile.mkstemp</c>: a new file named prefix + 8 random characters + suffix, created exclusively.</summary>

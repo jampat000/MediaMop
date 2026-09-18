@@ -544,6 +544,83 @@ public sealed class FileLifecycleTests : IDisposable
 
         Assert.Equal("new", File.ReadAllText(final));
         Assert.False(File.Exists(staged));
+        Assert.Equal([final], Directory.EnumerateFiles(_root.Join("out", "deep")));
+    }
+
+    /// <summary>
+    /// Across volumes .NET's <c>File.Move</c> copies straight to the name it is given (dotnet/runtime
+    /// <c>FileSystem.Unix.cs</c> <c>MoveFile</c>, the <c>EXDEV</c> branch). A media manager importing from the output folder
+    /// (Sonarr/Radarr through a remote path mapping) must never find a half-written file at the final name, so the copying
+    /// move has to land on a hidden partial and only a same-directory rename may produce the final name.
+    /// </summary>
+    [Fact]
+    public void A_cross_volume_finalise_never_writes_the_final_name_until_the_file_is_complete()
+    {
+        var staged = _root.Join("work", "t.mkv");
+        Directory.CreateDirectory(_root.Join("work"));
+        File.WriteAllText(staged, "the whole cleaned file");
+        var final = _root.Join("out", "Show.S01E01", "Show.S01E01.mkv");
+        var moves = new List<(string From, string To)>();
+
+        void CrossVolumeMove(string from, string to, bool overwrite)
+        {
+            moves.Add((from, to));
+            if (Path.GetDirectoryName(from) == Path.GetDirectoryName(to))
+            {
+                File.Move(from, to, overwrite);
+                return;
+            }
+
+            // What .NET does when rename(2) fails with EXDEV: open the destination, copy into it, then delete the source.
+            Assert.NotEqual(final, to);
+            var bytes = File.ReadAllBytes(from);
+            using (var output = new FileStream(to, overwrite ? FileMode.Create : FileMode.CreateNew))
+            {
+                output.Write(bytes, 0, bytes.Length / 2);
+                Assert.False(File.Exists(final), "a half-copied file must never be visible at its final name");
+                output.Write(bytes, bytes.Length / 2, bytes.Length - (bytes.Length / 2));
+            }
+
+            File.Delete(from);
+        }
+
+        FileLifecycle.SafeFinalizeFile(staged, final, null, CrossVolumeMove);
+
+        Assert.Equal("the whole cleaned file", File.ReadAllText(final));
+        Assert.False(File.Exists(staged));
+        Assert.Equal(2, moves.Count);
+        var partial = moves[0].To;
+        Assert.Equal(Path.GetDirectoryName(final), Path.GetDirectoryName(partial));
+        Assert.StartsWith(".Show.S01E01.mkv.", Path.GetFileName(partial), StringComparison.Ordinal);
+        Assert.EndsWith(".partial", partial, StringComparison.Ordinal);
+        Assert.Equal((partial, final), moves[1]);
+        Assert.Equal([final], Directory.EnumerateFiles(Path.GetDirectoryName(final)!));
+    }
+
+    [Fact]
+    public void A_staged_file_that_cannot_be_moved_is_copied_to_the_partial_and_still_published_atomically()
+    {
+        var staged = _root.Join("work", "held.mkv");
+        Directory.CreateDirectory(_root.Join("work"));
+        File.WriteAllText(staged, "held open elsewhere");
+        var final = _root.Join("out", "held.mkv");
+        var calls = 0;
+
+        void RefuseTheFirstMove(string from, string to, bool overwrite)
+        {
+            if (calls++ == 0)
+            {
+                throw new IOException("The process cannot access the file because it is being used by another process.");
+            }
+
+            File.Move(from, to, overwrite);
+        }
+
+        FileLifecycle.SafeFinalizeFile(staged, final, null, RefuseTheFirstMove);
+
+        Assert.Equal("held open elsewhere", File.ReadAllText(final));
+        Assert.False(File.Exists(staged));
+        Assert.Equal([final], Directory.EnumerateFiles(_root.Join("out")));
     }
 
     [Fact]
