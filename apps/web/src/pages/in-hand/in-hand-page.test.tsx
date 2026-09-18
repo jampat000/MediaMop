@@ -132,6 +132,37 @@ it("says where the files are, without claiming to know the library", async () =>
   expect(screen.queryByText(/your library/i)).not.toBeInTheDocument();
 });
 
+it("sizes each band stage by the number of files sitting in it", async () => {
+  mount([file()], { unprocessed: 12, processing: 3, on_hold: 0 });
+
+  const stages = await screen.findAllByTestId("in-hand-band-stage");
+  const share = (label: string) =>
+    stages
+      .find((s) => s.textContent?.startsWith(label))
+      ?.getAttribute("style") ?? "";
+
+  // 15 files in the band: 12 and 3 by count, an empty stage floored at 6% so it still reads.
+  expect(share("Arriving")).toContain("--mm-flow-share: 12");
+  expect(share("Working")).toContain("--mm-flow-share: 3");
+  expect(share("On hold")).toMatch(
+    /--mm-flow-share: 0\.8999|--mm-flow-share: 0\.9/,
+  );
+  // Each stage opens Files filtered to exactly that status.
+  expect(screen.getByRole("link", { name: /Arriving/ })).toHaveAttribute(
+    "href",
+    "/processing?tab=files&status=unprocessed",
+  );
+});
+
+it("says so in a sentence rather than drawing an empty band", async () => {
+  mount([], {});
+
+  expect(await screen.findByTestId("in-hand-band-empty")).toBeInTheDocument();
+  expect(screen.queryByTestId("in-hand-band")).not.toBeInTheDocument();
+  // Folders are set, so today's numbers still render.
+  expect(screen.getByTestId("in-hand-today")).toBeInTheDocument();
+});
+
 it("groups files by library", async () => {
   mount([
     file({ id: 1, library_name: "Films 4K" }),
@@ -314,10 +345,21 @@ it("asks nothing of a healthy install", async () => {
 it("says there is nothing to watch before any watched folder is set (#459)", async () => {
   mount([], {}, { libraries: [{ enabled: false, watched_folder: "/x" }] });
 
-  expect(await screen.findByText("Nothing to watch yet")).toBeInTheDocument();
+  // The sentence now leads an interrupt line above the band, so it is matched loosely;
+  // where its link goes is the guarantee, and that is asserted exactly.
+  expect(await screen.findByText(/Nothing to watch yet/)).toBeInTheDocument();
   expect(
-    screen.getByRole("link", { name: "Set up a library" }),
+    screen.getByRole("link", { name: /Set up a library/ }),
   ).toHaveAttribute("href", "/processing?tab=libraries");
+});
+
+it("draws no band of zeroes before any watched folder is set", async () => {
+  mount([], {}, { libraries: [{ enabled: false, watched_folder: "/x" }] });
+
+  // A fresh install must not lead with six empty stages: the setup interrupt wins outright.
+  await screen.findByText(/Nothing to watch yet/);
+  expect(screen.queryByTestId("in-hand-band")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("in-hand-today")).not.toBeInTheDocument();
 });
 
 it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", async () => {
@@ -332,13 +374,13 @@ it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", 
   );
 
   expect(
-    await screen.findByText("Background work has stopped"),
+    await screen.findByText(/Background work has stopped/),
   ).toBeInTheDocument();
   expect(
     screen.getByText(/1 worker slot\(s\) stopped responding/),
   ).toBeInTheDocument();
-  expect(await screen.findByText("2 jobs failed")).toBeInTheDocument();
+  expect(await screen.findByText(/2 jobs failed/)).toBeInTheDocument();
   expect(
-    screen.getByRole("link", { name: "Review failed jobs" }),
+    screen.getByRole("link", { name: /Review failed jobs/ }),
   ).toHaveAttribute("href", "/processing?tab=jobs&status=failed");
 });

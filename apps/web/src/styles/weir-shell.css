@@ -3060,96 +3060,10 @@ select.mm-input::-ms-expand {
 }
 
 /* --- "In hand": files Weir currently has custody of (#463) -------------------------------
-   Built on the type ramp and surface tokens rather than fixed values, so both themes work and
-   the four density steps still scale it. */
-
-.mm-inhand-flow {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
-  align-items: stretch;
-  gap: 0;
-  margin-bottom: var(--mm-space);
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius);
-  background: var(--mm-card-bg);
-  box-shadow: var(--mm-shadow-card);
-  overflow: hidden;
-}
-
-.mm-inhand-flow__stage {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 1rem 1.15rem;
-  min-width: 0;
-}
-
-/* The middle stage is the one this screen is about. */
-.mm-inhand-flow__stage--active {
-  background: var(--mm-accent-soft);
-}
-
-.mm-inhand-flow__label {
-  margin: 0;
-  font-size: var(--mm-type-eyebrow);
-  font-weight: 600;
-  letter-spacing: var(--mm-tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--mm-text3);
-}
-
-.mm-inhand-flow__figure {
-  margin: 0;
-  font-size: var(--mm-type-figure);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--mm-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.mm-inhand-flow__detail {
-  margin: 0;
-  font-size: var(--mm-type-caption);
-  color: var(--mm-text2);
-  overflow-wrap: anywhere;
-}
-
-.mm-inhand-flow__arrow {
-  display: flex;
-  align-items: center;
-  padding: 0 0.35rem;
-  color: var(--mm-text3);
-}
-
-.mm-inhand-group,
-.mm-inhand-stuck,
-.mm-inhand-empty {
-  margin-bottom: var(--mm-space);
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius);
-  background: var(--mm-card-bg);
-  box-shadow: var(--mm-shadow-card);
-  overflow: hidden;
-}
-
-.mm-inhand-group__title {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  margin: 0;
-  padding: 0.85rem 1.15rem;
-  font-size: var(--mm-type-panel);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--mm-text);
-  border-bottom: 1px solid var(--mm-border);
-}
-
-.mm-inhand-group__count {
-  font-size: var(--mm-type-caption);
-  font-weight: 400;
-  color: var(--mm-text3);
-}
+   The page's lead band, figure row and sections are the page-neutral primitives in
+   weir-content.css. What is left here is the file row itself, which nothing else draws:
+   built on the type ramp and surface tokens rather than fixed values, so both themes work
+   and the four density steps still scale it. */
 
 .mm-inhand-list {
   margin: 0;
@@ -3157,13 +3071,15 @@ select.mm-input::-ms-expand {
   list-style: none;
 }
 
+/* A borderless list of rows, flush with its section heading: one hairline per row, none
+   under the last. The card these used to sit in is gone — see docs/design/content-language.md. */
 .mm-inhand-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
   gap: 1rem;
   align-items: start;
-  padding: 0.7rem 1.15rem;
-  border-bottom: 1px solid var(--mm-border-sidebar);
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--mm-border);
 }
 
 .mm-inhand-row:last-child {
@@ -3241,115 +3157,7 @@ select.mm-input::-ms-expand {
   font-variant-numeric: tabular-nums;
 }
 
-.mm-inhand-stuck {
-  border-color: var(--mm-status-failed-text);
-  background: var(--mm-status-failed-bg);
-}
-
-.mm-inhand-stuck__title {
-  margin: 0;
-  padding: 0.9rem 1.15rem 0.35rem;
-  font-size: var(--mm-type-panel);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--mm-text);
-}
-
-.mm-inhand-stuck__body {
-  margin: 0;
-  padding: 0 1.15rem 0.75rem;
-  font-size: var(--mm-type-caption);
-  color: var(--mm-text2);
-}
-
-.mm-inhand-stuck__link {
-  display: inline-block;
-  padding: 0.75rem 1.15rem;
-  font-size: var(--mm-type-caption);
-  font-weight: 600;
-  color: var(--mm-accent-bright);
-}
-
-/* Only what needs a person: no watched folder, stopped workers, failed jobs (#459). */
-.mm-inhand-notices {
-  display: grid;
-  gap: 0.6rem;
-  margin-bottom: var(--mm-space);
-}
-
-.mm-inhand-notice {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 1rem;
-  padding: 0.75rem 1.15rem;
-  border: 1px solid var(--mm-status-warning-text);
-  border-radius: var(--mm-radius);
-  background: var(--mm-status-warning-bg);
-}
-
-.mm-inhand-notice__title {
-  margin: 0;
-  font-size: var(--mm-type-body);
-  font-weight: 600;
-  color: var(--mm-text);
-}
-
-.mm-inhand-notice__body {
-  grid-column: 1;
-  margin: 0.15rem 0 0;
-  font-size: var(--mm-type-caption);
-  color: var(--mm-text2);
-  overflow-wrap: anywhere;
-}
-
-.mm-inhand-notice__link {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  font-size: var(--mm-type-caption);
-  font-weight: 600;
-  color: var(--mm-accent-bright);
-  white-space: nowrap;
-}
-
-@media (max-width: 560px) {
-  .mm-inhand-notice {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .mm-inhand-notice__link {
-    grid-column: 1;
-    grid-row: auto;
-    margin-top: 0.5rem;
-  }
-}
-
-.mm-inhand-empty__title {
-  margin: 0;
-  padding: 1.5rem 1.15rem 0.35rem;
-  font-size: var(--mm-type-panel);
-  font-weight: 600;
-  color: var(--mm-text);
-}
-
-.mm-inhand-empty__body {
-  margin: 0;
-  padding: 0 1.15rem 1.5rem;
-  font-size: var(--mm-type-body);
-  color: var(--mm-text2);
-  max-width: 42rem;
-}
-
 @media (max-width: 720px) {
-  .mm-inhand-flow {
-    grid-template-columns: 1fr;
-  }
-
-  /* The arrows only mean anything in a row. */
-  .mm-inhand-flow__arrow {
-    display: none;
-  }
-
   .mm-inhand-row {
     grid-template-columns: minmax(0, 1fr);
   }
