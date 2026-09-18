@@ -3,7 +3,7 @@
 Weir publishes an all-in-one container image with:
 
 - the Weir server (C# / .NET 10, a self-contained single-file build)
-- bundled production web UI and ffmpeg
+- bundled production web UI, ffmpeg and mkvmerge (MKVToolNix)
 - SQLite runtime under `WEIR_HOME`
 
 Images are published for `linux/amd64` and `linux/arm64`.

@@ -158,6 +158,18 @@ public static class FfmpegCommands
     }
 
     /// <summary>
+    /// #548: <c>ffmpeg -hide_banner -version</c>, the ffmpeg half of the media-tool report
+    /// (<c>GET /api/v1/system/media-tools</c>), matching <see cref="MkvmergeCommands.BuildVersionArgv"/>.
+    /// <c>-hide_banner</c> only suppresses the build-configuration block that would otherwise follow;
+    /// the first line, the one <see cref="MediaToolVersions.FromBanner"/> keeps, is printed either way.
+    /// </summary>
+    public static IReadOnlyList<string> BuildVersionArgv(string ffmpegBin)
+    {
+        ArgumentNullException.ThrowIfNull(ffmpegBin);
+        return [ffmpegBin, "-hide_banner", "-version"];
+    }
+
+    /// <summary>
     /// #547: the mov,mp4,m4a,3gp,3g2,mj2 muxer family — the only extensions Weir's remux ever writes that share
     /// it are <c>.mp4</c>, <c>.m4v</c> and <c>.mov</c> — refuses an attachment output stream outright ("Attachments
     /// are not supported in QuickTime/MP4"), verified against the bundled ffmpeg. Every other container Weir
