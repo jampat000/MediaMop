@@ -4,9 +4,9 @@
  * most, already aggregated by the server), so sorting them here is cheap and never touches the file list.
  *
  * Rule 3 of docs/design/content-language.md: a heading, a hairline, then the content — no box, and the
- * table is `.mm-quiet-table`. Below 760px that primitive stacks each row and reads the column name from
- * `data-label`, which also hides the header — and with it these sort controls. Sorting is a pointer-width
- * affordance here; the filters on the Files sub-view are not.
+ * table is `.mm-quiet-table --sortable`. Below 760px that primitive stacks each row and reads the column
+ * name from `data-label`; the `--sortable` variant keeps the header row above the stack as a row of sort
+ * controls, so these buttons are reachable at every width rather than being a pointer-width affordance.
  */
 import { useMemo, useState } from "react";
 
@@ -114,7 +114,7 @@ export function LibraryBreakdownTable({
           <p className="mm-quiet-note">{emptyMessage}</p>
         ) : (
           <div className="mm-quiet-table-wrap">
-            <table className="mm-quiet-table min-w-[30rem] max-[760px]:min-w-0">
+            <table className="mm-quiet-table mm-quiet-table--sortable min-w-[30rem] max-[760px]:min-w-0">
               <thead>
                 <tr>
                   {header("value", columnLabel(facet))}

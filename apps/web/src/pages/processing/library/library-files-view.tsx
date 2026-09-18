@@ -9,9 +9,9 @@
  *
  * Rule 3 of docs/design/content-language.md: no box around any of it, and the table is `.mm-quiet-table`.
  * The sub-view is one thing, so it takes no invented heading. Below 760px the primitive stacks each row and
- * reads its column names from `data-label` — nine columns no longer run off the side of a phone, at the cost
- * of the header row, and with it the sort controls and the select-all box. Both are pointer-width
- * conveniences; the filters, the per-row checkboxes, paging and Clean are not, and all still work there.
+ * reads its column names from `data-label` — nine columns no longer run off the side of a phone. The table
+ * is also `--sortable`, so the header row comes back above the stacked rows as the controls it is: the sort
+ * buttons and the select-all box stay reachable by pointer and keyboard at every width.
  */
 import { Fragment, useMemo, useState } from "react";
 
@@ -275,7 +275,7 @@ export function LibraryFilesView({
 
       {files && rows.length > 0 ? (
         <div className="mm-quiet-table-wrap">
-          <table className="mm-quiet-table min-w-[58rem] max-[760px]:min-w-0">
+          <table className="mm-quiet-table mm-quiet-table--sortable min-w-[58rem] max-[760px]:min-w-0">
             <thead>
               <tr>
                 <th scope="col">

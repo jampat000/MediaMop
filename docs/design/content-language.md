@@ -262,10 +262,19 @@ at ≤720px everything stacks. That happens by itself — do not add breakpoints
 | `.mm-quiet-section__title`   | `h2`      | The heading. Give it an id and `aria-labelledby` the section |
 | `.mm-quiet-section__aside`   | `div`     | The section's links, baseline-aligned with the heading    |
 | `.mm-quiet-section__body`    | `div`     | The content under the hairline                            |
+| `.mm-quiet-group`            | `section` | One group of fields inside a long form: an uppercase eyebrow over a hairline, not a second box |
+| `.mm-quiet-group__head`      | `div`     | The eyebrow row with the hairline under it                |
+| `.mm-quiet-group__name`      | `span`    | Holds the step and the title, baseline-aligned            |
+| `.mm-quiet-group__step`      | `span`, `aria-hidden` | An optional "step n of five" cue. Keep it out of the heading's accessible name |
+| `.mm-quiet-group__title`     | `h3`      | The group's name. Give it an id and `aria-labelledby` the group |
+| `.mm-quiet-group__detail`    | `p`       | One explanatory line under the hairline                   |
+| `.mm-quiet-group__body`      | `div`     | The fields. Spaces its own children                       |
+| `.mm-quiet-actions`          | `div`     | A form's own Save row: a hairline, then the buttons        |
 | `.mm-quiet-link`             | `button` / `a` | The only control shape in the quiet body. Write the label with a trailing `→` |
 | `.mm-quiet-note`             | `p`       | A muted paragraph: empty states, captions, explanations   |
-| `.mm-quiet-table-wrap`       | `div`     | Horizontal scroll container                               |
+| `.mm-quiet-table-wrap`       | `div`     | Horizontal scroll container, and the containing block for anything inside it |
 | `.mm-quiet-table`            | `table`   | The borderless table                                      |
+| `.mm-quiet-table--sortable`  | modifier  | The column headings are the sort buttons: keeps the header row when the table stacks |
 | `.mm-quiet-table__name`      | `th[scope=row]` | The row's name cell                                 |
 | `.mm-quiet-table__strong`    | `span`    | A primary value inside a cell                             |
 | `.mm-quiet-table__sub`       | `span`    | The explanatory line under it                             |
@@ -277,6 +286,30 @@ at ≤720px everything stacks. That happens by itself — do not add breakpoints
 
 Every `td` in a `.mm-quiet-table` needs `data-label="…"` matching its column heading:
 below 760px the table becomes stacked rows and that attribute is the label.
+
+**`--sortable`.** Stacking hides the header row, and for a table whose column headings
+*are* its sort buttons — Library → Files, the breakdowns, Files — that hid the only way
+to sort. Add `mm-quiet-table--sortable` and the header row comes back above the stacked
+rows as what it is: a row of controls. Only header cells that actually hold a control are
+kept, so a plain `Share` heading or an `.sr-only` "Actions" does not turn into a stray
+word, and the column in force is marked from its own `aria-sort`. The buttons are the
+same buttons, so pointer and keyboard reach them at every width. A table that only labels
+its columns does not take the modifier.
+
+**A quiet table's `.sr-only` heading needs the wrapper to be positioned.** It is, and
+that is not decoration: `.mm-quiet-table-wrap` scrolls, so an absolutely positioned child
+without a positioned ancestor inside the wrapper is laid out against whatever is
+positioned further up — at the scrolled-out x of the column it belongs to, stretching the
+page. Measured before the fix on Library → Files at 1024: `.mm-app-layout` scrollWidth
+1248 against clientWidth 1024, all of it one `.sr-only` span sitting at x=1247. Note that
+`document.documentElement.scrollWidth` is **not** the check — `.mm-app-layout` has
+`overflow-x: clip`, so the document measures clean either way, and that false signal has
+already fooled agents on this work. Measure `.mm-app-layout` itself.
+
+**A `.mm-quiet-link` that is busy or unavailable** takes `disabled` (or `aria-disabled`)
+and the primitive dims it and changes the cursor. Say so in the label as well — an export
+mid-download reads "Exporting…" — but the label is not enough on its own: before this the
+control looked identical whether you could press it or not.
 
 **The interrupt.** Something broken may sit above the band, because it outranks the
 routine. It is still a list of sentences with a link each — not a card, not a banner,

@@ -48,8 +48,8 @@ export function QuietSection({
  * below a `.mm-quiet-section__title` without ever becoming a second box, and the
  * `.mm-quiet-stack` these sit in supplies the 2.5rem between groups.
  *
- * Everything here is an existing token. If this treatment earns a name, it belongs in
- * weir-content.css as a page-neutral primitive rather than as a copy in each page.
+ * The treatment earned its name, so it is `.mm-quiet-group` in weir-content.css rather
+ * than a Tailwind copy here: one place to change it, and a page cannot drift from it.
  */
 export function QuietFieldGroup({
   step,
@@ -71,34 +71,24 @@ export function QuietFieldGroup({
   const headingId = useId();
   return (
     <section
-      className={`min-w-0${className ? ` ${className}` : ""}`}
+      className={`mm-quiet-group${className ? ` ${className}` : ""}`}
       aria-labelledby={headingId}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[var(--mm-line)] pb-[0.55rem]">
-        <span className="flex min-w-0 items-baseline gap-2">
+      <div className="mm-quiet-group__head">
+        <span className="mm-quiet-group__name">
           {step === undefined ? null : (
-            <span
-              aria-hidden="true"
-              className="text-[length:var(--mm-type-eyebrow)] font-semibold tabular-nums text-[var(--mm-gold-dim)]"
-            >
+            <span aria-hidden="true" className="mm-quiet-group__step">
               {step}
             </span>
           )}
-          <h3
-            id={headingId}
-            className="m-0 text-[length:var(--mm-type-eyebrow)] font-semibold uppercase tracking-[var(--mm-tracking-eyebrow)] text-[var(--mm-text3)]"
-          >
+          <h3 id={headingId} className="mm-quiet-group__title">
             {title}
           </h3>
         </span>
         {aside ?? null}
       </div>
-      {detail ? (
-        <p className="mt-3 max-w-prose text-[length:var(--mm-type-caption)] leading-5 text-[var(--mm-text3)]">
-          {detail}
-        </p>
-      ) : null}
-      <div className="mt-4 min-w-0 space-y-4">{children}</div>
+      {detail ? <p className="mm-quiet-group__detail">{detail}</p> : null}
+      <div className="mm-quiet-group__body">{children}</div>
     </section>
   );
 }
@@ -107,5 +97,4 @@ export function QuietFieldGroup({
  * The hairline above a form's own Save row. `mm-card-action-footer` drew this when the
  * form was a card; without the card it is just a rule and the buttons under it.
  */
-export const quietActionRowClass =
-  "flex flex-wrap items-center gap-2 border-t border-[var(--mm-border)] pt-5";
+export const quietActionRowClass = "mm-quiet-actions";
