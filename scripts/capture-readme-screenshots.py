@@ -280,7 +280,7 @@ def capture_processing_record(browser: Browser, base_url: str, storage_state: di
         page.click(f'[data-testid="processing-file-log-{file_id}"]')
         panel = page.locator('[data-testid="processing-file-log-panel"]')
         panel.wait_for(state="visible", timeout=harness.TIMEOUT_MS)
-        if panel.get_by_text("0 record(s)").count():
+        if panel.get_by_text("0 records").count():
             harness.fail("The processing record panel opened with no records in it.")
         panel.scroll_into_view_if_needed()
         page.wait_for_timeout(400)

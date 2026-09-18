@@ -252,6 +252,46 @@ public sealed class LibraryViewStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Problems_groups_never_overlap_and_hold_every_file_that_cannot_be_processed_exactly_once()
+    {
+        // The Library Overview's attention line names the "Cannot be processed" figure and the files a clean is
+        // holding back, and the Problems view is the same files grouped. Both only add up if no file is in two
+        // groups and every file the scan could not process is in one. A hardlinked file the scan could not read
+        // used to count under "Still shared with a download" as well as "Weir could not read the file", and a
+        // hardlinked file that already matches (nothing to clean) counted as a problem at all.
+        await LibraryAsync();
+        await RecordAsync(
+            File("/lib/fine.mkv", LibraryFileClassification.Matches, Probe("h264", 1080, ("audio", "aac", 2, "eng"))),
+            File("/lib/fine-and-seeding.mkv", LibraryFileClassification.Matches, Probe("h264", 1080, ("audio", "aac", 2, "eng")), linkCount: 2),
+            File("/lib/change.mkv", LibraryFileClassification.WouldChange, Probe("h264", 1080, ("audio", "aac", 2, "eng"))),
+            File("/lib/change-but-seeding.mkv", LibraryFileClassification.WouldChange, Probe("h264", 1080, ("audio", "aac", 2, "eng")), linkCount: 2),
+            File("/lib/broken.mkv", LibraryFileClassification.CannotProcess, "", problem: LibraryProblemKind.Unreadable),
+            File("/lib/broken-and-seeding.mkv", LibraryFileClassification.CannotProcess, "", problem: LibraryProblemKind.Unreadable, linkCount: 3),
+            File("/lib/locked.mkv", LibraryFileClassification.CannotProcess, "", problem: LibraryProblemKind.NoPermission),
+            File("/lib/silent.mkv", LibraryFileClassification.CannotProcess, "", problem: LibraryProblemKind.NoAudioLeft));
+
+        var totals = await Read(uow => LibraryViewStore.TotalsAsync(uow, _libraryId));
+        var groups = await Read(uow => LibraryViewStore.ProblemsAsync(uow, _libraryId, cleanHardlinkedFiles: false));
+        var heldBack = groups
+            .Where(g => g.Kind is LibraryProblemKind.Seeding or LibraryProblemKind.ManagerRedownload)
+            .Sum(g => g.Files);
+
+        Assert.Equal(4, totals.CannotProcess);
+        Assert.Equal(["/lib/change-but-seeding.mkv"], Assert.Single(groups, g => g.Kind == LibraryProblemKind.Seeding).SampleFiles);
+        Assert.Equal(2, Assert.Single(groups, g => g.Kind == LibraryProblemKind.Unreadable).Files);
+        Assert.Equal(totals.CannotProcess, groups.Sum(g => g.Files) - heldBack);
+
+        var everyPath = new List<string>();
+        foreach (var g in groups)
+        {
+            everyPath.AddRange(await Read(uow => LibraryViewStore.PathsAsync(uow, _libraryId, LibraryViewStore.QueryFor(g.Kind))));
+        }
+
+        Assert.Equal(everyPath.Count, everyPath.Distinct(StringComparer.Ordinal).Count());
+        Assert.DoesNotContain("/lib/fine-and-seeding.mkv", everyPath);
+    }
+
+    [Fact]
     public async Task A_library_that_allows_hardlinked_files_never_reports_seeding_as_a_problem()
     {
         await LibraryAsync();

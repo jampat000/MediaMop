@@ -152,6 +152,25 @@ describe("SettingsMediaManagersTab", () => {
     expect(status).toHaveTextContent("never");
   });
 
+  it("never says Connected when there is no check time behind it", async () => {
+    vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
+      connection({
+        last_test_ok: true,
+        last_test_at: null,
+        last_test_detail: "Reachable, 214 series",
+      }),
+    ]);
+    render(<SettingsMediaManagersTab />, { wrapper });
+
+    const status = await screen.findByTestId("media-manager-status");
+    // "Connected" above "Last checked: never" is two statements that cannot both
+    // be true. Without a time, nothing has established the connection.
+    expect(status).not.toHaveTextContent("Connected");
+    expect(status).toHaveTextContent("Not checked yet");
+    expect(status).toHaveTextContent("never");
+    expect(status.querySelector(".mm-status-text--healthy")).toBeNull();
+  });
+
   it("prevents remove or update while a connection test is running", async () => {
     vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
       connection(),
@@ -194,6 +213,10 @@ describe("SettingsMediaManagersTab", () => {
     const details = await screen.findByTestId("media-manager-setup-details");
     expect(details.tagName.toLowerCase()).toBe("details");
     expect(details).not.toHaveAttribute("open");
+    // The summary says it opens, since the browser's own triangle is hidden.
+    const summary = details.querySelector("summary");
+    expect(summary).toHaveTextContent("How to point Deluno at Weir");
+    expect(summary).toHaveTextContent("Show →");
   });
 
   it("does not name internal modules in the intro", async () => {

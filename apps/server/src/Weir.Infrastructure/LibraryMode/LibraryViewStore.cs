@@ -228,7 +228,9 @@ public static class LibraryViewStore
     /// <summary>
     /// The filter that selects one problem kind. <see cref="LibraryProblemKind.Seeding"/> is the one kind read from
     /// a column rather than <c>problem_kind</c>: a link count above one is a fact about the file, recorded at every
-    /// scan, while the other kinds are verdicts the scan or a clean's preflight reached.
+    /// scan, while the other kinds are verdicts the scan or a clean's preflight reached. The groups never overlap:
+    /// every <c>cannot_process</c> file carries the scan's own kind and lands in exactly that group, and seeding only
+    /// ever holds back a file the rules would otherwise change.
     /// </summary>
     public static LibraryFileQuery QueryFor(LibraryProblemKind kind) => kind == LibraryProblemKind.Seeding
         ? new LibraryFileQuery { ProblemKind = LibraryProblemKind.Seeding }
@@ -329,7 +331,13 @@ public static class LibraryViewStore
             if (problem == LibraryProblemKind.Seeding)
             {
                 // A link count above one is the evidence; the scan records it per file, so no stat() per row here.
-                clauses.Add("COALESCE(f.link_count, 1) > 1");
+                // Only a file a clean would otherwise change is held back by it: a file that already matches has
+                // nothing to clean, and a file the scan could not process is already in the group for that reason.
+                // Keeping every group disjoint is what lets the Overview add the groups up without counting a
+                // file twice (the "3 files" alert beside a "Cannot be processed 4" tile).
+                clauses.Add(
+                    "COALESCE(f.link_count, 1) > 1 AND f.classification = 'would_change' " +
+                    "AND (f.problem_kind IS NULL OR f.problem_kind = 'seeding')");
             }
             else
             {

@@ -54,6 +54,7 @@ import { LibraryOverviewView } from "./library/library-overview-view";
 import { LibraryProblemsView } from "./library/library-problems-view";
 import { LibraryRedownloadsPanel } from "./library/library-redownloads-panel";
 import { LibrarySettingsPanel } from "./library/library-settings-panel";
+import { plural } from "../../lib/ui/mm-plural";
 
 /** The sub-views, in the order the tab strip shows them. */
 export type LibraryViewId =
@@ -363,7 +364,7 @@ export function ProcessingLibrarySection() {
           >
             {scanSentence(scan, !nothingScanned)}
             {totals && totals.files > 0
-              ? ` ${totals.files} file(s), ${formatBytes(totals.size_bytes)}.`
+              ? ` ${plural(totals.files, "file", "files")}, ${formatBytes(totals.size_bytes)}.`
               : ""}
           </span>
           {editable ? (
@@ -471,7 +472,7 @@ export function ProcessingLibrarySection() {
             {cleanNotice ? (
               <div className="space-y-1" data-testid="library-clean-notice">
                 <p className="mm-quiet-note">
-                  {cleanNotice.queued} file(s) queued to clean
+                  {plural(cleanNotice.queued, "file", "files")} queued to clean
                   {cleanNotice.skipped.length > 0
                     ? `; ${cleanNotice.skipped.length} skipped (still shared with a download)`
                     : ""}

@@ -72,19 +72,25 @@ function ConnectionStatusPanel({
   connection: MediaManagerConnection;
   fmt: (iso: string | null) => string;
 }) {
+  // A result only counts with a time behind it. "Connected" above "Last checked:
+  // never" is two sentences that cannot both be true, so a result with no check
+  // time (a row written without one, or restored from an older install) reads as
+  // unchecked rather than borrowing the success colour.
+  const result = connection.last_test_at ? connection.last_test_ok : null;
+
   const headline =
-    connection.last_test_ok === null
+    result === null
       ? "Not checked yet"
-      : connection.last_test_ok
+      : result
         ? "Connected"
         : "Connection failed";
 
   // The site's own status colours, so the headline reads the same in light and dark
   // as every other good/bad word in Weir, not a raw palette green and red.
   const tone =
-    connection.last_test_ok === null
+    result === null
       ? "text-[var(--mm-text)]"
-      : connection.last_test_ok
+      : result
         ? "mm-status-text--healthy"
         : "mm-status-text--failed";
 
@@ -100,12 +106,12 @@ function ConnectionStatusPanel({
           {connection.last_test_at ? fmt(connection.last_test_at) : "never"}
         </span>
       </p>
-      {connection.last_test_ok === false && connection.last_test_detail ? (
+      {result === false && connection.last_test_detail ? (
         <p className="mm-status-text--failed mt-1 text-xs">
           {connection.last_test_detail}
         </p>
       ) : null}
-      {connection.last_test_ok === null ? (
+      {result === null ? (
         <p className="mt-2 text-xs text-[var(--mm-text2)]">
           Run a test to check Weir can reach it.
         </p>
@@ -327,9 +333,14 @@ function ConnectionCard({
           className="group mt-4 border-t border-[var(--mm-border)] pt-3 text-xs text-[var(--mm-text3)]"
           data-testid="media-manager-setup-details"
         >
-          <summary className="cursor-pointer list-none font-medium text-[var(--mm-text2)] marker:hidden [&::-webkit-details-marker]:hidden">
-            <span className="underline-offset-2 group-open:underline">
-              How to point {connection.name} at Weir
+          {/* A disclosure has to say it opens. The browser's own triangle is hidden
+            here, so the summary carries the same Show / Hide link Settings > Logs
+            uses for its folded section. */}
+          <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 font-medium text-[var(--mm-text2)] [&::-webkit-details-marker]:hidden">
+            <span>How to point {connection.name} at Weir</span>
+            <span className="mm-quiet-link group-open:hidden">Show →</span>
+            <span className="mm-quiet-link hidden group-open:inline">
+              Hide →
             </span>
           </summary>
 
