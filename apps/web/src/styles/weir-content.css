@@ -566,6 +566,86 @@
   margin-top: 0.9rem;
 }
 
+/* ── 3a · The field group ────────────────────────────────────────────────────
+ * Rule 3 takes the box off a form, and a forty-field form that loses its grouping with
+ * it becomes unusable — so the grouping has to survive as type and whitespace. The
+ * treatment is the one the language already gives a table's header row: an uppercase
+ * eyebrow over a hairline, labelling the block beneath it. It reads clearly under a
+ * `.mm-quiet-section__title` without ever becoming a second box, and the
+ * `.mm-quiet-stack` these sit in supplies the space between groups.
+ *
+ * This is a group *inside* a section, not a second kind of section: the heading is an
+ * `h3`, it is quieter than `.mm-quiet-section__title`, and it carries no links of its
+ * own beyond what `__head` allows.
+ */
+
+.mm-quiet-group {
+  min-width: 0;
+}
+
+.mm-quiet-group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--mm-line);
+}
+
+.mm-quiet-group__name {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+/* An optional "step n of five" cue. Decorative: keep it out of the heading's accessible
+ * name, which stays exactly the group's own title. */
+.mm-quiet-group__step {
+  color: var(--mm-gold-dim);
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-quiet-group__title {
+  margin: 0;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.mm-quiet-group__detail {
+  max-width: 65ch;
+  margin: 0.75rem 0 0;
+  color: var(--mm-text3);
+  font-size: var(--mm-type-caption);
+  line-height: 1.25rem;
+}
+
+.mm-quiet-group__body {
+  min-width: 0;
+  margin-top: 1rem;
+}
+
+.mm-quiet-group__body > * + * {
+  margin-top: 1rem;
+}
+
+/* The hairline above a form's own Save row. A card drew this; without the card it is
+ * just a rule and the buttons under it. */
+.mm-quiet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--mm-border);
+}
+
 /* The only control the quiet body carries: a text link, never a button chrome. */
 .mm-quiet-link {
   padding: 0;
@@ -584,6 +664,27 @@
   color: var(--mm-accent);
 }
 
+/* A link that is busy or unavailable — an export mid-download, a "load older" with a
+ * request in flight — has to look unavailable, not just say so in its label. It keeps
+ * its focus ring, because a disabled control the keyboard can still reach (an `<a>`, or
+ * `aria-disabled`) must still show where the focus is. */
+.mm-quiet-link:disabled,
+.mm-quiet-link[aria-disabled="true"] {
+  color: var(--mm-text-disabled);
+  cursor: not-allowed;
+}
+
+.mm-quiet-link:disabled:hover,
+.mm-quiet-link[aria-disabled="true"]:hover {
+  color: var(--mm-text-disabled);
+}
+
+.mm-quiet-link:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .mm-quiet-note {
   max-width: 44rem;
   margin: 0;
@@ -594,7 +695,16 @@
 
 /* ── 3a · The borderless table ─────────────────────────────────────────────── */
 
+/* `position: relative` is not decoration: the wrapper scrolls, so anything absolutely
+ * positioned inside it — a `.sr-only` column heading, most often — needs this box as its
+ * containing block or it is laid out against the nearest positioned ancestor instead, at
+ * the scrolled-out position of the column it belongs to, and stretches the page.
+ * Measured on Library -> Files at 1024: `.mm-app-layout` scrollWidth 1248 against
+ * clientWidth 1024, all of it one `.sr-only` span sitting at x=1247. It is invisible
+ * because the layout clips, which is exactly why it stays fixed here rather than on the
+ * `th` of whichever table happens to have one today. */
 .mm-quiet-table-wrap {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -748,6 +858,50 @@
 
   .mm-quiet-table__name {
     padding-bottom: 0.3rem;
+  }
+
+  /* `--sortable`: for a table whose column headings *are* its sort buttons. Stacking
+   * hides the header row, and for those tables that takes sorting with it — the one
+   * behavioural cost of the restack. Here the header row comes back instead as a row of
+   * controls above the stacked rows: only the cells that hold a control are kept, so a
+   * `Share` heading or an `.sr-only` "Actions" does not turn into a stray word, and the
+   * column the table is sorted by is marked by its own `aria-sort`. The buttons are the
+   * same buttons, so pointer and keyboard both reach them exactly as they do on a
+   * desktop. Without this variant the header stays hidden, which is right for a table
+   * that only labels its columns. */
+  .mm-quiet-table--sortable thead {
+    position: static;
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .mm-quiet-table--sortable thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 1.1rem;
+    padding: 0 0 0.6rem;
+    border-bottom: 1px solid var(--mm-line);
+  }
+
+  .mm-quiet-table--sortable thead th {
+    display: none;
+    width: auto;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .mm-quiet-table--sortable thead th:has(button),
+  .mm-quiet-table--sortable thead th:has(input) {
+    display: block;
+  }
+
+  .mm-quiet-table--sortable thead th[aria-sort="ascending"],
+  .mm-quiet-table--sortable thead th[aria-sort="descending"] {
+    color: var(--mm-accent);
   }
 }
 
