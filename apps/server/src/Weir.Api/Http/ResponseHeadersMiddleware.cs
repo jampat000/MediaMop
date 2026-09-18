@@ -33,7 +33,10 @@ public sealed class RequestContextMiddleware
     {
         ArgumentNullException.ThrowIfNull(context);
         var incoming = context.Request.Headers[HeaderName].ToString().Trim();
-        var requestId = incoming.Length > 0 ? incoming : Guid.NewGuid().ToString("N");
+        // Sanitized once, here: this value flows into every log line for the rest of the request (via the
+        // scope below), the unhandled-failure log and the echoed response header, so cleaning it at the
+        // source is simpler and safer than cleaning it again at each of those uses.
+        var requestId = HttpLogSanitizer.Sanitize(incoming.Length > 0 ? incoming : Guid.NewGuid().ToString("N"));
         using var scope = LogContext.BeginRequest(requestId);
         context.Response.OnStarting(() =>
         {
@@ -66,12 +69,22 @@ public sealed class RequestContextMiddleware
 
     private bool LogUnhandled(Exception exception, string requestId, HttpContext context, long started)
     {
+        // requestId is already sanitized (see InvokeAsync). Method and RouteLabelFor are sanitized here,
+        // for this text log line only: Kestrel rejects control characters in the method token, so Method
+        // is not expected to carry one in practice, but nothing here relies on that holding for every
+        // possible host (a test server, a future reverse proxy) — sanitize it anyway, it is a no-op for a
+        // clean value. RouteLabelFor is the route template when a route matched (never attacker-controlled)
+        // but falls back to the decoded request path on a no-match, which is; sanitizing the whole result
+        // covers both without needing to know which case applied. The metrics call below keeps the raw,
+        // unsanitized values — they are aggregated into counters and JSON, never written to a text log line,
+        // so there is nothing here for CWE-117 to forge, and rewriting them would just add another way for
+        // the log and metrics labels for the same request to disagree.
         _logger.LogError(
             exception,
             "Unhandled request failure request_id={RequestId} method={Method} route={Route}",
             requestId,
-            context.Request.Method,
-            RouteLabelFor(context));
+            HttpLogSanitizer.Sanitize(context.Request.Method),
+            HttpLogSanitizer.Sanitize(RouteLabelFor(context)));
         _metrics.RecordRequest(context.Request.Method, RouteLabelFor(context), 500, _time.GetElapsedTime(started).TotalMilliseconds);
         return false;
     }
