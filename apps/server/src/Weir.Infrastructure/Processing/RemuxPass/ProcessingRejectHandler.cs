@@ -381,10 +381,15 @@ public sealed class ProcessingRejectHandler : IJobHandler
             body.Set("origin", origin);
         }
 
+        // The fingerprint stats the file on the watched folder, which may be a network share. Work the
+        // dedupe key out before asking for the transaction, not in the argument list after it: arguments
+        // evaluate left to right, so inlining this would put a remote stat inside the write lock
+        // (#586 made that lock start at BEGIN). QueueingFailurePolicy.Enqueue's callers do the same.
+        var dedupeKey = $"{IntakeRules.PassThroughJobKind}:{library.Id}:{relativePath}:{QueueingFailurePolicy.FingerprintTag(library, relativePath)}";
         _jobs.EnqueueOrGet(
             uow.Connection,
             uow.WriteTransaction(),
-            $"{IntakeRules.PassThroughJobKind}:{library.Id}:{relativePath}:{QueueingFailurePolicy.FingerprintTag(library, relativePath)}",
+            dedupeKey,
             IntakeRules.PassThroughJobKind,
             PyJsonWriter.Dumps(body, PyJsonFormat.Compact),
             JobQueueRules.DefaultMaxAttempts,

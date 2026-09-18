@@ -43,6 +43,13 @@ public sealed class SqliteDatabase
             Cache = SqliteCacheMode.Private,
             Pooling = pooling,
             // Seconds a command waits on a locked database (complements PRAGMA busy_timeout).
+            // Since #586 this only ever times a genuine wait for another writer's lock, which is what it
+            // is for. It used to be reachable a second way: Microsoft.Data.Sqlite re-runs a statement that
+            // answers SQLITE_BUSY until this expires, and SQLITE_BUSY_SNAPSHOT — a read-then-write upgrade
+            // on a snapshot another connection has already overtaken — answers exactly that while never
+            // being able to succeed, so the whole thirty seconds went by before the request failed. Units
+            // of work now take the write lock at BEGIN (UnitOfWork.EnsureTransaction), so no transaction
+            // here can hold a stale snapshot and that second path is gone.
             DefaultTimeout = BusyTimeoutMilliseconds / 1000,
         }.ToString();
     }
