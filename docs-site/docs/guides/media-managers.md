@@ -14,8 +14,11 @@ anything that can send Weir a message directly.
 ## Deluno: automatic hand-off
 
 Deluno hands a file to Weir to work on, and waits to be told it's ready. This is the fully
-automatic setup: once it's connected, you don't need to watch a folder at all — Deluno tells Weir
-about a new file, Weir cleans it, and Deluno is notified when the cleaned copy is ready to import.
+automatic setup: Deluno tells Weir about a new file, Weir cleans it, and Deluno is told when the
+cleaned copy is ready to import. You don't move anything by hand.
+
+The Weir library still needs a watched folder: Weir only accepts a hand-off for a file inside one.
+Point it at the folder Deluno downloads into, using the same path Deluno sees.
 
 ## Sonarr and Radarr: checking before Weir touches a file
 
