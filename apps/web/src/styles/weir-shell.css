@@ -1359,6 +1359,14 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
 .mm-main {
   flex: 1;
+  /* A flex item's automatic minimum size is its min-content width, so without this the main column
+     refuses to shrink below the widest thing any page puts in it — the workspace tab row, or a
+     table with a rem `min-width`. Those already sit in their own `overflow-x: auto` wrappers, but a
+     scroll container still reports its contents' min-content size to its ancestors, so the whole
+     column grew past the viewport and .mm-app-layout's `overflow-x: clip` sheared the right edge
+     off. With a zero minimum the column takes the width it is actually given and those wrappers
+     scroll, which is what they are for. */
+  min-width: 0;
   min-height: 100dvh;
   padding: var(--mm-main-pad-y) var(--mm-main-pad-x)
     calc(40px * var(--mm-density-ui-scale));
