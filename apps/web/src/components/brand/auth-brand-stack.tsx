@@ -7,8 +7,11 @@ export function AuthBrandStack() {
       <div className="mm-auth-brand-logo">
         <WeirLogo variant="auth" />
       </div>
+      {/* The same sentence the sidebar carries (brand-header-link.tsx), kept identical on
+          purpose: these are the two places Weir describes itself, and they should not say two
+          different things. The reason it changed is written up there. */}
       <p className="mm-auth-brand-tagline">
-        Cleans every download before your media manager imports it.
+        Cleans new downloads, and files already in your library.
       </p>
     </div>
   );

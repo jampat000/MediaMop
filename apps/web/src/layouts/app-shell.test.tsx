@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "./app-shell";
@@ -86,6 +86,90 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "In hand" })).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Dashboard" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends every nav item to the screen its label names, and has no others", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<div>Main</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    const items = within(nav)
+      .getAllByRole("link")
+      .map((link) => [link.textContent, link.getAttribute("href")]);
+
+    // The whole nav, in order. A new entry has to be added here deliberately, and a label that
+    // stops matching its destination fails rather than quietly misleading someone.
+    expect(items).toEqual([
+      ["In hand", "/"],
+      ["Activity", "/activity"],
+      ["Processing", "/processing"],
+      ["Settings", "/settings"],
+    ]);
+  });
+
+  it("marks only the current screen, and marks nothing on a page that is not one", () => {
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/activity"]}>
+        <Routes>
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<div>In hand</div>} />
+            <Route path="activity" element={<div>Activity</div>} />
+            <Route path="*" element={<div>Not found</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const current = () =>
+      within(screen.getByRole("navigation", { name: "Primary" }))
+        .getAllByRole("link")
+        .filter((link) => link.getAttribute("aria-current") === "page")
+        .map((link) => link.textContent);
+
+    expect(current()).toEqual(["Activity"]);
+    unmount();
+
+    // `/dashboard` is the Not found page now that 3.0.0 dropped its redirect (#585). In hand is
+    // the index route, so it must not claim to be the screen you are on.
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<div>In hand</div>} />
+            <Route path="*" element={<div>Not found</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(current()).toEqual([]);
+  });
+
+  it("names the sidebar landmark after the product", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<AppShell />}>
+            <Route index element={<div>Main</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // It was "Product", left over from the suite this stopped being.
+    expect(
+      screen.getByRole("complementary", { name: "Weir" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("complementary", { name: "Product" }),
     ).not.toBeInTheDocument();
   });
 
