@@ -76,7 +76,7 @@ public sealed class ProcessingRejectHandlerTests : IDisposable
         var library = await LibraryAsync(rejectedFileAction: "delete_file");
         var source = _folders.Source("Film/film.mkv");
         await FileRowAsync(library, "Film/film.mkv");
-        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await LinkAsync(library, connection);
         await _fixture.Db(async uow => { await _fixture.Ledger.RecordReceivedAsync(uow, "deluno", "h1", library, "Film/film.mkv"); return 0; });
         _fixture.Http.Json(HttpMethod.Get, ManifestPath, """{"capabilities":["processor-reject-regrab"],"libraries":[]}""");
@@ -107,7 +107,7 @@ public sealed class ProcessingRejectHandlerTests : IDisposable
         var source = _folders.Source("Film/film.mkv");
         var bytesBefore = File.ReadAllBytes(source);
         await FileRowAsync(library, "Film/film.mkv");
-        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await LinkAsync(library, connection);
         _fixture.Http.Json(HttpMethod.Get, ManifestPath, """{"capabilities":["processor-reject-regrab"],"libraries":[]}""");
         _fixture.Http.Json(HttpMethod.Post, EventsPath, "{}", HttpStatusCode.Conflict);
@@ -130,7 +130,7 @@ public sealed class ProcessingRejectHandlerTests : IDisposable
         var source = _folders.Source("Film/film.mkv");
         var bytesBefore = File.ReadAllBytes(source);
         await FileRowAsync(library, "Film/film.mkv");
-        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await LinkAsync(library, connection);
         _fixture.Http.Json(HttpMethod.Get, ManifestPath, """{"capabilities":["processor-reject-regrab"],"libraries":[]}""");
         _fixture.Http.Throw(HttpMethod.Post, EventsPath, new HttpRequestException("no route to host"));
@@ -148,7 +148,7 @@ public sealed class ProcessingRejectHandlerTests : IDisposable
         var library = await LibraryAsync();
         _folders.Source("Film/film.mkv");
         await FileRowAsync(library, "Film/film.mkv");
-        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await LinkAsync(library, connection);
         _fixture.Http.Json(HttpMethod.Get, ManifestPath, """{"capabilities":[],"libraries":[]}""");
         _fixture.Http.Json(HttpMethod.Post, EventsPath, "{}", HttpStatusCode.Accepted);
@@ -260,7 +260,7 @@ public sealed class ProcessingRejectHandlerTests : IDisposable
         var library = await LibraryAsync(rejectedFileAction: "delete_file");
         _folders.Source("Film/film.mkv");
         // Deliberately no files row: this hand-off was never seen by a watched-folder scan.
-        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://10.1.1.9:5099", "k1");
+        var connection = await _fixture.AddConnectionAsync("deluno", "Deluno", "http://192.0.2.30:5099", "k1");
         await LinkAsync(library, connection);
         await _fixture.Db(async uow => { await _fixture.Ledger.RecordReceivedAsync(uow, "deluno", "h9", library, "Film/film.mkv"); return 0; });
         _fixture.Http.Json(HttpMethod.Get, ManifestPath, """{"capabilities":["processor-reject-regrab"],"libraries":[]}""");

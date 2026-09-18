@@ -40,7 +40,7 @@ def test_a_manager_with_no_columns_of_its_own_can_be_added(operator: WeirClient)
     code, row = _create(operator)
     assert code == 201, row
     assert row["kind"] == "deluno"
-    assert row["base_url"] == "http://10.1.1.142:5099"
+    assert row["base_url"] == "http://192.0.2.10:5099"
     assert row["webhook_url_path"] == "/api/v1/intake/webhook/deluno"
     assert sorted(lane["lane"] for lane in row["lanes"]) == ["missing", "upgrade"]
 
@@ -54,7 +54,7 @@ def test_the_api_key_is_never_returned_only_whether_it_is_saved(operator: WeirCl
 
 def test_listing_returns_every_configured_manager(operator: WeirClient) -> None:
     _create(operator, name="Deluno", kind="deluno")
-    _create(operator, name="Radarr", kind="radarr", base_url="http://10.1.1.5:7878")
+    _create(operator, name="Radarr", kind="radarr", base_url="http://192.0.2.20:7878")
     listed = operator.get(f"{API}/media-managers/connections").json()
     assert {row["kind"] for row in listed} == {"deluno", "radarr"}
 
@@ -206,7 +206,7 @@ def test_one_managers_secret_does_not_gate_another(operator: WeirClient) -> None
     """The point of per-connection secrets: revoking one must not lock out the rest."""
 
     _, deluno = _create(operator, name="Deluno", kind="deluno")
-    _create(operator, name="Radarr", kind="radarr", base_url="http://10.1.1.5:7878")
+    _create(operator, name="Radarr", kind="radarr", base_url="http://192.0.2.20:7878")
     _generate_secret(operator, deluno["id"])
 
     assert operator.post(f"{API}/intake/webhook/radarr", json={"eventType": "Grab"}).status_code == 200

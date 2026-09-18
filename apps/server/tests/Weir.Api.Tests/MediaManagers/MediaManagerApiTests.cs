@@ -67,7 +67,7 @@ public sealed class MediaManagerApiTests
         return (server, client, manager);
     }
 
-    private static async Task<JsonNode> CreateAsync(ApiTestClient client, string kind = "deluno", string name = "Deluno", string baseUrl = "http://10.1.1.142:5099", string apiKey = "deluno_secret_key")
+    private static async Task<JsonNode> CreateAsync(ApiTestClient client, string kind = "deluno", string name = "Deluno", string baseUrl = "http://192.0.2.10:5099", string apiKey = "deluno_secret_key")
     {
         using var response = await client.PostAsync(Connections, new { csrf_token = await client.CsrfAsync(), kind, name, base_url = baseUrl, api_key = apiKey });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -81,9 +81,9 @@ public sealed class MediaManagerApiTests
         await using var _server = server;
         var row = await CreateAsync(client);
         Assert.Equal(
-            """{"id":1,"kind":"deluno","name":"Deluno","enabled":true,"base_url":"http://10.1.1.142:5099","api_key_is_saved":true,"webhook_secret_is_set":false,"webhook_url_path":"/api/v1/intake/webhook/deluno","last_test_ok":null,"last_test_at":null,"last_test_detail":null,"lanes":[{"lane":"missing","enabled":false,"max_items_per_run":50,"retry_delay_minutes":1440,"schedule_enabled":false,"schedule_days":"","schedule_start":"00:00","schedule_end":"23:59","schedule_interval_seconds":3600},{"lane":"upgrade","enabled":false,"max_items_per_run":50,"retry_delay_minutes":1440,"schedule_enabled":false,"schedule_days":"","schedule_start":"00:00","schedule_end":"23:59","schedule_interval_seconds":3600}]}""",
+            """{"id":1,"kind":"deluno","name":"Deluno","enabled":true,"base_url":"http://192.0.2.10:5099","api_key_is_saved":true,"webhook_secret_is_set":false,"webhook_url_path":"/api/v1/intake/webhook/deluno","last_test_ok":null,"last_test_at":null,"last_test_detail":null,"lanes":[{"lane":"missing","enabled":false,"max_items_per_run":50,"retry_delay_minutes":1440,"schedule_enabled":false,"schedule_days":"","schedule_start":"00:00","schedule_end":"23:59","schedule_interval_seconds":3600},{"lane":"upgrade","enabled":false,"max_items_per_run":50,"retry_delay_minutes":1440,"schedule_enabled":false,"schedule_days":"","schedule_start":"00:00","schedule_end":"23:59","schedule_interval_seconds":3600}]}""",
             row.ToJsonString());
-        await CreateAsync(client, "radarr", "Radarr", "http://10.1.1.5:7878");
+        await CreateAsync(client, "radarr", "Radarr", "http://192.0.2.20:7878");
 
         using (var unknown = await client.PostAsync(Connections, new { csrf_token = await client.CsrfAsync(), kind = "plex", name = "P" }))
         {
@@ -211,7 +211,7 @@ public sealed class MediaManagerApiTests
         var (server, client, _) = await StartAsync();
         await using var _server = server;
         await CreateAsync(client);
-        await CreateAsync(client, "radarr", "Radarr", "http://10.1.1.5:7878");
+        await CreateAsync(client, "radarr", "Radarr", "http://192.0.2.20:7878");
         using var generated = await client.PostAsync($"{Connections}/1/webhook-secret", new { csrf_token = await client.CsrfAsync() });
         var body = await Json(generated);
         var secret = body["webhook_secret"]!.GetValue<string>();
@@ -279,7 +279,7 @@ public sealed class MediaManagerApiTests
     {
         var (server, client, manager) = await StartAsync();
         await using var _server = server;
-        await CreateAsync(client, "radarr", "Radarr", "http://10.1.1.5:7878");
+        await CreateAsync(client, "radarr", "Radarr", "http://192.0.2.20:7878");
         manager.Json(HttpMethod.Get, "/api/v3/system/status", "<html>this is a login page, not Radarr</html>");
         using var tested = await client.PostAsync($"{Connections}/1/test", new { csrf_token = await client.CsrfAsync() });
         Assert.Equal(HttpStatusCode.OK, tested.StatusCode);
